@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "/backend_service";
+
+service BackendService {
+    rpc HandleProbe(HandleProbeRequest) returns (HandleProbeResponse) {}
+}
+
+message HandleProbeRequest {
+    string method = 1;
+    string request_uri = 2;
+
+}
+
+message HandleProbeResponse {
+    string message = 2;
+}
+
