@@ -6,9 +6,40 @@ service BackendService {
     rpc HandleProbe(HandleProbeRequest) returns (HandleProbeResponse) {}
 }
 
+// Stores 1:N
+message KeyValues {
+  string key = 1;
+  repeated string value = 2;
+}
+// Parsed URL values. Based on golang url.URL
+message ParsedURL {
+  string scheme = 1;
+  string user = 2;
+  string password = 3;
+  string host = 4;
+  string port = 5;
+  string path = 6;
+  repeated KeyValues query = 7;
+  string raw_path = 8;
+  string raw_query = 9;
+  string fragment = 10;
+}
+
+message HttpRequest {
+    string proto = 1;
+    string method = 2;
+    int64 content_length = 3;
+    ParsedURL parsed_url = 4;
+    repeated KeyValues header = 5;
+    // TODO: Add cookies, parsed form data
+    string body = 6;
+    string remote_address = 7;
+}
+
 message HandleProbeRequest {
-    string method = 1;
-    string request_uri = 2;
+  string request_uri = 1;
+  HttpRequest request = 2;
+
 
 }
 
