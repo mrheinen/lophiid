@@ -12,20 +12,24 @@ import (
 )
 
 type HttpServer struct {
-	mux    *http.ServeMux
-	client client.BackendClient
+	mux     *http.ServeMux
+	client  client.BackendClient
+	sslCert string
+	sslKey  string
 }
 
-func NewHttpServer(c client.BackendClient) *HttpServer {
+func NewHttpServer(c client.BackendClient, sslCert string, sslKey string) *HttpServer {
 	return &HttpServer{
 		client: c,
+		sslCert: sslCert,
+		sslKey: sslKey,
 	}
 }
 
 func (h *HttpServer) Start(listen_string string) error {
 	h.mux = http.NewServeMux()
 	h.mux.HandleFunc("/", h.catchAll)
-	return http.ListenAndServe(listen_string, h.mux)
+	return http.ListenAndServeTLS(listen_string, h.sslCert, h.sslKey, h.mux)
 }
 
 func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
@@ -83,5 +87,5 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 	h.client.HandleProbeRequest(pr)
 
 	fmt.Printf("got / request\n")
-	io.WriteString(w, "This is my website!\n")
+	io.WriteString(w, "Hi!\n")
 }
