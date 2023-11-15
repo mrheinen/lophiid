@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-var listenString = flag.String("l", ":443", "HTTP server listen string (e.g. \":443\")")
+var listenPort = flag.Int64("p", 443, "HTTP server port to listen on")
 var serverLocation = flag.String("s", "localhost:41110", "RPC server location")
 var sslCert = flag.String("c", "", "SSL certificate file")
 var sslKey = flag.String("k", "", "SSL certificate key")
@@ -21,7 +21,14 @@ func main() {
 	}
 	defer c.Disconnect()
 
-	log.Printf("%s %s\n", *sslCert, *sslKey)
-	s := http_server.NewHttpServer(&c, *sslCert, *sslKey)
-	log.Fatal(s.Start(*listenString))
+	var s *http_server.HttpServer
+	if *sslCert != "" && *sslKey != "" {
+		log.Printf("Starting HTTPS server (%d)", *listenPort)
+		s = http_server.NewSSLHttpServer(&c, *listenPort, *sslCert, *sslKey)
+	} else {
+		log.Printf("Starting HTTP server (%d)", *listenPort)
+		s = http_server.NewHttpServer(&c, *listenPort)
+	}
+
+	log.Fatal(s.Start())
 }

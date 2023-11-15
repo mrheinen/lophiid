@@ -1,8 +1,6 @@
 package http_server
 
 import (
-	// Note: Also remove the 'os' import.
-
 	"fmt"
 	"greyhole/backend_service"
 	"greyhole/pkg/client"
@@ -14,24 +12,47 @@ import (
 type HttpServer struct {
 	mux     *http.ServeMux
 	client  client.BackendClient
+	ssl     bool
 	sslCert string
 	sslKey  string
+	port    int64
 }
 
-func NewHttpServer(c client.BackendClient, sslCert string, sslKey string) *HttpServer {
+// NewHttpServer creates a new initialized HttpServer struct.
+func NewHttpServer(c client.BackendClient, port int64) *HttpServer {
 	return &HttpServer{
 		client: c,
-		sslCert: sslCert,
-		sslKey: sslKey,
+		ssl:    false,
+		port:   port,
 	}
 }
 
-func (h *HttpServer) Start(listen_string string) error {
-	h.mux = http.NewServeMux()
-	h.mux.HandleFunc("/", h.catchAll)
-	return http.ListenAndServeTLS(listen_string, h.sslCert, h.sslKey, h.mux)
+func NewSSLHttpServer(c client.BackendClient, port int64, sslCert string, sslKey string) *HttpServer {
+	return &HttpServer{
+		client:  c,
+		ssl:     true,
+		sslCert: sslCert,
+		sslKey:  sslKey,
+		port:    port,
+	}
 }
 
+// Start starts the HTTP server.
+func (h *HttpServer) Start() error {
+	h.mux = http.NewServeMux()
+	h.mux.HandleFunc("/", h.catchAll)
+
+	listen_string := fmt.Sprintf(":%d", h.port)
+
+	if h.ssl {
+		return http.ListenAndServeTLS(listen_string, h.sslCert, h.sslKey, h.mux)
+	}
+	return http.ListenAndServe(listen_string, h.mux)
+
+}
+
+// catchAll receives all HTTP requests.  It parses the requests and sends them
+// to the backend using grpc. The backend will the tell catchAll how to respond.
 func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 	pr := &backend_service.HandleProbeRequest{
 		RequestUri: r.RequestURI,
@@ -44,7 +65,7 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 				Scheme:   r.URL.Scheme,
 				User:     r.URL.User.Username(),
 				Host:     r.URL.Host,
-				Port:     r.URL.Port(),
+				Port:     h.port,
 				Path:     r.URL.Path,
 				RawPath:  r.URL.RawPath,
 				RawQuery: r.URL.RawQuery,
@@ -84,8 +105,12 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.client.HandleProbeRequest(pr)
+	// TODO: process and return response from the server.
+	res, err := h.client.HandleProbeRequest(pr)
+	if err != nil {
+		log.Printf("unable to process request: %s", err)
+	}
 
-	fmt.Printf("got / request\n")
-	io.WriteString(w, "Hi!\n")
+	fmt.Printf("got request for: %s\n", pr.RequestUri)
+	io.WriteString(w, res.GetResponse().Body)
 }

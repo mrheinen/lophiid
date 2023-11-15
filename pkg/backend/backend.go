@@ -2,7 +2,6 @@ package backend
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 
@@ -18,8 +17,15 @@ type BackendServer struct {
 
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
 	log.Printf("Got request: %v", req)
+
+	// Determine if it is a payload request.
+	// If not, send anticipated response.
+	res := &backend_service.HttpResponse{
+		Body: "hello!",
+	}
+
 	return &backend_service.HandleProbeResponse{
-		Message: fmt.Sprintf("Hello, %s", req.RequestUri),
+		Response: res,
 	}, nil
 }
 

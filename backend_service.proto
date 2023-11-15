@@ -17,7 +17,7 @@ message ParsedURL {
   string user = 2;
   string password = 3;
   string host = 4;
-  string port = 5;
+  int64 port = 5;
   string path = 6;
   repeated KeyValues query = 7;
   string raw_path = 8;
@@ -25,6 +25,7 @@ message ParsedURL {
   string fragment = 10;
 }
 
+// HttpRequest represents the HTTP request that is received from client.
 message HttpRequest {
     string proto = 1;
     string method = 2;
@@ -36,14 +37,20 @@ message HttpRequest {
     string remote_address = 7;
 }
 
+// Contains all information needed to send an HTTP reply.
+message HttpResponse {
+    int64 code = 1;
+    string body = 2;
+    repeated KeyValues header = 3;
+    repeated KeyValues cookie = 4;
+}
+
 message HandleProbeRequest {
   string request_uri = 1;
   HttpRequest request = 2;
-
-
 }
 
 message HandleProbeResponse {
-    string message = 2;
+    HttpResponse response = 1;
 }
 
