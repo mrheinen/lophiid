@@ -2,7 +2,8 @@ package client
 
 import (
 	"context"
-	"greyhole/backend_service"
+
+	"loophid/backend_service"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

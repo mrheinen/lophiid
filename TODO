@@ -2,3 +2,6 @@ Secure grpc calls with this article
 https://dev.to/techschoolguru/how-to-secure-grpc-connection-with-ssl-tls-in-go-4ph
 
 Show vulnerable landing pages
+
+
+Rename contentlocation.location to path

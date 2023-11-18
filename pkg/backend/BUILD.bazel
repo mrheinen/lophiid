@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "backend",
+    srcs = ["backend.go"],
+    importpath = "loophid/pkg/backend",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//backend_service",
+        "//pkg/database",
+    ],
+)
+
+go_test(
+    name = "backend_test",
+    srcs = ["backend_test.go"],
+    embed = [":backend"],
+    deps = [
+        "//backend_service",
+        "//pkg/database",
+    ],
+)

@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"greyhole/pkg/client"
-	http_server "greyhole/pkg/http/server"
+	"loophid/pkg/client"
+	http_server "loophid/pkg/http/server"
 	"log"
 )
 

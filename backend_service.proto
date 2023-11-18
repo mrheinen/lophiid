@@ -11,6 +11,12 @@ message KeyValues {
   string key = 1;
   repeated string value = 2;
 }
+// Stores 1:1
+message KeyValue {
+  string key = 1;
+  string value = 2;
+}
+
 // Parsed URL values. Based on golang url.URL
 message ParsedURL {
   string scheme = 1;
@@ -31,7 +37,7 @@ message HttpRequest {
     string method = 2;
     int64 content_length = 3;
     ParsedURL parsed_url = 4;
-    repeated KeyValues header = 5;
+    repeated KeyValue header = 5;
     // TODO: Add cookies, parsed form data
     string body = 6;
     string remote_address = 7;
@@ -41,8 +47,8 @@ message HttpRequest {
 message HttpResponse {
     int64 code = 1;
     string body = 2;
-    repeated KeyValues header = 3;
-    repeated KeyValues cookie = 4;
+    repeated KeyValue header = 3;
+    repeated KeyValue cookie = 4;
 }
 
 message HandleProbeRequest {

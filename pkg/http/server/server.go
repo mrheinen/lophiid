@@ -2,8 +2,8 @@ package http_server
 
 import (
 	"fmt"
-	"greyhole/backend_service"
-	"greyhole/pkg/client"
+	"loophid/backend_service"
+	"loophid/pkg/client"
 	"io"
 	"log"
 	"net/http"
@@ -90,9 +90,9 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for k, v := range r.Header {
-		pr.Request.Header = append(pr.Request.Header, &backend_service.KeyValues{
+		pr.Request.Header = append(pr.Request.Header, &backend_service.KeyValue{
 			Key:   k,
-			Value: v,
+			Value: v[0], // TODO: Check this
 		})
 	}
 
@@ -112,5 +112,11 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("got request for: %s\n", pr.RequestUri)
+
+	// At least one header is always set.
+	for _, h := range res.Response.Header {
+		w.Header().Set(h.Key, h.Value)
+
+	}
 	io.WriteString(w, res.GetResponse().Body)
 }

@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "database",
+    srcs = ["database.go"],
+    importpath = "loophid/pkg/database",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_vingarcia_ksql//:ksql",
+        "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
+    ],
+)

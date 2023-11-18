@@ -1,4 +1,4 @@
-module greyhole
+module loophid
 
 go 1.21.3
 
