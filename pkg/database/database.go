@@ -178,10 +178,10 @@ type FakeDatabaseClient struct {
 }
 
 func (f *FakeDatabaseClient) Close() {}
-func (f *FakeDatabaseClient) InsertContent(name string, content string, contentType string) (int64, error) {
+func (f *FakeDatabaseClient) InsertContent(name string, content string, contentType string, server string) (int64, error) {
 	return f.ContentIDToReturn, nil
 }
-func (f *FakeDatabaseClient) UpdateContent(id int64, name string, content string, contentType string) error {
+func (f *FakeDatabaseClient) UpdateContent(id int64, name string, content string, contentType string, server string) error {
 	return nil
 }
 func (f *FakeDatabaseClient) GetContentByID(id int64) (Content, error) {

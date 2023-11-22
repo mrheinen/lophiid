@@ -3,9 +3,8 @@ https://dev.to/techschoolguru/how-to-secure-grpc-connection-with-ssl-tls-in-go-4
 
 Show vulnerable landing pages, random server headers.
 
-
 Rename contentlocation.location to path
-Add Server header to content database and response.
+x Add Server header to content database and response.
 
 Allow multiple content to match a single content rule. Pick a random one OR
 sequantial (make it optional).
@@ -14,3 +13,9 @@ Allow notes and links to be added to content. Also store software somewhere.
 Maybe even CVEs.
 
 Create a page with links to all content rules. Only indexable by Google ;P
+
+Allow bruteforcing of login pages.
+
+If multiple content rules match, instead of returning a random one, track per IP
+which one was already returned and return another.
+

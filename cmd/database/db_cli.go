@@ -11,6 +11,7 @@ var contentAdd = flag.Bool("content-add", false, "Add content")
 var contentFile = flag.String("content-file", "", "Content file to read data from")
 var contentName = flag.String("content-name", "", "Name of the content")
 var contentType = flag.String("content-type", "text/plain", "Content-type header value")
+var contentServer = flag.String("content-server", "Apache", "Content server header")
 var contentList = flag.Bool("content-list", false, "List all content")
 var contentDel = flag.Bool("content-del", false, "Delete content with the ID given with --id")
 var databaseID = flag.Int64("id", 0, "Database ID to be used with other operations")
@@ -61,7 +62,7 @@ func main() {
 			return
 		}
 
-		id, err := dbc.InsertContent(*contentName, string(dat), *contentType)
+		id, err := dbc.InsertContent(*contentName, string(dat), *contentType, *contentServer)
 		if err != nil {
 			fmt.Printf("inserting content to database: %s", err)
 			return

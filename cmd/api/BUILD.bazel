@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/database",
-        "@com_github_gorilla_mux//:go_default_library",
+        "@com_github_gorilla_mux//:mux",
     ],
 )
 
