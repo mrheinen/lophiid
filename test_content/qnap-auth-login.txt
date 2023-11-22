@@ -1,0 +1,8 @@
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<QDocRoot version="1.0">
+<doQuick><![CDATA[]]></doQuick><is_booting><![CDATA[0]]></is_booting><mediaReady><![CDATA[1]]></mediaReady><shutdown_info><type><![CDATA[-1]]></type><timestamp><![CDATA[0]]></timestamp><duration><![CDATA[0]]></duration></shutdown_info>
+<hostname><![CDATA[QNAP-NB]]></hostname><DemoSiteSuppurt><![CDATA[no]]></DemoSiteSuppurt><webAccessPort><![CDATA[8080]]></webAccessPort><stunnelEnabled><![CDATA[1]]></stunnelEnabled><stunnelPort><![CDATA[443]]></stunnelPort><support_ksmbd><![CDATA[no]]></support_ksmbd><passwdConstraints><passwdConstraint01><![CDATA[0]]></passwdConstraint01><passwdConstraint02><![CDATA[0]]></passwdConstraint02><passwdConstraint03><![CDATA[0]]></passwdConstraint03><passwdConstraint04><![CDATA[0]]></passwdConstraint04><pw_constraint01_opt><![CDATA[3]]></pw_constraint01_opt><pw_constraint01_letter><![CDATA[0]]></pw_constraint01_letter><pw_min_limit_en><![CDATA[1]]></pw_min_limit_en><pw_min_limit><![CDATA[8]]></pw_min_limit></passwdConstraints>
+<ts><![CDATA[78306801]]></ts><fwNotice><![CDATA[0]]></fwNotice><title><![CDATA[]]></title><content><![CDATA[]]></content><psType><![CDATA[1]]></psType><standard_massage><![CDATA[]]></standard_massage><standard_color><![CDATA[#FFFFFF]]></standard_color><standard_size><![CDATA[12 px]]></standard_size><standard_bg_style><![CDATA[fill]]></standard_bg_style><showVersion><![CDATA[0]]></showVersion><show_link><![CDATA[1]]></show_link><cuid><![CDATA[ef51bd583709f71ed0d6ec90961822c5]]></cuid><auth_method><![CDATA[ck]]></auth_method><mfa_support></mfa_support>
+<function_support><![CDATA[redirect_url,xs-auth-redirect,passwordless_login,multi_2sv,app_privilege]]></function_support></QDocRoot>
+

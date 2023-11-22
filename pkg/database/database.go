@@ -13,18 +13,20 @@ var ContentTable = ksql.NewTable("content")
 var ContentRuleTable = ksql.NewTable("content_rule")
 
 type Content struct {
-	ID          int64     `ksql:"id,skipInserts"`
-	Content     string    `ksql:"content"`
-	Name        string    `ksql:"name"`
-	ContentType string    `ksql:"content_type"`
-	CreatedAt   time.Time `ksql:"created_at,skipInserts"`
-	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC"`
+	ID          int64     `ksql:"id,skipInserts" json:"id"`
+	Content     string    `ksql:"content"        json:"content"`
+	Name        string    `ksql:"name"           json:"name"`
+	ContentType string    `ksql:"content_type"   json:"content_type"`
+	Server      string    `ksql:"server"         json:"server"`
+	CreatedAt   time.Time `ksql:"created_at,skipInserts" json:"created_at"`
+	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC"  json:"updated_at"`
 }
 
 type PartialContent struct {
 	ID          int64     `ksql:"id,skipInserts"`
 	Content     string    `ksql:"content"`
 	ContentType string    `ksql:"content_type"`
+	Server      string    `ksql:"server"`
 	Name        string    `ksql:"name"`
 	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC"`
 }
@@ -54,8 +56,8 @@ type PartialContentRule struct {
 
 type DatabaseClient interface {
 	Close()
-	InsertContent(name string, content string, contentType string) (int64, error)
-	UpdateContent(id int64, name string, content string, contentType string) error
+	InsertContent(name string, content string, contentType string, server string) (int64, error)
+	UpdateContent(id int64, name string, content string, contentType string, server string) error
 	GetContentByID(id int64) (Content, error)
 	GetContent() ([]Content, error)
 	DeleteContent(id int64) error
@@ -93,23 +95,25 @@ func (d *PostgresClient) Close() {
 // InsertContent creates a new row in the content table, It does not check
 // whether there already is a similar entry. This because we allow multiple
 // entries with the same name.
-func (d *PostgresClient) InsertContent(name string, content string, contentType string) (int64, error) {
+func (d *PostgresClient) InsertContent(name string, content string, contentType string, server string) (int64, error) {
 	ct := &Content{
 		Name:        name,
 		Content:     content,
 		ContentType: contentType,
+		Server:      server,
 	}
 
 	err := d.db.Insert(d.ctx, ContentTable, ct)
 	return ct.ID, err
 }
 
-func (d *PostgresClient) UpdateContent(id int64, name string, content string, contentType string) error {
+func (d *PostgresClient) UpdateContent(id int64, name string, content string, contentType string, server string) error {
 	ct := &PartialContent{
 		ID:          id,
 		Name:        name,
 		Content:     content,
 		ContentType: contentType,
+		Server:      server,
 	}
 	return d.db.Patch(d.ctx, ContentTable, ct)
 }

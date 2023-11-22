@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "api_lib",
+    srcs = ["api_server.go"],
+    importpath = "loophid/cmd/api",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/database",
+        "@com_github_gorilla_mux//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "api",
+    embed = [":api_lib"],
+    visibility = ["//visibility:public"],
+)

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"loophid/pkg/database"
 	"loophid/backend_service"
+	"loophid/pkg/database"
 )
 
 type BackendServer struct {
@@ -56,9 +56,14 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			Body: content.Content,
 		}
 
+		// Append custom headers
 		res.Header = append(res.Header, &backend_service.KeyValue{
 			Key:   "Content-type",
 			Value: content.ContentType,
+		})
+		res.Header = append(res.Header, &backend_service.KeyValue{
+			Key:   "Server",
+			Value: content.Server,
 		})
 	}
 

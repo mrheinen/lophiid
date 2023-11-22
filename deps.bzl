@@ -352,6 +352,13 @@ def go_dependencies():
         version = "v1.3.1",
     )
     go_repository(
+        name = "com_github_gorilla_mux",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/gorilla/mux",
+        sum = "h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=",
+        version = "v1.8.1",
+    )
+    go_repository(
         name = "com_github_gorilla_websocket",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/gorilla/websocket",

@@ -12,6 +12,7 @@ CREATE TABLE content (
   name            VARCHAR(256) NOT NULL,
   content         TEXT NOT NULL,
   content_type    VARCHAR(256) NOT NULL,
+  server          VARCHAR(256) NOT NULL,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
