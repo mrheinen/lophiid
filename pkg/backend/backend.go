@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"regexp"
+	"strings"
 	"time"
 
 	"loophid/backend_service"
@@ -34,14 +36,31 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	var matchedRules []*database.ContentRule
 	for _, rule := range s.safeRules.GetRules() {
 		reqPath := req.Request.GetParsedUrl().Path
+
+		matched := false
 		switch rule.PathMatching {
 		case "exact":
-			if reqPath == rule.Path {
-				matchedRules = append(matchedRules, &rule)
+			matched = (reqPath == rule.Path)
+		case "prefix":
+			matched = strings.HasPrefix(reqPath, rule.Path)
+		case "suffix":
+			matched = strings.HasSuffix(reqPath, rule.Path)
+		case "contains":
+			matched = strings.Contains(reqPath, rule.Path)
+		case "regex":
+			var err error
+			matched, err = regexp.MatchString(rule.Path, reqPath)
+			// Most cases should be catched when validating a contentrule upon
+			// creation.
+			if err != nil {
+				fmt.Printf("Invalid regex: %s", err)
 			}
 		}
-	}
 
+		if matched {
+			matchedRules = append(matchedRules, &rule)
+		}
+	}
 	if len(matchedRules) == 0 {
 		return &backend_service.HandleProbeResponse{
 			Response: &backend_service.HttpResponse{

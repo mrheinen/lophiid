@@ -61,8 +61,9 @@ type DatabaseClient interface {
 	GetContentByID(id int64) (Content, error)
 	GetContent() ([]Content, error)
 	DeleteContent(id int64) error
-	InsertContentRule(id int64, path string, pathMatching string, method string, body string, bodyMatching string) (int64, error)
-	UpdateContentRule(id int64, path string, contentId int64) error
+	InsertContentRule(contentId int64, path string, pathMatching string, method string, body string, bodyMatching string) (int64, error)
+	UpdateContentRule(id int64, contentId int64, path string, pathMatching string, method string, body string, bodyMatching string) error
+	GetContentRuleByID(id int64) (ContentRule, error)
 	GetContentRules() ([]ContentRule, error)
 	DeleteContentRule(id int64) error
 }
@@ -134,10 +135,10 @@ func (d *PostgresClient) DeleteContent(id int64) error {
 	return d.db.Delete(d.ctx, ContentTable, id)
 }
 
-func (d *PostgresClient) InsertContentRule(id int64, path string, pathMatching string, method string, body string, bodyMatching string) (int64, error) {
+func (d *PostgresClient) InsertContentRule(contentId int64, path string, pathMatching string, method string, body string, bodyMatching string) (int64, error) {
 	cl := &ContentRule{
 		Path:         path,
-		ContentID:    id,
+		ContentID:    contentId,
 		PathMatching: pathMatching,
 		Method:       method,
 		Body:         body,
@@ -148,14 +149,24 @@ func (d *PostgresClient) InsertContentRule(id int64, path string, pathMatching s
 	return cl.ID, err
 }
 
-func (d *PostgresClient) UpdateContentRule(id int64, path string, contentId int64) error {
+func (d *PostgresClient) UpdateContentRule(id int64, contentId int64, path string, pathMatching string, method string, body string, bodyMatching string) error {
 	cl := &PartialContentRule{
-		ID:        id,
-		Path:      path,
-		ContentID: contentId,
+		ID:           id,
+		Path:         path,
+		PathMatching: pathMatching,
+		ContentID:    contentId,
+		Body:         body,
+		BodyMatching: bodyMatching,
+		Method:       method,
 	}
 
 	return d.db.Patch(d.ctx, ContentRuleTable, cl)
+}
+
+func (d *PostgresClient) GetContentRuleByID(id int64) (ContentRule, error) {
+	cr := ContentRule{}
+	err := d.db.QueryOne(d.ctx, &cr, fmt.Sprintf("FROM content_rule WHERE id = %d", id))
+	return cr, err
 }
 
 func (d *PostgresClient) GetContentRules() ([]ContentRule, error) {
@@ -173,35 +184,39 @@ func (d *PostgresClient) DeleteContentRule(id int64) error {
 type FakeDatabaseClient struct {
 	ContentIDToReturn     int64
 	ContentToReturn       Content
+	ErrorToReturn         error
 	ContentRuleIDToReturn int64
 	ContentRuleToReturn   ContentRule
 }
 
 func (f *FakeDatabaseClient) Close() {}
 func (f *FakeDatabaseClient) InsertContent(name string, content string, contentType string, server string) (int64, error) {
-	return f.ContentIDToReturn, nil
+	return f.ContentIDToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) UpdateContent(id int64, name string, content string, contentType string, server string) error {
-	return nil
+	return f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) GetContentRuleByID(id int64) (ContentRule, error) {
+	return f.ContentRuleToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetContentByID(id int64) (Content, error) {
-	return f.ContentToReturn, nil
+	return f.ContentToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetContent() ([]Content, error) {
-	return []Content{f.ContentToReturn}, nil
+	return []Content{f.ContentToReturn}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) DeleteContent(id int64) error {
-	return nil
+	return f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) InsertContentRule(id int64, path string, pathMatching string, method string, body string, bodyMatching string) (int64, error) {
-	return f.ContentRuleIDToReturn, nil
+	return f.ContentRuleIDToReturn, f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) UpdateContentRule(id int64, path string, contentId int64) error {
-	return nil
+func (f *FakeDatabaseClient) UpdateContentRule(id int64, contentId int64, path string, pathMatching string, method string, body string, bodyMatching string) error {
+	return f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetContentRules() ([]ContentRule, error) {
-	return []ContentRule{f.ContentRuleToReturn}, nil
+	return []ContentRule{f.ContentRuleToReturn}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) DeleteContentRule(id int64) error {
-	return nil
+	return f.ErrorToReturn
 }

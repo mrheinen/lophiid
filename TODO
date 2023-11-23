@@ -19,3 +19,5 @@ Allow bruteforcing of login pages.
 If multiple content rules match, instead of returning a random one, track per IP
 which one was already returned and return another.
 
+Check regex for contentrule when creating or updating the entry
+

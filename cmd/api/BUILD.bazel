@@ -6,6 +6,7 @@ go_library(
     importpath = "loophid/cmd/api",
     visibility = ["//visibility:private"],
     deps = [
+        "//pkg/api",
         "//pkg/database",
         "@com_github_gorilla_mux//:mux",
     ],
