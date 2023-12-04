@@ -12,10 +12,26 @@ type ApiServer struct {
 	dbc database.DatabaseClient
 }
 
-type HttpResult struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
+type HttpContentResult struct {
+	Status   string             `json:"status"`
+	Message  string             `json:"message"`
+	Contents []database.Content `json:"contents"`
 }
+
+type HttpContentRuleResult struct {
+	Status       string                 `json:"status"`
+	Message      string                 `json:"message"`
+	ContentRules []database.ContentRule `json:"content_rules"`
+}
+
+type HttpRequestsResult struct {
+	Status   string             `json:"status"`
+	Message  string             `json:"message"`
+	Requests []database.Request `json:"requests"`
+}
+
+const ResultSuccess = "OK"
+const ResultError = "ERR"
 
 func NewApiServer(dbc database.DatabaseClient) *ApiServer {
 	return &ApiServer{
@@ -24,191 +40,208 @@ func NewApiServer(dbc database.DatabaseClient) *ApiServer {
 }
 
 func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	var rb database.ContentRule
+	rb.ID = 0
 
-	res := HttpResult{}
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
 
-	if err := req.ParseForm(); err != nil {
-		json.NewEncoder(w).Encode(HttpResult{
-			Status:  "NOK",
+	if err := d.Decode(&rb); err != nil {
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultError,
 			Message: err.Error(),
 		})
 		return
 	}
 
-	id := req.Form.Get("id")
-	contentId := req.Form.Get("content_id")
-	path := req.Form.Get("path")
-	pathMatching := req.Form.Get("path_matching")
-	body := req.Form.Get("body")
-	bodyMatching := req.Form.Get("body_matching")
-	method := req.Form.Get("method")
+	fmt.Printf("%v\n\n", rb)
 
-	// We allow the 'content' parameter to be empty to simulate empty replies.
-	if contentId == "" || path == "" {
-		res.Status = "NOK"
-		res.Message = "Empty parameters given"
-		json.NewEncoder(w).Encode(res)
+	if rb.ContentID == 0 || rb.Path == "" {
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultError,
+			Message: "Empty parameters given",
+		})
 		return
 	}
 
-	icontentId, err := strconv.ParseInt(contentId, 10, 64)
-	if err != nil {
-		res.Status = "NOK"
-		res.Message = fmt.Sprintf("Unable to parse Content ID %s: %s", contentId, err.Error())
-		json.NewEncoder(w).Encode(res)
-		return
-	}
-
-	if id == "" {
+	if rb.ID == 0 {
 		// This is an insert
-		nid, err := a.dbc.InsertContentRule(icontentId, path, pathMatching, method, body, bodyMatching)
+		//nid, err := a.dbc.InsertContentRule(rb.ContentID, rb.Path, rb.PathMatching, rb.Method, rb.Body, rb.BodyMatching)
+		nid, err := a.dbc.InsertContentRule(&rb)
 		if err != nil {
-			res.Status = "NOK"
-			res.Message = fmt.Sprintf("Unable to update %d: %s", nid, err.Error())
-			json.NewEncoder(w).Encode(res)
+			json.NewEncoder(w).Encode(HttpContentRuleResult{
+				Status:  ResultError,
+				Message: fmt.Sprintf("Unable to update %d: %s", nid, err.Error()),
+			})
 			return
 		}
 
-		json.NewEncoder(w).Encode(HttpResult{
-			Status:  "OK",
-			Message: fmt.Sprintf("Added new content (id: %d)", nid),
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultSuccess,
+			Message: fmt.Sprintf("Added new rule (id: %d)", nid),
 		})
 		return
 	} else {
 
 		// This is an update.
-		intID, err := strconv.ParseInt(id, 10, 64)
+		err := a.dbc.UpdateContentRule(&rb)
 		if err != nil {
-			res.Status = "NOK"
-			res.Message = fmt.Sprintf("Unable to parse ID %s: %s", id, err.Error())
-			json.NewEncoder(w).Encode(res)
-			return
-		}
-
-		err = a.dbc.UpdateContentRule(intID, icontentId, path, pathMatching, method, body, bodyMatching)
-		if err != nil {
-			json.NewEncoder(w).Encode(HttpResult{
-				Status:  "NOK",
+			json.NewEncoder(w).Encode(HttpContentRuleResult{
+				Status:  ResultError,
 				Message: err.Error(),
 			})
 			return
 		}
 
-		json.NewEncoder(w).Encode(HttpResult{
-			Status:  "OK",
-			Message: "Updated content",
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultSuccess,
+			Message: "Updated rule",
 		})
 		return
 	}
 }
 
 func (a *ApiServer) HandleGetSingleContentRule(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
 	id := req.URL.Query().Get("id")
 	intID, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	cr, err := a.dbc.GetContentRuleByID(intID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = json.NewEncoder(w).Encode(cr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (a *ApiServer) HandleGetAllContentRules(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	crs, err := a.dbc.GetContentRules()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = json.NewEncoder(w).Encode(crs)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	res := HttpResult{}
-
-	if err := req.ParseForm(); err != nil {
-		json.NewEncoder(w).Encode(HttpResult{
-			Status:  "NOK",
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultError,
 			Message: err.Error(),
 		})
 		return
 	}
 
-	id := req.Form.Get("id")
-	name := req.Form.Get("name")
-	content := req.Form.Get("content")
-	contentType := req.Form.Get("content_type")
-	server := req.Form.Get("server")
-
-	// We allow the 'content' parameter to be empty to simulate empty replies.
-	if name == "" || contentType == "" || server == "" {
-		res.Status = "NOK"
-		res.Message = "Empty parameters given"
-		json.NewEncoder(w).Encode(res)
+	cr, err := a.dbc.GetContentRuleByID(intID)
+	if err != nil {
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
 		return
 	}
 
-	if id == "" {
+	err = json.NewEncoder(w).Encode(HttpContentRuleResult{
+		Status:       ResultSuccess,
+		ContentRules: []database.ContentRule{cr},
+	})
+
+	if err != nil {
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+	}
+}
+
+func (a *ApiServer) HandleGetAllContentRules(w http.ResponseWriter, req *http.Request) {
+	crs, err := a.dbc.GetContentRules()
+	if err != nil {
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(HttpContentRuleResult{
+		Status:       ResultSuccess,
+		ContentRules: crs,
+	}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (a *ApiServer) HandleDeleteContentRule(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	err = a.dbc.DeleteContentRule(intID)
+	if err != nil {
+		json.NewEncoder(w).Encode(HttpContentRuleResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(HttpContentRuleResult{
+		Status:  ResultSuccess,
+		Message: fmt.Sprintf("Deleted rule with ID: %s", id),
+	})
+}
+
+func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.Request) {
+	var rb database.Content
+	rb.ID = 0
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&rb); err != nil {
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	fmt.Printf("%v\n\n", rb)
+
+	// We allow the 'content' parameter to be empty to simulate empty replies.
+	if rb.Name == "" || rb.ContentType == "" || rb.Server == "" {
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: "Empty parameters given.",
+		})
+		return
+	}
+
+	if rb.ID == 0 {
 		// This is an insert
-		nid, err := a.dbc.InsertContent(name, content, contentType, server)
+		nid, err := a.dbc.InsertContent(&rb)
 		if err != nil {
-			res.Status = "NOK"
-			res.Message = fmt.Sprintf("Unable to update %d: %s", nid, err.Error())
-			json.NewEncoder(w).Encode(res)
+			json.NewEncoder(w).Encode(HttpContentResult{
+				Status:  ResultError,
+				Message: fmt.Sprintf("Unable to update %d: %s", nid, err.Error()),
+			})
 			return
 		}
 
-		json.NewEncoder(w).Encode(HttpResult{
-			Status:  "OK",
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultSuccess,
 			Message: fmt.Sprintf("Added new content (id: %d)", nid),
 		})
 		return
 	} else {
 
-		// This is an update.
-		intID, err := strconv.ParseInt(id, 10, 64)
+		err := a.dbc.UpdateContent(&rb)
 		if err != nil {
-			res.Status = "NOK"
-			res.Message = fmt.Sprintf("Unable to parse ID %s: %s", id, err.Error())
-			json.NewEncoder(w).Encode(res)
-			return
-		}
-
-		err = a.dbc.UpdateContent(intID, name, content, contentType, server)
-		if err != nil {
-			json.NewEncoder(w).Encode(HttpResult{
-				Status:  "NOK",
+			json.NewEncoder(w).Encode(HttpContentResult{
+				Status:  ResultError,
 				Message: err.Error(),
 			})
 			return
 		}
 
-		json.NewEncoder(w).Encode(HttpResult{
-			Status:  "OK",
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultSuccess,
 			Message: "Updated content",
 		})
 		return
@@ -216,39 +249,97 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 }
 
 func (a *ApiServer) HandleGetSingleContent(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
 	id := req.URL.Query().Get("id")
 	intID, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
 		return
 	}
 
 	cts, err := a.dbc.GetContentByID(intID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(cts)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	ret := HttpContentResult{
+		Status: ResultSuccess,
+		Contents: []database.Content{
+			cts,
+		},
 	}
+	json.NewEncoder(w).Encode(ret)
 }
 
 func (a *ApiServer) HandleGetAllContent(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	cts, err := a.dbc.GetContent()
 	if err != nil {
-		fmt.Printf("getting content: %s\n", err)
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
 	}
 
-	json.NewEncoder(w).Encode(cts)
+	json.NewEncoder(w).Encode(HttpContentResult{
+		Status:   ResultSuccess,
+		Contents: cts,
+	})
+}
+
+func (a *ApiServer) HandleDeleteContent(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
 	if err != nil {
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	err = a.dbc.DeleteContent(intID)
+	if err != nil {
+		json.NewEncoder(w).Encode(HttpContentResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode(HttpContentResult{
+		Status:  ResultSuccess,
+		Message: fmt.Sprintf("Deleted Content with ID: %s", id),
+	})
+}
+
+func (a *ApiServer) HandleGetAllRequests(w http.ResponseWriter, req *http.Request) {
+	reqs, err := a.dbc.GetRequests()
+	if err != nil {
+		json.NewEncoder(w).Encode(HttpRequestsResult{
+			Status:  ResultError,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(HttpRequestsResult{
+		Status:   ResultSuccess,
+		Requests: reqs,
+	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

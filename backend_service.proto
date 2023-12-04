@@ -41,6 +41,7 @@ message HttpRequest {
     // TODO: Add cookies, parsed form data
     string body = 6;
     string remote_address = 7;
+    string raw = 8;
 }
 
 // Contains all information needed to send an HTTP reply.

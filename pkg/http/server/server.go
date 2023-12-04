@@ -2,11 +2,12 @@ package http_server
 
 import (
 	"fmt"
-	"loophid/backend_service"
-	"loophid/pkg/client"
 	"io"
 	"log"
+	"loophid/backend_service"
+	"loophid/pkg/client"
 	"net/http"
+	"net/http/httputil"
 )
 
 type HttpServer struct {
@@ -54,9 +55,16 @@ func (h *HttpServer) Start() error {
 // catchAll receives all HTTP requests.  It parses the requests and sends them
 // to the backend using grpc. The backend will the tell catchAll how to respond.
 func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
+
+	raw, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		fmt.Printf("Problem decoding requests: %s", err)
+	}
+
 	pr := &backend_service.HandleProbeRequest{
 		RequestUri: r.RequestURI,
 		Request: &backend_service.HttpRequest{
+			Raw:           string(raw),
 			Method:        r.Method,
 			Proto:         r.Proto,
 			ContentLength: r.ContentLength,

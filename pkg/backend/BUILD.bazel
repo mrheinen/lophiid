@@ -4,6 +4,7 @@ go_library(
     name = "backend",
     srcs = [
         "backend.go",
+        "request_queue.go",
         "safe_rules.go",
     ],
     importpath = "loophid/pkg/backend",
@@ -16,7 +17,10 @@ go_library(
 
 go_test(
     name = "backend_test",
-    srcs = ["backend_test.go"],
+    srcs = [
+        "backend_test.go",
+        "request_queue_test.go",
+    ],
     embed = [":backend"],
     deps = [
         "//backend_service",

@@ -21,3 +21,14 @@ which one was already returned and return another.
 
 Check regex for contentrule when creating or updating the entry
 
+Write more tests for API server.
+
+Add autocomplete for web IU things like the content type field.
+
+Store raw requests and body as []byte in protobuf
+
+Proper slog implementation - add LogValue to fields
+
+Support macros in response (e.g. {{%%IP%%}})
+
+Allow multiple servers to be specified per content.
