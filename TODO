@@ -21,7 +21,6 @@ which one was already returned and return another.
 
 Check regex for contentrule when creating or updating the entry
 
-Write more tests for API server.
 
 Add autocomplete for web IU things like the content type field.
 
@@ -32,3 +31,15 @@ Proper slog implementation - add LogValue to fields
 Support macros in response (e.g. {{%%IP%%}})
 
 Allow multiple servers to be specified per content.
+
+reWrite more tests for API server.
+
+Finish the requests UI interface
+
+Add "application" and link content and rules to the application. Also display
+them as such.
+
+For a new rule, show how many requests would have matched.
+
+Per rule, allow a port to be specified.
+

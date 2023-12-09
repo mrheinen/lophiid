@@ -11,6 +11,7 @@ CREATE TABLE content (
   id              SERIAL PRIMARY KEY,
   name            VARCHAR(256) NOT NULL,
   content         TEXT NOT NULL,
+  description     TEXT NOT NULL,
   content_type    VARCHAR(256) NOT NULL,
   server          VARCHAR(256) NOT NULL,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -33,18 +34,23 @@ CREATE TABLE content_rule (
   body            VARCHAR(2048),
   body_matching   MATCHING_TYPE,
   method          METHOD_TYPE,
-  content_id      INT,
+  content_id      INT NOT NULL,
+  port            INT NOT NULL DEFAULT 0,
+  app_id          INT DEFAULT 0,
   CONSTRAINT fk_content_id FOREIGN KEY(content_id) REFERENCES content(id)
 );
 
-CREATE TABLE actor (
+CREATE TABLE app (
   id              SERIAL PRIMARY KEY,
+  name            VARCHAR(512),
+  vendor          VARCHAR(512),
+  version         VARCHAR(512),
+  os              VARCHAR(512),
+  link            VARCHAR(2048),
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  ip              VARCHAR(15),
-  hostname        VARCHAR(512),
-  role            ACTOR_ROLE_TYPE
+  updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
 
 CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
@@ -61,8 +67,12 @@ CREATE TABLE request (
   source_ip       VARCHAR(512),
   source_port     INT,
   raw             TEXT,
+  time_received   TIMESTAMP NOT NULL DEFAULT NOW(),
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
+  updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  honeypot_ip     VARCHAR(15),
+  content_id      INT,
+  rule_id         INT
 );
 
 GRANT ALL PRIVILEGES ON content TO lo;
@@ -71,3 +81,7 @@ GRANT ALL PRIVILEGES ON content_rule TO lo;
 GRANT ALL PRIVILEGES ON content_rule_id_seq TO lo;
 GRANT ALL PRIVILEGES ON request TO lo;
 GRANT ALL PRIVILEGES ON request_id_seq TO lo;
+GRANT ALL PRIVILEGES ON app TO lo;
+GRANT ALL PRIVILEGES ON app_id_seq TO lo;
+
+

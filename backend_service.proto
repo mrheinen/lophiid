@@ -33,15 +33,17 @@ message ParsedURL {
 
 // HttpRequest represents the HTTP request that is received from client.
 message HttpRequest {
-    string proto = 1;
-    string method = 2;
-    int64 content_length = 3;
-    ParsedURL parsed_url = 4;
-    repeated KeyValue header = 5;
+    int64 time_received = 1;
+    string proto = 2;
+    string method = 3;
+    int64 content_length = 4;
+    ParsedURL parsed_url = 5;
+    repeated KeyValue header = 6;
     // TODO: Add cookies, parsed form data
-    string body = 6;
-    string remote_address = 7;
-    string raw = 8;
+    string body = 7;
+    string remote_address = 8;
+    string honeypot_ip = 9;
+    string raw = 10;
 }
 
 // Contains all information needed to send an HTTP reply.

@@ -8,33 +8,37 @@ import (
 	"loophid/pkg/client"
 	"net/http"
 	"net/http/httputil"
+	"time"
 )
 
 type HttpServer struct {
-	mux     *http.ServeMux
-	client  client.BackendClient
-	ssl     bool
-	sslCert string
-	sslKey  string
-	port    int64
+	mux      *http.ServeMux
+	client   client.BackendClient
+	ssl      bool
+	sslCert  string
+	sslKey   string
+	port     int64
+	publicIP string
 }
 
 // NewHttpServer creates a new initialized HttpServer struct.
-func NewHttpServer(c client.BackendClient, port int64) *HttpServer {
+func NewHttpServer(c client.BackendClient, port int64, publicIP string) *HttpServer {
 	return &HttpServer{
-		client: c,
-		ssl:    false,
-		port:   port,
+		client:   c,
+		ssl:      false,
+		port:     port,
+		publicIP: publicIP,
 	}
 }
 
-func NewSSLHttpServer(c client.BackendClient, port int64, sslCert string, sslKey string) *HttpServer {
+func NewSSLHttpServer(c client.BackendClient, port int64, sslCert string, sslKey string, publicIP string) *HttpServer {
 	return &HttpServer{
-		client:  c,
-		ssl:     true,
-		sslCert: sslCert,
-		sslKey:  sslKey,
-		port:    port,
+		client:   c,
+		ssl:      true,
+		sslCert:  sslCert,
+		sslKey:   sslKey,
+		port:     port,
+		publicIP: publicIP,
 	}
 }
 
@@ -64,11 +68,14 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 	pr := &backend_service.HandleProbeRequest{
 		RequestUri: r.RequestURI,
 		Request: &backend_service.HttpRequest{
+			TimeReceived:  time.Now().Unix(),
 			Raw:           string(raw),
 			Method:        r.Method,
 			Proto:         r.Proto,
 			ContentLength: r.ContentLength,
 			RemoteAddress: r.RemoteAddr,
+			HoneypotIp:    h.publicIP,
+
 			ParsedUrl: &backend_service.ParsedURL{
 				Scheme:   r.URL.Scheme,
 				User:     r.URL.User.Username(),
@@ -82,8 +89,7 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// Important to keep in mind that a parameter might be repeated with the same
-	// name but a different value.
+	// Important to keep in mind that a parameter might be repeated with the same name but a different value.
 	for k, v := range r.URL.Query() {
 		pr.Request.ParsedUrl.Query = append(pr.Request.ParsedUrl.Query,
 			&backend_service.KeyValues{

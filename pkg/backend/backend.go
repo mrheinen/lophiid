@@ -2,9 +2,11 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math/rand"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -24,10 +26,11 @@ type BackendServer struct {
 
 func NewBackendServer(c database.DatabaseClient) *BackendServer {
 	return &BackendServer{
-		dbClient:      c,
-		safeRules:     &SafeRules{},
-		safeRulesChan: make(chan bool),
-		reqsQueue:     &RequestQueue{},
+		dbClient:        c,
+		safeRules:       &SafeRules{},
+		safeRulesChan:   make(chan bool),
+		reqsProcessChan: make(chan bool),
+		reqsQueue:       &RequestQueue{},
 	}
 }
 
@@ -35,6 +38,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()))
 
 	sReq := database.Request{
+		TimeReceived:  time.Unix(req.GetRequest().GetTimeReceived(), 0),
 		Proto:         req.GetRequest().GetProto(),
 		Method:        req.GetRequest().GetMethod(),
 		Uri:           req.GetRequestUri(),
@@ -43,17 +47,21 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		ContentLength: req.GetRequest().GetContentLength(),
 		Body:          req.GetRequest().GetBody(),
 		Raw:           req.GetRequest().GetRaw(),
+		HoneypotIP:    req.GetRequest().GetHoneypotIp(),
 	}
+
+	defer s.reqsQueue.Push(&sReq)
+
 	remoteAddrParts := strings.Split(req.GetRequest().GetRemoteAddress(), ":")
-	if len(remoteAddrParts) == 2 {
-		sReq.SourceIP = remoteAddrParts[0]
-		port, err := strconv.Atoi(remoteAddrParts[1])
-		if err != nil {
-			slog.Warn("Unable to convert source IP", slog.String("error", err.Error()))
-		} else {
-			sReq.SourcePort = int64(port)
-		}
+	if len(remoteAddrParts) != 2 {
+		return nil, fmt.Errorf("IP/port cannot be parsed from : %s", req.GetRequest().GetRemoteAddress())
 	}
+	sReq.SourceIP = remoteAddrParts[0]
+	port, err := strconv.Atoi(remoteAddrParts[1])
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse IP: %s", err)
+	}
+	sReq.SourcePort = int64(port)
 
 	// TODO: Add more headers here, in the struct, proto and database.
 	for _, h := range req.GetRequest().GetHeader() {
@@ -65,12 +73,14 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	}
 
-	// Put it in the queue so it can be stored async in the db.
-	s.reqsQueue.Push(&sReq)
-
 	var res *backend_service.HttpResponse
 	var matchedRules []database.ContentRule
 	for _, rule := range s.safeRules.GetRules() {
+		// Port 0 means any port.
+		if rule.Port != 0 && rule.Port != req.GetRequest().GetParsedUrl().GetPort() {
+			continue
+		}
+
 		reqPath := req.GetRequest().GetParsedUrl().GetPath()
 
 		matched := false
@@ -98,6 +108,9 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	}
 	if len(matchedRules) == 0 {
+		// TODO: set this to a default rule
+		sReq.ContentID = 0
+		sReq.RuleID = 0
 		return &backend_service.HandleProbeResponse{
 			Response: &backend_service.HttpResponse{
 				Body: "maybe",
@@ -105,12 +118,47 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}, nil
 	}
 
-	// Select a random rule if multiple matched.
 	matchedRule := matchedRules[0]
 	if len(matchedRules) > 1 {
-		matchedRule = matchedRules[rand.Int()%len(matchedRules)]
+		// TODO: cache this and keep a local version up to date. Maybe update async
+		// sync with the database.
+		cIdMap, err := s.dbClient.GetRequestUniqueKeyPerSourceIP()
+		if err != nil {
+			slog.Warn("fetching content table: %s", err.Error())
+			// In this case we'll just take a random one.
+			matchedRule = matchedRules[rand.Int()%len(matchedRules)]
+		} else {
+			matched := false
+			for _, r := range matchedRules {
+				// We combine the content and rule ID here because some rules can point
+				// to the same content but with different settings (e.g. server,
+				// content-type) so we want all combinations.
+				k := fmt.Sprintf("%d-%d", r.ID, r.ContentID)
+				if !slices.Contains(cIdMap[sReq.SourceIP], k) {
+					matchedRule = r
+					matched = true
+					break
+				}
+			}
+
+			if !matched {
+				// In this case all rule content combinations have been served at least
+				// once to this target. We send a random one.
+				matchedRule = matchedRules[rand.Int()%len(matchedRules)]
+			}
+		}
 	}
 
+	// Put it in the queue so it can be stored async in the db. We don't know if
+	// the fetching and serving of content below works. However, we assume it will
+	// on purpose so that when a rule has multiple content and one is
+	// failing/gone; the next request that matches the rule will be skipping this
+	// content.
+	sReq.ContentID = matchedRule.ContentID
+	sReq.RuleID = matchedRule.ID
+
+	// Take all rule IDs.
+	// Get all content IDs for source IP in last X time.
 	slog.Debug("Fetching content", slog.Int64("content_id", matchedRule.ContentID))
 	content, err := s.dbClient.GetContentByID(matchedRule.ContentID)
 	if err != nil {
@@ -147,7 +195,7 @@ func (s *BackendServer) LoadRules() error {
 
 func (s *BackendServer) ProcessReqsQueue() {
 	for req := s.reqsQueue.Pop(); req != nil; req = s.reqsQueue.Pop() {
-		id, err := s.dbClient.InsertRequest(req)
+		id, err := s.dbClient.Insert(req)
 		if err != nil {
 			slog.Warn("Unable to save request", slog.String("error", err.Error()))
 			return

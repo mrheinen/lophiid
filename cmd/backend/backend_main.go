@@ -17,16 +17,31 @@ import (
 )
 
 var serverLocation = flag.String("s", "localhost:41110", "RPC server listen string")
+var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 
 func main() {
 
 	var programLevel = new(slog.LevelVar) // Info by default
 	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
-	programLevel.Set(slog.LevelDebug)
+
+	switch *logLevel {
+	case "info":
+		programLevel.Set(slog.LevelInfo)
+	case "warn":
+		programLevel.Set(slog.LevelWarn)
+	case "debug":
+		programLevel.Set(slog.LevelDebug)
+	case "error":
+		programLevel.Set(slog.LevelError)
+	default:
+		fmt.Printf("Unknown log level given. Using info")
+		programLevel.Set(slog.LevelInfo)
+	}
+
 	listener, err := net.Listen("tcp", *serverLocation)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		slog.Error("Error: %s\n", err)
 		return
 	}
 
@@ -35,7 +50,7 @@ func main() {
 		MaxOpenConns: 3,
 	})
 	if err != nil {
-		fmt.Printf("Error opening database: %s", err)
+		slog.Error("Error opening database: %s", err)
 		return
 	}
 
@@ -43,12 +58,12 @@ func main() {
 
 	bs := backend.NewBackendServer(dbc)
 	if err := bs.Start(); err != nil {
-		fmt.Printf("Error: %s", err)
+		slog.Error("Error: %s", err)
 	}
 
 	rpcServer := grpc.NewServer()
 	backend_service.RegisterBackendServiceServer(rpcServer, bs)
 	if err := rpcServer.Serve(listener); err != nil {
-		fmt.Printf("Error: %s\n", err)
+		slog.Error("Error: %s\n", err)
 	}
 }

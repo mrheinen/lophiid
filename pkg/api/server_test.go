@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -14,64 +15,74 @@ import (
 func TestUpsertSingleContent(t *testing.T) {
 	for _, test := range []struct {
 		description       string
-		queryString       string
+		content           database.Content
 		status            string
 		statusMsgContains string
 		statusCode        int
 		err               error
 	}{
 		{
-			description:       "Insert OK",
-			queryString:       "/?name=foo&content_type=text&server=Apache",
+			description: "Insert OK",
+			content: database.Content{
+				Name:        "Foo",
+				ContentType: "text/html",
+				Server:      "Apache",
+				Content:     "<b>Ai</b>",
+			},
 			status:            ResultSuccess,
 			statusMsgContains: "Added",
 			err:               nil,
 		},
 		{
-			description:       "Updated OK",
-			queryString:       "/?id=2&name=foo&content_type=text&server=Apache",
+			description: "Insert fail",
+			content: database.Content{
+				Name:        "Foo",
+				ContentType: "text/html",
+				Server:      "Apache",
+				Content:     "<b>Ai</b>",
+			},
+			status:            ResultError,
+			statusMsgContains: "Unable to insert",
+			err:               errors.New("fail"),
+		},
+		{
+			description: "Updated OK",
+			content: database.Content{
+				ID:          42,
+				Name:        "Foo",
+				ContentType: "text/html",
+				Server:      "Apache",
+				Content:     "<b>Ai</b>",
+			},
 			status:            ResultSuccess,
 			statusMsgContains: "Updated",
 			err:               nil,
 		},
 		{
-			description:       "Insert fails with error",
-			queryString:       "/?name=foo&content_type=text&server=Apache",
-			statusMsgContains: "fail",
+			description: "Updated fail",
+			content: database.Content{
+				ID:          42,
+				Name:        "Foo",
+				ContentType: "text/html",
+				Server:      "Apache",
+				Content:     "<b>Ai</b>",
+			},
 			status:            ResultError,
+			statusMsgContains: "Unable to update",
 			err:               errors.New("fail"),
-		},
-		{
-			description:       "Update fails with error",
-			queryString:       "/?id=2&name=foo&content_type=text&server=Apache",
-			statusMsgContains: "fail",
-			status:            ResultError,
-			err:               errors.New("fail"),
-		},
-		{
-			description:       "Update fails on ID",
-			queryString:       "/?id=FAIL&name=foo&content_type=text&server=Apache",
-			statusMsgContains: "Unable to parse",
-			status:            ResultError,
-			err:               nil,
-		},
-		{
-			description:       "Missing parameters",
-			queryString:       "/?id=32",
-			statusMsgContains: "parameters given",
-			status:            ResultError,
-			err:               nil,
 		},
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
-
 			fd := database.FakeDatabaseClient{
 				ErrorToReturn: test.err,
 			}
 			s := NewApiServer(&fd)
 
-			req := httptest.NewRequest(http.MethodGet, test.queryString, nil)
+			buf := new(bytes.Buffer)
+			json.NewEncoder(buf).Encode(test.content)
+
+			req := httptest.NewRequest(http.MethodPost, "/foo", strings.NewReader(buf.String()))
 			w := httptest.NewRecorder()
 			s.HandleUpsertSingleContent(w, req)
 			res := w.Result()
@@ -83,7 +94,7 @@ func TestUpsertSingleContent(t *testing.T) {
 				t.Errorf("reading response body: %s", err)
 			}
 
-			pdata := HttpContentResult{}
+			pdata := HttpResult{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
 			}
@@ -136,8 +147,10 @@ func TestGetSingleContent(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 
 			fd := database.FakeDatabaseClient{
-				ContentToReturn: database.Content{
-					Content: test.contentString,
+				ContentsToReturn: map[int64]database.Content{
+					42: database.Content{
+						Content: test.contentString,
+					},
 				},
 				ErrorToReturn: test.err,
 			}
@@ -155,7 +168,7 @@ func TestGetSingleContent(t *testing.T) {
 				t.Errorf("reading response body: %s", err)
 			}
 
-			pdata := HttpContentResult{}
+			pdata := HttpResult{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
 			}
@@ -167,12 +180,15 @@ func TestGetSingleContent(t *testing.T) {
 			// If the result is OK then we expect 1 Content to have returned and
 			// subsequently check if the expected content string is present.
 			if pdata.Status == ResultSuccess {
-				if len(pdata.Contents) != 1 {
-					t.Fatalf("unexpected contents len %d", len(pdata.Contents))
+				dataLen := len(pdata.Data.([]interface{}))
+				if dataLen != 1 {
+					t.Fatalf("unexpected contents len %d", dataLen)
 				}
 
-				if !strings.Contains(pdata.Contents[0].Content, test.contentString) {
-					t.Errorf("expected \"%s\" to contain \"%s\"", pdata.Contents[0].Content, test.contentString)
+				d := pdata.Data.([]interface{})[0]
+				dataContent := d.(database.Content).Content
+				if !strings.Contains(dataContent, test.contentString) {
+					t.Errorf("expected \"%s\" to contain \"%s\"", dataContent, test.contentString)
 				}
 			}
 
@@ -222,9 +238,11 @@ func TestGetSingleContentRule(t *testing.T) {
 
 		t.Run(test.description, func(t *testing.T) {
 			fd := database.FakeDatabaseClient{
-				ContentRuleToReturn: database.ContentRule{
-					Path:      test.path,
-					ContentID: test.contentId,
+				ContentRulesToReturn: []database.ContentRule{
+					{
+						Path:      test.path,
+						ContentID: test.contentId,
+					},
 				},
 				ErrorToReturn: test.err,
 			}
@@ -242,7 +260,7 @@ func TestGetSingleContentRule(t *testing.T) {
 				t.Errorf("reading response body: %s", err)
 			}
 
-			pdata := HttpContentRuleResult{}
+			pdata := HttpResult{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
 			}
@@ -252,14 +270,14 @@ func TestGetSingleContentRule(t *testing.T) {
 			}
 
 			if pdata.Status == ResultSuccess {
-				if len(pdata.ContentRules) != 1 {
-					t.Fatalf("expected 1 result but got %d", len(pdata.ContentRules))
+				dataLen := len(pdata.Data.([]interface{}))
+				if dataLen != 1 {
+					t.Fatalf("expected 1 result but got %d", dataLen)
 				}
 
-				cr := pdata.ContentRules[0]
+				cr := pdata.Data.([]database.Request)[0]
 				if cr.Path != test.path {
 					t.Errorf("expected path %s, got %s", test.path, cr.Path)
-
 				}
 			}
 		})

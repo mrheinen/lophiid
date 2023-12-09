@@ -1,9 +1,9 @@
 package http_server
 
 import (
+	"io"
 	"loophid/backend_service"
 	"loophid/pkg/client"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,7 +34,7 @@ func TestCatchAllOk(t *testing.T) {
 	}
 
 	// Call the actual code.
-	s := NewHttpServer(&bc, port)
+	s := NewHttpServer(&bc, port, "127.0.0.1")
 	req := httptest.NewRequest(http.MethodGet, "/test?aa=bb&cc=dd", nil)
 	w := httptest.NewRecorder()
 	s.catchAll(w, req)
