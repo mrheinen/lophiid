@@ -19,16 +19,18 @@ type HttpResult struct {
 	Data    any    `json:"data"`
 }
 
-type HttpContentRuleResult struct {
-	Status       string                 `json:"status"`
-	Message      string                 `json:"message"`
-	ContentRules []database.ContentRule `json:"content_rules"`
+// For testing
+type HttpContentResult struct {
+	Status  string             `json:"status"`
+	Message string             `json:"message"`
+	Data    []database.Content `json:"data"`
 }
 
-type HttpRequestsResult struct {
-	Status   string             `json:"status"`
-	Message  string             `json:"message"`
-	Requests []database.Request `json:"requests"`
+// For testing
+type HttpContentRuleResult struct {
+	Status  string                 `json:"status"`
+	Message string                 `json:"message"`
+	Data    []database.ContentRule `json:"data"`
 }
 
 const ResultSuccess = "OK"
@@ -77,14 +79,14 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	}
 
 	if rb.ID == 0 {
-		nid, err := a.dbc.Insert(&rb)
+		dm, err := a.dbc.Insert(&rb)
 		if err != nil {
-			errMsg := fmt.Sprintf("Unable to update %d: %s", nid, err.Error())
+			errMsg := fmt.Sprintf("Unable to update %d: %s", dm.ModelID(), err.Error())
 			a.sendStatus(w, errMsg, ResultError, nil)
 			return
 		}
 
-		a.sendStatus(w, fmt.Sprintf("Added new rule (id: %d)", nid), ResultSuccess, nil)
+		a.sendStatus(w, fmt.Sprintf("Added new rule (id: %d)", dm.ModelID()), ResultSuccess, []database.DataModel{dm})
 		return
 	} else {
 
@@ -157,11 +159,10 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 	d.DisallowUnknownFields()
 
 	if err := d.Decode(&rb); err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
+		a.sendStatus(w, fmt.Sprintf("decode: %s", err.Error()), ResultError, nil)
 		return
 	}
 
-	// We allow the 'content' parameter to be empty to simulate empty replies.
 	if rb.Name == "" || rb.ContentType == "" || rb.Server == "" {
 		a.sendStatus(w, "Empty parameters given.", ResultError, nil)
 		return
@@ -169,13 +170,13 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 
 	if rb.ID == 0 {
 		// This is an insert
-		nid, err := a.dbc.Insert(&rb)
+		dm, err := a.dbc.Insert(&rb)
 		if err != nil {
-			a.sendStatus(w, fmt.Sprintf("Unable to insert %d: %s", nid, err.Error()), ResultError, nil)
+			a.sendStatus(w, fmt.Sprintf("Unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
 			return
 		}
 
-		a.sendStatus(w, fmt.Sprintf("Added new content (id: %d)", nid), ResultSuccess, nil)
+		a.sendStatus(w, fmt.Sprintf("Added new content (id: %d)", dm.ModelID()), ResultSuccess, []database.DataModel{dm})
 		return
 	} else {
 
@@ -239,8 +240,86 @@ func (a *ApiServer) HandleDeleteContent(w http.ResponseWriter, req *http.Request
 	a.sendStatus(w, fmt.Sprintf("Deleted Content with ID: %s", id), ResultSuccess, nil)
 }
 
+func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Request) {
+	var rb database.Application
+	rb.ID = 0
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&rb); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if rb.Name == "" || rb.Version == "" {
+		a.sendStatus(w, "App name and version are required", ResultError, nil)
+		return
+	}
+
+	if rb.ID == 0 {
+		// This is an insert
+		dm, err := a.dbc.Insert(&rb)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("Unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
+			return
+		}
+
+		a.sendStatus(w, fmt.Sprintf("Added new app (id: %d)", dm.ModelID()), ResultSuccess, []database.DataModel{dm})
+		return
+	} else {
+
+		err := a.dbc.Update(&rb)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("Unable to update app: %s", err.Error()), ResultError, nil)
+			return
+		}
+
+		a.sendStatus(w, "Updated app", ResultSuccess, nil)
+		return
+	}
+}
+
+func (a *ApiServer) HandleDeleteApp(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	err = a.dbc.Delete(&database.Application{ID: intID})
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, fmt.Sprintf("Deleted Application with ID: %s", id), ResultSuccess, nil)
+}
+
+func (a *ApiServer) HandleGetAllApps(w http.ResponseWriter, req *http.Request) {
+	apps, err := a.dbc.GetApps()
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, apps)
+}
+
 func (a *ApiServer) HandleGetAllRequests(w http.ResponseWriter, req *http.Request) {
-	reqs, err := a.dbc.GetRequests()
+	ip := req.URL.Query().Get("ip")
+	var reqs []database.Request
+	var err error
+	if ip != "" {
+		reqs, err = a.dbc.GetRequestsForSourceIP(ip)
+	} else {
+		reqs, err = a.dbc.GetRequests()
+	}
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
@@ -262,8 +341,14 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
+	var reqs []database.Request
+	ip := req.URL.Query().Get("source_ip")
+	if ip != "" {
+		reqs, err = a.dbc.GetRequestsSegment(iOffset, iLimit, &ip)
+	} else {
+		reqs, err = a.dbc.GetRequestsSegment(iOffset, iLimit, nil)
+	}
 
-	reqs, err := a.dbc.GetRequestsSegment(iOffset, iLimit)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return

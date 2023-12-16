@@ -20,11 +20,12 @@ type DataModel interface {
 }
 type Content struct {
 	ID          int64     `ksql:"id,skipInserts" json:"id"`
-	Content     string    `ksql:"content"        json:"content"`
+	Data        []byte    `ksql:"data"           json:"data"`
 	Name        string    `ksql:"name"           json:"name"`
 	Description string    `ksql:"description"    json:"description"`
 	ContentType string    `ksql:"content_type"   json:"content_type"`
 	Server      string    `ksql:"server"         json:"server"`
+	StatusCode  string    `ksql:"status_code"    json:"status_code"`
 	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC"  json:"updated_at"`
 }
@@ -58,7 +59,7 @@ type Request struct {
 	Referer       string    `ksql:"referer" json:"referer"`
 	ContentLength int64     `ksql:"content_length" json:"content_length"`
 	UserAgent     string    `ksql:"user_agent" json:"user_agent"`
-	Body          string    `ksql:"body" json:"body"`
+	Body          []byte    `ksql:"body" json:"body"`
 	HoneypotIP    string    `ksql:"honeypot_ip" json:"honeypot_ip"`
 	SourceIP      string    `ksql:"source_ip" json:"source_ip"`
 	SourcePort    int64     `ksql:"source_port" json:"source_port"`
@@ -92,16 +93,18 @@ func (c *Application) ModelID() int64 { return c.ID }
 
 type DatabaseClient interface {
 	Close()
-	Insert(dm DataModel) (int64, error)
+	Insert(dm DataModel) (DataModel, error)
 	Update(dm DataModel) error
 	Delete(dm DataModel) error
+	GetApps() ([]Application, error)
 	GetContentByID(id int64) (Content, error)
 	GetContent() ([]Content, error)
 	GetContentRuleByID(id int64) (ContentRule, error)
 	GetContentRules() ([]ContentRule, error)
 	GetRequests() ([]Request, error)
-	GetRequestsSegment(offset int64, limit int64) ([]Request, error)
-	GetRequestUniqueKeyPerSourceIP() (map[string][]string, error)
+	GetRequestsForSourceIP(ip string) ([]Request, error)
+	GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error)
+	GetRequestsDistinctComboLastMonth() ([]Request, error)
 }
 
 type KSQLClient struct {
@@ -144,7 +147,7 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 	}
 
 	switch name {
-	case "App":
+	case "Application":
 		return &AppTable
 	case "Request":
 		return &RequestTable
@@ -157,13 +160,13 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 	}
 }
 
-func (d *KSQLClient) Insert(dm DataModel) (int64, error) {
+func (d *KSQLClient) Insert(dm DataModel) (DataModel, error) {
 	t := d.getTableForModel(dm)
 	if t == nil {
-		return 0, fmt.Errorf("Unknown datamodel: %v", dm)
+		return dm, fmt.Errorf("Unknown datamodel: %v", dm)
 	}
 	err := d.db.Insert(d.ctx, *t, dm)
-	return dm.ModelID(), err
+	return dm, err
 }
 
 func (d *KSQLClient) Update(dm DataModel) error {
@@ -182,36 +185,39 @@ func (d *KSQLClient) Delete(dm DataModel) error {
 	return d.db.Delete(d.ctx, *t, dm.ModelID())
 }
 
+func (d *KSQLClient) GetApps() ([]Application, error) {
+	var apps []Application
+	err := d.db.Query(d.ctx, &apps, "FROM app ORDER BY name")
+	return apps, err
+}
+
 func (d *KSQLClient) GetRequests() ([]Request, error) {
 	var rs []Request
 	err := d.db.Query(d.ctx, &rs, "FROM request ORDER BY time_received")
 	return rs, err
 }
 
-func (d *KSQLClient) GetRequestsSegment(offset int64, limit int64) ([]Request, error) {
+func (d *KSQLClient) GetRequestsForSourceIP(ip string) ([]Request, error) {
 	var rs []Request
-	err := d.db.Query(d.ctx, &rs, "FROM request ORDER BY time_received DESC OFFSET $1 LIMIT $2", offset, limit)
+	err := d.db.Query(d.ctx, &rs, "FROM request WHERE source_ip = $1 ORDER BY time_received", ip)
 	return rs, err
-
 }
 
-func (d *KSQLClient) GetRequestUniqueKeyPerSourceIP() (map[string][]string, error) {
+func (d *KSQLClient) GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error) {
 	var rs []Request
-	ret := make(map[string][]string)
-	err := d.db.Query(d.ctx, &rs, "SELECT DISTINCT source_ip, content_id, rule_id FROM request WHERE content_id > 0 AND time_received >= date_trunc('month', current_date - interval '1'month);")
-	if err != nil {
-		return ret, err
+	var err error
+	if source_ip != nil {
+		err = d.db.Query(d.ctx, &rs, "FROM request WHERE source_ip = $1 ORDER BY time_received DESC OFFSET $2 LIMIT $3", *source_ip, offset, limit)
+	} else {
+		err = d.db.Query(d.ctx, &rs, "FROM request ORDER BY time_received DESC OFFSET $1 LIMIT $2", offset, limit)
 	}
+	return rs, err
+}
 
-	for _, req := range rs {
-		k := fmt.Sprintf("%d-%d", req.RuleID, req.ContentID)
-		if _, ok := ret[req.SourceIP]; ok {
-			ret[req.SourceIP] = append(ret[req.SourceIP], k)
-		} else {
-			ret[req.SourceIP] = []string{k}
-		}
-	}
-	return ret, err
+func (d *KSQLClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
+	var rs []Request
+	err := d.db.Query(d.ctx, &rs, "SELECT DISTINCT source_ip, content_id, rule_id FROM request WHERE content_id > 0 AND time_received >= date_trunc('month', current_date - interval '1'month);")
+	return rs, err
 }
 
 func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
@@ -234,7 +240,7 @@ func (d *KSQLClient) GetContentRuleByID(id int64) (ContentRule, error) {
 
 func (d *KSQLClient) GetContentRules() ([]ContentRule, error) {
 	var cts []ContentRule
-	err := d.db.Query(d.ctx, &cts, "FROM content_rule")
+	err := d.db.Query(d.ctx, &cts, "FROM content_rule ORDER BY app_id DESC")
 	return cts, err
 }
 
@@ -245,12 +251,12 @@ func (d *KSQLClient) DeleteContentRule(id int64) error {
 // FakeDatabaseClient is a struct specifically for testing users of the
 // DatabaseClient interface
 type FakeDatabaseClient struct {
-	ContentIDToReturn          int64
-	ContentsToReturn           map[int64]Content
-	ErrorToReturn              error
-	ContentRuleIDToReturn      int64
-	ContentRulesToReturn       []ContentRule
-	UniqueKeyPerSourceToReturn map[string][]string
+	ContentIDToReturn     int64
+	ContentsToReturn      map[int64]Content
+	ErrorToReturn         error
+	ContentRuleIDToReturn int64
+	ContentRulesToReturn  []ContentRule
+	RequestsToReturn      []Request
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -273,20 +279,25 @@ func (f *FakeDatabaseClient) GetContentRules() ([]ContentRule, error) {
 func (f *FakeDatabaseClient) GetRequests() ([]Request, error) {
 	return []Request{}, nil
 }
-func (f *FakeDatabaseClient) GetRequestsSegment(offset int64, limit int64) ([]Request, error) {
+func (f *FakeDatabaseClient) GetRequestsForSourceIP(ip string) ([]Request, error) {
 	return []Request{}, nil
 }
-func (f *FakeDatabaseClient) GetRequestUniqueKeyPerSourceIP() (map[string][]string, error) {
-	return f.UniqueKeyPerSourceToReturn, f.ErrorToReturn
+func (f *FakeDatabaseClient) GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error) {
+	return []Request{}, f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) Insert(dm DataModel) (int64, error) {
-	return 42, nil
+func (f *FakeDatabaseClient) Insert(dm DataModel) (DataModel, error) {
+	return dm, f.ErrorToReturn
 }
-
 func (f *FakeDatabaseClient) Update(dm DataModel) error {
 	return f.ErrorToReturn
 }
-
+func (f *FakeDatabaseClient) GetApps() ([]Application, error) {
+	return []Application{}, f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) Delete(dm DataModel) error {
 	return f.ErrorToReturn
+}
+
+func (f *FakeDatabaseClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
+	return f.RequestsToReturn, nil
 }

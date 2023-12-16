@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"loophid/backend_service"
@@ -15,12 +16,12 @@ func TestHandleProbeMatchesSingleRuleOK(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
 		ContentsToReturn: map[int64]database.Content{
 			expectedContentId: database.Content{
-				Content:     "<b>Hello</b>",
+				Data:        []byte("<b>Hello</b>"),
 				ContentType: "text/plain; charset=UTF-8",
 				ID:          expectedContentId,
 			},
 			55: database.Content{
-				Content:     "<b>NO</b>",
+				Data:        []byte("<b>NO</b>"),
 				ContentType: "text/html; charset=UTF-8",
 				ID:          55,
 			},
@@ -72,8 +73,8 @@ func TestHandleProbeMatchesSingleRuleOK(t *testing.T) {
 			}
 
 			// Inspect the returned response.
-			if (resp.Response.Body == fdbc.ContentsToReturn[expectedContentId].Content) != test.contentShouldMatch {
-				t.Errorf("expected %s, got %s", fdbc.ContentsToReturn[expectedContentId].Content, resp.Response.Body)
+			if bytes.Equal(resp.Response.Body, fdbc.ContentsToReturn[expectedContentId].Data) != test.contentShouldMatch {
+				t.Errorf("expected %s, got %s", fdbc.ContentsToReturn[expectedContentId].Data, resp.Response.Body)
 			}
 
 		})
@@ -92,7 +93,7 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 		contentRules       []database.ContentRule
 		expectedContentIds []int64
 		contentsToReturn   map[int64]database.Content
-		uniqueKeysToReturn map[string][]string
+		requestsToReturn   []database.Request
 	}{
 		{
 			description:        "two rules with same path but one matches port",
@@ -100,23 +101,23 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 			pathToMatch:        originalPath,
 			portToMatch:        8080,
 			contentRules: []database.ContentRule{
-				{ID: 1, Port: 80, Path: originalPath, PathMatching: "exact", ContentID: 42},
-				{ID: 2, Port: 8080, Path: originalPath, PathMatching: "exact", ContentID: 55},
+				{ID: 1, AppID: 1, Port: 80, Path: originalPath, PathMatching: "exact", ContentID: 42},
+				{ID: 2, AppID: 2, Port: 8080, Path: originalPath, PathMatching: "exact", ContentID: 55},
 			},
 			expectedContentIds: []int64{55},
 			contentsToReturn: map[int64]database.Content{
 				42: database.Content{
-					Content:     "<b>Hello</b>",
+					Data:        []byte("<b>Hello</b>"),
 					ContentType: "text/plain; charset=UTF-8",
 					ID:          42,
 				},
 				55: database.Content{
-					Content:     "<b>NO</b>",
+					Data:        []byte("<b>NO</b>"),
 					ContentType: "text/html; charset=UTF-8",
 					ID:          55,
 				},
 			},
-			uniqueKeysToReturn: map[string][]string{},
+			requestsToReturn: []database.Request{},
 		},
 		{
 			description:        "two rules, one matches exact",
@@ -124,23 +125,23 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 			pathToMatch:        originalPath,
 			portToMatch:        80,
 			contentRules: []database.ContentRule{
-				{ID: 1, Port: 80, Path: originalPath, PathMatching: "exact", ContentID: 42},
-				{ID: 2, Port: 80, Path: "/someotherpath", PathMatching: "exact", ContentID: 55},
+				{ID: 1, AppID: 1, Port: 80, Path: originalPath, PathMatching: "exact", ContentID: 42},
+				{ID: 2, AppID: 2, Port: 80, Path: "/someotherpath", PathMatching: "exact", ContentID: 55},
 			},
 			expectedContentIds: []int64{42},
 			contentsToReturn: map[int64]database.Content{
 				42: database.Content{
-					Content:     "<b>Hello</b>",
+					Data:        []byte("<b>Hello</b>"),
 					ContentType: "text/plain; charset=UTF-8",
 					ID:          42,
 				},
 				55: database.Content{
-					Content:     "<b>NO</b>",
+					Data:        []byte("<b>NO</b>"),
 					ContentType: "text/html; charset=UTF-8",
 					ID:          55,
 				},
 			},
-			uniqueKeysToReturn: map[string][]string{},
+			requestsToReturn: []database.Request{},
 		},
 		{
 			description:        "two rules, one matches prefix",
@@ -148,23 +149,23 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 			pathToMatch:        originalPath,
 			portToMatch:        80,
 			contentRules: []database.ContentRule{
-				{ID: 1, Port: 80, Path: originalPath, PathMatching: "prefix", ContentID: 42},
-				{ID: 2, Port: 80, Path: "/someotherpath", PathMatching: "exact", ContentID: 55},
+				{ID: 1, AppID: 2, Port: 80, Path: originalPath, PathMatching: "prefix", ContentID: 42},
+				{ID: 2, AppID: 3, Port: 80, Path: "/someotherpath", PathMatching: "exact", ContentID: 55},
 			},
 			expectedContentIds: []int64{42},
 			contentsToReturn: map[int64]database.Content{
 				42: database.Content{
-					Content:     "<b>Hello</b>",
+					Data:        []byte("<b>Hello</b>"),
 					ContentType: "text/plain; charset=UTF-8",
 					ID:          42,
 				},
 				55: database.Content{
-					Content:     "<b>NO</b>",
+					Data:        []byte("<b>NO</b>"),
 					ContentType: "text/html; charset=UTF-8",
 					ID:          55,
 				},
 			},
-			uniqueKeysToReturn: map[string][]string{},
+			requestsToReturn: []database.Request{},
 		},
 		{
 			description:        "two rules, one matches contains",
@@ -172,23 +173,23 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 			pathToMatch:        originalPath,
 			portToMatch:        80,
 			contentRules: []database.ContentRule{
-				{ID: 1, Port: 80, Path: "/ba", PathMatching: "contains", ContentID: 42},
-				{ID: 2, Port: 80, Path: "/someotherpath", PathMatching: "exact", ContentID: 43},
+				{ID: 1, AppID: 1, Port: 80, Path: "/ba", PathMatching: "contains", ContentID: 42},
+				{ID: 2, AppID: 2, Port: 80, Path: "/someotherpath", PathMatching: "exact", ContentID: 43},
 			},
 			expectedContentIds: []int64{42},
 			contentsToReturn: map[int64]database.Content{
 				42: database.Content{
-					Content:     "<b>Hello</b>",
+					Data:        []byte("<b>Hello</b>"),
 					ContentType: "text/plain; charset=UTF-8",
 					ID:          42,
 				},
 				43: database.Content{
-					Content:     "<b>NO</b>",
+					Data:        []byte("<b>NO</b>"),
 					ContentType: "text/html; charset=UTF-8",
 					ID:          43,
 				},
 			},
-			uniqueKeysToReturn: map[string][]string{},
+			requestsToReturn: []database.Request{},
 		},
 		{
 			description:        "two rules, one matches suffix",
@@ -196,54 +197,57 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 			pathToMatch:        originalPath,
 			portToMatch:        80,
 			contentRules: []database.ContentRule{
-				{ID: 1, Port: 80, Path: "/someotherpath", PathMatching: "exact", ContentID: 42},
-				{ID: 2, Port: 80, Path: "bar", PathMatching: "suffix", ContentID: 43},
+				{ID: 1, AppID: 1, Port: 80, Path: "/someotherpath", PathMatching: "exact", ContentID: 42},
+				{ID: 2, AppID: 2, Port: 80, Path: "bar", PathMatching: "suffix", ContentID: 43},
 			},
 			expectedContentIds: []int64{43},
 			contentsToReturn: map[int64]database.Content{
 				42: database.Content{
-					Content:     "<b>Hello</b>",
+					Data:        []byte("<b>Hello</b>"),
 					ContentType: "text/plain; charset=UTF-8",
 					ID:          42,
 				},
 				43: database.Content{
-					Content:     "<b>NO</b>",
+					Data:        []byte("<b>NO</b>"),
 					ContentType: "text/html; charset=UTF-8",
 					ID:          43,
 				},
 			},
-			uniqueKeysToReturn: map[string][]string{},
+			requestsToReturn: []database.Request{},
 		},
-
 		{
-			description:        "two rules, both match, different contents",
+			description:        "two rules, both match, different contents. one already seen",
 			contentShouldMatch: true,
 			pathToMatch:        originalPath,
 			portToMatch:        80,
 			// Both rules match the same path
 			contentRules: []database.ContentRule{
-				{ID: 1, Port: 80, Path: originalPath, PathMatching: "exact", ContentID: 42},
-				{ID: 2, Port: 80, Path: originalPath, PathMatching: "exact", ContentID: 55},
+				{ID: 1, AppID: 1, Port: 80, Path: originalPath, PathMatching: "exact", ContentID: 42},
+				{ID: 2, AppID: 2, Port: 80, Path: originalPath, PathMatching: "exact", ContentID: 55},
 			},
 			// We only expect the second though whereas normally the first is shared.
 			// We repeat the ID multiple times to make sure the result us getting
 			// lucky.
-			expectedContentIds: []int64{55, 55, 55},
+			expectedContentIds: []int64{55},
 			contentsToReturn: map[int64]database.Content{
 				42: database.Content{
-					Content:     "<b>Hello</b>",
+					Data:        []byte("<b>Hello</b>"),
 					ContentType: "text/plain; charset=UTF-8",
 					ID:          42,
 				},
 				55: database.Content{
-					Content:     "<b>NO</b>",
+					Data:        []byte("<b>NO</b>"),
 					ContentType: "text/html; charset=UTF-8",
 					ID:          55,
 				},
 			},
 			// The backend will be told that the first was already served.
-			uniqueKeysToReturn: map[string][]string{
-				"127.0.0.1": []string{"1-42"},
+			requestsToReturn: []database.Request{
+				database.Request{
+					RuleID:    1,
+					ContentID: 42,
+					SourceIP:  "127.0.0.1",
+				},
 			},
 		},
 	} {
@@ -251,9 +255,9 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			fmt.Printf("Running: %s\n", test.description)
 			fdbc := &database.FakeDatabaseClient{
-				ContentsToReturn:           test.contentsToReturn,
-				ContentRulesToReturn:       test.contentRules,
-				UniqueKeyPerSourceToReturn: test.uniqueKeysToReturn,
+				ContentsToReturn:     test.contentsToReturn,
+				ContentRulesToReturn: test.contentRules,
+				RequestsToReturn:     test.requestsToReturn,
 			}
 
 			b := NewBackendServer(fdbc)
@@ -278,9 +282,9 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 				}
 
 				// Inspect the returned response.
-				content := test.contentsToReturn[id].Content
-				if (resp.Response.Body == content) != test.contentShouldMatch {
-					t.Errorf("expected %s, got %s", content, resp.Response.Body)
+				data := test.contentsToReturn[id].Data
+				if bytes.Equal(resp.Response.Body, data) != test.contentShouldMatch {
+					t.Errorf("expected %s, got %s", data, resp.Response.Body)
 				}
 			}
 			b.Stop()

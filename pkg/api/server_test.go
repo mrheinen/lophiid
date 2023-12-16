@@ -27,7 +27,7 @@ func TestUpsertSingleContent(t *testing.T) {
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
-				Content:     "<b>Ai</b>",
+				Data:        []byte("<b>Ai</b>"),
 			},
 			status:            ResultSuccess,
 			statusMsgContains: "Added",
@@ -39,7 +39,7 @@ func TestUpsertSingleContent(t *testing.T) {
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
-				Content:     "<b>Ai</b>",
+				Data:        []byte("<b>Ai</b>"),
 			},
 			status:            ResultError,
 			statusMsgContains: "Unable to insert",
@@ -52,7 +52,7 @@ func TestUpsertSingleContent(t *testing.T) {
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
-				Content:     "<b>Ai</b>",
+				Data:        []byte("<b>Ai</b>"),
 			},
 			status:            ResultSuccess,
 			statusMsgContains: "Updated",
@@ -65,7 +65,7 @@ func TestUpsertSingleContent(t *testing.T) {
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
-				Content:     "<b>Ai</b>",
+				Data:        []byte("<b>Ai</b>"),
 			},
 			status:            ResultError,
 			statusMsgContains: "Unable to update",
@@ -94,7 +94,7 @@ func TestUpsertSingleContent(t *testing.T) {
 				t.Errorf("reading response body: %s", err)
 			}
 
-			pdata := HttpResult{}
+			pdata := HttpContentResult{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
 			}
@@ -113,7 +113,7 @@ func TestGetSingleContent(t *testing.T) {
 	for _, test := range []struct {
 		description       string
 		queryString       string
-		contentString     string
+		expectedData      []byte
 		statusMsgContains string
 		status            string
 		err               error
@@ -121,7 +121,7 @@ func TestGetSingleContent(t *testing.T) {
 		{
 			description:       "Runs OK",
 			queryString:       "/?id=42",
-			contentString:     "test123",
+			expectedData:      []byte("test123"),
 			statusMsgContains: "",
 			status:            ResultSuccess,
 			err:               nil,
@@ -129,7 +129,7 @@ func TestGetSingleContent(t *testing.T) {
 		{
 			description:       "Invalid ID",
 			queryString:       "/?id=INVALID",
-			contentString:     "",
+			expectedData:      []byte(""),
 			statusMsgContains: "invalid syntax",
 			status:            ResultError,
 			err:               nil,
@@ -137,7 +137,7 @@ func TestGetSingleContent(t *testing.T) {
 		{
 			description:       "Database error",
 			queryString:       "/?id=42",
-			contentString:     "",
+			expectedData:      []byte(""),
 			statusMsgContains: "oops",
 			status:            ResultError,
 			err:               errors.New("oops"),
@@ -149,7 +149,7 @@ func TestGetSingleContent(t *testing.T) {
 			fd := database.FakeDatabaseClient{
 				ContentsToReturn: map[int64]database.Content{
 					42: database.Content{
-						Content: test.contentString,
+						Data: test.expectedData,
 					},
 				},
 				ErrorToReturn: test.err,
@@ -168,7 +168,7 @@ func TestGetSingleContent(t *testing.T) {
 				t.Errorf("reading response body: %s", err)
 			}
 
-			pdata := HttpResult{}
+			pdata := HttpContentResult{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
 			}
@@ -180,20 +180,17 @@ func TestGetSingleContent(t *testing.T) {
 			// If the result is OK then we expect 1 Content to have returned and
 			// subsequently check if the expected content string is present.
 			if pdata.Status == ResultSuccess {
-				dataLen := len(pdata.Data.([]interface{}))
-				if dataLen != 1 {
-					t.Fatalf("unexpected contents len %d", dataLen)
+				if len(pdata.Data) != 1 {
+					t.Fatalf("unexpected contents len %d", len(pdata.Data))
 				}
-
-				d := pdata.Data.([]interface{})[0]
-				dataContent := d.(database.Content).Content
-				if !strings.Contains(dataContent, test.contentString) {
-					t.Errorf("expected \"%s\" to contain \"%s\"", dataContent, test.contentString)
+				content := pdata.Data[0]
+				if !bytes.Contains(content.Data, test.expectedData) {
+					t.Errorf("expected \"%s\" to contain \"%s\"", content.Data, test.expectedData)
 				}
 			}
 
 			if test.statusMsgContains != "" && !strings.Contains(pdata.Message, test.statusMsgContains) {
-				t.Errorf("%s does not contain %s", string(data), test.contentString)
+				t.Errorf("%s does not contain %s", pdata.Message, test.statusMsgContains)
 			}
 
 		})
@@ -260,7 +257,7 @@ func TestGetSingleContentRule(t *testing.T) {
 				t.Errorf("reading response body: %s", err)
 			}
 
-			pdata := HttpResult{}
+			pdata := HttpContentRuleResult{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
 			}
@@ -270,12 +267,11 @@ func TestGetSingleContentRule(t *testing.T) {
 			}
 
 			if pdata.Status == ResultSuccess {
-				dataLen := len(pdata.Data.([]interface{}))
+				dataLen := len(pdata.Data)
 				if dataLen != 1 {
 					t.Fatalf("expected 1 result but got %d", dataLen)
 				}
-
-				cr := pdata.Data.([]database.Request)[0]
+				cr := pdata.Data[0]
 				if cr.Path != test.path {
 					t.Errorf("expected path %s, got %s", test.path, cr.Path)
 				}

@@ -59,7 +59,6 @@ func (h *HttpServer) Start() error {
 // catchAll receives all HTTP requests.  It parses the requests and sends them
 // to the backend using grpc. The backend will the tell catchAll how to respond.
 func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
-
 	raw, err := httputil.DumpRequest(r, true)
 	if err != nil {
 		fmt.Printf("Problem decoding requests: %s", err)
@@ -115,7 +114,7 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("parsing body: %s", err)
 		} else {
-			pr.Request.Body = string(b)
+			pr.Request.Body = b
 		}
 	}
 
@@ -127,10 +126,31 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("got request for: %s\n", pr.RequestUri)
 
+	switch res.Response.StatusCode {
+	case "200":
+		w.WriteHeader(http.StatusOK)
+	case "301":
+		w.WriteHeader(http.StatusMovedPermanently)
+	case "302":
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	case "400":
+		w.WriteHeader(http.StatusBadRequest)
+	case "401":
+		w.WriteHeader(http.StatusUnauthorized)
+	case "403":
+		w.WriteHeader(http.StatusForbidden)
+	case "404":
+		w.WriteHeader(http.StatusNotFound)
+	case "500":
+		w.WriteHeader(http.StatusInternalServerError)
+	default:
+		w.WriteHeader(http.StatusOK)
+	}
+
 	// At least one header is always set.
 	for _, h := range res.Response.Header {
 		w.Header().Set(h.Key, h.Value)
 
 	}
-	io.WriteString(w, res.GetResponse().Body)
+	w.Write(res.GetResponse().Body)
 }

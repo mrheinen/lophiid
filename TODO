@@ -41,5 +41,5 @@ them as such.
 
 For a new rule, show how many requests would have matched.
 
-Per rule, allow a port to be specified.
-
+Refactor the timed events in the backend (e.g. loading rules). Also make
+cleaning of expired items from cache a timed event.

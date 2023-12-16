@@ -9,7 +9,7 @@ go_library(
         "//pkg/api",
         "//pkg/database",
         "@com_github_gorilla_mux//:mux",
-        "@com_github_rs_cors//:go_default_library",
+        "@com_github_rs_cors//:cors",
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
     ],
