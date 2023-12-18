@@ -1,71 +1,91 @@
 <template>
   <div>
-    <div class="field">
       <input type="hidden" name="id" v-model="localApp.id" />
-      <label class="label">Name</label>
+      <FieldSet legend="Settings" :toggleable="true">
 
-      <InputText
-        id="name"
-        type="text"
-        placeholder="App name"
-        v-model="localApp.name"
-      />
-    </div>
+        <div>
+          <label class="label">Name</label>
+          <InputText
+          id="title"
+          type="text"
+          placeholder=""
+          v-model="localApp.name"
+          />
+        </div>
 
-    <div class="field">
-      <label class="label">Version</label>
-      <InputText
-        id="version"
-        type="text"
-        placeholder="v1.1.x"
-        v-model="localApp.version"
-      />
-    </div>
 
-    <div class="field">
-      <label class="label">Vendor</label>
+        <div class="field">
+          <label class="label">Version</label>
+          <InputText
+          id="version"
+          type="text"
+          placeholder="v1.1.x"
+          v-model="localApp.version"
+          />
+        </div>
 
-      <InputText
-        id="vendor"
-        type="text"
-        placeholder="Microfast"
-        v-model="localApp.vendor"
-      />
-    </div>
+        <div class="field">
+          <label class="label">Vendor</label>
 
-    <div class="field">
-      <label class="label">Operating system</label>
+          <InputText
+          id="vendor"
+          type="text"
+          placeholder="Microfast"
+          v-model="localApp.vendor"
+          />
+        </div>
 
-      <InputText
-        id="os"
-        type="text"
-        placeholder="Linux"
-        v-model="localApp.os"
-      />
-    </div>
+        <div class="field">
+          <label class="label">Operating system</label>
 
-    <div class="field">
-      <label class="label">Reference link </label>
-      <InputText
-        id="reference"
-        type="text"
-        placeholder="http://..."
-        v-model="localApp.link"
-      />
-    </div>
+          <InputText
+          id="os"
+          type="text"
+          placeholder="Linux"
+          v-model="localApp.os"
+          />
+        </div>
 
-    <button class="button is-primary" @click="submitForm()">
-      {{ localApp.id > 0 ? "Submit" : "Add" }}
-    </button>
+        <div class="field">
+          <label class="label">Reference link </label>
+          <InputText
+          id="reference"
+          type="text"
+          placeholder="http://..."
+          v-model="localApp.link"
+          />
+        </div>
+
+      </FieldSet>
+
+
+    <PrimeButton :label="localApp.id > 0 ? 'Submit' : 'Add'"  @click="submitForm()">
+    </PrimeButton>
     &nbsp;
-    <button class="button is-dark" @click="resetForm()">Reset</button>
-    <a
-      v-if="localApp.id && localApp.id > 0"
-      @click.prevent="deleteContent(localApp.id)"
-      href="#"
-      >delete</a
-    >
+    <PrimeButton severity="secondary" label="Reset" @click="resetForm()"></PrimeButton>
+    &nbsp;
+    <PrimeButton  severity="danger" @click="requireConfirmation($event)" label="Delete"></PrimeButton>
+
+
+    <ConfirmPopup group="headless">
+    <template #container="{ message, acceptCallback, rejectCallback }">
+      <div class="bg-gray-900 text-white border-round p-3">
+        <span>{{ message.message }}</span>
+        <div class="flex align-items-center gap-2 mt-3">
+          <PrimeButton icon="pi pi-check" label="Save" @click="acceptCallback"
+          class="p-button-sm p-button-outlined"></PrimeButton>
+          <PrimeButton label="Cancel" severity="secondary" outlined @click="rejectCallback"
+          class="p-button-sm p-button-text"></PrimeButton>
+        </div>
+      </div>
+    </template>
+    </ConfirmPopup>
+
+
+
   </div>
+
+
 </template>
 
 <script>
@@ -79,6 +99,21 @@ export default {
     };
   },
   methods: {
+    requireConfirmation(event) {
+      this.$confirm.require({
+        target: event.currentTarget,
+        group: 'headless',
+        message: 'Are you sure? You cannot undo this.',
+        accept: () => {
+
+          if (this.localApp.id) {
+            this.deleteApp(this.localApp.id);
+          }
+        },
+        reject: () => {
+        }
+      });
+    },
     resetForm() {
       this.localApp = {};
     },
@@ -116,7 +151,7 @@ export default {
         });
     },
 
-    deleteContent(id) {
+    deleteApp(id) {
       fetch(this.config.backendAddress + "/app/delete", {
         method: "POST",
         headers: {

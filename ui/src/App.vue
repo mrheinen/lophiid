@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-full">
-      <nav-bar> </nav-bar>
+      <vue-nav-bar> </vue-nav-bar>
     </div>
   </div>
 
@@ -13,13 +13,14 @@
 </template>
 
 <script>
-import NavBar from "./components/nav/NavBar.vue";
+//import NavBar from "./components/nav/NavBar.vue";
+import VueNavBar from "./components/nav/VueNavBar.vue";
 import Config from "./Config.js";
 import { readonly } from "vue";
 
 export default {
   components: {
-    NavBar,
+    VueNavBar,
   },
   provide() {
     return {
@@ -29,3 +30,12 @@ export default {
   },
 };
 </script>
+
+
+<style>
+.mright {
+ margin-right: 10px;
+};
+
+
+</style>

@@ -50,6 +50,7 @@ import Button from './../node_modules/primevue/button';
 import ConfirmPopup from './../node_modules/primevue/confirmpopup';
 import Dialog from './../node_modules/primevue/dialog';
 import CheckBox from './../node_modules/primevue/checkbox';
+import MenuBar from './../node_modules/primevue/menubar';
 
 import ConfirmationService from './../node_modules/primevue/confirmationservice';
 
@@ -70,6 +71,7 @@ app.component('ConfirmPopup', ConfirmPopup);
 app.component('PrimeButton', Button);
 app.component('PrimeDialog', Dialog);
 app.component('CheckBox', CheckBox);
+app.component('MenuBar', MenuBar);
 app.use(hljsVuePlugin);
 app.use(router);
 app.use(PrimeVue);

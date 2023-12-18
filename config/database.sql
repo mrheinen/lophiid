@@ -10,7 +10,7 @@ CREATE USER lo WITH PASSWORD 'test';
 CREATE TABLE content (
   id              SERIAL PRIMARY KEY,
   name            VARCHAR(256) NOT NULL,
-  content         TEXT NOT NULL, // TODO: remove
+  content         TEXT NOT NULL, -- TODO: remove
   data            BYTEA DEFAULT ''::bytea,
   description     TEXT NOT NULL,
   content_type    VARCHAR(256) NOT NULL,
@@ -86,5 +86,6 @@ GRANT ALL PRIVILEGES ON request TO lo;
 GRANT ALL PRIVILEGES ON request_id_seq TO lo;
 GRANT ALL PRIVILEGES ON app TO lo;
 GRANT ALL PRIVILEGES ON app_id_seq TO lo;
-
+GRANT ALL PRIVILEGES ON process_queue TO lo;
+GRANT ALL PRIVILEGES ON process_queue_id_seq TO lo;
 

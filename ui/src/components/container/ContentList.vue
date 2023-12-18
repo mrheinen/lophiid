@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths">
-      <table class="table is-hoverable" v-if="contents.length > 0">
+      <table class="table is-hoverable" style="margin-left: 15px;" v-if="contents.length > 0">
         <thead>
           <th>ID</th>
           <th>Description</th>
@@ -27,7 +27,7 @@
         </tbody>
       </table>
     </div>
-    <div class="column restrict-width">
+    <div class="column restrict-width mright">
       <content-form
         @update-content="onUpdateContent"
         @deleted-content="onDeleteContent"

@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths">
-      <table class="table is-hoverable" v-if="requests.length > 0">
+      <table class="table is-hoverable" style="margin-left: 10px;" v-if="requests.length > 0">
         <thead>
           <th id="date">Date</th>
           <th>Honeypot</th>
@@ -11,6 +11,7 @@
           <th>Port</th>
           <th>Content ID</th>
           <th>Rule ID</th>
+          <th>Actions</th>
         </thead>
         <tbody>
           <tr
@@ -26,21 +27,42 @@
             </td>
             <td v-else>{{ req.method }}</td>
             <td>{{ req.parsed.uri }}</td>
-            <td><a :href="getFreshRequestLink() + '?source_ip=' + req.source_ip"> {{ req.source_ip }}</a></td>
+            <td>
+              <a :href="getFreshRequestLink() + '?source_ip=' + req.source_ip">
+                {{ req.source_ip }}</a
+              >
+            </td>
             <td>{{ req.port }}</td>
-            <td><a :href="'/content/' + req.content_id">{{ req.content_id }}</a></td>
-            <td><a :href="'/rules/' + req.rule_id">{{ req.rule_id }}</a></td>
+            <td>
+              <a :href="'/content/' + req.content_id">{{ req.content_id }}</a>
+            </td>
+            <td>
+              <a :href="'/rules/' + req.rule_id">{{ req.rule_id }}</a>
+            </td>
+            <td>
+              <a :href="'/rules?path=' + req.path + '&method=' + req.method">
+                <i
+                  title="create a rule for this"
+                  class="pi pi-arrow-circle-right"
+                ></i>
+              </a>
+            </td>
           </tr>
         </tbody>
       </table>
 
-      <i v-if="offset > 0" @click="loadPrevRequests()" class="pi pi-arrow-left pi-style"></i>
-      <i v-if="requests.length == limit"
+      <i
+        v-if="offset > 0"
+        @click="loadPrevRequests()"
+        class="pi pi-arrow-left pi-style"
+      ></i>
+      <i
+        v-if="requests.length == limit"
         @click="loadNextRequests()"
         class="pi pi-arrow-right pi-style pi-style-right"
       ></i>
     </div>
-    <div class="column restricted-width">
+    <div class="column restricted-width mright">
       <request-view :request="selectedRequest"></request-view>
     </div>
   </div>
@@ -72,7 +94,8 @@ export default {
       this.loadRequests();
     },
     getRequestLink() {
-      let link = this.config.requestsLink + "/" + this.offset + "/" + this.limit;
+      let link =
+        this.config.requestsLink + "/" + this.offset + "/" + this.limit;
       if (this.selectedSourceIP) {
         link += "?ip=" + this.selectedSourceIP;
       }
@@ -110,7 +133,12 @@ export default {
       }
     },
     loadRequests() {
-      var url = this.config.backendAddress + "/request/segment?offset=" + this.offset + "&limit=" + this.limit
+      var url =
+        this.config.backendAddress +
+        "/request/segment?offset=" +
+        this.offset +
+        "&limit=" +
+        this.limit;
 
       if (this.selectedSourceIP) {
         url += "&source_ip=" + this.selectedSourceIP;

@@ -16,11 +16,13 @@ export default {
   // There next 3 need to be in sync with the database enums.
   backendMatchingMethods: ['exact', 'prefix', 'suffix', 'regex', 'contains'],
   contentRuleHTTPMethods: ['ANY' , 'GET', 'POST'],
-  //statusCodeValues: [ '200', '301', '302', '400', '401', '403', '404', '500'],
   statusCodeValues: [
     { label: '200 - OK', value: '200' },
     { label: '301 - Permanent redirect', value: '301' },
     { label: '302 - Temporary redirect', value: '302' },
+    { label: '400 - Bad request', value: '400' },
+    { label: '401 - Unauthorized', value: '401' },
+    { label: '403 - Access denied', value: '403' },
     { label: '404 - Not found', value: '404' },
     { label: '500 - Server error', value: '500' }
   ],

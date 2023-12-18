@@ -1,14 +1,6 @@
 Secure grpc calls with this article
 https://dev.to/techschoolguru/how-to-secure-grpc-connection-with-ssl-tls-in-go-4ph
 
-Show vulnerable landing pages, random server headers.
-
-Rename contentlocation.location to path
-x Add Server header to content database and response.
-
-Allow multiple content to match a single content rule. Pick a random one OR
-sequantial (make it optional).
-
 Allow notes and links to be added to content. Also store software somewhere.
 Maybe even CVEs.
 
@@ -16,30 +8,53 @@ Create a page with links to all content rules. Only indexable by Google ;P
 
 Allow bruteforcing of login pages.
 
-If multiple content rules match, instead of returning a random one, track per IP
-which one was already returned and return another.
-
 Check regex for contentrule when creating or updating the entry
 
-
 Add autocomplete for web IU things like the content type field.
-
-Store raw requests and body as []byte in protobuf
 
 Proper slog implementation - add LogValue to fields
 
 Support macros in response (e.g. {{%%IP%%}})
 
-Allow multiple servers to be specified per content.
-
-reWrite more tests for API server.
-
 Finish the requests UI interface
-
-Add "application" and link content and rules to the application. Also display
-them as such.
 
 For a new rule, show how many requests would have matched.
 
 Refactor the timed events in the backend (e.g. loading rules). Also make
 cleaning of expired items from cache a timed event.
+
+Fix routing
+
+Add source IP to rule so we can mess with specific targets.
+
+Add export option for rules and content.
+
+Add statistics.
+
+Allow request searching per content ID, rule indexable
+
+Test with a fresh database.
+
+Allow response duration to be set.
+
+Hook response matching.
+
+XXL fetch malware.
+
+Detect and decode base64.
+
+Add tags to the requests overview and show information. E.g. [payload] [base64]
+
+Add authentication of honeypot
+
+Add authentication to web UI
+
+Add xsrf protection to web UI
+
+Add loading animations
+
+Allow a content to be set as the default.
+
+Add request to process queue, pick it up from thread, run through decoders, run
+through metadata extractors, store metadata.... missing link..  fetch payloads
+

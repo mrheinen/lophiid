@@ -14,6 +14,7 @@ var ContentTable = ksql.NewTable("content")
 var ContentRuleTable = ksql.NewTable("content_rule")
 var RequestTable = ksql.NewTable("request")
 var AppTable = ksql.NewTable("app")
+var ProcessQueueTable = ksql.NewTable("process_queue")
 
 type DataModel interface {
 	ModelID() int64
@@ -69,6 +70,12 @@ type Request struct {
 	UpdatedAt     time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
 	ContentID     int64     `ksql:"content_id" json:"content_id"`
 	RuleID        int64     `ksql:"rule_id" json:"rule_id"`
+}
+
+type ProcessQueue struct {
+	ID        int64     `ksql:"id,skipInserts" json:"id"`
+	RequestID int64     `ksql:"request_id" json:"request_id"`
+	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }
@@ -155,6 +162,8 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &ContentTable
 	case "ContentRule":
 		return &ContentRuleTable
+	case "ProcessQueue":
+		return &ProcessQueueTable
 	default:
 		return nil
 	}

@@ -1,6 +1,6 @@
 <template>
   <div class="columns">
-    <div class="column is-three-fifths">
+    <div class="column is-three-fifths" style="margin-left: 15px;">
       <table class="table is-hoverable" v-if="apps.length > 0">
         <thead>
           <th>ID</th>
@@ -25,7 +25,7 @@
         </tbody>
       </table>
     </div>
-    <div class="column">
+    <div class="column mright">
       <app-form @update-app="reloadApps()" :app="selectedApp"></app-form>
     </div>
   </div>

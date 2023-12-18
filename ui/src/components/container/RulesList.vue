@@ -1,14 +1,14 @@
 <template>
   <PrimeDialog v-model:visible="contentFormVisible" modal header="Add content">
-    <ContentForm @update-content="onAddedContent" ></ContentForm>
+    <ContentForm @update-content="onAddedContent"></ContentForm>
   </PrimeDialog>
 
-  <PrimeDialog v-model:visible="appFormVisible" modal header="Add application" >
-    <AppForm @update-app="onAddedApp" ></AppForm>
+  <PrimeDialog v-model:visible="appFormVisible" modal header="Add application">
+    <AppForm @update-app="onAddedApp"></AppForm>
   </PrimeDialog>
 
   <div class="columns">
-    <div class="column is-three-fifths" style="margin-left: 15px;">
+    <div class="column is-three-fifths" style="margin-left: 15px">
       <table class="table is-hoverable" v-if="rules.length > 0">
         <thead>
           <th>App</th>
@@ -27,13 +27,27 @@
             :key="rule.id"
             :class="isSelectedId == rule.id ? 'is-selected' : ''"
           >
-          <td v-if="rule.rowspan >= 0" :rowspan="rule.rowspan > 0 ? rule.rowspan : ''">{{ rule.app_name }}</td>
-          <td v-if="rule.rowspan >= 0" :rowspan="rule.rowspan > 0 ? rule.rowspan : ''">{{ rule.app_version }}</td>
+            <td
+              v-if="rule.rowspan >= 0"
+              :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
+            >
+              {{ rule.app_name }}
+            </td>
+            <td
+              v-if="rule.rowspan >= 0"
+              :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
+            >
+              {{ rule.app_version }}
+            </td>
             <td>{{ rule.id }}</td>
             <td>{{ rule.method == "ANY" ? "Any" : rule.method }}</td>
-            <td>{{ rule.path }}</td>
+            <td>{{ rule.parsed.path }}</td>
             <td>{{ rule.port == 0 ? "Any" : rule.port }}</td>
-            <td><a :href="'/content/' + rule.content_id"> {{ rule.content_id }}</a></td>
+            <td>
+              <a :href="'/content/' + rule.content_id">
+                {{ rule.content_id }}</a
+              >
+            </td>
             <td>{{ rule.parsed.updated_at }}</td>
           </tr>
         </tbody>
@@ -48,7 +62,7 @@
         :rule="selectedRule"
         :contentid="selectedContentId"
         :appid="selectedAppId"
-        ></rule-form>
+      ></rule-form>
     </div>
   </div>
 </template>
@@ -109,7 +123,7 @@ export default {
       this.contentFormVisible = true;
     },
     reloadRules() {
-      this.loadRules(function() {});
+      this.loadRules(function () {});
     },
     setSelectedRule(id) {
       var selected = null;
@@ -139,7 +153,7 @@ export default {
             if (response.data) {
               for (var i = 0; i < response.data.length; i++) {
                 const newApp = Object.assign({}, response.data[i]);
-                if (!newApp.name || newApp.name == '') {
+                if (!newApp.name || newApp.name == "") {
                   newApp.name = "Any";
                   newApp.version = "Any";
                 }
@@ -168,6 +182,13 @@ export default {
                 newRule.parsed = {};
                 newRule.parsed.created_at = dateToString(newRule.created_at);
                 newRule.parsed.updated_at = dateToString(newRule.updated_at);
+                if (newRule.path.length > 45) {
+                  newRule.parsed.path = newRule.path.substring(0, 45);
+                  newRule.parsed.path += "...";
+                } else {
+                  newRule.parsed.path = newRule.path;
+                }
+
                 this.rules.push(newRule);
               }
             }
@@ -181,9 +202,9 @@ export default {
     this.selectedRule = this.baseRule;
   },
   computed: {
-      isLoading() {
-        return this.rulesLoading == true || this.appsLoading == true;
-      }
+    isLoading() {
+      return this.rulesLoading == true || this.appsLoading == true;
+    },
   },
   watch: {
     isLoading(newVal) {
@@ -193,28 +214,28 @@ export default {
 
       // In this case apps and/or rules were reloaded.
 
-        this.appRules = [];
-        var appCount = {};
-        for (var i = 0; i < this.rules.length; i++) {
-          var cAppId = this.rules[i].app_id;
-          if (appCount[cAppId]) {
-            appCount[cAppId]++;
-          } else {
-            appCount[cAppId] = 1;
-          }
-          var newRule = Object.assign({}, this.rules[i]);
-          if (this.apps[cAppId]) {
-            newRule.app_version = this.apps[cAppId].version;
-            newRule.app_name = this.apps[cAppId].name;
-          } else {
-            console.log("App not found in map!");
-            console.log(this.apps);
-            newRule.app_version = "Any";
-            newRule.app_name = "Any";
-          }
-
-          this.appRules.push(newRule);
+      this.appRules = [];
+      var appCount = {};
+      for (var i = 0; i < this.rules.length; i++) {
+        var cAppId = this.rules[i].app_id;
+        if (appCount[cAppId]) {
+          appCount[cAppId]++;
+        } else {
+          appCount[cAppId] = 1;
         }
+        var newRule = Object.assign({}, this.rules[i]);
+        if (this.apps[cAppId]) {
+          newRule.app_version = this.apps[cAppId].version;
+          newRule.app_name = this.apps[cAppId].name;
+        } else {
+          console.log("App not found in map!");
+          console.log(this.apps);
+          newRule.app_version = "Any";
+          newRule.app_name = "Any";
+        }
+
+        this.appRules.push(newRule);
+      }
 
       var appIdToSkip = -1;
       for (var o = 0; o < this.appRules.length; o++) {
@@ -235,7 +256,7 @@ export default {
   created() {
     const maybeSetID = this.$route.params.ruleId;
     const that = this;
-    this.loadRules(function() {
+    this.loadRules(function () {
       if (maybeSetID) {
         that.setSelectedRule(maybeSetID);
       }
@@ -243,10 +264,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-.mright {
- margin-right: 10px;
-};
-
-</style>
