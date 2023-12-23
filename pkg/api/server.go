@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"loophid/pkg/database"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 type ApiServer struct {
@@ -327,6 +329,36 @@ func (a *ApiServer) HandleGetAllRequests(w http.ResponseWriter, req *http.Reques
 	a.sendStatus(w, "", ResultSuccess, reqs)
 }
 
+func ParseQuery(q string) (map[string]string, error) {
+	ret := make(map[string]string)
+
+	// TODO: move global
+	//partRegex := regexp.MustCompile(`([a-zA-Z_]*:[a-zA-Z0-9\.\-]*)`)
+	partRegex := regexp.MustCompile(`[a-z\_]*:[a-zA-Z0-9\._\-]*`)
+	validSearchKeywords := map[string]bool{
+		"source_ip":   true,
+		"host":        true,
+		"honeypot_ip": true,
+		"uri":         true,
+		"method":      true,
+		"port":        true,
+	}
+
+	for _, part := range partRegex.FindAllString(q, -1) {
+		options := strings.Split(part, ":")
+		if len(options) != 2 {
+			return ret, fmt.Errorf("invalid search part: %s", part)
+		}
+
+		if _, ok := validSearchKeywords[options[0]]; !ok {
+			return ret, fmt.Errorf("unknown search option: %s", part)
+		} else {
+			ret[options[0]] = options[1]
+		}
+	}
+	return ret, nil
+}
+
 func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Request) {
 	offset := req.URL.Query().Get("offset")
 	iOffset, err := strconv.ParseInt(offset, 10, 64)
@@ -342,9 +374,15 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 		return
 	}
 	var reqs []database.Request
-	ip := req.URL.Query().Get("source_ip")
-	if ip != "" {
-		reqs, err = a.dbc.GetRequestsSegment(iOffset, iLimit, &ip)
+	query := req.URL.Query().Get("q")
+	if query != "" {
+		params, er := ParseQuery(query)
+		if err != nil {
+			a.sendStatus(w, er.Error(), ResultError, nil)
+			return
+		}
+
+		reqs, err = a.dbc.SearchRequests(iOffset, iLimit, params)
 	} else {
 		reqs, err = a.dbc.GetRequestsSegment(iOffset, iLimit, nil)
 	}
@@ -354,4 +392,26 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 		return
 	}
 	a.sendStatus(w, "", ResultSuccess, reqs)
+}
+
+func (a *ApiServer) HandleGetMetadataForRequest(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	mds, err := a.dbc.GetMetadataByRequestID(intID)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "", ResultSuccess, mds)
 }

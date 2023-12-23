@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"time"
 
@@ -14,7 +15,7 @@ var ContentTable = ksql.NewTable("content")
 var ContentRuleTable = ksql.NewTable("content_rule")
 var RequestTable = ksql.NewTable("request")
 var AppTable = ksql.NewTable("app")
-var ProcessQueueTable = ksql.NewTable("process_queue")
+var RequestMetadataTable = ksql.NewTable("request_metadata")
 
 type DataModel interface {
 	ModelID() int64
@@ -72,14 +73,19 @@ type Request struct {
 	RuleID        int64     `ksql:"rule_id" json:"rule_id"`
 }
 
-type ProcessQueue struct {
+func (c *Request) ModelID() int64 { return c.ID }
+
+type RequestMetadata struct {
 	ID        int64     `ksql:"id,skipInserts" json:"id"`
 	RequestID int64     `ksql:"request_id" json:"request_id"`
 	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	Type      string    `ksql:"type" json:"type"`
+	Data      string    `ksql:"data" json:"data"`
 }
 
-func (c *Request) ModelID() int64 { return c.ID }
+func (c *RequestMetadata) ModelID() int64 { return c.ID }
 
+// TODO: delete ?
 type RequestSourceContent struct {
 	SourceIP  string
 	ContentID int64
@@ -111,7 +117,9 @@ type DatabaseClient interface {
 	GetRequests() ([]Request, error)
 	GetRequestsForSourceIP(ip string) ([]Request, error)
 	GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error)
+	SearchRequests(offset int64, limit int64, params map[string]string) ([]Request, error)
 	GetRequestsDistinctComboLastMonth() ([]Request, error)
+	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 }
 
 type KSQLClient struct {
@@ -162,8 +170,8 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &ContentTable
 	case "ContentRule":
 		return &ContentRuleTable
-	case "ProcessQueue":
-		return &ProcessQueueTable
+	case "RequestMetadata":
+		return &RequestMetadataTable
 	default:
 		return nil
 	}
@@ -221,6 +229,40 @@ func (d *KSQLClient) GetRequestsSegment(offset int64, limit int64, source_ip *st
 		err = d.db.Query(d.ctx, &rs, "FROM request ORDER BY time_received DESC OFFSET $1 LIMIT $2", offset, limit)
 	}
 	return rs, err
+}
+
+func (d *KSQLClient) SearchRequests(offset int64, limit int64, params map[string]string) ([]Request, error) {
+	var rs []Request
+
+	baseQuery := "FROM request"
+
+	idx := 1
+	var values []interface{}
+	for k, v := range params {
+		if idx == 1 {
+			baseQuery = fmt.Sprintf("%s WHERE %s = $%d ", baseQuery, k, idx)
+			values = append(values, v)
+		} else {
+			baseQuery = fmt.Sprintf("%s AND %s = $%d ", baseQuery, k, idx)
+			values = append(values, v)
+		}
+
+		idx++
+	}
+
+	baseQuery = fmt.Sprintf("%s ORDER BY time_received DESC OFFSET %d LIMIT %d", baseQuery, offset, limit)
+	slog.Debug("Running query", slog.String("query", baseQuery), slog.Int("values", len(values)))
+	start := time.Now()
+	err := d.db.Query(d.ctx, &rs, baseQuery, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error) {
+	var md []RequestMetadata
+	err := d.db.Query(d.ctx, &md, "FROM request_metadata WHERE request_id = $1 ORDER BY type", id)
+	return md, err
 }
 
 func (d *KSQLClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
@@ -309,4 +351,10 @@ func (f *FakeDatabaseClient) Delete(dm DataModel) error {
 
 func (f *FakeDatabaseClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
 	return f.RequestsToReturn, nil
+}
+func (f *FakeDatabaseClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error) {
+	return []RequestMetadata{}, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, params map[string]string) ([]Request, error) {
+	return []Request{}, f.ErrorToReturn
 }

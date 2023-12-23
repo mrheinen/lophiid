@@ -2,6 +2,13 @@ load("@bazel_gazelle//:deps.bzl", "go_repository")
 
 def go_dependencies():
     go_repository(
+        name = "cc_mvdan_xurls_v2",
+        build_file_proto_mode = "disable_global",
+        importpath = "mvdan.cc/xurls/v2",
+        sum = "h1:lyBNOm8Wo71UknhUs4QTFUNNMyxy2JEIaKKo0RWOh+8=",
+        version = "v2.5.0",
+    )
+    go_repository(
         name = "co_honnef_go_tools",
         build_file_proto_mode = "disable_global",
         importpath = "honnef.co/go/tools",
@@ -555,6 +562,13 @@ def go_dependencies():
         version = "v0.5.0",
     )
     go_repository(
+        name = "com_github_mvdan_xurls",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/mvdan/xurls",
+        sum = "h1:OpuDelGQ1R1ueQ6sSryzi6P+1RtBpfQHM8fJwlE45ww=",
+        version = "v1.1.0",
+    )
+    go_repository(
         name = "com_github_mwitkow_go_conntrack",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/mwitkow/go-conntrack",
@@ -691,8 +705,8 @@ def go_dependencies():
         name = "com_github_rogpeppe_go_internal",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/rogpeppe/go-internal",
-        sum = "h1:/FiVV8dS/e+YqF2JvO3yXRFbBLTIuSDkuC7aBOAvL+k=",
-        version = "v1.6.1",
+        sum = "h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=",
+        version = "v1.10.0",
     )
     go_repository(
         name = "com_github_rs_cors",
@@ -1020,8 +1034,8 @@ def go_dependencies():
         name = "org_golang_x_mod",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/mod",
-        sum = "h1:LUYupSeNrTNCGzR/hVBk2NHZO4hXcVaW1k4Qx7rjPx8=",
-        version = "v0.8.0",
+        sum = "h1:lFO9qtOdlre5W1jxS3r/4szv2/6iXxScdzjoBMXNhYk=",
+        version = "v0.10.0",
     )
     go_repository(
         name = "org_golang_x_net",

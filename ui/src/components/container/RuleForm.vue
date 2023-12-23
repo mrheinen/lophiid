@@ -281,7 +281,7 @@ export default {
 };
 </script>
 
-<style scoped>this.$route.query.methodthis.$route.query.method
+<style scoped>
 textarea {
   width: 100%;
   height: 400px;

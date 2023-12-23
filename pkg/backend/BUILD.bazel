@@ -15,6 +15,7 @@ go_library(
     deps = [
         "//backend_service",
         "//pkg/database",
+        "@cc_mvdan_xurls_v2//:xurls",
     ],
 )
 

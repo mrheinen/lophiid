@@ -69,9 +69,13 @@ func main() {
 	r.HandleFunc("/request/all", as.HandleGetAllRequests).Methods("GET")
 	r.HandleFunc("/request/segment", as.HandleGetRequestsSegment).Methods("GET")
 
+	// All application endpoints
 	r.HandleFunc("/app/all", as.HandleGetAllApps).Methods("GET")
 	r.HandleFunc("/app/upsert", as.HandleUpsertSingleApp).Methods("POST")
 	r.HandleFunc("/app/delete", as.HandleDeleteApp).Methods("POST")
+
+	r.HandleFunc("/meta/request", as.HandleGetMetadataForRequest).Methods("POST")
+
 	handler := cors.Default().Handler(r)
 
 	srv := &http.Server{

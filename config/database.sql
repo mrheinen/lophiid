@@ -24,9 +24,17 @@ CREATE TABLE content (
 CREATE TYPE MATCHING_TYPE AS ENUM ('exact', 'prefix', 'suffix', 'contains', 'regex');
 CREATE TYPE METHOD_TYPE AS ENUM ('GET', 'POST', 'HEAD', 'TRACE', 'OPTIONS', 'DELETE', 'PUT', 'ANY');
 CREATE TYPE STATUS_CODE AS ENUM ('200','301', '302', '400', '401', '403', '404', '500');
---  Attacker is the origator from the attack. Delivery is the host with the
---  malware (e.g. where it's wget from).
-CREATE TYPE ACTOR_ROLE_TYPE AS ENUM ('UNKNOWN', 'ATTACKER', 'DELIVERY' );
+
+CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'DECODED_STRING_BASE64');
+
+CREATE TABLE request_metadata (
+  id              SERIAL PRIMARY KEY,
+  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  request_id      INT,
+  type            METADATA_TYPE NOT NULL,
+  data            TEXT,
+  CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
+);
 
 CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,
@@ -86,6 +94,10 @@ GRANT ALL PRIVILEGES ON request TO lo;
 GRANT ALL PRIVILEGES ON request_id_seq TO lo;
 GRANT ALL PRIVILEGES ON app TO lo;
 GRANT ALL PRIVILEGES ON app_id_seq TO lo;
-GRANT ALL PRIVILEGES ON process_queue TO lo;
-GRANT ALL PRIVILEGES ON process_queue_id_seq TO lo;
+GRANT ALL PRIVILEGES ON request_metadata TO lo;
+GRANT ALL PRIVILEGES ON request_metadata_id_seq TO lo;
+
+
+CREATE INDEX requests_idx ON request ( time_received desc );
+
 

@@ -58,3 +58,6 @@ Allow a content to be set as the default.
 Add request to process queue, pick it up from thread, run through decoders, run
 through metadata extractors, store metadata.... missing link..  fetch payloads
 
+Add settings menu.  Including default page to serve and virus total API
+Add virus total api
+

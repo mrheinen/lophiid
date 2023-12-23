@@ -25,6 +25,7 @@ type BackendServer struct {
 	ruleVsCache     *RuleVsContentCache
 }
 
+// NewBackendServer creates a new instance of the backend server.
 func NewBackendServer(c database.DatabaseClient) *BackendServer {
 	sCache := NewSessionCache(time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
@@ -40,6 +41,8 @@ func NewBackendServer(c database.DatabaseClient) *BackendServer {
 	}
 }
 
+// ProbeRequestToDatabaseRequest transforms aHandleProbeRequest to a
+// database.Request.
 func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.HandleProbeRequest) (*database.Request, error) {
 	sReq := database.Request{
 		TimeReceived:  time.Unix(req.GetRequest().GetTimeReceived(), 0),
@@ -83,6 +86,8 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 	return &sReq, nil
 }
 
+// HandleProbe receives requests from te honeypots and tells them how to
+// respond.
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
 	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()))
 
@@ -132,6 +137,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			matchedRules = append(matchedRules, rule)
 		}
 	}
+
 	if len(matchedRules) == 0 {
 		// TODO: set this to a default rule
 		sReq.ContentID = 0
@@ -217,6 +223,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}, nil
 }
 
+// LoadRules loads the content rules from the database.
 func (s *BackendServer) LoadRules() error {
 	rules, err := s.dbClient.GetContentRules()
 	if err != nil {
@@ -226,6 +233,9 @@ func (s *BackendServer) LoadRules() error {
 	return nil
 }
 
+// ProcessReqsQueue empties the reqsQueue and stores the requests in the
+// database. It also extracts metadata from the requests and stores that also in
+// the database.
 func (s *BackendServer) ProcessReqsQueue() {
 	for req := s.reqsQueue.Pop(); req != nil; req = s.reqsQueue.Pop() {
 		dm, err := s.dbClient.Insert(req)
@@ -234,6 +244,49 @@ func (s *BackendServer) ProcessReqsQueue() {
 			return
 		} else {
 			slog.Debug("saved request", slog.Int64("request_id", dm.ModelID()))
+		}
+
+		// Extract base64 strings
+		b64Map := make(map[string][]byte)
+		ex := NewBase64Extractor(b64Map, true)
+		ex.ParseRequest(req)
+
+		linksMap := make(map[string]struct{})
+		lx := NewURLExtractor(linksMap)
+		lx.ParseRequest(req)
+
+		if len(b64Map) == 0 && len(linksMap) == 0 {
+			continue
+		}
+
+		// Iterate over the base64 strings and store them. Importantly, while doing
+		// so try to extract links from the decoded content.
+		var metadatas []database.RequestMetadata
+		for _, v := range b64Map {
+			lx.ParseString(string(v))
+			metadatas = append(metadatas, database.RequestMetadata{
+				Type:      ex.MetaType(),
+				Data:      string(v),
+				RequestID: req.ID,
+			})
+		}
+
+		for v := range linksMap {
+			metadatas = append(metadatas, database.RequestMetadata{
+				Type:      lx.MetaType(),
+				Data:      string(v),
+				RequestID: req.ID,
+			})
+		}
+
+		// Store the metadata.
+		for _, m := range metadatas {
+			dm, err := s.dbClient.Insert(&m)
+			if err != nil {
+				slog.Warn("Could not save metadata for request", slog.String("error", err.Error()))
+			} else {
+				slog.Debug("Saved metadata", slog.Int64("id", dm.ModelID()), slog.String("value", m.Data), slog.String("type", m.Type))
+			}
 		}
 	}
 }

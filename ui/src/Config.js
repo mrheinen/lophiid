@@ -8,8 +8,8 @@ export default {
   requestsLink: '/requests',
   requestsSegmentLink: '/requests/:offset/:limit',
   requestsSegmentLinkName: 'reqSegmentLink',
-  backendAddress: 'http://192.168.1.78:8088',
- // backendAddress: 'http://127.0.0.1:8088',
+  //backendAddress: 'http://192.168.1.78:8088',
+  backendAddress: 'http://127.0.0.1:8088',
   backendResultOk: 'OK',
   backendResultNotOk: 'ERR',
 

@@ -8,6 +8,7 @@ import (
 	"loophid/pkg/database"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -276,6 +277,39 @@ func TestGetSingleContentRule(t *testing.T) {
 					t.Errorf("expected path %s, got %s", test.path, cr.Path)
 				}
 			}
+		})
+	}
+}
+
+func TestParseQuery(t *testing.T) {
+	for _, test := range []struct {
+		description   string
+		queryString   string
+		errorContains string
+		resultMap     map[string]string
+	}{
+		{
+			description:   "fetch successful",
+			queryString:   "source_ip:1.1.1.1",
+			errorContains: "",
+			resultMap: map[string]string{
+				"source_ip": "1.1.1.1",
+			},
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			res, err := ParseQuery(test.queryString)
+			if test.errorContains != "" {
+				if err == nil || !strings.Contains(err.Error(), test.errorContains) {
+					t.Errorf("expected \"%s\" in \"%s\"", err.Error(), test.errorContains)
+				}
+			}
+
+			if !reflect.DeepEqual(test.resultMap, res) {
+				t.Errorf("%v is not %v", test.resultMap, res)
+			}
+
 		})
 	}
 }

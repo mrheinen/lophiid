@@ -1,7 +1,19 @@
 <template>
   <div class="columns">
-    <div class="column is-three-fifths">
-      <table class="table is-hoverable" style="margin-left: 10px;" v-if="requests.length > 0">
+    <div class="column is-three-fifths" style="margin-left: 10px">
+      <form @submit.prevent="loadRequests(true)">
+        <span class="p-input-icon-left" style="width: 100%">
+          <i class="pi pi-search" />
+          <InputText
+            @focusin="searchIsFocused = true"
+            @focusout="searchIsFocused = false"
+            v-model="query"
+            placeholder="Search"
+          />
+        </span>
+      </form>
+
+      <table class="table is-hoverable" v-if="requests.length > 0">
         <thead>
           <th id="date">Date</th>
           <th>Honeypot</th>
@@ -9,8 +21,8 @@
           <th>Uri</th>
           <th>Src Host</th>
           <th>Port</th>
-          <th>Content ID</th>
-          <th>Rule ID</th>
+          <th>CID</th>
+          <th>RID</th>
           <th>Actions</th>
         </thead>
         <tbody>
@@ -28,7 +40,9 @@
             <td v-else>{{ req.method }}</td>
             <td>{{ req.parsed.uri }}</td>
             <td>
-              <a :href="getFreshRequestLink() + '?source_ip=' + req.source_ip">
+              <a
+                :href="getFreshRequestLink() + '?q=source_ip:' + req.source_ip"
+              >
                 {{ req.source_ip }}</a
               >
             </td>
@@ -63,7 +77,10 @@
       ></i>
     </div>
     <div class="column restricted-width mright">
-      <request-view :request="selectedRequest"></request-view>
+      <request-view
+        :request="selectedRequest"
+        :metadata="selectedMetadata"
+      ></request-view>
     </div>
   </div>
 </template>
@@ -81,24 +98,28 @@ export default {
   inject: ["config"],
   data() {
     return {
+      searchIsFocused: false,
       requests: [],
-      selectedSourceIP: null,
       selectedRequest: null,
+      selectedMetadata: [],
+      query: null,
+      isSelectedElement: null,
       isSelectedId: 0,
-      limit: 25,
+      limit: 24,
       offset: 0,
     };
   },
   methods: {
     reloadRequests() {
-      this.loadRequests();
+      this.loadRequests(true);
     },
     getRequestLink() {
       let link =
         this.config.requestsLink + "/" + this.offset + "/" + this.limit;
-      if (this.selectedSourceIP) {
-        link += "?ip=" + this.selectedSourceIP;
+      if (this.query) {
+        link += "?q=" + this.query;
       }
+
       return link;
     },
     getFreshRequestLink() {
@@ -107,17 +128,45 @@ export default {
     loadNextRequests() {
       this.offset += this.limit;
       this.$router.push(this.getRequestLink());
-      this.loadRequests();
+      this.loadRequests(true);
     },
     loadPrevRequests() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
         this.$router.push(this.getRequestLink());
-        this.loadRequests();
+        this.loadRequests(false);
       }
+    },
+    setNextSelectedElement() {
+      for (var i = 0; i < this.requests.length; i++) {
+        if (this.requests[i].id == this.isSelectedId) {
+          if (i + 1 < this.requests.length) {
+            this.setSelectedReq(this.requests[i + 1].id);
+          } else {
+            return false;
+          }
+          break;
+        }
+      }
+      return true;
+    },
+    setPrevSelectedElement() {
+      for (var i = this.requests.length - 1; i >= 0; i--) {
+        if (this.requests[i].id == this.isSelectedId) {
+          if (i - 1 >= 0) {
+            this.setSelectedReq(this.requests[i - 1].id);
+          } else {
+            return false;
+          }
+          break;
+        }
+      }
+      return true;
     },
     setSelectedReq(id) {
       var selected = null;
+      this.selectedMetadata = [];
+      this.loadMetadata(id);
       for (var i = 0; i < this.requests.length; i++) {
         if (this.requests[i].id == id) {
           selected = this.requests[i];
@@ -132,7 +181,28 @@ export default {
         this.isSelectedId = id;
       }
     },
-    loadRequests() {
+
+    loadMetadata(id) {
+      fetch(this.config.backendAddress + "/meta/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "id=" + id,
+      })
+        .then((response) => response.json())
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            if (response.data) {
+              this.selectedMetadata = response.data;
+            }
+          }
+        });
+    },
+
+    loadRequests(selectFirst) {
       var url =
         this.config.backendAddress +
         "/request/segment?offset=" +
@@ -140,9 +210,10 @@ export default {
         "&limit=" +
         this.limit;
 
-      if (this.selectedSourceIP) {
-        url += "&source_ip=" + this.selectedSourceIP;
+      if (this.query) {
+        url += "&q=" + this.query;
       }
+
       fetch(url)
         .then((response) => response.json())
         .then((response) => {
@@ -168,6 +239,11 @@ export default {
               newReq.parsed.body = atob(newReq.body);
               this.requests.push(newReq);
             }
+            if (selectFirst) {
+              this.setSelectedReq(response.data[0].id);
+            } else {
+              this.setSelectedReq(response.data[response.data.length - 1].id);
+            }
           }
         });
     },
@@ -181,18 +257,35 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
-    if (this.$route.query.source_ip) {
-      this.selectedSourceIP = this.$route.query.source_ip;
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
     }
 
-    this.loadRequests();
+    this.loadRequests(true);
+  },
+  mounted() {
+    const that = this;
+    window.addEventListener("keyup", function (event) {
+      if (that.searchIsFocused) {
+        return;
+      }
+      if (event.key == "j") {
+        if (!that.setPrevSelectedElement()) {
+          that.loadPrevRequests();
+        }
+      } else if (event.key == "k") {
+        if (!that.setNextSelectedElement()) {
+          that.loadNextRequests();
+        }
+      }
+    });
   },
 };
 </script>
 
 <style scoped>
 #date {
-  width: 200px;
+  width: 170px;
 }
 
 table {
@@ -214,5 +307,9 @@ i.pi-style-right {
 
 .restricted-width {
   width: 700px;
+}
+
+.p-inputtext {
+  width: 100%;
 }
 </style>
