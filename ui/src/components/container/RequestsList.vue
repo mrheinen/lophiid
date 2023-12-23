@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 10px">
-      <form @submit.prevent="loadRequests(true)">
+      <form @submit.prevent="performNewSearch()">
         <span class="p-input-icon-left" style="width: 100%">
           <i class="pi pi-search" />
           <InputText
@@ -110,6 +110,10 @@ export default {
     };
   },
   methods: {
+    performNewSearch() {
+      this.offset = 0;
+      this.loadRequests(true);
+    },
     reloadRequests() {
       this.loadRequests(true);
     },

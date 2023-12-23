@@ -16,6 +16,7 @@ import (
 var (
 	base64Reg    = regexp.MustCompile(`([a-zA-Z0-9=/+]*)`)
 	urlStrictReg = xurls.Strict()
+	urlIPReg     = regexp.MustCompile(`[\s\t]+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:[\d]+)?/[a-zA-Z0-9_\-\./\?&=]*`)
 )
 
 func decodeURL(encoded string) (string, error) {
@@ -102,7 +103,24 @@ func StringsFromRequest(req *database.Request) []string {
 func ExtractUrls(data string) []string {
 	// Add regexes for URLs that have no scheme. Specifically also for commands
 	// like curl 1.1.1.1/sh
-	return urlStrictReg.FindAllString(data, -1)
+
+	ip := urlIPReg.FindAllString(data, -1)
+	sc := urlStrictReg.FindAllString(data, -1)
+
+	retmap := make(map[string]bool)
+	var ret []string
+	for _, entry := range append(ip, sc...) {
+		if strings.Contains(entry, ";") {
+			parts := strings.Split(entry, ";")
+			entry = parts[0]
+		}
+		centry := strings.TrimSpace(entry)
+		if _, ok := retmap[centry]; !ok {
+			retmap[centry] = true
+			ret = append(ret, centry)
+		}
+	}
+	return ret
 }
 
 type Extractor interface {

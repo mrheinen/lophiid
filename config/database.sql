@@ -99,5 +99,9 @@ GRANT ALL PRIVILEGES ON request_metadata_id_seq TO lo;
 
 
 CREATE INDEX requests_idx ON request ( time_received desc );
+CREATE INDEX requests_port_idx ON request (
+  time_received desc,
+  port asc,
+);
 
 
