@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "vt",
+    srcs = ["vt.go"],
+    importpath = "loophid/pkg/vt",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_virustotal_vt_go//:vt-go"],
+)

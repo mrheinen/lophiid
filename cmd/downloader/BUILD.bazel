@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "downloader_lib",
+    srcs = ["downloader.go"],
+    importpath = "loophid/cmd/downloader",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/downloader"],
+)
+
+go_binary(
+    name = "downloader",
+    embed = [":downloader_lib"],
+    visibility = ["//visibility:public"],
+)
