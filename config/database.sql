@@ -63,6 +63,24 @@ CREATE TABLE app (
 );
 
 
+CREATE TABLE downloads (
+  id              SERIAL PRIMARY KEY,
+  original_url    VARCHAR(2048),
+  used_url        VARCHAR(2048),
+  ip              VARCHAR(52),
+  host            VARCHAR(1024),
+  content_type    VARCHAR(256),
+  sha256sum       VARCHAR(64),
+  file_location   VARCHAR(512),
+  size            INT,
+  times_seen      INT NOT NULL DEFAULT 1,
+  port            INT,
+  request_id      INT,
+  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  last_seen_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
+);
+
 CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
   proto           VARCHAR(10),
@@ -96,12 +114,27 @@ GRANT ALL PRIVILEGES ON app TO lo;
 GRANT ALL PRIVILEGES ON app_id_seq TO lo;
 GRANT ALL PRIVILEGES ON request_metadata TO lo;
 GRANT ALL PRIVILEGES ON request_metadata_id_seq TO lo;
-
+GRANT ALL PRIVILEGES ON downloads TO lo;
+GRANT ALL PRIVILEGES ON downloads_id_seq TO lo;
 
 CREATE INDEX requests_idx ON request ( time_received desc );
 CREATE INDEX requests_port_idx ON request (
   time_received desc,
-  port asc,
+  port asc
 );
 
+CREATE INDEX requests_source_ip_idx ON request (
+  time_received desc,
+  source_ip desc
+);
+
+CREATE INDEX requests_uri_idx ON request (
+  time_received desc,
+  uri
+);
+
+CREATE INDEX requests_content_length_idx ON request (
+  time_received desc,
+  content_length
+);
 

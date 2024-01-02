@@ -126,6 +126,11 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("got request for: %s\n", pr.RequestUri)
 
+	if res == nil || res.Response == nil {
+		fmt.Printf("Got nil ? Res: %+v, ProbeRequest: %+v\n", res, pr)
+		fmt.Printf("HTTP request: %+v\n", r)
+	}
+
 	switch res.Response.StatusCode {
 	case "200":
 		w.WriteHeader(http.StatusOK)

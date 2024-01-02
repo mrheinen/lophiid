@@ -15,6 +15,7 @@ go_library(
     deps = [
         "//backend_service",
         "//pkg/database",
+        "//pkg/downloader",
         "@cc_mvdan_xurls_v2//:xurls",
     ],
 )
@@ -32,5 +33,6 @@ go_test(
     deps = [
         "//backend_service",
         "//pkg/database",
+        "//pkg/downloader",
     ],
 )

@@ -70,8 +70,7 @@
 export default {
   inject: ["config"],
   data() {
-    return {
-    };
+    return {};
   },
   methods: {},
 };

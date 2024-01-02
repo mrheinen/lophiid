@@ -11,19 +11,17 @@ import ContentList from './components/container/ContentList.vue';
 import RulesList from './components/container/RulesList.vue';
 import RequestsList from './components/container/RequestsList.vue';
 import AppsList from './components/container/AppsList.vue';
+import DownList from './components/container/DownloadsList.vue';
+import PrimeVue from './../node_modules/primevue/config';
 
 import './../node_modules/bulma/css/bulma.css';
-
-import PrimeVue from './../node_modules/primevue/config';
-//import './../node_modules/primevue/resources/themes/lara-light-green/theme.css'
 import './../node_modules/primevue/resources/themes/lara-light-blue/theme.css'
-
-
-
 import './../node_modules/primeicons/primeicons.css';
-
 import './../node_modules/highlight.js/styles/stackoverflow-light.css'
 import './../node_modules/highlight.js/lib/common';
+
+import store from './authStore.js';
+
 import hljsVuePlugin from "./../node_modules/@highlightjs/vue-plugin";
 
 const router = createRouter({
@@ -34,6 +32,7 @@ const router = createRouter({
     {path: Config.rulesLink, component: RulesList },
     {path: Config.rulesSelectedLink, component: RulesList },
     {path: Config.appsLink, component: AppsList },
+    {path: Config.downloadsLink, component: DownList },
     {path: Config.requestsLink, component: RequestsList },
     {path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },
   ]
@@ -74,6 +73,7 @@ app.component('CheckBox', CheckBox);
 app.component('MenuBar', MenuBar);
 app.use(hljsVuePlugin);
 app.use(router);
+app.use(store);
 app.use(PrimeVue);
 app.use(ToastPlugin);
 app.use(ConfirmationService);

@@ -6,9 +6,7 @@ import (
 	"log/slog"
 	"loophid/pkg/database"
 	"net/http"
-	"regexp"
 	"strconv"
-	"strings"
 )
 
 type ApiServer struct {
@@ -313,7 +311,17 @@ func (a *ApiServer) HandleGetAllApps(w http.ResponseWriter, req *http.Request) {
 	a.sendStatus(w, "", ResultSuccess, apps)
 }
 
+func (a *ApiServer) HandleGetAllDownloads(w http.ResponseWriter, req *http.Request) {
+	dls, err := a.dbc.GetDownloads()
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, dls)
+}
+
 func (a *ApiServer) HandleGetAllRequests(w http.ResponseWriter, req *http.Request) {
+
 	ip := req.URL.Query().Get("ip")
 	var reqs []database.Request
 	var err error
@@ -327,36 +335,6 @@ func (a *ApiServer) HandleGetAllRequests(w http.ResponseWriter, req *http.Reques
 		return
 	}
 	a.sendStatus(w, "", ResultSuccess, reqs)
-}
-
-func ParseQuery(q string) (map[string]string, error) {
-	ret := make(map[string]string)
-
-	// TODO: move global
-	//partRegex := regexp.MustCompile(`([a-zA-Z_]*:[a-zA-Z0-9\.\-]*)`)
-	partRegex := regexp.MustCompile(`[a-z\_]*:[a-zA-Z0-9\._\-]*`)
-	validSearchKeywords := map[string]bool{
-		"source_ip":   true,
-		"host":        true,
-		"honeypot_ip": true,
-		"uri":         true,
-		"method":      true,
-		"port":        true,
-	}
-
-	for _, part := range partRegex.FindAllString(q, -1) {
-		options := strings.Split(part, ":")
-		if len(options) != 2 {
-			return ret, fmt.Errorf("invalid search part: %s", part)
-		}
-
-		if _, ok := validSearchKeywords[options[0]]; !ok {
-			return ret, fmt.Errorf("unknown search option: %s", part)
-		} else {
-			ret[options[0]] = options[1]
-		}
-	}
-	return ret, nil
 }
 
 func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Request) {
@@ -376,13 +354,7 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 	var reqs []database.Request
 	query := req.URL.Query().Get("q")
 	if query != "" {
-		params, er := ParseQuery(query)
-		if err != nil {
-			a.sendStatus(w, er.Error(), ResultError, nil)
-			return
-		}
-
-		reqs, err = a.dbc.SearchRequests(iOffset, iLimit, params)
+		reqs, err = a.dbc.SearchRequests(iOffset, iLimit, query)
 	} else {
 		reqs, err = a.dbc.GetRequestsSegment(iOffset, iLimit, nil)
 	}
@@ -392,6 +364,31 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 		return
 	}
 	a.sendStatus(w, "", ResultSuccess, reqs)
+}
+
+func (a *ApiServer) HandleSearchContentRules(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var rls []database.ContentRule
+	query := req.URL.Query().Get("q")
+	rls, err = a.dbc.SearchContentRules(iOffset, iLimit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
 }
 
 func (a *ApiServer) HandleGetMetadataForRequest(w http.ResponseWriter, req *http.Request) {

@@ -12,11 +12,7 @@ Check regex for contentrule when creating or updating the entry
 
 Add autocomplete for web IU things like the content type field.
 
-Proper slog implementation - add LogValue to fields
-
 Support macros in response (e.g. {{%%IP%%}})
-
-Finish the requests UI interface
 
 For a new rule, show how many requests would have matched.
 
@@ -37,8 +33,6 @@ Test with a fresh database.
 
 Allow response duration to be set.
 
-Hook response matching.
-
 XXL fetch malware.
 
 Detect and decode base64.
@@ -51,8 +45,6 @@ Add authentication to web UI
 
 Add xsrf protection to web UI
 
-Add loading animations
-
 Allow a content to be set as the default.
 
 Add request to process queue, pick it up from thread, run through decoders, run
@@ -60,4 +52,22 @@ through metadata extractors, store metadata.... missing link..  fetch payloads
 
 Add settings menu.  Including default page to serve and virus total API
 Add virus total api
+
+Prevent recursive downloads if the IP of a honeypot is used as payload in a
+request. This is a reason why we need to know what honeypots there are.
+
+XL - Allow honeypots to self register. They will receive a default configuration
+which can be edited via the UI.
+
+XL - Allow alerts to be configured for rules
+
+XL - Create reports. Daily report per email.
+
+Allow a hostname to be specified for a rule.
+
+Allow content to be uploaded in a zip.
+
+Make the rules paged and searchable. Refactor the requestslists.vue so that a
+lot of the logic can be reused for the rules vue.
+
 

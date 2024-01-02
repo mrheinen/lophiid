@@ -821,6 +821,13 @@ def go_dependencies():
         version = "v0.0.0-20200815063812-42c35b437635",
     )
     go_repository(
+        name = "com_github_thedevsaddam_gojsonq_v2",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/thedevsaddam/gojsonq/v2",
+        sum = "h1:CoMVaYyKFsVj6TjU6APqAhAvC07hTI6IQen8PHzHYY0=",
+        version = "v2.5.2",
+    )
+    go_repository(
         name = "com_github_tmc_grpc_websocket_proxy",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/tmc/grpc-websocket-proxy",
@@ -861,6 +868,13 @@ def go_dependencies():
         importpath = "github.com/vingarcia/ksql/adapters/kpgx5",
         sum = "h1:cm1D14ugr+iZGm8XmMg64UgbvgARHhO17ypTVvtA++k=",
         version = "v1.10.0",
+    )
+    go_repository(
+        name = "com_github_virustotal_vt_go",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/VirusTotal/vt-go",
+        sum = "h1:jnE1HrFdXi5hlgbDMOuNxCerI9Lu+vYVAEQ1x3/35v8=",
+        version = "v1.0.0",
     )
     go_repository(
         name = "com_github_vishvananda_netlink",

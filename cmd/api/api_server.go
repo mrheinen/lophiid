@@ -64,15 +64,19 @@ func main() {
 	r.HandleFunc("/contentrule/single", as.HandleGetSingleContentRule).Methods("GET")
 	r.HandleFunc("/contentrule/upsert", as.HandleUpsertSingleContentRule).Methods("POST")
 	r.HandleFunc("/contentrule/delete", as.HandleDeleteContentRule).Methods("POST")
+	r.HandleFunc("/contentrule/search", as.HandleSearchContentRules).Methods("GET")
 
 	// All requests endpoints
 	r.HandleFunc("/request/all", as.HandleGetAllRequests).Methods("GET")
+	// TODO: rename segment to search
 	r.HandleFunc("/request/segment", as.HandleGetRequestsSegment).Methods("GET")
 
 	// All application endpoints
 	r.HandleFunc("/app/all", as.HandleGetAllApps).Methods("GET")
 	r.HandleFunc("/app/upsert", as.HandleUpsertSingleApp).Methods("POST")
 	r.HandleFunc("/app/delete", as.HandleDeleteApp).Methods("POST")
+
+	r.HandleFunc("/downloads/all", as.HandleGetAllDownloads).Methods("GET")
 
 	r.HandleFunc("/meta/request", as.HandleGetMetadataForRequest).Methods("POST")
 

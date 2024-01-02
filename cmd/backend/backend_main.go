@@ -11,8 +11,10 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/backend"
 	"loophid/pkg/database"
+	"loophid/pkg/downloader"
 	"net"
 	"os"
+	"time"
 
 	"github.com/vingarcia/ksql"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
@@ -21,6 +23,7 @@ import (
 )
 
 var serverLocation = flag.String("s", "localhost:41110", "RPC server listen string")
+var downloadDir = flag.String("d", "/tmp/", "Directory to download files/urls in")
 var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 var serverCert = flag.String("ssl-server-cert", "", "server SSL certificate")
 var serverKey = flag.String("ssl-server-key", "", "server SSL key")
@@ -28,6 +31,7 @@ var caCert = flag.String("ssl-cacert", "", "server CA cert")
 
 func main() {
 
+	flag.Parse()
 	var programLevel = new(slog.LevelVar) // Info by default
 	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
@@ -62,8 +66,8 @@ func main() {
 	}
 
 	dbc := database.NewKSQLClient(&db)
-
-	bs := backend.NewBackendServer(dbc)
+	dLoader := downloader.NewHTTPDownloader(*downloadDir, time.Minute*10)
+	bs := backend.NewBackendServer(dbc, dLoader)
 	if err := bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

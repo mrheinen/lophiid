@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "database",
@@ -9,4 +9,10 @@ go_library(
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
     ],
+)
+
+go_test(
+    name = "database_test",
+    srcs = ["database_test.go"],
+    embed = [":database"],
 )

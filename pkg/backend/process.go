@@ -2,6 +2,7 @@ package backend
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"html"
 	"log/slog"
 	"loophid/pkg/database"
@@ -24,17 +25,48 @@ func decodeURL(encoded string) (string, error) {
 		return encoded, nil
 	}
 
+	return url.QueryUnescape(encoded)
+}
+
+// roughDecodeURL is a fall back URL decoding function. The returned string will
+// only have the ascii characters decoded. Anything else is left in tact.
+func roughDecodeURL(encoded string) string {
+	var ret strings.Builder
+	ret.Grow(len(encoded))
+	for i := 0; i < len(encoded); {
+		if encoded[i] != '%' || i > len(encoded)-2 {
+			ret.WriteByte(encoded[i])
+			i += 1
+			continue
+		} else {
+			dst := make([]byte, 1)
+			bytesWritten, err := hex.Decode(dst, []byte{encoded[i+1], encoded[i+2]})
+			if bytesWritten == 1 && err == nil && dst[0] > 32 && dst[0] < 177 {
+				ret.WriteByte(dst[0])
+			} else {
+				ret.WriteByte(encoded[i])
+				ret.WriteByte(encoded[i+1])
+				ret.WriteByte(encoded[i+2])
+			}
+			i = i + 3
+		}
+	}
+	return ret.String()
+}
+
+// decodeURLOrEmptyString attempts to decode the string. It first uses the url
+// package decoding which is strict but very complete. If that fails then it
+// will fall back to a very simplistic search/replace decode function.
+func decodeURLOrEmptyString(encoded string) string {
 	// This is a special case and in preparation of the Base64 encoding we do
 	// later on. We may have to rethink whether to keep this here or move it
 	// somewhere else.  Anyway, a + in the URL is a space.
 	decoded := strings.ReplaceAll(encoded, "+", " ")
-	return url.QueryUnescape(decoded)
-}
 
-func decodeURLOrEmptyString(encoded string) string {
-	ret, err := decodeURL(encoded)
+	ret, err := decodeURL(decoded)
 	if err != nil {
-		return ""
+		slog.Warn("could not decode, falling back", slog.String("error", err.Error()))
+		return roughDecodeURL(decoded)
 	}
 	return ret
 }
@@ -64,11 +96,13 @@ func StringsFromRequest(req *database.Request) []string {
 	// TODO: Make this cleaner and access the actual
 	// header instead of grepping the entire request.
 	if strings.Contains(req.Raw, "application/x-www-form-urlencoded") {
-		params, err := url.ParseQuery(string(req.Body))
+		// Hack until this is fixed: https://github.com/golang/go/issues/50034
+		body := strings.ReplaceAll(string(req.Body), ";", "+")
+		params, err := url.ParseQuery(body)
 		if err != nil {
-			slog.Warn("could not parse body", slog.String("error", err.Error()),
-				slog.String("body", string(req.Body)))
-			res = append(res, decodeURLOrEmptyString(string(req.Body)))
+			slog.Warn("could not parse body query", slog.String("error", err.Error()),
+				slog.String("body", body))
+			res = append(res, decodeURLOrEmptyString(body))
 		} else {
 			for _, values := range params {
 				for _, p := range values {
@@ -77,16 +111,25 @@ func StringsFromRequest(req *database.Request) []string {
 			}
 		}
 	} else {
+		// Hack until this is fixed: https://github.com/golang/go/issues/50034
 		res = append(res, string(req.Body))
 	}
 
 	// Parse all query parameters to find base64 strings.
 	qIdx := strings.Index(req.Uri, "?")
 	if qIdx == -1 {
+		// Sometimes the path is the payload. Add it only if the path itself is not
+		// a URL.
+		res = append(res, decodeURLOrEmptyString(req.Uri))
 		return res
 	}
+
 	query := req.Uri[qIdx+1:]
+	path := req.Uri[:qIdx]
+	res = append(res, decodeURLOrEmptyString(path))
 	params, err := url.ParseQuery(query)
+	// Hack until this is fixed: https://github.com/golang/go/issues/50034
+	query = strings.ReplaceAll(query, ";", "+")
 	if err != nil {
 		slog.Warn("could not parse query", slog.String("error", err.Error()), slog.String("query", query))
 		return res
@@ -149,7 +192,10 @@ func (u *URLExtractor) ParseRequest(req *database.Request) {
 	var member struct{}
 	for _, s := range StringsFromRequest(req) {
 		for _, url := range ExtractUrls(s) {
-			u.result[url] = member
+			// Skip the URL if it contains our honeypot IP.
+			if !strings.Contains(url, req.HoneypotIP) {
+				u.result[url] = member
+			}
 		}
 	}
 }

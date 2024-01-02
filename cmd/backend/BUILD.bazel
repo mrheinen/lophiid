@@ -9,6 +9,7 @@ go_library(
         "//backend_service",
         "//pkg/backend",
         "//pkg/database",
+        "//pkg/downloader",
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
         "@org_golang_google_grpc//:go_default_library",

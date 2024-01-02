@@ -8,15 +8,18 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"loophid/backend_service"
 	"loophid/pkg/database"
+	"loophid/pkg/downloader"
 )
 
 type BackendServer struct {
 	backend_service.BackendServiceServer
 	dbClient        database.DatabaseClient
+	dLoader         downloader.Downloader
 	safeRules       *SafeRules
 	safeRulesChan   chan bool
 	reqsProcessChan chan bool
@@ -26,12 +29,13 @@ type BackendServer struct {
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader) *BackendServer {
 	sCache := NewSessionCache(time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
 	return &BackendServer{
 		dbClient:        c,
+		dLoader:         dLoader,
 		safeRules:       &SafeRules{},
 		safeRulesChan:   make(chan bool),
 		reqsProcessChan: make(chan bool),
@@ -105,7 +109,8 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	var res *backend_service.HttpResponse
 	var matchedRules []database.ContentRule
-	for _, rule := range s.safeRules.GetRules() {
+
+	for _, rule := range s.safeRules.Get() {
 		// Port 0 means any port.
 		if rule.Port != 0 && rule.Port != req.GetRequest().GetParsedUrl().GetPort() {
 			continue
@@ -229,7 +234,7 @@ func (s *BackendServer) LoadRules() error {
 	if err != nil {
 		return err
 	}
-	s.safeRules.SetRules(rules)
+	s.safeRules.Set(rules)
 	return nil
 }
 
@@ -259,6 +264,8 @@ func (s *BackendServer) ProcessReqsQueue() {
 			continue
 		}
 
+		var wg sync.WaitGroup
+
 		// Iterate over the base64 strings and store them. Importantly, while doing
 		// so try to extract links from the decoded content.
 		var metadatas []database.RequestMetadata
@@ -267,15 +274,74 @@ func (s *BackendServer) ProcessReqsQueue() {
 			metadatas = append(metadatas, database.RequestMetadata{
 				Type:      ex.MetaType(),
 				Data:      string(v),
-				RequestID: req.ID,
+				RequestID: dm.ModelID(),
 			})
 		}
 
+		contentTypesToParse := make(map[string]bool)
+		contentTypesToParse["text/x-sh"] = true
+
+		// Iterate over the links and try to download them.
 		for v := range linksMap {
+			wg.Add(1)
+			targetFile, err := s.dLoader.PepareTargetFileDir(fmt.Sprintf("%d", dm.ModelID()))
+			if err != nil {
+				slog.Warn("error preparing file", slog.String("error", err.Error()))
+				continue
+			}
+			go func(url string, reqID int64) {
+				//dInfo, fileContent, err := s.dLoader.FromUrl(reqID, url, targetFile, &wg)
+				dInfo, _, err := s.dLoader.FromUrl(reqID, url, targetFile, &wg)
+				if err != nil {
+					slog.Debug("could not download", slog.String("error", err.Error()))
+					if err := s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), targetFile); err != nil {
+						slog.Debug("could not cleanup", slog.String("error", err.Error()))
+					}
+				} else {
+					slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
+
+					// Often the first payload is just a script to download the real
+					// stuff. So therefore we want to parse them for URLs. Disabled for
+					// now because this can cause an infinit download loop.
+
+					/*
+						if fileContent != nil {
+							if _, ok := contentTypesToParse[dInfo.ContentType]; ok {
+								lx.ParseString(string(fileContent))
+							} else {
+								if strings.HasSuffix(url, ".sh") || strings.HasSuffix(url, ".txt") {
+									lx.ParseString(string(fileContent))
+								}
+							}
+						}
+					*/
+
+					// Check if we already downloaded this exact file. If we downloaded it
+					// before, update the existing database record and increase the
+					// times_seen counter. Else add a new record.
+					dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
+					if err == nil {
+						dm.TimesSeen = dm.TimesSeen + 1
+						if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), targetFile); err != nil {
+							slog.Debug("could not cleanup", slog.String("error", err.Error()))
+						}
+						slog.Debug("already seen file from URL before", slog.String("url", url), slog.Int64("times_seen", dm.TimesSeen))
+						if err = s.dbClient.Update(&dm); err != nil {
+							slog.Warn("could not update", slog.String("error", err.Error()))
+						}
+					} else {
+						_, err = s.dbClient.Insert(&dInfo)
+						if err != nil {
+							slog.Warn("error on insert", slog.String("error", err.Error()))
+						}
+					}
+				}
+			}(v, dm.ModelID())
+
 			metadatas = append(metadatas, database.RequestMetadata{
 				Type:      lx.MetaType(),
 				Data:      string(v),
-				RequestID: req.ID,
+				RequestID: dm.ModelID(),
 			})
 		}
 
@@ -288,6 +354,7 @@ func (s *BackendServer) ProcessReqsQueue() {
 				slog.Debug("Saved metadata", slog.Int64("id", dm.ModelID()), slog.String("value", m.Data), slog.String("type", m.Type))
 			}
 		}
+		wg.Wait()
 	}
 }
 
@@ -305,7 +372,6 @@ func (s *BackendServer) loadRuleIdContentIdCombos() error {
 }
 
 func (s *BackendServer) Start() error {
-
 	if err := s.loadRuleIdContentIdCombos(); err != nil {
 		return fmt.Errorf("loading combos: %s", err)
 	}
@@ -324,12 +390,12 @@ func (s *BackendServer) Start() error {
 				rulesTicker.Stop()
 				return
 			case <-rulesTicker.C:
-				cl := len(s.safeRules.GetRules())
+				cl := len(s.safeRules.Get())
 
 				if err = s.LoadRules(); err != nil {
 					slog.Error("reloading rules", slog.String("error", err.Error()))
 				}
-				nl := len(s.safeRules.GetRules())
+				nl := len(s.safeRules.Get())
 
 				if cl != nl {
 					slog.Info("Rules updated\n", slog.Int("from", cl), slog.Int("to", nl))

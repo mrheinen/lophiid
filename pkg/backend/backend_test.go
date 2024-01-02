@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"loophid/backend_service"
 	"loophid/pkg/database"
+	"loophid/pkg/downloader"
 	"testing"
 )
 
@@ -36,7 +37,13 @@ func TestHandleProbeMatchesSingleRuleOK(t *testing.T) {
 		},
 	}
 
-	b := NewBackendServer(fdbc)
+	fakeDownLoader := downloader.FakeDownloader{
+		ErrorToReturn:      nil,
+		DownloadToReturn:   database.Download{},
+		TargetFileToReturn: "",
+	}
+
+	b := NewBackendServer(fdbc, &fakeDownLoader)
 	if err := b.Start(); err != nil {
 		t.Fatalf("loading rules: %s", err)
 	}
@@ -260,7 +267,12 @@ func TestHandleProbeMatchesMultipleRuleOK(t *testing.T) {
 				RequestsToReturn:     test.requestsToReturn,
 			}
 
-			b := NewBackendServer(fdbc)
+			fakeDownLoader := downloader.FakeDownloader{
+				ErrorToReturn:      nil,
+				DownloadToReturn:   database.Download{},
+				TargetFileToReturn: "",
+			}
+			b := NewBackendServer(fdbc, &fakeDownLoader)
 			if err := b.Start(); err != nil {
 				t.Fatalf("loading rules: %s", err)
 			}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/vingarcia/ksql"
@@ -16,6 +18,7 @@ var ContentRuleTable = ksql.NewTable("content_rule")
 var RequestTable = ksql.NewTable("request")
 var AppTable = ksql.NewTable("app")
 var RequestMetadataTable = ksql.NewTable("request_metadata")
+var DownloadTable = ksql.NewTable("downloads")
 
 type DataModel interface {
 	ModelID() int64
@@ -104,6 +107,25 @@ type Application struct {
 
 func (c *Application) ModelID() int64 { return c.ID }
 
+type Download struct {
+	ID           int64     `ksql:"id,skipInserts" json:"id"`
+	RequestID    int64     `ksql:"request_id" json:"request_id"`
+	Size         int64     `ksql:"size" json:"size"`
+	Port         int64     `ksql:"port" json:"port"`
+	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	LastSeenAt   time.Time `ksql:"last_seen_at,timeNowUTC" json:"last_seen_at"`
+	ContentType  string    `ksql:"content_type" json:"content_type"`
+	OriginalUrl  string    `ksql:"original_url" json:"original_url"`
+	UsedUrl      string    `ksql:"used_url" json:"used_url"`
+	IP           string    `ksql:"ip" json:"ip"`
+	SHA256sum    string    `ksql:"sha256sum" json:"sha265sum"`
+	Host         string    `ksql:"host" json:"host"`
+	FileLocation string    `ksql:"file_location" json:"file_location"`
+	TimesSeen    int64     `ksql:"times_seen" json:"times_seen"`
+}
+
+func (c *Download) ModelID() int64 { return c.ID }
+
 type DatabaseClient interface {
 	Close()
 	Insert(dm DataModel) (DataModel, error)
@@ -114,12 +136,32 @@ type DatabaseClient interface {
 	GetContent() ([]Content, error)
 	GetContentRuleByID(id int64) (ContentRule, error)
 	GetContentRules() ([]ContentRule, error)
+	GetDownloads() ([]Download, error)
+	GetDownloadBySum(sha256sum string) (Download, error)
 	GetRequests() ([]Request, error)
 	GetRequestsForSourceIP(ip string) ([]Request, error)
 	GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error)
-	SearchRequests(offset int64, limit int64, params map[string]string) ([]Request, error)
+	SearchRequests(offset int64, limit int64, query string) ([]Request, error)
+	SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error)
 	GetRequestsDistinctComboLastMonth() ([]Request, error)
 	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
+}
+
+// Helper function to get database field names.
+func getDatamodelDatabaseFields(datamodel interface{}) []string {
+	var ret []string
+	t := reflect.TypeOf(datamodel)
+	for i := 0; i < t.NumField(); i++ {
+		tvalue := t.Field(i).Tag.Get("ksql")
+		if tvalue != "" {
+			idx := strings.Index(tvalue, ",")
+			if idx != -1 {
+				tvalue = tvalue[:idx]
+			}
+			ret = append(ret, tvalue)
+		}
+	}
+	return ret
 }
 
 type KSQLClient struct {
@@ -172,7 +214,10 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &ContentRuleTable
 	case "RequestMetadata":
 		return &RequestMetadataTable
+	case "Download":
+		return &DownloadTable
 	default:
+		fmt.Printf("Don't know %s datamodel\n", name)
 		return nil
 	}
 }
@@ -180,7 +225,7 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 func (d *KSQLClient) Insert(dm DataModel) (DataModel, error) {
 	t := d.getTableForModel(dm)
 	if t == nil {
-		return dm, fmt.Errorf("Unknown datamodel: %v", dm)
+		return dm, fmt.Errorf("unknown datamodel: %v", dm)
 	}
 	err := d.db.Insert(d.ctx, *t, dm)
 	return dm, err
@@ -189,7 +234,7 @@ func (d *KSQLClient) Insert(dm DataModel) (DataModel, error) {
 func (d *KSQLClient) Update(dm DataModel) error {
 	t := d.getTableForModel(dm)
 	if t == nil {
-		return fmt.Errorf("Unknown datamodel: %v", dm)
+		return fmt.Errorf("unknown datamodel: %v", dm)
 	}
 	return d.db.Patch(d.ctx, *t, dm)
 }
@@ -197,7 +242,7 @@ func (d *KSQLClient) Update(dm DataModel) error {
 func (d *KSQLClient) Delete(dm DataModel) error {
 	t := d.getTableForModel(dm)
 	if t == nil {
-		return fmt.Errorf("Unknown datamodel: %v", dm)
+		return fmt.Errorf("unknown datamodel: %v", dm)
 	}
 	return d.db.Delete(d.ctx, *t, dm.ModelID())
 }
@@ -206,6 +251,18 @@ func (d *KSQLClient) GetApps() ([]Application, error) {
 	var apps []Application
 	err := d.db.Query(d.ctx, &apps, "FROM app ORDER BY name")
 	return apps, err
+}
+
+func (d *KSQLClient) GetDownloads() ([]Download, error) {
+	var dls []Download
+	err := d.db.Query(d.ctx, &dls, "FROM downloads ORDER BY created_at DESC")
+	return dls, err
+}
+
+func (d *KSQLClient) GetDownloadBySum(sha256sum string) (Download, error) {
+	var dl Download
+	err := d.db.QueryOne(d.ctx, &dl, "FROM downloads WHERE sha256sum = $1", sha256sum)
+	return dl, err
 }
 
 func (d *KSQLClient) GetRequests() ([]Request, error) {
@@ -231,29 +288,163 @@ func (d *KSQLClient) GetRequestsSegment(offset int64, limit int64, source_ip *st
 	return rs, err
 }
 
-func (d *KSQLClient) SearchRequests(offset int64, limit int64, params map[string]string) ([]Request, error) {
-	var rs []Request
+type WhereType int64
 
-	baseQuery := "FROM request"
+const (
+	IS WhereType = iota
+	LIKE
+	GREATER_THAN
+	LOWER_THAN
+)
+
+type SearchRequestsParam struct {
+	key      string
+	value    string
+	matching WhereType
+}
+
+func parseQuery(q string, validFields []string) ([]SearchRequestsParam, error) {
+	var ret []SearchRequestsParam
+
+	type RegexByWhereType struct {
+		regex     *regexp.Regexp
+		splitChar string
+		whereType WhereType
+	}
+
+	rSearches := []RegexByWhereType{
+		{
+			regex:     regexp.MustCompile(`[a-z\_]*:[a-zA-Z0-9\._\-%:]*`),
+			splitChar: ":",
+			whereType: IS,
+		},
+		{
+			regex:     regexp.MustCompile(`[a-z\_]*~[a-zA-Z0-9\._\-%:]*`),
+			splitChar: "~",
+			whereType: LIKE,
+		},
+		{
+			regex:     regexp.MustCompile(`[a-z\_]*>[0-9]*`),
+			splitChar: ">",
+			whereType: GREATER_THAN,
+		},
+		{
+			regex:     regexp.MustCompile(`[a-z\_]*[<0-9]*`),
+			splitChar: "<",
+			whereType: LOWER_THAN,
+		},
+	}
+
+	for _, regConf := range rSearches {
+		for _, part := range regConf.regex.FindAllString(q, -1) {
+			options := strings.SplitN(part, regConf.splitChar, 2)
+			if len(options) != 2 {
+				continue
+			}
+
+			hasField := false
+			for _, v := range validFields {
+				if v == options[0] {
+					hasField = true
+					break
+				}
+			}
+
+			if !hasField {
+				return ret, fmt.Errorf("unknown search option: %s", part)
+			} else {
+				ret = append(ret, SearchRequestsParam{
+					key:      options[0],
+					value:    options[1],
+					matching: regConf.whereType,
+				})
+			}
+		}
+	}
+
+	if len(ret) == 0 {
+		slog.Debug("Search did not parse", slog.String("query", q))
+	}
+	return ret, nil
+}
+
+func getWhereClause(index int, s *SearchRequestsParam) (string, error) {
+	switch s.matching {
+	case IS:
+		return fmt.Sprintf("%s = $%d ", s.key, index), nil
+	case LIKE:
+		if !strings.Contains(s.value, "%") {
+			s.value = fmt.Sprintf("%s%%", s.value)
+		}
+		return fmt.Sprintf("%s LIKE $%d ", s.key, index), nil
+	case LOWER_THAN:
+		return fmt.Sprintf("%s < $%d ", s.key, index), nil
+	case GREATER_THAN:
+		return fmt.Sprintf("%s > $%d ", s.key, index), nil
+	}
+
+	return "", fmt.Errorf("could not match %+v", s)
+}
+
+func buildQuery(params []SearchRequestsParam, queryPrefix string, querySuffix string) (string, []interface{}, error) {
+	baseQuery := queryPrefix
 
 	idx := 1
 	var values []interface{}
-	for k, v := range params {
-		if idx == 1 {
-			baseQuery = fmt.Sprintf("%s WHERE %s = $%d ", baseQuery, k, idx)
-			values = append(values, v)
-		} else {
-			baseQuery = fmt.Sprintf("%s AND %s = $%d ", baseQuery, k, idx)
-			values = append(values, v)
+	for _, param := range params {
+		wc, err := getWhereClause(idx, &param)
+		if err != nil {
+			return "", nil, err
 		}
-
+		if idx == 1 {
+			baseQuery = fmt.Sprintf("%s WHERE %s", baseQuery, wc)
+			values = append(values, param.value)
+		} else {
+			baseQuery = fmt.Sprintf("%s AND %s", baseQuery, wc)
+			values = append(values, param.value)
+		}
 		idx++
 	}
 
-	baseQuery = fmt.Sprintf("%s ORDER BY time_received DESC OFFSET %d LIMIT %d", baseQuery, offset, limit)
-	slog.Debug("Running query", slog.String("query", baseQuery), slog.Int("values", len(values)))
+	baseQuery = fmt.Sprintf("%s %s", baseQuery, querySuffix)
+	return baseQuery, values, nil
+}
+
+func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]Request, error) {
+	var rs []Request
+
+	params, err := parseQuery(query, getDatamodelDatabaseFields(Request{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM request", fmt.Sprintf("ORDER BY time_received DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
 	start := time.Now()
-	err := d.db.Query(d.ctx, &rs, baseQuery, values...)
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
+	var rs []ContentRule
+
+	params, err := parseQuery(query, getDatamodelDatabaseFields(ContentRule{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM content_rule", fmt.Sprintf("ORDER BY app_id DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
 	elapsed := time.Since(start)
 	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
 	return rs, err
@@ -308,6 +499,7 @@ type FakeDatabaseClient struct {
 	ContentRuleIDToReturn int64
 	ContentRulesToReturn  []ContentRule
 	RequestsToReturn      []Request
+	DownloadsToReturn     []Download
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -355,6 +547,15 @@ func (f *FakeDatabaseClient) GetRequestsDistinctComboLastMonth() ([]Request, err
 func (f *FakeDatabaseClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error) {
 	return []RequestMetadata{}, f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, params map[string]string) ([]Request, error) {
+func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, query string) ([]Request, error) {
 	return []Request{}, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
+	return f.ContentRulesToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) GetDownloads() ([]Download, error) {
+	return f.DownloadsToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) GetDownloadBySum(sha256sum string) (Download, error) {
+	return f.DownloadsToReturn[0], f.ErrorToReturn
 }
