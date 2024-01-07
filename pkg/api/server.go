@@ -72,7 +72,7 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		return
 	}
 
-	if rb.ContentID == 0 || rb.Path == "" {
+	if rb.ContentID == 0 || (rb.Path == "" && rb.Body == "") {
 		errMsg := "Empty parameters given"
 		a.sendStatus(w, errMsg, ResultError, nil)
 		return
@@ -321,7 +321,6 @@ func (a *ApiServer) HandleGetAllDownloads(w http.ResponseWriter, req *http.Reque
 }
 
 func (a *ApiServer) HandleGetAllRequests(w http.ResponseWriter, req *http.Request) {
-
 	ip := req.URL.Query().Get("ip")
 	var reqs []database.Request
 	var err error
@@ -353,11 +352,7 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 	}
 	var reqs []database.Request
 	query := req.URL.Query().Get("q")
-	if query != "" {
-		reqs, err = a.dbc.SearchRequests(iOffset, iLimit, query)
-	} else {
-		reqs, err = a.dbc.GetRequestsSegment(iOffset, iLimit, nil)
-	}
+	reqs, err = a.dbc.SearchRequests(iOffset, iLimit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -391,6 +386,31 @@ func (a *ApiServer) HandleSearchContentRules(w http.ResponseWriter, req *http.Re
 	a.sendStatus(w, "", ResultSuccess, rls)
 }
 
+func (a *ApiServer) HandleSearchContent(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var rls []database.Content
+	query := req.URL.Query().Get("q")
+	rls, err = a.dbc.SearchContent(iOffset, iLimit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
 func (a *ApiServer) HandleGetMetadataForRequest(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -411,4 +431,105 @@ func (a *ApiServer) HandleGetMetadataForRequest(w http.ResponseWriter, req *http
 	}
 
 	a.sendStatus(w, "", ResultSuccess, mds)
+}
+
+type AppExport struct {
+	App      *database.Application
+	Rules    []database.ContentRule
+	Contents []database.Content
+}
+
+func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	app, err := a.dbc.GetAppByID(intID)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	rules, err := a.dbc.SearchContentRules(0, 250, fmt.Sprintf("app_id:%d", app.ID))
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	ret := AppExport{
+		App:   &app,
+		Rules: rules,
+	}
+
+	for _, rule := range rules {
+		content, err := a.dbc.GetContentByID(rule.ContentID)
+		if err != nil {
+			a.sendStatus(w, err.Error(), ResultError, nil)
+			return
+		}
+
+		ret.Contents = append(ret.Contents, content)
+	}
+
+	a.sendStatus(w, "", ResultSuccess, ret)
+}
+
+// ImportAppWithContentAndRule imports the given app with its rules and contents
+// into the database. Everything is imported as new.
+func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http.Request) {
+	var ae AppExport
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&ae); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	// Set the app ID to 0 so that it gets inserted as new.
+	ae.App.ID = 0
+	appModel, err := a.dbc.Insert(ae.App)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	cm := make(map[int64]database.Content)
+	for _, cnt := range ae.Contents {
+		cm[cnt.ID] = cnt
+	}
+
+	for _, r := range ae.Rules {
+		ct, ok := cm[r.ContentID]
+		if !ok {
+			a.sendStatus(w, "a rule is missing", ResultError, nil)
+			return
+		}
+
+		ct.ID = 0
+		contentModel, err := a.dbc.Insert(&ct)
+		if err != nil {
+			a.sendStatus(w, err.Error(), ResultError, nil)
+			return
+		}
+
+		r.ContentID = contentModel.ModelID()
+		r.AppID = appModel.ModelID()
+		r.ID = 0
+		_, err = a.dbc.Insert(&r)
+		if err != nil {
+			a.sendStatus(w, err.Error(), ResultError, nil)
+			return
+		}
+	}
+
+	a.sendStatus(w, "", ResultSuccess, nil)
 }

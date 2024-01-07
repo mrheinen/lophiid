@@ -30,6 +30,7 @@ type Content struct {
 	Description string    `ksql:"description"    json:"description"`
 	ContentType string    `ksql:"content_type"   json:"content_type"`
 	Server      string    `ksql:"server"         json:"server"`
+	IsDefault   bool      `ksql:"is_default"     json:"is_default"`
 	StatusCode  string    `ksql:"status_code"    json:"status_code"`
 	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC"  json:"updated_at"`
@@ -39,6 +40,7 @@ func (c *Content) ModelID() int64 { return c.ID }
 
 type ContentRule struct {
 	ID           int64     `ksql:"id,skipInserts" json:"id"`
+	Host         string    `ksql:"host" json:"host"`
 	Path         string    `ksql:"path" json:"path"`
 	PathMatching string    `ksql:"path_matching" json:"path_matching"`
 	Body         string    `ksql:"body" json:"body"`
@@ -132,6 +134,8 @@ type DatabaseClient interface {
 	Update(dm DataModel) error
 	Delete(dm DataModel) error
 	GetApps() ([]Application, error)
+	GetAppByID(id int64) (Application, error)
+	SearchApps(offset int64, limit int64, query string) ([]Application, error)
 	GetContentByID(id int64) (Content, error)
 	GetContent() ([]Content, error)
 	GetContentRuleByID(id int64) (ContentRule, error)
@@ -143,6 +147,7 @@ type DatabaseClient interface {
 	GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error)
 	SearchRequests(offset int64, limit int64, query string) ([]Request, error)
 	SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error)
+	SearchContent(offset int64, limit int64, query string) ([]Content, error)
 	GetRequestsDistinctComboLastMonth() ([]Request, error)
 	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 }
@@ -247,6 +252,15 @@ func (d *KSQLClient) Delete(dm DataModel) error {
 	return d.db.Delete(d.ctx, *t, dm.ModelID())
 }
 
+func (d *KSQLClient) GetAppByID(id int64) (Application, error) {
+	ap := Application{}
+	err := d.db.QueryOne(d.ctx, &ap, fmt.Sprintf("FROM app WHERE id = %d", id))
+	if ap.ID == 0 {
+		return ap, fmt.Errorf("found no app for ID: %d", id)
+	}
+	return ap, err
+}
+
 func (d *KSQLClient) GetApps() ([]Application, error) {
 	var apps []Application
 	err := d.db.Query(d.ctx, &apps, "FROM app ORDER BY name")
@@ -314,22 +328,22 @@ func parseQuery(q string, validFields []string) ([]SearchRequestsParam, error) {
 
 	rSearches := []RegexByWhereType{
 		{
-			regex:     regexp.MustCompile(`[a-z\_]*:[a-zA-Z0-9\._\-%:]*`),
+			regex:     regexp.MustCompile(`[a-z_]*:[a-zA-Z0-9\._\-%:\\/&=]*`),
 			splitChar: ":",
 			whereType: IS,
 		},
 		{
-			regex:     regexp.MustCompile(`[a-z\_]*~[a-zA-Z0-9\._\-%:]*`),
+			regex:     regexp.MustCompile(`[a-z_]*~[a-zA-Z0-9\._\-%%:\\/&=]*`),
 			splitChar: "~",
 			whereType: LIKE,
 		},
 		{
-			regex:     regexp.MustCompile(`[a-z\_]*>[0-9]*`),
+			regex:     regexp.MustCompile(`[a-z_]*>[0-9]*`),
 			splitChar: ">",
 			whereType: GREATER_THAN,
 		},
 		{
-			regex:     regexp.MustCompile(`[a-z\_]*[<0-9]*`),
+			regex:     regexp.MustCompile(`[a-z_]*[<0-9]*`),
 			splitChar: "<",
 			whereType: LOWER_THAN,
 		},
@@ -363,7 +377,7 @@ func parseQuery(q string, validFields []string) ([]SearchRequestsParam, error) {
 	}
 
 	if len(ret) == 0 {
-		slog.Debug("Search did not parse", slog.String("query", q))
+		slog.Debug("search did not parse", slog.String("query", q))
 	}
 	return ret, nil
 }
@@ -376,6 +390,7 @@ func getWhereClause(index int, s *SearchRequestsParam) (string, error) {
 		if !strings.Contains(s.value, "%") {
 			s.value = fmt.Sprintf("%s%%", s.value)
 		}
+		fmt.Printf("Returning: %s", s.value)
 		return fmt.Sprintf("%s LIKE $%d ", s.key, index), nil
 	case LOWER_THAN:
 		return fmt.Sprintf("%s < $%d ", s.key, index), nil
@@ -450,6 +465,46 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 	return rs, err
 }
 
+func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
+	var rs []Content
+
+	params, err := parseQuery(query, getDatamodelDatabaseFields(Content{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM content", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) SearchApps(offset int64, limit int64, query string) ([]Application, error) {
+	var rs []Application
+
+	params, err := parseQuery(query, getDatamodelDatabaseFields(Application{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM app", fmt.Sprintf("OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
 func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error) {
 	var md []RequestMetadata
 	err := d.db.Query(d.ctx, &md, "FROM request_metadata WHERE request_id = $1 ORDER BY type", id)
@@ -465,6 +520,9 @@ func (d *KSQLClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
 func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
 	ct := Content{}
 	err := d.db.QueryOne(d.ctx, &ct, fmt.Sprintf("FROM content WHERE id = %d", id))
+	if ct.ID == 0 {
+		return ct, fmt.Errorf("found no content for ID: %d", id)
+	}
 	return ct, err
 }
 
@@ -507,7 +565,11 @@ func (f *FakeDatabaseClient) GetContentRuleByID(id int64) (ContentRule, error) {
 	return f.ContentRulesToReturn[0], f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetContentByID(id int64) (Content, error) {
-	return f.ContentsToReturn[id], f.ErrorToReturn
+	ct, ok := f.ContentsToReturn[id]
+	if !ok {
+		return ct, fmt.Errorf("not found")
+	}
+	return ct, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetContent() ([]Content, error) {
 	var ret []Content
@@ -553,9 +615,22 @@ func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, query str
 func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
 	return f.ContentRulesToReturn, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
+	var ret []Content
+	for _, v := range f.ContentsToReturn {
+		ret = append(ret, v)
+	}
+	return ret, f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) GetDownloads() ([]Download, error) {
 	return f.DownloadsToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetDownloadBySum(sha256sum string) (Download, error) {
 	return f.DownloadsToReturn[0], f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) GetAppByID(id int64) (Application, error) {
+	return Application{}, nil
+}
+func (f *FakeDatabaseClient) SearchApps(offset int64, limit int64, query string) ([]Application, error) {
+	return []Application{}, nil
 }

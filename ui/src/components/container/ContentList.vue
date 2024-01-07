@@ -1,7 +1,19 @@
 <template>
   <div class="columns">
-    <div class="column is-three-fifths">
-      <table class="table is-hoverable" style="margin-left: 15px;" v-if="contents.length > 0">
+    <div class="column is-three-fifths" style="margin-left: 15px;">
+      <form @submit.prevent="performNewSearch()">
+        <span class="p-input-icon-left" style="width: 100%">
+          <i class="pi pi-search" />
+          <InputText
+            @focusin="searchIsFocused = true"
+            @focusout="searchIsFocused = false"
+            v-model="query"
+            placeholder="Search"
+          />
+        </span>
+      </form>
+
+      <table class="table is-hoverable" v-if="contents.length > 0">
         <thead>
           <th>ID</th>
           <th>Description</th>
@@ -18,7 +30,7 @@
             :class="isSelectedId == content.id ? 'is-selected' : ''"
           >
             <td>{{ content.id }}</td>
-            <td>{{ content.name }}</td>
+            <td>{{ content.name }} <b class="default" v-if="content.is_default">default</b></td>
             <td>{{ content.content_type }}</td>
             <td>{{ content.server }}</td>
             <td>{{ content.parsed.created_at }}</td>
@@ -26,6 +38,18 @@
           </tr>
         </tbody>
       </table>
+
+      <i
+        v-if="offset > 0"
+        @click="loadPrev()"
+        class="pi pi-arrow-left pi-style"
+      ></i>
+      <i
+        v-if="contents.length == limit"
+        @click="loadNext()"
+        class="pi pi-arrow-right pi-style pi-style-right"
+      ></i>
+
     </div>
     <div class="column restrict-width mright">
       <content-form
@@ -53,6 +77,10 @@ export default {
       contents: [],
       selectedContent: null,
       isSelectedId: 0,
+      limit: 24,
+      offset: 0,
+      query: null,
+      searchIsFocused: false,
       baseContent: {
         id: 0,
         name: "",
@@ -65,6 +93,11 @@ export default {
     };
   },
   methods: {
+    performNewSearch() {
+      this.offset = 0;
+      this.loadContents(true, function(){});
+    },
+
     onDeleteContent() {
       console.log("Deleted content");
       this.reloadContents();
@@ -74,7 +107,58 @@ export default {
       this.reloadContents();
     },
     reloadContents() {
-      this.loadContents(function(){});
+      this.loadContents(true, function(){});
+    },
+    getFreshRequestLink() {
+      return this.config.requestsLink + "/0/" + this.limit;
+    },
+    getContentLink() {
+      let link =
+        this.config.contentLink + "/" + this.offset + "/" + this.limit;
+      if (this.query) {
+        link += "?q=" + this.query;
+      }
+
+      return link;
+    },
+
+    setNextSelectedElement() {
+      for (var i = 0; i < this.contents.length; i++) {
+        if (this.contents[i].id == this.isSelectedId) {
+          if (i + 1 < this.contents.length) {
+            this.setSelectedContent(this.contents[i + 1].id);
+          } else {
+            return false;
+          }
+          break;
+        }
+      }
+      return true;
+    },
+    setPrevSelectedElement() {
+      for (var i = this.contents.length - 1; i >= 0; i--) {
+        if (this.contents[i].id == this.isSelectedId) {
+          if (i - 1 >= 0) {
+            this.setSelectedContent(this.contents[i - 1].id);
+          } else {
+            return false;
+          }
+          break;
+        }
+      }
+      return true;
+    },
+    loadNext() {
+      this.offset += this.limit;
+      this.$router.push(this.getContentLink());
+      this.loadContents(true, function(){});
+    },
+    loadPrev() {
+      if (this.offset - this.limit >= 0) {
+        this.offset -= this.limit;
+        this.$router.push(this.getContentLink());
+        this.loadContents(false, function(){});
+      }
     },
     setSelectedContent(id) {
       var selected = null;
@@ -92,8 +176,14 @@ export default {
         this.isSelectedId = id;
       }
     },
-    loadContents(callback) {
-      fetch(this.config.backendAddress + "/content/all")
+    loadContents(selectFirst, callback) {
+      var url = this.config.backendAddress + "/content/segment?offset=" +
+        this.offset + "&limit=" + this.limit;
+      if (this.query) {
+        url += "&q=" + this.query;
+      }
+
+      fetch(url)
         .then((response) => response.json())
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
@@ -117,6 +207,12 @@ export default {
                 }
                 this.contents.push(newContent);
               }
+
+              if (selectFirst) {
+                this.setSelectedContent(response.data[0].id);
+              } else {
+                this.setSelectedContent(response.data[response.data.length - 1].id);
+              }
             }
           }
           callback();
@@ -127,11 +223,33 @@ export default {
     this.selectedContent = this.baseContent;
   },
   created() {
-    const maybeSetID = this.$route.params.contentId;
+    if (this.$route.params.limit) {
+      this.limit = parseInt(this.$route.params.limit);
+    }
+
+    if (this.$route.params.offset) {
+      this.offset = parseInt(this.$route.params.offset);
+    }
+
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
+    }
+    this.loadContents(true, function(){})
+  },
+  mounted() {
     const that = this;
-    this.loadContents(function() {
-      if (maybeSetID) {
-        that.setSelectedContent(maybeSetID);
+    window.addEventListener("keyup", function (event) {
+      if (that.searchIsFocused) {
+        return;
+      }
+      if (event.key == "j") {
+        if (!that.setPrevSelectedElement()) {
+          that.loadPrev();
+        }
+      } else if (event.key == "k") {
+        if (!that.setNextSelectedElement()) {
+          that.loadNext();
+        }
       }
     });
   },
@@ -142,4 +260,36 @@ export default {
 .restrict-width {
   width: 700px;
 }
+
+#date {
+  width: 170px;
+}
+
+table {
+  width: 100%;
+}
+
+td {
+  font-size: 13px;
+}
+
+i.pi-style {
+  font-size: 2rem;
+  color: #00d1b2;
+}
+
+i.pi-style-right {
+  float: right;
+}
+
+.p-inputtext {
+  width: 100%;
+}
+
+.default {
+  font-weight: bold;
+  font-size: 9px;
+  color: #ab5a54;
+}
+
 </style>

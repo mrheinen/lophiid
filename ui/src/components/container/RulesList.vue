@@ -9,13 +9,25 @@
 
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
+      <form @submit.prevent="performNewSearch()">
+        <span class="p-input-icon-left" style="width: 100%">
+          <i class="pi pi-search" />
+          <InputText
+            @focusin="searchIsFocused = true"
+            @focusout="searchIsFocused = false"
+            v-model="query"
+            placeholder="Search"
+          />
+        </span>
+      </form>
+      <div>
       <table class="table is-hoverable" v-if="rules.length > 0">
         <thead>
           <th>App</th>
           <th>App version</th>
           <th>ID</th>
           <th>Method</th>
-          <th>Path</th>
+          <th>Path / Body</th>
           <th>Port</th>
           <th>Content ID</th>
           <th>Date updated</th>
@@ -41,10 +53,10 @@
             </td>
             <td>{{ rule.id }}</td>
             <td>{{ rule.method == "ANY" ? "Any" : rule.method }}</td>
-            <td>{{ rule.parsed.path }}</td>
+            <td>{{ rule.parsed.path_body }}</td>
             <td>{{ rule.port == 0 ? "Any" : rule.port }}</td>
             <td>
-              <a :href="'/content/' + rule.content_id">
+              <a :href="'/content?q=id:' + rule.content_id">
                 {{ rule.content_id }}</a
               >
             </td>
@@ -52,6 +64,18 @@
           </tr>
         </tbody>
       </table>
+
+      <i
+        v-if="offset > 0"
+        @click="loadPrevRules()"
+        class="pi pi-arrow-left pi-style"
+      ></i>
+      <i
+        v-if="rules.length == limit"
+        @click="loadNextRules()"
+        class="pi pi-arrow-right pi-style pi-style-right"
+      ></i>
+      </div>
     </div>
     <div class="column mright">
       <rule-form
@@ -72,6 +96,13 @@ function dateToString(inDate) {
   const nd = new Date(Date.parse(inDate));
   return nd.toLocaleString();
 }
+
+function truncateString(str, maxlen) {
+  if (str.length > maxlen ) {
+    return str.substring(0, maxlen) + "...";
+  }
+  return str;
+}
 import RuleForm from "./RuleForm.vue";
 import ContentForm from "./ContentForm.vue";
 import AppForm from "./AppForm.vue";
@@ -84,9 +115,13 @@ export default {
   inject: ["config"],
   data() {
     return {
+      limit: 24,
+      offset: 0,
       rules: [],
+      searchIsFocused: false,
       rulesLoading: false,
       apps: {},
+      query: null,
       appsLoading: false,
       appRules: [],
       selectedRule: null,
@@ -96,18 +131,63 @@ export default {
       contentFormVisible: false,
       appFormVisible: false,
       baseRule: {
-        id: 0,
-        path: "",
-        content_id: 0,
-        port: 0,
-        path_matching: "",
-        method: "",
-        time_created: "",
-        time_updated: "",
+        host: "",
+        path_matching: "exact",
+        body_matching: "exact",
+        method: "ANY",
       },
     };
   },
   methods: {
+    performNewSearch() {
+      this.offset = 0;
+      this.loadRules(true, function () {});
+    },
+    loadNextRules() {
+      this.offset += this.limit;
+      this.$router.push(this.getRulesLink());
+      this.loadRules(true, function () {});
+    },
+    loadPrevRules() {
+      if (this.offset - this.limit >= 0) {
+        this.offset -= this.limit;
+        this.$router.push(this.getRulesLink());
+        this.loadRules(false, function () {});
+      }
+    },
+    getRulesLink() {
+      let link = this.config.rulesLink + "/" + this.offset + "/" + this.limit;
+      if (this.query) {
+        link += "?q=" + this.query;
+      }
+      return link;
+    },
+    setNextSelectedElement() {
+      for (var i = 0; i < this.rules.length; i++) {
+        if (this.rules[i].id == this.isSelectedId) {
+          if (i + 1 < this.rules.length) {
+            this.setSelectedRule(this.rules[i + 1].id);
+          } else {
+            return false;
+          }
+          break;
+        }
+      }
+      return true;
+    },
+    setPrevSelectedElement() {
+      for (var i = this.rules.length - 1; i >= 0; i--) {
+        if (this.rules[i].id == this.isSelectedId) {
+          if (i - 1 >= 0) {
+            this.setSelectedRule(this.rules[i - 1].id);
+          } else {
+            return false;
+          }
+          break;
+        }
+      }
+      return true;
+    },
     onAddedContent(id) {
       this.selectedContentId = id;
       this.contentFormVisible = false;
@@ -123,7 +203,7 @@ export default {
       this.contentFormVisible = true;
     },
     reloadRules() {
-      this.loadRules(function () {});
+      this.loadRules(true, function () {});
     },
     setSelectedRule(id) {
       var selected = null;
@@ -166,10 +246,15 @@ export default {
           this.appsLoading = false;
         });
     },
-    loadRules(callback) {
+    loadRules(selectFirst, callback) {
+      var url = this.config.backendAddress + "/contentrule/segment?offset=" +
+        this.offset + "&limit=" + this.limit;
+      if (this.query) {
+        url += "&q=" + this.query;
+      }
       this.rulesLoading = true;
       this.loadApps();
-      fetch(this.config.backendAddress + "/contentrule/all")
+      fetch(url)
         .then((response) => response.json())
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
@@ -180,16 +265,31 @@ export default {
               for (var i = 0; i < response.data.length; i++) {
                 const newRule = Object.assign({}, response.data[i]);
                 newRule.parsed = {};
-                newRule.parsed.created_at = dateToString(newRule.created_at);
+
                 newRule.parsed.updated_at = dateToString(newRule.updated_at);
-                if (newRule.path.length > 45) {
-                  newRule.parsed.path = newRule.path.substring(0, 45);
-                  newRule.parsed.path += "...";
+                newRule.parsed.path_body = ""
+                if (newRule.path.length > 0 && newRule.body.length > 0 ) {
+                  newRule.parsed.path_body += "path:";
+                  newRule.parsed.path_body += truncateString(newRule.path, 22);
+                  newRule.parsed.path_body += " body:";
+                  newRule.parsed.path_body += truncateString(newRule.body, 22);
                 } else {
-                  newRule.parsed.path = newRule.path;
+                  if(newRule.path.length > 0) {
+                    newRule.parsed.path_body += "path:";
+                    newRule.parsed.path_body += truncateString(newRule.path, 40);
+                  } else {
+                    newRule.parsed.path_body += "body:";
+                    newRule.parsed.path_body += truncateString(newRule.body, 40);
+                  }
                 }
 
                 this.rules.push(newRule);
+              }
+
+              if (selectFirst) {
+                this.setSelectedRule(response.data[0].id);
+              } else {
+                this.setSelectedRule(response.data[response.data.length - 1].id);
               }
             }
           }
@@ -254,13 +354,71 @@ export default {
     },
   },
   created() {
-    const maybeSetID = this.$route.params.ruleId;
+    if (this.$route.params.limit) {
+      this.limit = parseInt(this.$route.params.limit);
+    }
+
+    if (this.$route.params.offset) {
+      this.offset = parseInt(this.$route.params.offset);
+    }
+
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
+    }
+
+    // If a path and method parameter is given, reset the form and use the given
+    // values.
+    var that = this
+    this.loadRules(true, function () {
+      if (that.$route.query.path && that.$route.query.method) {
+        var newRule = Object.assign({}, that.baseRule);
+        newRule.path = that.$route.query.path;
+        newRule.method = that.$route.query.method;
+        that.selectedRule = newRule;
+        that.isSelectedId = -1;
+      }
+    });
+  },
+  mounted() {
     const that = this;
-    this.loadRules(function () {
-      if (maybeSetID) {
-        that.setSelectedRule(maybeSetID);
+    window.addEventListener("keyup", function (event) {
+      if (that.searchIsFocused) {
+        return;
+      }
+      if (event.key == "j") {
+        if (!that.setPrevSelectedElement()) {
+          that.loadPrevRules();
+        }
+      } else if (event.key == "k") {
+        if (!that.setNextSelectedElement()) {
+          that.loadNextRules();
+        }
       }
     });
   },
 };
 </script>
+
+
+<style scoped>
+
+.p-inputtext {
+  width: 100%;
+}
+i.pi-style {
+  font-size: 2rem;
+  color: #00d1b2;
+}
+
+i.pi-style-right {
+  float: right;
+}
+
+td {
+  font-size: 13px;
+}
+
+table {
+  width: 100%;
+}
+</style>

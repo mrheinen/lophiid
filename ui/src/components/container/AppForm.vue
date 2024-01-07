@@ -1,121 +1,162 @@
 <template>
-  <div>
-      <input type="hidden" name="id" v-model="localApp.id" />
-      <FieldSet legend="Settings" :toggleable="true">
 
-        <div>
-          <label class="label">Name</label>
-          <InputText
+  <PrimeDialog v-model:visible="importFormVisible" modal header="Export app tree">
+    <ImportAppForm @form-done="onImportDone()"></ImportAppForm>
+  </PrimeDialog>
+
+
+  <div>
+    <input type="hidden" name="id" v-model="localApp.id" />
+    <FieldSet legend="Settings" :toggleable="true">
+      <div>
+        <label class="label">Name</label>
+        <InputText
           id="title"
           type="text"
           placeholder=""
           v-model="localApp.name"
-          />
-        </div>
+        />
+      </div>
 
-
-        <div class="field">
-          <label class="label">Version</label>
-          <InputText
+      <div class="field">
+        <label class="label">Version</label>
+        <InputText
           id="version"
           type="text"
           placeholder="v1.1.x"
           v-model="localApp.version"
-          />
-        </div>
+        />
+      </div>
 
-        <div class="field">
-          <label class="label">Vendor</label>
+      <div class="field">
+        <label class="label">Vendor</label>
 
-          <InputText
+        <InputText
           id="vendor"
           type="text"
           placeholder="Microfast"
           v-model="localApp.vendor"
-          />
-        </div>
+        />
+      </div>
 
-        <div class="field">
-          <label class="label">Operating system</label>
+      <div class="field">
+        <label class="label">Operating system</label>
 
-          <InputText
+        <InputText
           id="os"
           type="text"
           placeholder="Linux"
           v-model="localApp.os"
-          />
-        </div>
+        />
+      </div>
 
-        <div class="field">
-          <label class="label">Reference link </label>
-          <InputText
+      <div class="field">
+        <label class="label">Reference link </label>
+        <InputText
           id="reference"
           type="text"
           placeholder="http://..."
           v-model="localApp.link"
-          />
-        </div>
+        />
+      </div>
+    </FieldSet>
 
-      </FieldSet>
-
-
-    <PrimeButton :label="localApp.id > 0 ? 'Submit' : 'Add'"  @click="submitForm()">
+    <PrimeButton
+      :label="localApp.id > 0 ? 'Submit' : 'Add'"
+      @click="submitForm()"
+    >
     </PrimeButton>
     &nbsp;
-    <PrimeButton severity="secondary" label="Reset" @click="resetForm()"></PrimeButton>
+    <PrimeButton
+      severity="secondary"
+      label="Reset"
+      @click="resetForm()"
+    ></PrimeButton>
     &nbsp;
-    <PrimeButton  severity="danger" @click="requireConfirmation($event)" label="Delete"></PrimeButton>
+    <PrimeButton
+      severity="danger"
+      @click="requireConfirmation($event)"
+      label="Delete"
+    ></PrimeButton>
+    &nbsp;
+    <PrimeButton
+      severity="secondary"
+      @click="exportApp(localApp.id)"
+      label="Export"
+    ></PrimeButton>
 
+    &nbsp;
+    <PrimeButton
+      severity="secondary"
+      @click="showImportForm()"
+      label="Import"
+    ></PrimeButton>
 
     <ConfirmPopup group="headless">
-    <template #container="{ message, acceptCallback, rejectCallback }">
-      <div class="bg-gray-900 text-white border-round p-3">
-        <span>{{ message.message }}</span>
-        <div class="flex align-items-center gap-2 mt-3">
-          <PrimeButton icon="pi pi-check" label="Save" @click="acceptCallback"
-          class="p-button-sm p-button-outlined"></PrimeButton>
-          <PrimeButton label="Cancel" severity="secondary" outlined @click="rejectCallback"
-          class="p-button-sm p-button-text"></PrimeButton>
+      <template #container="{ message, acceptCallback, rejectCallback }">
+        <div class="bg-gray-900 text-white border-round p-3">
+          <span>{{ message.message }}</span>
+          <div class="flex align-items-center gap-2 mt-3">
+            <PrimeButton
+              icon="pi pi-check"
+              label="Save"
+              @click="acceptCallback"
+              class="p-button-sm p-button-outlined"
+            ></PrimeButton>
+            <PrimeButton
+              label="Cancel"
+              severity="secondary"
+              outlined
+              @click="rejectCallback"
+              class="p-button-sm p-button-text"
+            ></PrimeButton>
+          </div>
         </div>
-      </div>
-    </template>
+      </template>
     </ConfirmPopup>
-
-
-
   </div>
-
-
 </template>
 
 <script>
+
+import ImportAppForm from './ImportAppForm.vue';
+
 export default {
+  components: {
+    ImportAppForm,
+  },
   props: ["app"],
   emits: ["update-app"],
   inject: ["config"],
   data() {
     return {
       localApp: {},
+      importFormVisible: false,
     };
   },
   methods: {
     requireConfirmation(event) {
       this.$confirm.require({
         target: event.currentTarget,
-        group: 'headless',
-        message: 'Are you sure? You cannot undo this.',
+        group: "headless",
+        message: "Are you sure? You cannot undo this.",
         accept: () => {
-
           if (this.localApp.id) {
             this.deleteApp(this.localApp.id);
           }
         },
-        reject: () => {
-        }
+        reject: () => {},
       });
     },
     resetForm() {
       this.localApp = {};
+    },
+    onImportDone() {
+      this.$emit("update-app");
+      this.importFormVisible = false;
+    },
+    showImportForm() {
+      this.importFormVisible = true;
     },
     onContentFormClicked() {
       this.$emit("open-content-form");
@@ -167,6 +208,31 @@ export default {
             this.$toast.success("Deleted entry");
             this.resetForm();
             this.$emit("update-app");
+          }
+        });
+    },
+    exportApp(id) {
+      fetch(this.config.backendAddress + "/app/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "id=" + id,
+      })
+        .then((response) => response.json())
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error("Could not export app");
+          } else {
+            var filename = response.data.App['name'] + '-' + response.data.App['version'];
+            const blob = new Blob([JSON.stringify(response.data)], { type: 'application/json' })
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            link.remove();
+            this.$toast.success("Exported app");
           }
         });
     },

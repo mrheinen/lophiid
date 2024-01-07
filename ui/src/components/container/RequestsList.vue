@@ -1,6 +1,6 @@
 <template>
   <div class="columns">
-    <div class="column is-three-fifths" style="margin-left: 10px">
+    <div class="column is-three-fifths" style="margin-left: 15px">
       <form @submit.prevent="performNewSearch()">
         <span class="p-input-icon-left" style="width: 100%">
           <i class="pi pi-search" />
@@ -48,10 +48,10 @@
             </td>
             <td>{{ req.port }}</td>
             <td>
-              <a :href="'/content/' + req.content_id">{{ req.content_id }}</a>
+              <a :href="'/content?q=id:' + req.content_id">{{ req.content_id }}</a>
             </td>
             <td>
-              <a :href="'/rules/' + req.rule_id">{{ req.rule_id }}</a>
+              <a :href="'/rules?q=id:' + req.rule_id">{{ req.rule_id }}</a>
             </td>
             <td>
               <a :href="'/rules?path=' + req.path + '&method=' + req.method">
@@ -215,7 +215,7 @@ export default {
         this.limit;
 
       if (this.query) {
-        url += "&q=" + this.query;
+        url += "&q=" + encodeURIComponent(this.query);
       }
 
       fetch(url)

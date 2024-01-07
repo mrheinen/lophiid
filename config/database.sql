@@ -16,6 +16,7 @@ CREATE TABLE content (
   content_type    VARCHAR(256) NOT NULL,
   server          VARCHAR(256) NOT NULL,
   status_code     STATUS_CODE NOT NULL DEFAULT "200"
+  is_default      BOOLEAN DEFAULT FALSE
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -40,6 +41,7 @@ CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  host            VARCHAR(512) NOT NULL,
   path            VARCHAR(2048) NOT NULL,
   path_matching   MATCHING_TYPE,
   body            VARCHAR(2048),

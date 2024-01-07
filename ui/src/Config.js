@@ -1,9 +1,9 @@
 
 export default {
   contentLink: '/content',
-  contentSelectedLink: '/content/:contentId',
+  contentSegmentLink: '/content/:offset/:limit',
   rulesLink: '/rules',
-  rulesSelectedLink: '/rules/:ruleId',
+  rulesSegmentLink: '/rules/:offset/:limit',
   appsLink: '/apps',
   downloadsLink: '/downloads',
   requestsLink: '/requests',

@@ -89,6 +89,115 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 
 	return &sReq, nil
 }
+func MatchesString(method string, dataToSearch string, searchValue string) bool {
+	if searchValue == "" {
+		return false
+	}
+
+	switch method {
+	case "exact":
+		return dataToSearch == searchValue
+	case "prefix":
+		return strings.HasPrefix(dataToSearch, searchValue)
+	case "suffix":
+		return strings.HasSuffix(dataToSearch, searchValue)
+	case "contains":
+		return strings.Contains(dataToSearch, searchValue)
+	case "regex":
+		matched, err := regexp.MatchString(searchValue, dataToSearch)
+		// Most cases should be catched when validating a contentrule upon
+		// creation.
+		if err != nil {
+			slog.Warn("Invalid regex", slog.String("error", err.Error()))
+			return false
+		}
+		return matched
+	default:
+		return false
+	}
+}
+
+func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *database.Request) (database.ContentRule, error) {
+	var matchedRules []database.ContentRule
+	for _, rule := range rules {
+		// Port 0 means any port.
+		if rule.Port != 0 && rule.Port != req.Port {
+			continue
+		}
+
+		matchedPath := MatchesString(rule.PathMatching, req.Path, rule.Path)
+		matchedBody := MatchesString(rule.BodyMatching, string(req.Body), rule.Body)
+
+		// We assume here that at least path or body are set.
+		matched := false
+		if matchedPath && rule.Body == "" {
+			matched = true
+		} else if matchedBody && rule.Path == "" {
+			matched = true
+		} else if matchedBody && matchedPath {
+			matched = true
+		}
+
+		if matched {
+			matchedRules = append(matchedRules, rule)
+		}
+	}
+
+	if len(matchedRules) == 0 {
+		return database.ContentRule{}, fmt.Errorf("no rule found")
+	}
+
+	if len(matchedRules) == 1 {
+		s.UpdateCaches(req.SourceIP, matchedRules[0])
+		return matchedRules[0], nil
+	}
+
+	lastMatchedRule, err := s.sessionCache.Get(req.SourceIP)
+	var lastMatchedAppId int64
+	if err == nil {
+		lastMatchedAppId = lastMatchedRule.AppID
+	} else {
+		lastMatchedAppId = -1
+	}
+
+	var unservedRules []database.ContentRule
+	// Find out what rules match but haven't been served.
+	for _, r := range matchedRules {
+		// We combine the content and rule ID here because some rules can point
+		// to the same content but with different settings (e.g. server,
+		// content-type) so we want all combinations.
+		if !s.ruleVsCache.Has(req.SourceIP, r.ID, r.ContentID) {
+			unservedRules = append(unservedRules, r)
+
+			// A rule matching the same app id is prefered.
+			if r.AppID == lastMatchedAppId {
+				s.UpdateCaches(req.SourceIP, r)
+				return r, nil
+			}
+		}
+	}
+
+	var matchedRule database.ContentRule
+
+	if len(unservedRules) > 0 {
+		matchedRule = unservedRules[rand.Int()%len(unservedRules)]
+	} else {
+		// In this case all rule content combinations have been served at least
+		// once to this target. We send a random one.
+		matchedRule = matchedRules[rand.Int()%len(matchedRules)]
+	}
+
+	s.UpdateCaches(req.SourceIP, matchedRule)
+	return matchedRule, nil
+}
+
+func (s *BackendServer) UpdateCaches(ip string, rule database.ContentRule) {
+	// Cache the rule to influence future requests.
+	// TODO: consider cleaning expired sessions via a go routine.
+	s.sessionCache.CleanExpired()
+	s.sessionCache.Store(ip, rule)
+	s.ruleVsCache.Store(ip, rule.ID, rule.ContentID)
+}
 
 // HandleProbe receives requests from te honeypots and tells them how to
 // respond.
@@ -107,97 +216,17 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	// content.
 	defer s.reqsQueue.Push(sReq)
 
-	var res *backend_service.HttpResponse
-	var matchedRules []database.ContentRule
-
-	for _, rule := range s.safeRules.Get() {
-		// Port 0 means any port.
-		if rule.Port != 0 && rule.Port != req.GetRequest().GetParsedUrl().GetPort() {
-			continue
-		}
-
-		reqPath := req.GetRequest().GetParsedUrl().GetPath()
-
-		matched := false
-		switch rule.PathMatching {
-		case "exact":
-			matched = reqPath == rule.Path
-		case "prefix":
-			matched = strings.HasPrefix(reqPath, rule.Path)
-		case "suffix":
-			matched = strings.HasSuffix(reqPath, rule.Path)
-		case "contains":
-			matched = strings.Contains(reqPath, rule.Path)
-		case "regex":
-			var err error
-			matched, err = regexp.MatchString(rule.Path, reqPath)
-			// Most cases should be catched when validating a contentrule upon
-			// creation.
-			if err != nil {
-				slog.Warn("Invalid regex", slog.String("error", err.Error()))
-			}
-		}
-
-		if matched {
-			matchedRules = append(matchedRules, rule)
-		}
-	}
-
-	if len(matchedRules) == 0 {
-		// TODO: set this to a default rule
-		sReq.ContentID = 0
-		sReq.RuleID = 0
-		return &backend_service.HandleProbeResponse{
-			Response: &backend_service.HttpResponse{
-				Body: []byte("maybe"),
-			},
-		}, nil
-	}
-
-	matchedRule := matchedRules[0]
-	if len(matchedRules) > 1 {
-		lastMatchedRule, err := s.sessionCache.Get(sReq.SourceIP)
-		var lastMatchedAppId int64
-		if err == nil {
-			lastMatchedAppId = lastMatchedRule.AppID
+	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq)
+	if err != nil {
+		cts, err := s.dbClient.SearchContent(0, 1, "is_default:true")
+		if err != nil || len(cts) != 1 {
+			matchedRule = s.safeRules.Get()[0]
 		} else {
-			lastMatchedAppId = -1
-		}
-
-		matched := false
-		var unservedRules []database.ContentRule
-		// Find out what rules match but haven't been served.
-		for _, r := range matchedRules {
-			// We combine the content and rule ID here because some rules can point
-			// to the same content but with different settings (e.g. server,
-			// content-type) so we want all combinations.
-			if !s.ruleVsCache.Has(sReq.SourceIP, r.ID, r.ContentID) {
-				unservedRules = append(unservedRules, r)
-
-				// A rule matching the same app id is prefered.
-				if r.AppID == lastMatchedAppId {
-					matchedRule = r
-					matched = true
-					break
-				}
-			}
-
-			if !matched {
-				if len(unservedRules) > 0 {
-					matchedRule = unservedRules[rand.Int()%len(unservedRules)]
-				} else {
-					// In this case all rule content combinations have been served at least
-					// once to this target. We send a random one.
-					matchedRule = matchedRules[rand.Int()%len(matchedRules)]
-				}
-			}
+			slog.Debug("setting default content")
+			matchedRule.ContentID = cts[0].ID
+			matchedRule.ID = 0
 		}
 	}
-
-	// Cache the rule to influence future requests.
-	s.sessionCache.CleanExpired()
-	s.sessionCache.Store(sReq.SourceIP, matchedRule)
-	s.ruleVsCache.Store(sReq.SourceIP, matchedRule.ID, matchedRule.ContentID)
 
 	sReq.ContentID = matchedRule.ContentID
 	sReq.RuleID = matchedRule.ID
@@ -208,7 +237,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		return nil, err
 	}
 
-	res = &backend_service.HttpResponse{
+	res := &backend_service.HttpResponse{
 		Body:       content.Data,
 		StatusCode: content.StatusCode,
 	}
@@ -241,14 +270,11 @@ func (s *BackendServer) LoadRules() error {
 // ProcessReqsQueue empties the reqsQueue and stores the requests in the
 // database. It also extracts metadata from the requests and stores that also in
 // the database.
-func (s *BackendServer) ProcessReqsQueue() {
+func (s *BackendServer) ProcessReqsQueue() error {
 	for req := s.reqsQueue.Pop(); req != nil; req = s.reqsQueue.Pop() {
 		dm, err := s.dbClient.Insert(req)
 		if err != nil {
-			slog.Warn("Unable to save request", slog.String("error", err.Error()))
-			return
-		} else {
-			slog.Debug("saved request", slog.Int64("request_id", dm.ModelID()))
+			return fmt.Errorf("error saving request: %s", err)
 		}
 
 		// Extract base64 strings
@@ -278,66 +304,16 @@ func (s *BackendServer) ProcessReqsQueue() {
 			})
 		}
 
-		contentTypesToParse := make(map[string]bool)
-		contentTypesToParse["text/x-sh"] = true
-
 		// Iterate over the links and try to download them.
 		for v := range linksMap {
-			wg.Add(1)
 			targetFile, err := s.dLoader.PepareTargetFileDir(fmt.Sprintf("%d", dm.ModelID()))
 			if err != nil {
 				slog.Warn("error preparing file", slog.String("error", err.Error()))
 				continue
 			}
-			go func(url string, reqID int64) {
-				//dInfo, fileContent, err := s.dLoader.FromUrl(reqID, url, targetFile, &wg)
-				dInfo, _, err := s.dLoader.FromUrl(reqID, url, targetFile, &wg)
-				if err != nil {
-					slog.Debug("could not download", slog.String("error", err.Error()))
-					if err := s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), targetFile); err != nil {
-						slog.Debug("could not cleanup", slog.String("error", err.Error()))
-					}
-				} else {
-					slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
 
-					// Often the first payload is just a script to download the real
-					// stuff. So therefore we want to parse them for URLs. Disabled for
-					// now because this can cause an infinit download loop.
-
-					/*
-						if fileContent != nil {
-							if _, ok := contentTypesToParse[dInfo.ContentType]; ok {
-								lx.ParseString(string(fileContent))
-							} else {
-								if strings.HasSuffix(url, ".sh") || strings.HasSuffix(url, ".txt") {
-									lx.ParseString(string(fileContent))
-								}
-							}
-						}
-					*/
-
-					// Check if we already downloaded this exact file. If we downloaded it
-					// before, update the existing database record and increase the
-					// times_seen counter. Else add a new record.
-					dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
-					if err == nil {
-						dm.TimesSeen = dm.TimesSeen + 1
-						if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), targetFile); err != nil {
-							slog.Debug("could not cleanup", slog.String("error", err.Error()))
-						}
-						slog.Debug("already seen file from URL before", slog.String("url", url), slog.Int64("times_seen", dm.TimesSeen))
-						if err = s.dbClient.Update(&dm); err != nil {
-							slog.Warn("could not update", slog.String("error", err.Error()))
-						}
-					} else {
-						_, err = s.dbClient.Insert(&dInfo)
-						if err != nil {
-							slog.Warn("error on insert", slog.String("error", err.Error()))
-						}
-					}
-				}
-			}(v, dm.ModelID())
-
+			wg.Add(1)
+			go s.DownloadPayload(req.ID, v, targetFile, &wg)
 			metadatas = append(metadatas, database.RequestMetadata{
 				Type:      lx.MetaType(),
 				Data:      string(v),
@@ -347,14 +323,63 @@ func (s *BackendServer) ProcessReqsQueue() {
 
 		// Store the metadata.
 		for _, m := range metadatas {
-			dm, err := s.dbClient.Insert(&m)
+			_, err := s.dbClient.Insert(&m)
 			if err != nil {
 				slog.Warn("Could not save metadata for request", slog.String("error", err.Error()))
-			} else {
-				slog.Debug("Saved metadata", slog.Int64("id", dm.ModelID()), slog.String("value", m.Data), slog.String("type", m.Type))
 			}
 		}
 		wg.Wait()
+	}
+	return nil
+}
+
+func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile string, wg *sync.WaitGroup) {
+	//dInfo, fileContent, err := s.dLoader.FromUrl(reqID, url, targetFile, &wg)
+	dInfo, _, err := s.dLoader.FromUrl(reqID, url, outputFile, wg)
+	if err != nil {
+		slog.Debug("could not download", slog.String("error", err.Error()))
+		if err := s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
+			slog.Debug("could not cleanup", slog.String("error", err.Error()))
+		}
+	} else {
+		slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
+
+		// Often the first payload is just a script to download the real
+		// stuff. So therefore we want to parse them for URLs. Disabled for
+		// now because this can cause an infinite download loop.
+
+		/*
+			contentTypesToParse := make(map[string]bool)
+			contentTypesToParse["text/x-sh"] = true
+			if fileContent != nil {
+				if _, ok := contentTypesToParse[dInfo.ContentType]; ok {
+					lx.ParseString(string(fileContent))
+				} else {
+					if strings.HasSuffix(url, ".sh") || strings.HasSuffix(url, ".txt") {
+						lx.ParseString(string(fileContent))
+					}
+				}
+			}
+		*/
+
+		// Check if we already downloaded this exact file. If we downloaded it
+		// before, update the existing database record and increase the
+		// times_seen counter. Else add a new record.
+		dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
+		if err == nil {
+			dm.TimesSeen = dm.TimesSeen + 1
+			if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
+				slog.Debug("could not cleanup", slog.String("error", err.Error()))
+			}
+			if err = s.dbClient.Update(&dm); err != nil {
+				slog.Warn("could not update", slog.String("error", err.Error()))
+			}
+		} else {
+			_, err = s.dbClient.Insert(&dInfo)
+			if err != nil {
+				slog.Warn("error on insert", slog.String("error", err.Error()))
+			}
+		}
 	}
 }
 

@@ -58,13 +58,14 @@ func main() {
 	r.HandleFunc("/content/single", as.HandleGetSingleContent).Methods("GET")
 	r.HandleFunc("/content/upsert", as.HandleUpsertSingleContent).Methods("POST")
 	r.HandleFunc("/content/delete", as.HandleDeleteContent).Methods("POST")
+	r.HandleFunc("/content/segment", as.HandleSearchContent).Methods("GET")
 
 	// All rules endpoints.
 	r.HandleFunc("/contentrule/all", as.HandleGetAllContentRules).Methods("GET")
 	r.HandleFunc("/contentrule/single", as.HandleGetSingleContentRule).Methods("GET")
 	r.HandleFunc("/contentrule/upsert", as.HandleUpsertSingleContentRule).Methods("POST")
 	r.HandleFunc("/contentrule/delete", as.HandleDeleteContentRule).Methods("POST")
-	r.HandleFunc("/contentrule/search", as.HandleSearchContentRules).Methods("GET")
+	r.HandleFunc("/contentrule/segment", as.HandleSearchContentRules).Methods("GET")
 
 	// All requests endpoints
 	r.HandleFunc("/request/all", as.HandleGetAllRequests).Methods("GET")
@@ -75,6 +76,8 @@ func main() {
 	r.HandleFunc("/app/all", as.HandleGetAllApps).Methods("GET")
 	r.HandleFunc("/app/upsert", as.HandleUpsertSingleApp).Methods("POST")
 	r.HandleFunc("/app/delete", as.HandleDeleteApp).Methods("POST")
+	r.HandleFunc("/app/export", as.ExportAppWithContentAndRule).Methods("POST")
+	r.HandleFunc("/app/import", as.ImportAppWithContentAndRule).Methods("POST")
 
 	r.HandleFunc("/downloads/all", as.HandleGetAllDownloads).Methods("GET")
 

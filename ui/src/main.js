@@ -28,9 +28,9 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {path: Config.contentLink, component: ContentList },
-    {path: Config.contentSelectedLink, component: ContentList },
+    {path: Config.contentSegmentLink, component: ContentList },
     {path: Config.rulesLink, component: RulesList },
-    {path: Config.rulesSelectedLink, component: RulesList },
+    {path: Config.rulesSegmentLink, component: RulesList },
     {path: Config.appsLink, component: AppsList },
     {path: Config.downloadsLink, component: DownList },
     {path: Config.requestsLink, component: RequestsList },

@@ -120,7 +120,9 @@ func StringsFromRequest(req *database.Request) []string {
 	if qIdx == -1 {
 		// Sometimes the path is the payload. Add it only if the path itself is not
 		// a URL.
-		res = append(res, decodeURLOrEmptyString(req.Uri))
+		if !strings.HasPrefix(req.Uri, "http") {
+			res = append(res, decodeURLOrEmptyString(req.Uri))
+		}
 		return res
 	}
 

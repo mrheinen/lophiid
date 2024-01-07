@@ -41,13 +41,17 @@
           <i @click="onAppFormOpen()" class="pi pi-plus-circle"></i>
         </div>
       </FieldSet>
-      <!--
-    </div>
-
-    <br/>
-    <div class="card">
- -->
       <FieldSet legend="Advanced settings" :toggleable="true" :collapsed="true">
+        <div>
+          <label class="label">Host</label>
+          <InputText
+            id="host"
+            type="text"
+            placeholder="Hostname to serve this on"
+            v-model="localRule.host"
+          />
+        </div>
+
         <div>
           <label class="label">Body</label>
           <InputText
@@ -157,6 +161,7 @@ export default {
       localRule: {
         path_matching: "exact",
         body_matching: "exact",
+        host: "",
         method: "ANY",
       },
       appValues: [],
