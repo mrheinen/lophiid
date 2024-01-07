@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/vingarcia/ksql"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
@@ -326,59 +327,84 @@ func parseQuery(q string, validFields []string) ([]SearchRequestsParam, error) {
 		whereType WhereType
 	}
 
-	rSearches := []RegexByWhereType{
-		{
-			regex:     regexp.MustCompile(`[a-z_]*:[a-zA-Z0-9\._\-%:\\/&=]*`),
-			splitChar: ":",
-			whereType: IS,
-		},
-		{
-			regex:     regexp.MustCompile(`[a-z_]*~[a-zA-Z0-9\._\-%%:\\/&=]*`),
-			splitChar: "~",
-			whereType: LIKE,
-		},
-		{
-			regex:     regexp.MustCompile(`[a-z_]*>[0-9]*`),
-			splitChar: ">",
-			whereType: GREATER_THAN,
-		},
-		{
-			regex:     regexp.MustCompile(`[a-z_]*[<0-9]*`),
-			splitChar: "<",
-			whereType: LOWER_THAN,
-		},
-	}
+	outsideParam := true
 
-	for _, regConf := range rSearches {
-		for _, part := range regConf.regex.FindAllString(q, -1) {
-			options := strings.SplitN(part, regConf.splitChar, 2)
-			if len(options) != 2 {
-				continue
-			}
+	for i := 0; i < len(q); {
+		if outsideParam && unicode.IsSpace(rune(q[i])) {
+			i++
+			continue
+		}
 
-			hasField := false
-			for _, v := range validFields {
-				if v == options[0] {
-					hasField = true
-					break
-				}
-			}
+		outsideParam = false
+		var keyword strings.Builder
+		var seperator byte
+		for ; i < len(q) && (q[i] != ':' && q[i] != '~' && q[i] != '>' && q[i] != '<'); i++ {
+			keyword.WriteByte(q[i])
+		}
 
-			if !hasField {
-				return ret, fmt.Errorf("unknown search option: %s", part)
-			} else {
-				ret = append(ret, SearchRequestsParam{
-					key:      options[0],
-					value:    options[1],
-					matching: regConf.whereType,
-				})
+		hasField := false
+		for _, field := range validFields {
+			if field == keyword.String() {
+				hasField = true
+				break
 			}
 		}
+
+		if !hasField {
+			return ret, fmt.Errorf("unknown search keyword: %s", keyword.String())
+		}
+
+		seperator = q[i]
+
+		// We move to the start of the value and check if it is between quotes. When
+		// between quotes then we will allow spaces.
+		i++
+		inQuote := false
+		var finishChar byte
+		if q[i] == '"' || q[i] == '\'' {
+			finishChar = q[i]
+			inQuote = true
+			i++
+		}
+
+		var value strings.Builder
+		if inQuote {
+			for ; i < len(q) && q[i] != finishChar; i++ {
+				value.WriteByte(q[i])
+			}
+		} else {
+			for ; i < len(q) && !unicode.IsSpace(rune(q[i])); i++ {
+				value.WriteByte(q[i])
+			}
+		}
+
+		if i < len(q) {
+			i++
+		}
+
+		outsideParam = true
+
+		var whereType WhereType
+		switch seperator {
+		case ':':
+			whereType = IS
+		case '~':
+			whereType = LIKE
+		case '<':
+			whereType = LOWER_THAN
+		case '>':
+			whereType = GREATER_THAN
+		default:
+			return ret, fmt.Errorf("unknown seperator %c", seperator)
+		}
+
+		ret = append(ret, SearchRequestsParam{
+			key:      keyword.String(),
+			value:    value.String(),
+			matching: whereType,
+		})
 	}
 
-	if len(ret) == 0 {
-		slog.Debug("search did not parse", slog.String("query", q))
-	}
 	return ret, nil
 }
 
@@ -390,7 +416,6 @@ func getWhereClause(index int, s *SearchRequestsParam) (string, error) {
 		if !strings.Contains(s.value, "%") {
 			s.value = fmt.Sprintf("%s%%", s.value)
 		}
-		fmt.Printf("Returning: %s", s.value)
 		return fmt.Sprintf("%s LIKE $%d ", s.key, index), nil
 	case LOWER_THAN:
 		return fmt.Sprintf("%s < $%d ", s.key, index), nil
