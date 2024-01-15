@@ -2,15 +2,18 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"loophid/pkg/database"
+	"loophid/pkg/javascript"
 	"net/http"
 	"strconv"
 )
 
 type ApiServer struct {
-	dbc database.DatabaseClient
+	dbc     database.DatabaseClient
+	jRunner javascript.JavascriptRunner
 }
 
 type HttpResult struct {
@@ -36,9 +39,10 @@ type HttpContentRuleResult struct {
 const ResultSuccess = "OK"
 const ResultError = "ERR"
 
-func NewApiServer(dbc database.DatabaseClient) *ApiServer {
+func NewApiServer(dbc database.DatabaseClient, jRunner javascript.JavascriptRunner) *ApiServer {
 	return &ApiServer{
 		dbc,
+		jRunner,
 	}
 }
 
@@ -72,7 +76,7 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		return
 	}
 
-	if rb.ContentID == 0 || (rb.Path == "" && rb.Body == "") {
+	if rb.ContentID == 0 || (rb.Uri == "" && rb.Body == "") {
 		errMsg := "Empty parameters given"
 		a.sendStatus(w, errMsg, ResultError, nil)
 		return
@@ -166,6 +170,38 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 	if rb.Name == "" || rb.ContentType == "" || rb.Server == "" {
 		a.sendStatus(w, "Empty parameters given.", ResultError, nil)
 		return
+	}
+
+	// If both the content and the script are set, we currently assume something
+	// is wrong because the backend will use on of these and not both.
+	if len(rb.Data) > 0 && len(rb.Script) > 0 {
+		a.sendStatus(w, "Both data and script are set. Choose one.", ResultError, nil)
+		return
+	}
+
+	if len(rb.Script) > 0 {
+		// Try running the script with a fake request. This to see if it compiles
+		// and doesn't produce any errors.
+		modifiedScript := fmt.Sprintf("%s\ncreateResponse();", rb.Script)
+		_, err := a.jRunner.RunScript(modifiedScript, database.Request{
+			ID:            42,
+			Port:          80,
+			Uri:           "/foo",
+			Host:          "localhost",
+			Path:          "/foo",
+			Referer:       "http://localhost",
+			ContentLength: 42,
+			UserAgent:     "wget",
+			Body:          []byte("this is body"),
+		}, true)
+
+		// The script itself may complain because of the fake data we provided in
+		// the above request. We therefore ignore it if this happens and really just
+		// want to catch runtime errors.
+		if err != nil && !errors.Is(err, javascript.ErrScriptComplained) {
+			a.sendStatus(w, fmt.Sprintf("Script did not validate: %s", err), ResultError, nil)
+			return
+		}
 	}
 
 	if rb.ID == 0 {
@@ -311,6 +347,26 @@ func (a *ApiServer) HandleGetAllApps(w http.ResponseWriter, req *http.Request) {
 	a.sendStatus(w, "", ResultSuccess, apps)
 }
 
+func (a *ApiServer) HandleUpdateRequest(w http.ResponseWriter, req *http.Request) {
+	var rb database.Request
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&rb); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	err := a.dbc.Update(&rb)
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("Unable to update request: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "Updated request", ResultSuccess, nil)
+}
+
 func (a *ApiServer) HandleGetAllDownloads(w http.ResponseWriter, req *http.Request) {
 	dls, err := a.dbc.GetDownloads()
 	if err != nil {
@@ -411,6 +467,31 @@ func (a *ApiServer) HandleSearchContent(w http.ResponseWriter, req *http.Request
 	a.sendStatus(w, "", ResultSuccess, rls)
 }
 
+func (a *ApiServer) HandleSearchDownloads(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var rls []database.Download
+	query := req.URL.Query().Get("q")
+	rls, err = a.dbc.SearchDownloads(iOffset, iLimit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
 func (a *ApiServer) HandleGetMetadataForRequest(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -441,26 +522,26 @@ type AppExport struct {
 
 func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
+		a.sendStatus(w, fmt.Sprintf("parsing form: %s", err.Error()), ResultError, nil)
 		return
 	}
 	id := req.Form.Get("id")
 	intID, err := strconv.ParseInt(id, 10, 64)
 
 	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
+		a.sendStatus(w, fmt.Sprintf("parsing ID: %s: %s", id, err.Error()), ResultError, nil)
 		return
 	}
 
 	app, err := a.dbc.GetAppByID(intID)
 	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
+		a.sendStatus(w, fmt.Sprintf("getting app: %s", err.Error()), ResultError, nil)
 		return
 	}
 
 	rules, err := a.dbc.SearchContentRules(0, 250, fmt.Sprintf("app_id:%d", app.ID))
 	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
+		a.sendStatus(w, fmt.Sprintf("searching content rules: %s", err.Error()), ResultError, nil)
 		return
 	}
 
@@ -472,7 +553,7 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 	for _, rule := range rules {
 		content, err := a.dbc.GetContentByID(rule.ContentID)
 		if err != nil {
-			a.sendStatus(w, err.Error(), ResultError, nil)
+			a.sendStatus(w, fmt.Sprintf("getting content by ID: %s", err.Error()), ResultError, nil)
 			return
 		}
 

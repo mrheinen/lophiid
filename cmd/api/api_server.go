@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"loophid/pkg/api"
 	"loophid/pkg/database"
+	"loophid/pkg/javascript"
 	"net/http"
 	"os"
 
@@ -48,8 +49,9 @@ func main() {
 		return
 	}
 
+	jRunner := javascript.NewGojaJavascriptRunner()
 	dbc := database.NewKSQLClient(&db)
-	as := api.NewApiServer(dbc)
+	as := api.NewApiServer(dbc, jRunner)
 	defer dbc.Close()
 
 	r := mux.NewRouter()
@@ -69,7 +71,7 @@ func main() {
 
 	// All requests endpoints
 	r.HandleFunc("/request/all", as.HandleGetAllRequests).Methods("GET")
-	// TODO: rename segment to search
+	r.HandleFunc("/request/update", as.HandleUpdateRequest).Methods("POST")
 	r.HandleFunc("/request/segment", as.HandleGetRequestsSegment).Methods("GET")
 
 	// All application endpoints
@@ -80,6 +82,7 @@ func main() {
 	r.HandleFunc("/app/import", as.ImportAppWithContentAndRule).Methods("POST")
 
 	r.HandleFunc("/downloads/all", as.HandleGetAllDownloads).Methods("GET")
+	r.HandleFunc("/downloads/segment", as.HandleSearchDownloads).Methods("GET")
 
 	r.HandleFunc("/meta/request", as.HandleGetMetadataForRequest).Methods("POST")
 

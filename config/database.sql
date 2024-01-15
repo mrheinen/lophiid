@@ -13,6 +13,7 @@ CREATE TABLE content (
   content         TEXT NOT NULL, -- TODO: remove
   data            BYTEA DEFAULT ''::bytea,
   description     TEXT NOT NULL,
+  script          TEXT,
   content_type    VARCHAR(256) NOT NULL,
   server          VARCHAR(256) NOT NULL,
   status_code     STATUS_CODE NOT NULL DEFAULT "200"
@@ -42,8 +43,8 @@ CREATE TABLE content_rule (
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   host            VARCHAR(512) NOT NULL,
-  path            VARCHAR(2048) NOT NULL,
-  path_matching   MATCHING_TYPE,
+  uri             VARCHAR(2048) NOT NULL,
+  uri_matching    MATCHING_TYPE,
   body            VARCHAR(2048),
   body_matching   MATCHING_TYPE,
   method          METHOD_TYPE,
@@ -78,6 +79,7 @@ CREATE TABLE downloads (
   times_seen      INT NOT NULL DEFAULT 1,
   port            INT,
   request_id      INT,
+  last_request_id INT,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   last_seen_at    TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
@@ -102,8 +104,19 @@ CREATE TABLE request (
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   honeypot_ip     VARCHAR(15),
+  starred         BOOL default FALSE,
   content_id      INT,
   rule_id         INT
+);
+
+CREATE TABLE stored_search (
+  id                   SERIAL PRIMARY KEY,
+  query                VARCHAR(4096),
+  number_matches       INT,
+  number_matches_prev  INT,
+  interval_minutes     INT,
+  created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at           TIMESTAMP NOT NULL DEFAULT NOW(),
 );
 
 GRANT ALL PRIVILEGES ON content TO lo;
@@ -118,6 +131,8 @@ GRANT ALL PRIVILEGES ON request_metadata TO lo;
 GRANT ALL PRIVILEGES ON request_metadata_id_seq TO lo;
 GRANT ALL PRIVILEGES ON downloads TO lo;
 GRANT ALL PRIVILEGES ON downloads_id_seq TO lo;
+GRANT ALL PRIVILEGES ON stored_search TO lo;
+GRANT ALL PRIVILEGES ON stored_search_id_seq TO lo;
 
 CREATE INDEX requests_idx ON request ( time_received desc );
 CREATE INDEX requests_port_idx ON request (
@@ -139,4 +154,13 @@ CREATE INDEX requests_content_length_idx ON request (
   time_received desc,
   content_length
 );
+
+CREATE INDEX requests_created_at_idx ON request (
+  time_received desc,
+  created_at DESC
+);
+
+
+
+
 

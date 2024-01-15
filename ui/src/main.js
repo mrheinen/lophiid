@@ -29,6 +29,7 @@ const router = createRouter({
   routes: [
     {path: Config.contentLink, component: ContentList },
     {path: Config.contentSegmentLink, component: ContentList },
+    {path: Config.downloadsSegmentLink, component: DownList },
     {path: Config.rulesLink, component: RulesList },
     {path: Config.rulesSegmentLink, component: RulesList },
     {path: Config.appsLink, component: AppsList },

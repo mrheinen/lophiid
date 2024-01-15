@@ -6,8 +6,10 @@ import (
 	"errors"
 	"io"
 	"loophid/pkg/database"
+	"loophid/pkg/javascript"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -19,7 +21,8 @@ func TestUpsertSingleContent(t *testing.T) {
 		status            string
 		statusMsgContains string
 		statusCode        int
-		err               error
+		dbErr             error
+		scriptErr         error
 	}{
 		{
 			description: "Insert OK",
@@ -31,7 +34,36 @@ func TestUpsertSingleContent(t *testing.T) {
 			},
 			status:            ResultSuccess,
 			statusMsgContains: "Added",
-			err:               nil,
+			dbErr:             nil,
+			scriptErr:         nil,
+		},
+		{
+			description: "Insert OK script",
+			content: database.Content{
+				Name:        "Foo",
+				ContentType: "text/html",
+				Server:      "Apache",
+				Data:        []byte(""),
+				Script:      "1+1",
+			},
+			status:            ResultSuccess,
+			statusMsgContains: "Added",
+			dbErr:             nil,
+			scriptErr:         nil,
+		},
+		{
+			description: "Insert OK, script not",
+			content: database.Content{
+				Name:        "Foo",
+				ContentType: "text/html",
+				Server:      "Apache",
+				Data:        []byte(""),
+				Script:      "1+1",
+			},
+			status:            ResultError,
+			statusMsgContains: "patrick",
+			dbErr:             nil,
+			scriptErr:         errors.New("this is patrick"),
 		},
 		{
 			description: "Insert fail",
@@ -43,7 +75,8 @@ func TestUpsertSingleContent(t *testing.T) {
 			},
 			status:            ResultError,
 			statusMsgContains: "Unable to insert",
-			err:               errors.New("fail"),
+			dbErr:             errors.New("fail"),
+			scriptErr:         nil,
 		},
 		{
 			description: "Updated OK",
@@ -56,7 +89,8 @@ func TestUpsertSingleContent(t *testing.T) {
 			},
 			status:            ResultSuccess,
 			statusMsgContains: "Updated",
-			err:               nil,
+			dbErr:             nil,
+			scriptErr:         nil,
 		},
 		{
 			description: "Updated fail",
@@ -69,15 +103,20 @@ func TestUpsertSingleContent(t *testing.T) {
 			},
 			status:            ResultError,
 			statusMsgContains: "Unable to update",
-			err:               errors.New("fail"),
+			dbErr:             errors.New("fail"),
+			scriptErr:         nil,
 		},
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
 			fd := database.FakeDatabaseClient{
-				ErrorToReturn: test.err,
+				ErrorToReturn: test.dbErr,
 			}
-			s := NewApiServer(&fd)
+			fakeJrunner := javascript.FakeJavascriptRunner{
+				StringToReturn: "OK",
+				ErrorToReturn:  test.scriptErr,
+			}
+			s := NewApiServer(&fd, &fakeJrunner)
 
 			buf := new(bytes.Buffer)
 			json.NewEncoder(buf).Encode(test.content)
@@ -154,7 +193,8 @@ func TestGetSingleContent(t *testing.T) {
 				},
 				ErrorToReturn: test.err,
 			}
-			s := NewApiServer(&fd)
+			fakeJrunner := javascript.FakeJavascriptRunner{}
+			s := NewApiServer(&fd, &fakeJrunner)
 
 			req := httptest.NewRequest(http.MethodGet, test.queryString, nil)
 			w := httptest.NewRecorder()
@@ -201,7 +241,7 @@ func TestGetSingleContentRule(t *testing.T) {
 	for _, test := range []struct {
 		description string
 		queryString string
-		path        string
+		uri        string
 		contentId   int64
 		status      string
 		err         error
@@ -209,7 +249,7 @@ func TestGetSingleContentRule(t *testing.T) {
 		{
 			description: "fetch successful",
 			queryString: "/contentrule/get?id=42",
-			path:        "/this/path",
+			uri:        "/this/path",
 			contentId:   42,
 			status:      ResultSuccess,
 			err:         nil,
@@ -217,7 +257,7 @@ func TestGetSingleContentRule(t *testing.T) {
 		{
 			description: "fetch fails",
 			queryString: "/contentrule/get?id=42",
-			path:        "/this/path",
+			uri:        "/this/path",
 			contentId:   42,
 			status:      ResultError,
 			err:         errors.New("fail fail"),
@@ -226,7 +266,7 @@ func TestGetSingleContentRule(t *testing.T) {
 		{
 			description: "id parsing fails",
 			queryString: "/contentrule/get?id=FAIL",
-			path:        "/this/path",
+			uri:        "/this/path",
 			contentId:   42,
 			status:      ResultError,
 			err:         nil,
@@ -237,13 +277,15 @@ func TestGetSingleContentRule(t *testing.T) {
 			fd := database.FakeDatabaseClient{
 				ContentRulesToReturn: []database.ContentRule{
 					{
-						Path:      test.path,
+						Uri:      test.uri,
 						ContentID: test.contentId,
 					},
 				},
 				ErrorToReturn: test.err,
 			}
-			s := NewApiServer(&fd)
+
+			fakeJrunner := javascript.FakeJavascriptRunner{}
+			s := NewApiServer(&fd, &fakeJrunner)
 
 			req := httptest.NewRequest(http.MethodGet, test.queryString, nil)
 			w := httptest.NewRecorder()
@@ -272,9 +314,96 @@ func TestGetSingleContentRule(t *testing.T) {
 					t.Fatalf("expected 1 result but got %d", dataLen)
 				}
 				cr := pdata.Data[0]
-				if cr.Path != test.path {
-					t.Errorf("expected path %s, got %s", test.path, cr.Path)
+				if cr.Uri != test.uri {
+					t.Errorf("expected path %s, got %s", test.uri, cr.Uri)
 				}
+			}
+		})
+	}
+}
+
+func TestExportApp(t *testing.T) {
+	for _, test := range []struct {
+		description    string
+		appID          int
+		app            database.Application
+		contentRules   []database.ContentRule
+		contents       map[int64]database.Content
+		expectedStatus string
+	}{
+		{
+			description: "exports OK",
+			appID:       42,
+			app: database.Application{
+				ID: 42,
+			},
+			contentRules: []database.ContentRule{
+				{ContentID: 60},
+				{ContentID: 61},
+			},
+			contents: map[int64]database.Content{
+				60: {ID: 60},
+				61: {ID: 61},
+			},
+			expectedStatus: ResultSuccess,
+		},
+		{
+			description: "misses content rule, is fine",
+			appID:       42,
+			app: database.Application{
+				ID: 42,
+			},
+			contentRules:   []database.ContentRule{},
+			contents:       map[int64]database.Content{},
+			expectedStatus: ResultSuccess,
+		},
+		{
+			description: "misses content, not happy",
+			appID:       42,
+			app: database.Application{
+				ID: 42,
+			},
+			contentRules: []database.ContentRule{
+				{ContentID: 60},
+				{ContentID: 61},
+			},
+			contents:       map[int64]database.Content{},
+			expectedStatus: ResultError,
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fd := database.FakeDatabaseClient{
+				ApplicationToReturn:  test.app,
+				ContentRulesToReturn: test.contentRules,
+				ContentsToReturn:     test.contents,
+			}
+
+			s := NewApiServer(&fd, &javascript.FakeJavascriptRunner{})
+
+			formdata := url.Values{}
+			formdata.Set("id", "42")
+
+			req := httptest.NewRequest(http.MethodPost, "/foo", bytes.NewBufferString(formdata.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			s.ExportAppWithContentAndRule(w, req)
+			res := w.Result()
+
+			// Check the request body
+			defer res.Body.Close()
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Errorf("reading response body: %s", err)
+			}
+
+			pdata := HttpResult{}
+			if err = json.Unmarshal(data, &pdata); err != nil {
+				t.Errorf("error parsing response: %s (%s)", err, string(data))
+			}
+
+			if pdata.Status != test.expectedStatus {
+				t.Errorf("status %s expected, got %s (%v)", test.expectedStatus, pdata.Status, pdata)
 			}
 		})
 	}

@@ -21,8 +21,25 @@
           cols="40"
         />
       </div>
+      <input v-if="!scriptMode" type="file" @change="handleFileUpload" />
+      <div v-if="scriptMode">
+        <label class="label">Content Script</label>
+        <TextArea
+          spellcheck="false"
+          v-model="localContent.script"
+          autoResize
+          rows="20"
+          cols="70"
+        />
+      </div>
 
-      <input type="file" @change="handleFileUpload" />
+      <br />
+      <br />
+      <PrimeButton
+        severity="secondary"
+        :label="scriptMode ? 'Exit script Mode' : 'Enter script mode'"
+        @click="scriptMode = !scriptMode"
+      ></PrimeButton>
     </FieldSet>
 
     <FieldSet legend="Extra options" :toggleable="true" :collapsed="true">
@@ -58,12 +75,7 @@
         </div>
       </div>
 
-      <label class="label"
-        >Show content data
-        <CheckBox v-model="showContentData" :binary="true" />
-      </label>
-
-      <div v-if="showContentData">
+      <div v-if="!scriptMode">
         <label class="label">Data</label>
         <TextArea v-model="localContent.data" autoResize rows="20" cols="70" />
       </div>
@@ -127,6 +139,7 @@ export default {
       serverItems: [],
       selectedFile: null,
       showContentData: false,
+      scriptMode: false,
     };
   },
   methods: {
@@ -184,10 +197,21 @@ export default {
       this.localContent = {};
     },
     submitForm() {
+      if (
+        this.localContent.script &&
+        this.localContent.script.length > 0 &&
+        this.localContent.data &&
+        this.localContent.data.length > 0
+      ) {
+        this.$toast.error("Either specify a script or content data. Not both");
+        return;
+      }
       const contentToSubmit = Object.assign({}, this.localContent);
       // Remove the added fields.
       delete contentToSubmit.parsed;
-      contentToSubmit.data = btoa(contentToSubmit.data);
+      if (contentToSubmit.data) {
+        contentToSubmit.data = btoa(contentToSubmit.data);
+      }
 
       fetch(this.config.backendAddress + "/content/upsert", {
         method: "POST",

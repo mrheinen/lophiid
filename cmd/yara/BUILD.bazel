@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "yara_lib",
+    srcs = ["main.go"],
+    importpath = "loophid/cmd/yara",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/yara"],
+)
+
+go_binary(
+    name = "yara",
+    embed = [":yara_lib"],
+    visibility = ["//visibility:public"],
+)

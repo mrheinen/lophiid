@@ -62,6 +62,7 @@ func decodeURLOrEmptyString(encoded string) string {
 	// later on. We may have to rethink whether to keep this here or move it
 	// somewhere else.  Anyway, a + in the URL is a space.
 	decoded := strings.ReplaceAll(encoded, "+", " ")
+	decoded = strings.ReplaceAll(decoded, ";", " ")
 
 	ret, err := decodeURL(decoded)
 	if err != nil {
@@ -97,7 +98,7 @@ func StringsFromRequest(req *database.Request) []string {
 	// header instead of grepping the entire request.
 	if strings.Contains(req.Raw, "application/x-www-form-urlencoded") {
 		// Hack until this is fixed: https://github.com/golang/go/issues/50034
-		body := strings.ReplaceAll(string(req.Body), ";", "+")
+		body := string(req.Body)
 		params, err := url.ParseQuery(body)
 		if err != nil {
 			slog.Warn("could not parse body query", slog.String("error", err.Error()),
@@ -111,8 +112,17 @@ func StringsFromRequest(req *database.Request) []string {
 			}
 		}
 	} else {
-		// Hack until this is fixed: https://github.com/golang/go/issues/50034
-		res = append(res, string(req.Body))
+		params, err := url.ParseQuery(string(req.Body))
+		// Still try to parse as parameters.
+		if err == nil && len(params) > 2 {
+			for _, values := range params {
+				for _, p := range values {
+					res = append(res, decodeURLOrEmptyString(p))
+				}
+			}
+		} else {
+			res = append(res, string(req.Body))
+		}
 	}
 
 	// Parse all query parameters to find base64 strings.
@@ -134,6 +144,7 @@ func StringsFromRequest(req *database.Request) []string {
 	query = strings.ReplaceAll(query, ";", "+")
 	if err != nil {
 		slog.Warn("could not parse query", slog.String("error", err.Error()), slog.String("query", query))
+		res = append(res, decodeURLOrEmptyString(query))
 		return res
 	}
 
@@ -206,6 +217,25 @@ func (u *URLExtractor) ParseString(s string) {
 	var member struct{}
 	for _, url := range ExtractUrls(s) {
 		u.result[url] = member
+	}
+}
+
+func (u *URLExtractor) ParseStringForHost(s string, h string) {
+	var member struct{}
+	for _, newUrl := range ExtractUrls(s) {
+		p, err := url.Parse(newUrl)
+		if err != nil {
+			continue
+		}
+
+		host := p.Host
+		if strings.Contains(p.Host, ":") {
+			parts := strings.Split(p.Host, ":")
+			host = parts[0]
+		}
+		if host == h {
+			u.result[newUrl] = member
+		}
 	}
 }
 

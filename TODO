@@ -47,9 +47,6 @@ Add xsrf protection to web UI
 
 Allow a content to be set as the default.
 
-Add request to process queue, pick it up from thread, run through decoders, run
-through metadata extractors, store metadata.... missing link..  fetch payloads
-
 Add settings menu.  Including default page to serve and virus total API
 Add virus total api
 
@@ -67,8 +64,13 @@ Allow a hostname to be specified for a rule.
 
 Allow content to be uploaded in a zip.
 
-Make the rules paged and searchable. Refactor the requestslists.vue so that a
-lot of the logic can be reused for the rules vue.
+Check database error handling in case no record is found.
 
-Allow content.is_default to be set via the web interface. Possibly in a setting
-page.
+Add yara Support
+Add v8 scripted response.
+
+Support http://192.168.1.78:8081/requests/0/24?q=source_ip:161.142.198.183 with
+javascript
+
+  Add the ability to block certain IPs or requests.
+

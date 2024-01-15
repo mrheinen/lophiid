@@ -4,12 +4,12 @@
     <div class="card">
       <FieldSet legend="Settings" :toggleable="true">
         <div>
-          <label class="label">Path</label>
+          <label class="label">URI</label>
           <InputText
             id="title"
             type="text"
             placeholder=""
-            v-model="localRule.path"
+            v-model="localRule.uri"
           />
         </div>
 
@@ -86,9 +86,9 @@
           </div>
           <div class="column">
             <div class="field">
-              <label class="label">Path matching</label>
+              <label class="label">URI matching</label>
               <ListBox
-                v-model="localRule.path_matching"
+                v-model="localRule.uri_matching"
                 :options="config.backendMatchingMethods"
                 class="w-full md:w-14rem"
               />
@@ -159,7 +159,7 @@ export default {
   data() {
     return {
       localRule: {
-        path_matching: "exact",
+        uri_matching: "exact",
         body_matching: "exact",
         host: "",
         method: "ANY",
@@ -189,7 +189,7 @@ export default {
     },
     resetForm() {
       this.localRule = {
-        path_matching: "exact",
+        uri_matching: "exact",
         body_matching: "exact",
         method: "ANY",
       };
@@ -274,14 +274,6 @@ export default {
   },
   created() {
     this.loadApps(function () {});
-
-    if (this.$route.query.path) {
-      this.localRule.path = this.$route.query.path;
-    }
-
-    if (this.$route.query.method) {
-      this.localRule.method = this.$route.query.method;
-    }
   },
 };
 </script>

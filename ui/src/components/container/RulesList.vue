@@ -21,60 +21,68 @@
         </span>
       </form>
       <div>
-      <table class="table is-hoverable" v-if="rules.length > 0">
-        <thead>
-          <th>App</th>
-          <th>App version</th>
-          <th>ID</th>
-          <th>Method</th>
-          <th>Path / Body</th>
-          <th>Port</th>
-          <th>Content ID</th>
-          <th>Date updated</th>
-        </thead>
-        <tbody>
-          <tr
-            v-for="rule in appRules"
-            @click="setSelectedRule(rule.id)"
-            :key="rule.id"
-            :class="isSelectedId == rule.id ? 'is-selected' : ''"
-          >
-            <td
-              v-if="rule.rowspan >= 0"
-              :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
+        <table class="table is-hoverable" v-if="rules.length > 0">
+          <thead>
+            <th>App</th>
+            <th>App version</th>
+            <th>ID</th>
+            <th>Method</th>
+            <th>URI / Body</th>
+            <th>Port</th>
+            <th>Content ID</th>
+            <th>Actions</th>
+          </thead>
+          <tbody>
+            <tr
+              v-for="rule in appRules"
+              @click="setSelectedRule(rule.id)"
+              :key="rule.id"
+              :class="isSelectedId == rule.id ? 'is-selected' : ''"
             >
-              {{ rule.app_name }}
-            </td>
-            <td
-              v-if="rule.rowspan >= 0"
-              :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
-            >
-              {{ rule.app_version }}
-            </td>
-            <td>{{ rule.id }}</td>
-            <td>{{ rule.method == "ANY" ? "Any" : rule.method }}</td>
-            <td>{{ rule.parsed.path_body }}</td>
-            <td>{{ rule.port == 0 ? "Any" : rule.port }}</td>
-            <td>
-              <a :href="'/content?q=id:' + rule.content_id">
-                {{ rule.content_id }}</a
+              <td
+                v-if="rule.rowspan >= 0"
+                :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
               >
-            </td>
-            <td>{{ rule.parsed.updated_at }}</td>
-          </tr>
-        </tbody>
-      </table>
+                {{ rule.app_name }}
+              </td>
+              <td
+                v-if="rule.rowspan >= 0"
+                :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
+              >
+                {{ rule.app_version }}
+              </td>
+              <td>{{ rule.id }}</td>
+              <td>{{ rule.method == "ANY" ? "Any" : rule.method }}</td>
+              <td>{{ rule.parsed.uri_body }}</td>
+              <td>{{ rule.port == 0 ? "Any" : rule.port }}</td>
+              <td>
+                <a :href="'/content?q=id:' + rule.content_id">
+                  {{ rule.content_id }}</a
+                >
+              </td>
 
-      <i
-        v-if="offset > 0"
-        @click="loadPrevRules()"
-        class="pi pi-arrow-left pi-style"
-      ></i>
-      <i
-        v-if="rules.length == limit"
-        @click="loadNextRules()"
-        class="pi pi-arrow-right pi-style pi-style-right"
-      ></i>
+              <td>
+                <a :href="'/requests?q=rule_id:' + rule.id">
+                  <i
+                    title="View requests that matched this rule"
+                    class="pi pi-search"
+                  ></i>
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <i
+          v-if="offset > 0"
+          @click="loadPrevRules()"
+          class="pi pi-arrow-left pi-style"
+        ></i>
+        <i
+          v-if="rules.length == limit"
+          @click="loadNextRules()"
+          class="pi pi-arrow-right pi-style pi-style-right"
+        ></i>
       </div>
     </div>
     <div class="column mright">
@@ -98,7 +106,7 @@ function dateToString(inDate) {
 }
 
 function truncateString(str, maxlen) {
-  if (str.length > maxlen ) {
+  if (str.length > maxlen) {
     return str.substring(0, maxlen) + "...";
   }
   return str;
@@ -132,7 +140,7 @@ export default {
       appFormVisible: false,
       baseRule: {
         host: "",
-        path_matching: "exact",
+        uri_matching: "exact",
         body_matching: "exact",
         method: "ANY",
       },
@@ -247,8 +255,12 @@ export default {
         });
     },
     loadRules(selectFirst, callback) {
-      var url = this.config.backendAddress + "/contentrule/segment?offset=" +
-        this.offset + "&limit=" + this.limit;
+      var url =
+        this.config.backendAddress +
+        "/contentrule/segment?offset=" +
+        this.offset +
+        "&limit=" +
+        this.limit;
       if (this.query) {
         url += "&q=" + this.query;
       }
@@ -267,19 +279,25 @@ export default {
                 newRule.parsed = {};
 
                 newRule.parsed.updated_at = dateToString(newRule.updated_at);
-                newRule.parsed.path_body = ""
-                if (newRule.path.length > 0 && newRule.body.length > 0 ) {
-                  newRule.parsed.path_body += "path:";
-                  newRule.parsed.path_body += truncateString(newRule.path, 22);
-                  newRule.parsed.path_body += " body:";
-                  newRule.parsed.path_body += truncateString(newRule.body, 22);
+                newRule.parsed.uri_body = "";
+                if (newRule.uri.length > 0 && newRule.body.length > 0) {
+                  newRule.parsed.uri_body += "uri:";
+                  newRule.parsed.uri_body += truncateString(newRule.uri, 22);
+                  newRule.parsed.uri_body += " body:";
+                  newRule.parsed.uri_body += truncateString(newRule.body, 22);
                 } else {
-                  if(newRule.path.length > 0) {
-                    newRule.parsed.path_body += "path:";
-                    newRule.parsed.path_body += truncateString(newRule.path, 40);
+                  if (newRule.uri.length > 0) {
+                    newRule.parsed.uri_body += "uri:";
+                    newRule.parsed.uri_body += truncateString(
+                      newRule.uri,
+                      40
+                    );
                   } else {
-                    newRule.parsed.path_body += "body:";
-                    newRule.parsed.path_body += truncateString(newRule.body, 40);
+                    newRule.parsed.uri_body += "body:";
+                    newRule.parsed.uri_body += truncateString(
+                      newRule.body,
+                      40
+                    );
                   }
                 }
 
@@ -289,7 +307,9 @@ export default {
               if (selectFirst) {
                 this.setSelectedRule(response.data[0].id);
               } else {
-                this.setSelectedRule(response.data[response.data.length - 1].id);
+                this.setSelectedRule(
+                  response.data[response.data.length - 1].id
+                );
               }
             }
           }
@@ -366,14 +386,26 @@ export default {
       this.query = this.$route.query.q;
     }
 
-    // If a path and method parameter is given, reset the form and use the given
+    // If a uri and method parameter is given, reset the form and use the given
     // values.
-    var that = this
+    var that = this;
     this.loadRules(true, function () {
-      if (that.$route.query.path && that.$route.query.method) {
+      if (that.$route.query.uri || that.$route.query.method ||
+        that.$route.query.content_id) {
         var newRule = Object.assign({}, that.baseRule);
-        newRule.path = that.$route.query.path;
-        newRule.method = that.$route.query.method;
+
+        if (that.$route.query.uri) {
+          newRule.uri = that.$route.query.uri;
+        }
+
+        if (that.$route.query.method) {
+          newRule.method = that.$route.query.method;
+        }
+
+        if (that.$route.query.content_id) {
+          newRule.content_id = that.$route.query.content_id;
+        }
+
         that.selectedRule = newRule;
         that.isSelectedId = -1;
       }
@@ -399,9 +431,7 @@ export default {
 };
 </script>
 
-
 <style scoped>
-
 .p-inputtext {
   width: 100%;
 }

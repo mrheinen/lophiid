@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "javascript",
+    srcs = ["goja.go"],
+    importpath = "loophid/pkg/javascript",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/database",
+        "@com_github_dop251_goja//:goja",
+    ],
+)
+
+go_test(
+    name = "javascript_test",
+    srcs = ["goja_test.go"],
+    embed = [":javascript"],
+    deps = ["//pkg/database"],
+)

@@ -131,6 +131,11 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("HTTP request: %+v\n", r)
 	}
 
+	// At least one header is always set.
+	for _, h := range res.Response.Header {
+		w.Header().Set(h.Key, h.Value)
+	}
+
 	switch res.Response.StatusCode {
 	case "200":
 		w.WriteHeader(http.StatusOK)
@@ -152,10 +157,5 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	// At least one header is always set.
-	for _, h := range res.Response.Header {
-		w.Header().Set(h.Key, h.Value)
-
-	}
 	w.Write(res.GetResponse().Body)
 }

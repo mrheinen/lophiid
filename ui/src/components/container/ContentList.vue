@@ -5,8 +5,8 @@
         <span class="p-input-icon-left" style="width: 100%">
           <i class="pi pi-search" />
           <InputText
-            @focusin="searchIsFocused = true"
-            @focusout="searchIsFocused = false"
+            @focusin="keyboardDisabled = true"
+            @focusout="keyboardDisabled = false"
             v-model="query"
             placeholder="Search"
           />
@@ -19,8 +19,8 @@
           <th>Description</th>
           <th>Content type</th>
           <th>Server</th>
-          <th>Date created</th>
           <th>Date updated</th>
+          <th>Actions</th>
         </thead>
         <tbody>
           <tr
@@ -33,8 +33,23 @@
             <td>{{ content.name }} <b class="default" v-if="content.is_default">default</b></td>
             <td>{{ content.content_type }}</td>
             <td>{{ content.server }}</td>
-            <td>{{ content.parsed.created_at }}</td>
             <td>{{ content.parsed.updated_at }}</td>
+            <td>
+              <a :href="'/rules?content_id=' + content.id">
+                <i
+                  title="Create a rule for this"
+                  class="pi pi-arrow-circle-right"
+                ></i>
+              </a>
+              &nbsp;
+              <a :href="'/requests?q=content_id:' + content.id">
+                  <i
+                    title="View requests that got this content"
+                    class="pi pi-search"
+                  ></i>
+                </a>
+
+            </td>
           </tr>
         </tbody>
       </table>
@@ -51,7 +66,7 @@
       ></i>
 
     </div>
-    <div class="column restrict-width mright">
+    <div class="column restrict-width mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
       <content-form
         @update-content="onUpdateContent"
         @deleted-content="onDeleteContent"
@@ -80,7 +95,7 @@ export default {
       limit: 24,
       offset: 0,
       query: null,
-      searchIsFocused: false,
+      keyboardDisabled: false,
       baseContent: {
         id: 0,
         name: "",
@@ -239,7 +254,7 @@ export default {
   mounted() {
     const that = this;
     window.addEventListener("keyup", function (event) {
-      if (that.searchIsFocused) {
+      if (that.keyboardDisabled) {
         return;
       }
       if (event.key == "j") {

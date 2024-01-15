@@ -7,21 +7,22 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/database"
 	"loophid/pkg/downloader"
+	"loophid/pkg/javascript"
 	"testing"
 )
 
 func TestGetMatchedRuleBasic(t *testing.T) {
 	bunchOfRules := []database.ContentRule{
-		{ID: 1, AppID: 1, Port: 80, Path: "/42", PathMatching: "exact", ContentID: 42},
-		{ID: 3, AppID: 2, Port: 80, Path: "/prefix", PathMatching: "prefix", ContentID: 43},
-		{ID: 4, AppID: 3, Port: 80, Path: "contains", PathMatching: "contains", ContentID: 44},
-		{ID: 5, AppID: 4, Port: 80, Path: "suffix", PathMatching: "suffix", ContentID: 45},
-		{ID: 6, AppID: 4, Port: 80, Path: "^/a[8-9/]*", PathMatching: "regex", ContentID: 46},
-		{ID: 7, AppID: 7, Port: 443, Path: "/eeee", PathMatching: "exact", ContentID: 42},
-		{ID: 8, AppID: 8, Port: 8888, Path: "/eeee", PathMatching: "exact", ContentID: 42},
+		{ID: 1, AppID: 1, Port: 80, Uri: "/42", UriMatching: "exact", ContentID: 42},
+		{ID: 3, AppID: 2, Port: 80, Uri: "/prefix", UriMatching: "prefix", ContentID: 43},
+		{ID: 4, AppID: 3, Port: 80, Uri: "contains", UriMatching: "contains", ContentID: 44},
+		{ID: 5, AppID: 4, Port: 80, Uri: "suffix", UriMatching: "suffix", ContentID: 45},
+		{ID: 6, AppID: 4, Port: 80, Uri: "^/a[8-9/]*", UriMatching: "regex", ContentID: 46},
+		{ID: 7, AppID: 7, Port: 443, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
+		{ID: 8, AppID: 8, Port: 8888, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
 		{ID: 9, AppID: 9, Port: 80, Body: "woohoo", BodyMatching: "exact", ContentID: 42},
 		{ID: 10, AppID: 9, Port: 80, Body: "/etc/passwd", BodyMatching: "contains", ContentID: 42},
-		{ID: 11, AppID: 9, Port: 80, Path: "/pppaaattthhh", PathMatching: "exact", Body: "/etc/hosts", BodyMatching: "contains", ContentID: 42},
+		{ID: 11, AppID: 9, Port: 80, Uri: "/pppaaattthhh", UriMatching: "exact", Body: "/etc/hosts", BodyMatching: "contains", ContentID: 42},
 	}
 
 	for _, test := range []struct {
@@ -34,7 +35,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched nothing ",
 			requestInput: database.Request{
-				Path: "/fddfffd",
+				Uri:  "/fddfffd",
 				Port: 80,
 			},
 			contentRulesInput: bunchOfRules,
@@ -43,7 +44,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (exact) ",
 			requestInput: database.Request{
-				Path: "/42",
+				Uri:  "/42",
 				Port: 80,
 			},
 			contentRulesInput:     bunchOfRules,
@@ -53,7 +54,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (prefix) ",
 			requestInput: database.Request{
-				Path: "/prefixdsfsfdf",
+				Uri:  "/prefixdsfsfdf",
 				Port: 80,
 			},
 			contentRulesInput:     bunchOfRules,
@@ -64,7 +65,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (contains) ",
 			requestInput: database.Request{
-				Path: "/sddsadcontainsfdfd",
+				Uri:  "/sddsadcontainsfdfd",
 				Port: 80,
 			},
 			contentRulesInput:     bunchOfRules,
@@ -74,7 +75,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (suffix) ",
 			requestInput: database.Request{
-				Path: "/ttttt?aa=suffix",
+				Uri:  "/ttttt?aa=suffix",
 				Port: 80,
 			},
 			contentRulesInput:     bunchOfRules,
@@ -84,7 +85,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (regex) ",
 			requestInput: database.Request{
-				Path: "/a898989898",
+				Uri:  "/a898989898",
 				Port: 80,
 			},
 			contentRulesInput:     bunchOfRules,
@@ -94,7 +95,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (on port) ",
 			requestInput: database.Request{
-				Path: "/eeee",
+				Uri:  "/eeee",
 				Port: 8888,
 			},
 			contentRulesInput:     bunchOfRules,
@@ -104,7 +105,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body alone (exact) ",
 			requestInput: database.Request{
-				Path: "/eeee",
+				Uri:  "/eeee",
 				Port: 80,
 				Body: []byte("woohoo"),
 			},
@@ -115,7 +116,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body alone (contains) ",
 			requestInput: database.Request{
-				Path: "/eeee",
+				Uri:  "/eeee",
 				Port: 80,
 				Body: []byte("asdssad /etc/passwd sdds"),
 			},
@@ -126,7 +127,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body and path (contains) ",
 			requestInput: database.Request{
-				Path: "/pppaaattthhh",
+				Uri:  "/pppaaattthhh",
 				Port: 80,
 				Body: []byte("asdssad /etc/hosts sdds"),
 			},
@@ -134,16 +135,15 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			contentRuleIDExpected: 11,
 			errorExpected:         false,
 		},
-
-
-
 	} {
 		t.Run(test.description, func(t *testing.T) {
 			fmt.Printf("Running: %s\n", test.description)
 
 			fdbc := &database.FakeDatabaseClient{}
 			fakeDownLoader := downloader.FakeDownloader{}
-			b := NewBackendServer(fdbc, &fakeDownLoader)
+			fakeJrunner := javascript.FakeJavascriptRunner{}
+
+			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
 			if (err != nil) != test.errorExpected {
@@ -159,17 +159,18 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 
 func TestGetMatchedRuleSameApp(t *testing.T) {
 	bunchOfRules := []database.ContentRule{
-		{ID: 1, AppID: 1, Port: 80, Path: "/aa", PathMatching: "exact", ContentID: 42},
-		{ID: 2, AppID: 1, Port: 80, Path: "/bb", PathMatching: "exact", ContentID: 42},
-		{ID: 3, AppID: 2, Port: 80, Path: "/bb", PathMatching: "exact", ContentID: 42},
+		{ID: 1, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+		{ID: 2, AppID: 1, Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
+		{ID: 3, AppID: 2, Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
 	}
 
 	fdbc := &database.FakeDatabaseClient{}
 	fakeDownLoader := downloader.FakeDownloader{}
-	b := NewBackendServer(fdbc, &fakeDownLoader)
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
 
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
-		Path: "/aa",
+		Uri:  "/aa",
 		Port: 80,
 	})
 
@@ -181,7 +182,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	// served though because it shares the app ID of the rule that was already
 	// served.
 	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &database.Request{
-		Path: "/bb",
+		Uri:  "/bb",
 		Port: 80,
 	})
 
@@ -193,7 +194,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	// and this is kept track off. Therefore we expect the rule that was not
 	// served before.
 	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &database.Request{
-		Path: "/bb",
+		Uri:  "/bb",
 		Port: 80,
 	})
 
@@ -205,7 +206,8 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeDownLoader := downloader.FakeDownloader{}
-	b := NewBackendServer(fdbc, &fakeDownLoader)
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
 
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
@@ -242,23 +244,33 @@ func TestHandleProbe(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
 		RequestsToReturn: []database.Request{},
 		ContentsToReturn: map[int64]database.Content{
-			42: database.Content{
+			42: {
 				ID:   42,
 				Data: []byte("content data"),
 			},
-			43: database.Content{
+			43: {
 				ID:   43,
 				Data: []byte("some other data"),
 			},
+			44: {
+				ID:     43,
+				Data:   []byte(""),
+				Script: "1+1",
+			},
 		},
 		ContentRulesToReturn: []database.ContentRule{
-			{ID: 1, AppID: 1, Port: 80, Path: "/aa", PathMatching: "exact", ContentID: 42},
-			{ID: 2, AppID: 1, Port: 80, Path: "/aa", PathMatching: "exact", ContentID: 42},
+			{ID: 1, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			{ID: 2, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			{ID: 3, AppID: 1, Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
 		},
 	}
 
 	fakeDownLoader := downloader.FakeDownloader{}
-	b := NewBackendServer(fdbc, &fakeDownLoader)
+	fakeJrunner := javascript.FakeJavascriptRunner{
+		StringToReturn: "this is script",
+		ErrorToReturn:  nil,
+	}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
 	b.Start()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -293,6 +305,17 @@ func TestHandleProbe(t *testing.T) {
 		t.Errorf("got %s, expected %s", res.Response.Body, fdbc.ContentsToReturn[42].Data)
 	}
 
+	// Now we simulate a request where the content response is based on a script.
+	probeReq.RequestUri = "/script"
+	res, err = b.HandleProbe(context.Background(), &probeReq)
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+
+	if !bytes.Equal(res.Response.Body, []byte(fakeJrunner.StringToReturn)) {
+		t.Errorf("got %s, expected %s", res.Response.Body, fakeJrunner.StringToReturn)
+	}
+
 	// Now we simulate a database error. Should never occur ;p
 	fdbc.ContentsToReturn = map[int64]database.Content{}
 	res, err = b.HandleProbe(context.Background(), &probeReq)
@@ -303,8 +326,9 @@ func TestHandleProbe(t *testing.T) {
 
 func TestProcessQueue(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
 	fakeDownLoader := downloader.FakeDownloader{}
-	b := NewBackendServer(fdbc, &fakeDownLoader)
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
 
 	req := database.Request{
 		Uri:  "/aaaaa",

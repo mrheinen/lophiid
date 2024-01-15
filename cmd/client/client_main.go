@@ -5,10 +5,11 @@ import (
 	"log"
 	"loophid/pkg/client"
 	http_server "loophid/pkg/http/server"
+	"strconv"
 	"strings"
 )
 
-var listenPort = flag.Int64("p", 443, "HTTP server port to listen on")
+var listenPort = flag.String("p", "80", "HTTP server port(s) to listen on. Comma seperated")
 var serverLocation = flag.String("s", "localhost:41110", "RPC server location")
 var sslCert = flag.String("c", "", "HTTP SSL certificate file")
 var sslKey = flag.String("k", "", "HTTP SSL certificate key")
@@ -48,14 +49,33 @@ func main() {
 	}
 
 	defer c.Disconnect()
-	var s *http_server.HttpServer
-	if *sslCert != "" && *sslKey != "" {
-		log.Printf("Starting HTTPS server (%d)", *listenPort)
-		s = http_server.NewSSLHttpServer(c, *listenPort, *sslCert, *sslKey, *myPublicIP)
+
+	finish := make(chan bool)
+	var ports []int
+	if strings.Contains(*listenPort, ",") {
+		for _, p := range strings.Split(*listenPort, ",") {
+			intVal, _ := strconv.Atoi(p)
+			ports = append(ports, intVal)
+		}
 	} else {
-		log.Printf("Starting HTTP server (%d)", *listenPort)
-		s = http_server.NewHttpServer(c, *listenPort, *myPublicIP)
+		intVal, _ := strconv.Atoi(*listenPort)
+		ports = append(ports, intVal)
 	}
 
-	log.Fatal(s.Start())
+	for _, port := range ports {
+		go func(port int) {
+			var s *http_server.HttpServer
+			if *sslCert != "" && *sslKey != "" {
+				log.Printf("Starting HTTPS server (%d)", port)
+				s = http_server.NewSSLHttpServer(c, int64(port), *sslCert, *sslKey, *myPublicIP)
+			} else {
+				log.Printf("Starting HTTP server (%d)", port)
+				s = http_server.NewHttpServer(c, int64(port), *myPublicIP)
+			}
+
+			log.Fatal(s.Start())
+		}(port)
+	}
+
+	<-finish
 }

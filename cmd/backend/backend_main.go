@@ -12,6 +12,7 @@ import (
 	"loophid/pkg/backend"
 	"loophid/pkg/database"
 	"loophid/pkg/downloader"
+	"loophid/pkg/javascript"
 	"net"
 	"os"
 	"time"
@@ -65,9 +66,11 @@ func main() {
 		return
 	}
 
+	jRunner := javascript.NewGojaJavascriptRunner()
+
 	dbc := database.NewKSQLClient(&db)
 	dLoader := downloader.NewHTTPDownloader(*downloadDir, time.Minute*10)
-	bs := backend.NewBackendServer(dbc, dLoader)
+	bs := backend.NewBackendServer(dbc, dLoader, jRunner)
 	if err := bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

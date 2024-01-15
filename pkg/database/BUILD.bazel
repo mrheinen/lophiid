@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "database",
-    srcs = ["database.go"],
+    srcs = [
+        "database.go",
+        "query.go",
+    ],
     importpath = "loophid/pkg/database",
     visibility = ["//visibility:public"],
     deps = [
@@ -13,6 +16,6 @@ go_library(
 
 go_test(
     name = "database_test",
-    srcs = ["database_test.go"],
+    srcs = ["query_test.go"],
     embed = [":database"],
 )

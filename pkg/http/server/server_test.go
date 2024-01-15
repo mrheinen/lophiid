@@ -12,7 +12,7 @@ import (
 func TestCatchAllOk(t *testing.T) {
 	var port int64 = 8888
 
-	expectedResponseBody := "hello123"
+	expectedResponseBody := []byte("hello123")
 	expectedHeader := "Content-Type"
 	expectedHeaderVal := "foo/bar"
 
@@ -48,7 +48,7 @@ func TestCatchAllOk(t *testing.T) {
 		t.Errorf("reading response body: %s", err)
 	}
 
-	if string(data) != expectedResponseBody {
+	if string(data) != string(expectedResponseBody) {
 		t.Errorf("body %s != %s", data, expectedResponseBody)
 	}
 	// Check the header.

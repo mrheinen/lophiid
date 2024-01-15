@@ -14,12 +14,14 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/database"
 	"loophid/pkg/downloader"
+	"loophid/pkg/javascript"
 )
 
 type BackendServer struct {
 	backend_service.BackendServiceServer
 	dbClient        database.DatabaseClient
 	dLoader         downloader.Downloader
+	jRunner         javascript.JavascriptRunner
 	safeRules       *SafeRules
 	safeRulesChan   chan bool
 	reqsProcessChan chan bool
@@ -29,13 +31,14 @@ type BackendServer struct {
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner) *BackendServer {
 	sCache := NewSessionCache(time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
 	return &BackendServer{
 		dbClient:        c,
 		dLoader:         dLoader,
+		jRunner:         jRunner,
 		safeRules:       &SafeRules{},
 		safeRulesChan:   make(chan bool),
 		reqsProcessChan: make(chan bool),
@@ -125,16 +128,16 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 			continue
 		}
 
-		matchedPath := MatchesString(rule.PathMatching, req.Path, rule.Path)
+		matchedUri := MatchesString(rule.UriMatching, req.Uri, rule.Uri)
 		matchedBody := MatchesString(rule.BodyMatching, string(req.Body), rule.Body)
 
 		// We assume here that at least path or body are set.
 		matched := false
-		if matchedPath && rule.Body == "" {
+		if matchedUri && rule.Body == "" {
 			matched = true
-		} else if matchedBody && rule.Path == "" {
+		} else if matchedBody && rule.Uri == "" {
 			matched = true
-		} else if matchedBody && matchedPath {
+		} else if matchedBody && matchedUri {
 			matched = true
 		}
 
@@ -237,9 +240,23 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		return nil, err
 	}
 
-	res := &backend_service.HttpResponse{
-		Body:       content.Data,
-		StatusCode: content.StatusCode,
+	var res *backend_service.HttpResponse
+	if content.Script != "" {
+		slog.Debug("running script")
+		sBody, err := s.jRunner.RunScript(content.Script, *sReq, false)
+		if err != nil {
+			slog.Warn("couldn't run script", slog.String("error", err.Error()))
+		}
+		res = &backend_service.HttpResponse{
+			Body:       []byte(sBody),
+			StatusCode: content.StatusCode,
+		}
+
+	} else {
+		res = &backend_service.HttpResponse{
+			Body:       content.Data,
+			StatusCode: content.StatusCode,
+		}
 	}
 
 	// Append custom headers
@@ -313,13 +330,14 @@ func (s *BackendServer) ProcessReqsQueue() error {
 			}
 
 			wg.Add(1)
-			go s.DownloadPayload(req.ID, v, targetFile, &wg)
+			go s.DownloadPayload(dm.ModelID(), v, targetFile, &wg)
 			metadatas = append(metadatas, database.RequestMetadata{
 				Type:      lx.MetaType(),
 				Data:      string(v),
 				RequestID: dm.ModelID(),
 			})
 		}
+
 
 		// Store the metadata.
 		for _, m := range metadatas {
@@ -338,47 +356,50 @@ func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile stri
 	dInfo, _, err := s.dLoader.FromUrl(reqID, url, outputFile, wg)
 	if err != nil {
 		slog.Debug("could not download", slog.String("error", err.Error()))
-		if err := s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
+		if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
 			slog.Debug("could not cleanup", slog.String("error", err.Error()))
 		}
-	} else {
-		slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
+		return
+	}
+	slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
 
-		// Often the first payload is just a script to download the real
-		// stuff. So therefore we want to parse them for URLs. Disabled for
-		// now because this can cause an infinite download loop.
+	// Often the first payload is just a script to download the real
+	// stuff. So therefore we want to parse them for URLs. Disabled for
+	// now because this can cause an infinite download loop.
 
-		/*
-			contentTypesToParse := make(map[string]bool)
-			contentTypesToParse["text/x-sh"] = true
-			if fileContent != nil {
-				if _, ok := contentTypesToParse[dInfo.ContentType]; ok {
+	/*
+		contentTypesToParse := make(map[string]bool)
+		contentTypesToParse["text/x-sh"] = true
+		if fileContent != nil {
+			if _, ok := contentTypesToParse[dInfo.ContentType]; ok {
+				lx.ParseString(string(fileContent))
+			} else {
+				if strings.HasSuffix(url, ".sh") || strings.HasSuffix(url, ".txt") {
 					lx.ParseString(string(fileContent))
-				} else {
-					if strings.HasSuffix(url, ".sh") || strings.HasSuffix(url, ".txt") {
-						lx.ParseString(string(fileContent))
-					}
 				}
 			}
-		*/
+		}
+	*/
 
-		// Check if we already downloaded this exact file. If we downloaded it
-		// before, update the existing database record and increase the
-		// times_seen counter. Else add a new record.
-		dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
-		if err == nil {
-			dm.TimesSeen = dm.TimesSeen + 1
-			if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
-				slog.Debug("could not cleanup", slog.String("error", err.Error()))
-			}
-			if err = s.dbClient.Update(&dm); err != nil {
-				slog.Warn("could not update", slog.String("error", err.Error()))
-			}
-		} else {
-			_, err = s.dbClient.Insert(&dInfo)
-			if err != nil {
-				slog.Warn("error on insert", slog.String("error", err.Error()))
-			}
+	// Check if we already downloaded this exact file. If we downloaded it
+	// before, update the existing database record and increase the
+	// times_seen counter. Else add a new record.
+	dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
+	if err == nil {
+		dm.TimesSeen = dm.TimesSeen + 1
+		dm.LastRequestID = reqID
+		if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
+			slog.Debug("could not cleanup", slog.String("error", err.Error()))
+		}
+		if err = s.dbClient.Update(&dm); err != nil {
+			slog.Warn("could not update", slog.String("error", err.Error()))
+		}
+	} else {
+		dInfo.LastRequestID = reqID
+		dInfo.TimesSeen = 1
+		_, err = s.dbClient.Insert(&dInfo)
+		if err != nil {
+			slog.Warn("error on insert", slog.String("error", err.Error()))
 		}
 	}
 }

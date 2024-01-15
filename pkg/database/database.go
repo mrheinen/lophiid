@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/vingarcia/ksql"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
@@ -24,6 +22,7 @@ var DownloadTable = ksql.NewTable("downloads")
 type DataModel interface {
 	ModelID() int64
 }
+
 type Content struct {
 	ID          int64     `ksql:"id,skipInserts" json:"id"`
 	Data        []byte    `ksql:"data"           json:"data"`
@@ -33,8 +32,9 @@ type Content struct {
 	Server      string    `ksql:"server"         json:"server"`
 	IsDefault   bool      `ksql:"is_default"     json:"is_default"`
 	StatusCode  string    `ksql:"status_code"    json:"status_code"`
+	Script      string    `ksql:"script"         json:"script"`
 	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC"  json:"updated_at"`
+	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC"              json:"updated_at"`
 }
 
 func (c *Content) ModelID() int64 { return c.ID }
@@ -42,8 +42,8 @@ func (c *Content) ModelID() int64 { return c.ID }
 type ContentRule struct {
 	ID           int64     `ksql:"id,skipInserts" json:"id"`
 	Host         string    `ksql:"host" json:"host"`
-	Path         string    `ksql:"path" json:"path"`
-	PathMatching string    `ksql:"path_matching" json:"path_matching"`
+	Uri         string     `ksql:"uri" json:"uri"`
+	UriMatching string     `ksql:"uri_matching" json:"uri_matching"`
 	Body         string    `ksql:"body" json:"body"`
 	BodyMatching string    `ksql:"body_matching" json:"body_matching"`
 	Method       string    `ksql:"method" json:"method"`
@@ -77,9 +77,14 @@ type Request struct {
 	UpdatedAt     time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
 	ContentID     int64     `ksql:"content_id" json:"content_id"`
 	RuleID        int64     `ksql:"rule_id" json:"rule_id"`
+	Starred       bool      `ksql:"starred" json:"starred"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }
+
+// BodyString returns the body as a string and is used in the javascript
+// context for easy access.
+func (c *Request) BodyString() string { return string(c.Body) }
 
 type RequestMetadata struct {
 	ID        int64     `ksql:"id,skipInserts" json:"id"`
@@ -111,20 +116,21 @@ type Application struct {
 func (c *Application) ModelID() int64 { return c.ID }
 
 type Download struct {
-	ID           int64     `ksql:"id,skipInserts" json:"id"`
-	RequestID    int64     `ksql:"request_id" json:"request_id"`
-	Size         int64     `ksql:"size" json:"size"`
-	Port         int64     `ksql:"port" json:"port"`
-	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	LastSeenAt   time.Time `ksql:"last_seen_at,timeNowUTC" json:"last_seen_at"`
-	ContentType  string    `ksql:"content_type" json:"content_type"`
-	OriginalUrl  string    `ksql:"original_url" json:"original_url"`
-	UsedUrl      string    `ksql:"used_url" json:"used_url"`
-	IP           string    `ksql:"ip" json:"ip"`
-	SHA256sum    string    `ksql:"sha256sum" json:"sha265sum"`
-	Host         string    `ksql:"host" json:"host"`
-	FileLocation string    `ksql:"file_location" json:"file_location"`
-	TimesSeen    int64     `ksql:"times_seen" json:"times_seen"`
+	ID            int64     `ksql:"id,skipInserts" json:"id"`
+	RequestID     int64     `ksql:"request_id" json:"request_id"`
+	Size          int64     `ksql:"size" json:"size"`
+	Port          int64     `ksql:"port" json:"port"`
+	CreatedAt     time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	LastSeenAt    time.Time `ksql:"last_seen_at,timeNowUTC" json:"last_seen_at"`
+	ContentType   string    `ksql:"content_type" json:"content_type"`
+	OriginalUrl   string    `ksql:"original_url" json:"original_url"`
+	UsedUrl       string    `ksql:"used_url" json:"used_url"`
+	IP            string    `ksql:"ip" json:"ip"`
+	SHA256sum     string    `ksql:"sha256sum" json:"sha265sum"`
+	Host          string    `ksql:"host" json:"host"`
+	FileLocation  string    `ksql:"file_location" json:"file_location"`
+	TimesSeen     int64     `ksql:"times_seen" json:"times_seen"`
+	LastRequestID int64     `ksql:"last_request_id" json:"last_request_id"`
 }
 
 func (c *Download) ModelID() int64 { return c.ID }
@@ -149,6 +155,7 @@ type DatabaseClient interface {
 	SearchRequests(offset int64, limit int64, query string) ([]Request, error)
 	SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error)
 	SearchContent(offset int64, limit int64, query string) ([]Content, error)
+	SearchDownloads(offset int64, limit int64, query string) ([]Download, error)
 	GetRequestsDistinctComboLastMonth() ([]Request, error)
 	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 }
@@ -277,6 +284,9 @@ func (d *KSQLClient) GetDownloads() ([]Download, error) {
 func (d *KSQLClient) GetDownloadBySum(sha256sum string) (Download, error) {
 	var dl Download
 	err := d.db.QueryOne(d.ctx, &dl, "FROM downloads WHERE sha256sum = $1", sha256sum)
+	if dl.ID == 0 {
+		return dl, fmt.Errorf("found no download for hash: %s", sha256sum)
+	}
 	return dl, err
 }
 
@@ -303,157 +313,10 @@ func (d *KSQLClient) GetRequestsSegment(offset int64, limit int64, source_ip *st
 	return rs, err
 }
 
-type WhereType int64
-
-const (
-	IS WhereType = iota
-	LIKE
-	GREATER_THAN
-	LOWER_THAN
-)
-
-type SearchRequestsParam struct {
-	key      string
-	value    string
-	matching WhereType
-}
-
-func parseQuery(q string, validFields []string) ([]SearchRequestsParam, error) {
-	var ret []SearchRequestsParam
-
-	type RegexByWhereType struct {
-		regex     *regexp.Regexp
-		splitChar string
-		whereType WhereType
-	}
-
-	outsideParam := true
-
-	for i := 0; i < len(q); {
-		if outsideParam && unicode.IsSpace(rune(q[i])) {
-			i++
-			continue
-		}
-
-		outsideParam = false
-		var keyword strings.Builder
-		var seperator byte
-		for ; i < len(q) && (q[i] != ':' && q[i] != '~' && q[i] != '>' && q[i] != '<'); i++ {
-			keyword.WriteByte(q[i])
-		}
-
-		hasField := false
-		for _, field := range validFields {
-			if field == keyword.String() {
-				hasField = true
-				break
-			}
-		}
-
-		if !hasField {
-			return ret, fmt.Errorf("unknown search keyword: %s", keyword.String())
-		}
-
-		seperator = q[i]
-
-		// We move to the start of the value and check if it is between quotes. When
-		// between quotes then we will allow spaces.
-		i++
-		inQuote := false
-		var finishChar byte
-		if q[i] == '"' || q[i] == '\'' {
-			finishChar = q[i]
-			inQuote = true
-			i++
-		}
-
-		var value strings.Builder
-		if inQuote {
-			for ; i < len(q) && q[i] != finishChar; i++ {
-				value.WriteByte(q[i])
-			}
-		} else {
-			for ; i < len(q) && !unicode.IsSpace(rune(q[i])); i++ {
-				value.WriteByte(q[i])
-			}
-		}
-
-		if i < len(q) {
-			i++
-		}
-
-		outsideParam = true
-
-		var whereType WhereType
-		switch seperator {
-		case ':':
-			whereType = IS
-		case '~':
-			whereType = LIKE
-		case '<':
-			whereType = LOWER_THAN
-		case '>':
-			whereType = GREATER_THAN
-		default:
-			return ret, fmt.Errorf("unknown seperator %c", seperator)
-		}
-
-		ret = append(ret, SearchRequestsParam{
-			key:      keyword.String(),
-			value:    value.String(),
-			matching: whereType,
-		})
-	}
-
-	return ret, nil
-}
-
-func getWhereClause(index int, s *SearchRequestsParam) (string, error) {
-	switch s.matching {
-	case IS:
-		return fmt.Sprintf("%s = $%d ", s.key, index), nil
-	case LIKE:
-		if !strings.Contains(s.value, "%") {
-			s.value = fmt.Sprintf("%s%%", s.value)
-		}
-		return fmt.Sprintf("%s LIKE $%d ", s.key, index), nil
-	case LOWER_THAN:
-		return fmt.Sprintf("%s < $%d ", s.key, index), nil
-	case GREATER_THAN:
-		return fmt.Sprintf("%s > $%d ", s.key, index), nil
-	}
-
-	return "", fmt.Errorf("could not match %+v", s)
-}
-
-func buildQuery(params []SearchRequestsParam, queryPrefix string, querySuffix string) (string, []interface{}, error) {
-	baseQuery := queryPrefix
-
-	idx := 1
-	var values []interface{}
-	for _, param := range params {
-		wc, err := getWhereClause(idx, &param)
-		if err != nil {
-			return "", nil, err
-		}
-		if idx == 1 {
-			baseQuery = fmt.Sprintf("%s WHERE %s", baseQuery, wc)
-			values = append(values, param.value)
-		} else {
-			baseQuery = fmt.Sprintf("%s AND %s", baseQuery, wc)
-			values = append(values, param.value)
-		}
-		idx++
-	}
-
-	baseQuery = fmt.Sprintf("%s %s", baseQuery, querySuffix)
-	return baseQuery, values, nil
-}
-
 func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]Request, error) {
 	var rs []Request
 
-	params, err := parseQuery(query, getDatamodelDatabaseFields(Request{}))
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Request{}))
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
@@ -473,7 +336,7 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
 	var rs []ContentRule
 
-	params, err := parseQuery(query, getDatamodelDatabaseFields(ContentRule{}))
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(ContentRule{}))
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
@@ -493,7 +356,7 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
 	var rs []Content
 
-	params, err := parseQuery(query, getDatamodelDatabaseFields(Content{}))
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Content{}))
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
@@ -513,12 +376,32 @@ func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]C
 func (d *KSQLClient) SearchApps(offset int64, limit int64, query string) ([]Application, error) {
 	var rs []Application
 
-	params, err := parseQuery(query, getDatamodelDatabaseFields(Application{}))
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Application{}))
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
 	query, values, err := buildQuery(params, "FROM app", fmt.Sprintf("OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) SearchDownloads(offset int64, limit int64, query string) ([]Download, error) {
+	var rs []Download
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Download{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM downloads", fmt.Sprintf("ORDER BY last_seen_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -583,6 +466,7 @@ type FakeDatabaseClient struct {
 	ContentRulesToReturn  []ContentRule
 	RequestsToReturn      []Request
 	DownloadsToReturn     []Download
+	ApplicationToReturn   Application
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -622,7 +506,7 @@ func (f *FakeDatabaseClient) Update(dm DataModel) error {
 	return f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetApps() ([]Application, error) {
-	return []Application{}, f.ErrorToReturn
+	return []Application{f.ApplicationToReturn}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) Delete(dm DataModel) error {
 	return f.ErrorToReturn
@@ -654,8 +538,11 @@ func (f *FakeDatabaseClient) GetDownloadBySum(sha256sum string) (Download, error
 	return f.DownloadsToReturn[0], f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetAppByID(id int64) (Application, error) {
-	return Application{}, nil
+	return f.ApplicationToReturn, nil
 }
 func (f *FakeDatabaseClient) SearchApps(offset int64, limit int64, query string) ([]Application, error) {
-	return []Application{}, nil
+	return []Application{f.ApplicationToReturn}, nil
+}
+func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query string) ([]Download, error) {
+	return []Download{}, nil
 }

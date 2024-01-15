@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "vt_lib",
+    srcs = ["main.go"],
+    importpath = "loophid/cmd/vt",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/vt"],
+)
+
+go_binary(
+    name = "vt",
+    embed = [":vt_lib"],
+    visibility = ["//visibility:public"],
+)

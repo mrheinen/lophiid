@@ -5,7 +5,10 @@ go_library(
     srcs = ["server.go"],
     importpath = "loophid/pkg/api",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/database"],
+    deps = [
+        "//pkg/database",
+        "//pkg/javascript",
+    ],
 )
 
 go_test(

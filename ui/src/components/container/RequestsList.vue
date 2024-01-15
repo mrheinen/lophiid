@@ -54,12 +54,18 @@
               <a :href="'/rules?q=id:' + req.rule_id">{{ req.rule_id }}</a>
             </td>
             <td>
-              <a :href="'/rules?path=' + req.path + '&method=' + req.method">
+              <a :href="'/rules?uri=' + encodeURIComponent(req.uri) + '&method=' + req.method">
                 <i
                   title="create a rule for this"
                   class="pi pi-arrow-circle-right"
                 ></i>
               </a>
+              &nbsp;
+              <i @click="toggleStarred(req.id)"
+                :class="req.starred ? 'starred' : ''"
+                    title="Star this request"
+                    class="pi pi-star"
+                  ></i>
             </td>
           </tr>
         </tbody>
@@ -110,6 +116,43 @@ export default {
     };
   },
   methods: {
+    toggleStarred(id) {
+
+      var starRequest = null;
+      for (var i=0; i<this.requests.length;i++) {
+        if (this.requests[i].id == id) {
+          starRequest = this.requests[i];
+          break;
+        }
+      }
+
+      if (starRequest == null) {
+        console.log("Could not find request with ID: " + id);
+        return
+      }
+
+      starRequest.starred = !starRequest.starred;
+      // Copy it so that when we delete the "parsed" section it does not mess up
+      // the UI.
+      var copyRequest = Object.assign({}, starRequest);
+
+      delete copyRequest.parsed;
+      fetch(this.config.backendAddress + "/request/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          },
+        body: JSON.stringify(copyRequest),
+      })
+        .then((response) => response.json())
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            this.$toast.success("Updated request");
+          }
+        });
+    },
     performNewSearch() {
       this.offset = 0;
       this.loadRequests(true);
@@ -315,5 +358,9 @@ i.pi-style-right {
 
 .p-inputtext {
   width: 100%;
+}
+
+.starred {
+  color: red;
 }
 </style>
