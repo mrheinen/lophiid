@@ -35,5 +35,6 @@ go_test(
         "//backend_service",
         "//pkg/database",
         "//pkg/downloader",
+        "//pkg/javascript",
     ],
 )

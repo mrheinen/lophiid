@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"loophid/pkg/util"
+
 	"github.com/vingarcia/ksql"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
 )
@@ -42,8 +44,8 @@ func (c *Content) ModelID() int64 { return c.ID }
 type ContentRule struct {
 	ID           int64     `ksql:"id,skipInserts" json:"id"`
 	Host         string    `ksql:"host" json:"host"`
-	Uri         string     `ksql:"uri" json:"uri"`
-	UriMatching string     `ksql:"uri_matching" json:"uri_matching"`
+	Uri          string    `ksql:"uri" json:"uri"`
+	UriMatching  string    `ksql:"uri_matching" json:"uri_matching"`
 	Body         string    `ksql:"body" json:"body"`
 	BodyMatching string    `ksql:"body_matching" json:"body_matching"`
 	Method       string    `ksql:"method" json:"method"`
@@ -209,12 +211,7 @@ func (d *KSQLClient) Close() {
 }
 
 func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
-	var name string
-	if t := reflect.TypeOf(dm); t.Kind() == reflect.Ptr {
-		name = t.Elem().Name()
-	} else {
-		name = t.Name()
-	}
+	name := util.GetStructName(dm)
 
 	switch name {
 	case "Application":

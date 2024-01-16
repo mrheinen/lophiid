@@ -1,6 +1,19 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px;">
+
+      <form @submit.prevent="performNewSearch()">
+        <span class="p-input-icon-left" style="width: 100%">
+          <i class="pi pi-search" />
+          <InputText
+            @focusin="keyboardDisabled = true"
+            @focusout="keyboardDisabled = false"
+            v-model="query"
+            placeholder="Search"
+          />
+        </span>
+      </form>
+
       <table class="table is-hoverable" v-if="apps.length > 0">
         <thead>
           <th>ID</th>
@@ -24,8 +37,22 @@
           </tr>
         </tbody>
       </table>
+
+      <i
+        v-if="offset > 0"
+        @click="loadPrev()"
+        class="pi pi-arrow-left pi-style"
+      ></i>
+      <i
+        v-if="apps.length == limit"
+        @click="loadNext()"
+        class="pi pi-arrow-right pi-style pi-style-right"
+      ></i>
+
+
+
     </div>
-    <div class="column mright">
+    <div class="column mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
       <app-form @update-app="reloadApps()" :app="selectedApp"></app-form>
     </div>
   </div>
@@ -47,6 +74,10 @@ export default {
       apps: [],
       selectedApp: null,
       isSelectedId: 0,
+      query: null,
+      limit: 24,
+      offset: 0,
+      keyboardDisabled: false,
       baseApp: {
         id: 0,
         name: "",
@@ -59,8 +90,12 @@ export default {
     };
   },
   methods: {
+    performNewSearch() {
+      this.offset = 0;
+      this.loadApps(true);
+    },
     reloadApps() {
-      this.loadApps();
+      this.loadApps(true);
     },
     setSelectedApp(id) {
       var selected = null;
@@ -78,8 +113,66 @@ export default {
         this.isSelectedId = id;
       }
     },
-    loadApps() {
-      fetch(this.config.backendAddress + "/app/all")
+    getFreshAppsLink() {
+      return this.config.appsLink + "/0/" + this.limit;
+    },
+    getAppsLink() {
+      let link =
+        this.config.appsLink + "/" + this.offset + "/" + this.limit;
+      if (this.query) {
+        link += "?q=" + this.query;
+      }
+
+      return link;
+    },
+    setNextSelectedElement() {
+      for (var i = 0; i < this.apps.length; i++) {
+        if (this.apps[i].id == this.isSelectedId) {
+          if (i + 1 < this.apps.length) {
+            this.setSelectedDownload(this.apps[i + 1].id);
+          } else {
+            return false;
+          }
+          break;
+        }
+      }
+      return true;
+    },
+    setPrevSelectedElement() {
+      for (var i = this.apps.length - 1; i >= 0; i--) {
+        if (this.apps[i].id == this.isSelectedId) {
+          if (i - 1 >= 0) {
+            this.setSelectedDownload(this.apps[i - 1].id);
+          } else {
+            return false;
+          }
+          break;
+        }
+      }
+      return true;
+    },
+    loadNext() {
+      this.offset += this.limit;
+      this.$router.push(this.getDownloadsLink());
+      this.loadDownloads(true);
+    },
+    loadPrev() {
+      if (this.offset - this.limit >= 0) {
+        this.offset -= this.limit;
+        this.$router.push(this.getDownloadsLink());
+        this.loadDownloads(false);
+      }
+    },
+
+
+
+    loadApps(selectFirst) {
+      var url = this.config.backendAddress + "/app/segment?offset=" +
+        this.offset + "&limit=" + this.limit;
+      if (this.query) {
+        url += "&q=" + this.query;
+      }
+      fetch(url)
         .then((response) => response.json())
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
@@ -94,6 +187,12 @@ export default {
                 newApp.parsed.updated_at = dateToString(newApp.updated_at);
                 this.apps.push(newApp);
               }
+
+              if (selectFirst) {
+                this.setSelectedApp(response.data[0].id);
+              } else {
+                this.setSelectedApp(response.data[response.data.length - 1].id);
+              }
             }
           }
         });
@@ -103,7 +202,65 @@ export default {
     this.selectedApp = this.baseApp;
   },
   created() {
-    this.loadApps();
+    if (this.$route.params.limit) {
+      this.limit = parseInt(this.$route.params.limit);
+    }
+
+    if (this.$route.params.offset) {
+      this.offset = parseInt(this.$route.params.offset);
+    }
+
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
+    }
+
+    this.loadApps(true);
+  },
+  mounted() {
+    const that = this;
+    window.addEventListener("keyup", function (event) {
+      if (that.keyboardDisabled) {
+        return;
+      }
+      if (event.key == "j") {
+        if (!that.setPrevSelectedElement()) {
+          that.loadPrev();
+        }
+      } else if (event.key == "k") {
+        if (!that.setNextSelectedElement()) {
+          that.loadNext();
+        }
+      }
+    });
   },
 };
 </script>
+
+
+<style scoped>
+
+#date {
+  width: 170px;
+}
+
+table {
+  width: 100%;
+}
+
+td {
+  font-size: 13px;
+}
+
+i.pi-style {
+  font-size: 2rem;
+  color: #00d1b2;
+}
+
+i.pi-style-right {
+  float: right;
+}
+
+.p-inputtext {
+  width: 100%;
+}
+</style>

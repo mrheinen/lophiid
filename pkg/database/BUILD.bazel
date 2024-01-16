@@ -9,6 +9,7 @@ go_library(
     importpath = "loophid/pkg/database",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/util",
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
     ],

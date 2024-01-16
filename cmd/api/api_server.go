@@ -80,6 +80,7 @@ func main() {
 	r.HandleFunc("/app/delete", as.HandleDeleteApp).Methods("POST")
 	r.HandleFunc("/app/export", as.ExportAppWithContentAndRule).Methods("POST")
 	r.HandleFunc("/app/import", as.ImportAppWithContentAndRule).Methods("POST")
+	r.HandleFunc("/app/segment", as.HandleSearchApps).Methods("GET")
 
 	r.HandleFunc("/downloads/all", as.HandleGetAllDownloads).Methods("GET")
 	r.HandleFunc("/downloads/segment", as.HandleSearchDownloads).Methods("GET")

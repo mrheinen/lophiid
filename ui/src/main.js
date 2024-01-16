@@ -33,6 +33,7 @@ const router = createRouter({
     {path: Config.rulesLink, component: RulesList },
     {path: Config.rulesSegmentLink, component: RulesList },
     {path: Config.appsLink, component: AppsList },
+    {path: Config.appsSegmentLink, component: AppsList },
     {path: Config.downloadsLink, component: DownList },
     {path: Config.requestsLink, component: RequestsList },
     {path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },

@@ -492,6 +492,31 @@ func (a *ApiServer) HandleSearchDownloads(w http.ResponseWriter, req *http.Reque
 	a.sendStatus(w, "", ResultSuccess, rls)
 }
 
+func (a *ApiServer) HandleSearchApps(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var rls []database.Application
+	query := req.URL.Query().Get("q")
+	rls, err = a.dbc.SearchApps(iOffset, iLimit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
 func (a *ApiServer) HandleGetMetadataForRequest(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)

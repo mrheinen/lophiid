@@ -5,6 +5,7 @@ export default {
   rulesLink: '/rules',
   rulesSegmentLink: '/rules/:offset/:limit',
   appsLink: '/apps',
+  appsSegmentLink: '/apps/:offset/:limit',
   downloadsLink: '/downloads',
   downloadsSegmentLink: '/downloads/:offset/:limit',
   requestsLink: '/requests',

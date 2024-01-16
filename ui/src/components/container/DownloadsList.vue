@@ -1,8 +1,6 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-
-
       <form @submit.prevent="performNewSearch()">
         <span class="p-input-icon-left" style="width: 100%">
           <i class="pi pi-search" />

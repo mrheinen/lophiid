@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "alerting",
+    srcs = [
+        "alerting.go",
+        "log.go",
+        "telegram.go",
+    ],
+    importpath = "loophid/pkg/alerting",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/util",
+        "@com_github_go_telegram_bot_api_telegram_bot_api_v5//:telegram-bot-api",
+    ],
+)
+
+go_test(
+    name = "alerting_test",
+    srcs = ["alerting_test.go"],
+    embed = [":alerting"],
+)

@@ -366,6 +366,13 @@ def go_dependencies():
         version = "v1.8.0",
     )
     go_repository(
+        name = "com_github_go_telegram_bot_api_telegram_bot_api_v5",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/go-telegram-bot-api/telegram-bot-api/v5",
+        sum = "h1:wG8n/XJQ07TmjbITcGiUaOtXxdrINDz1b0J1w0SzqDc=",
+        version = "v5.5.1",
+    )
+    go_repository(
         name = "com_github_gobwas_httphead",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/gobwas/httphead",
