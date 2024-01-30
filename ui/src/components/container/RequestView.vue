@@ -22,11 +22,12 @@
       </div>
     </FieldSet>
   </div>
+  <br />
 </template>
 
 <script>
 export default {
-  props: ["request", "metadata"],
+  props: ["request", "metadata", "ipinfo"],
   inject: ["config"],
   data() {
     return {
@@ -84,5 +85,13 @@ pre.decoded {
   word-break: normal !important;
   word-wrap: normal !important;
   white-space: pre !important;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 8px;
 }
 </style>

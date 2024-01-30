@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -12,9 +13,14 @@ import (
 	"time"
 
 	"loophid/backend_service"
+	"loophid/pkg/alerting"
 	"loophid/pkg/database"
 	"loophid/pkg/downloader"
 	"loophid/pkg/javascript"
+	"loophid/pkg/util"
+	"loophid/pkg/vt"
+
+	"github.com/vingarcia/ksql"
 )
 
 type BackendServer struct {
@@ -22,23 +28,27 @@ type BackendServer struct {
 	dbClient        database.DatabaseClient
 	dLoader         downloader.Downloader
 	jRunner         javascript.JavascriptRunner
+	vtMgr           vt.VTManager
+	alertMgr        *alerting.AlertManager
 	safeRules       *SafeRules
 	safeRulesChan   chan bool
 	reqsProcessChan chan bool
 	reqsQueue       *RequestQueue
-	sessionCache    *SessionCache
+	sessionCache    *util.StringMapCache
 	ruleVsCache     *RuleVsContentCache
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner) *BackendServer {
-	sCache := NewSessionCache(time.Minute * 30)
+func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager) *BackendServer {
+	sCache := util.NewStringMapCache(time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
 	return &BackendServer{
 		dbClient:        c,
 		dLoader:         dLoader,
 		jRunner:         jRunner,
+		alertMgr:        alertMgr,
+		vtMgr:           vtManager,
 		safeRules:       &SafeRules{},
 		safeRulesChan:   make(chan bool),
 		reqsProcessChan: make(chan bool),
@@ -158,7 +168,7 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 	lastMatchedRule, err := s.sessionCache.Get(req.SourceIP)
 	var lastMatchedAppId int64
 	if err == nil {
-		lastMatchedAppId = lastMatchedRule.AppID
+		lastMatchedAppId = lastMatchedRule.(database.ContentRule).AppID
 	} else {
 		lastMatchedAppId = -1
 	}
@@ -202,6 +212,29 @@ func (s *BackendServer) UpdateCaches(ip string, rule database.ContentRule) {
 	s.ruleVsCache.Store(ip, rule.ID, rule.ContentID)
 }
 
+func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
+	dm, err := s.dbClient.GetHoneypotByIP(req.GetIp())
+	if err != nil {
+		_, err := s.dbClient.Insert(&database.Honeypot{
+			IP:          req.GetIp(),
+			LastCheckin: time.Now(),
+		})
+
+		if err != nil {
+			return &backend_service.StatusResponse{}, fmt.Errorf("error inserting honeypot: %w", err)
+		}
+		slog.Info("status: adding honeypot ", slog.String("ip", req.GetIp()))
+	} else {
+		dm.LastCheckin = time.Now()
+		if err := s.dbClient.Update(&dm); err != nil {
+			return &backend_service.StatusResponse{}, fmt.Errorf("error updating honeypot: %w", err)
+		}
+		slog.Info("status: updating honeypot ", slog.String("ip", req.GetIp()))
+	}
+
+	return &backend_service.StatusResponse{}, nil
+}
+
 // HandleProbe receives requests from te honeypots and tells them how to
 // respond.
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
@@ -221,13 +254,17 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq)
 	if err != nil {
-		cts, err := s.dbClient.SearchContent(0, 1, "is_default:true")
-		if err != nil || len(cts) != 1 {
+		hp, err := s.dbClient.GetHoneypotByIP(sReq.HoneypotIP)
+		if err != nil {
+			slog.Warn("error finding honeypot", slog.String("error", err.Error()), slog.String("honeypot", sReq.HoneypotIP))
 			matchedRule = s.safeRules.Get()[0]
 		} else {
-			slog.Debug("setting default content")
-			matchedRule.ContentID = cts[0].ID
+			matchedRule.ContentID = hp.DefaultContentID
 			matchedRule.ID = 0
+		}
+	} else {
+		if matchedRule.Alert {
+			s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d, URI: %s", matchedRule.ID, sReq.Uri))
 		}
 	}
 
@@ -240,23 +277,16 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		return nil, err
 	}
 
-	var res *backend_service.HttpResponse
+	res := &backend_service.HttpResponse{}
+	res.StatusCode = content.StatusCode
 	if content.Script != "" {
 		slog.Debug("running script")
-		sBody, err := s.jRunner.RunScript(content.Script, *sReq, false)
+		err := s.jRunner.RunScript(content.Script, *sReq, res, false)
 		if err != nil {
 			slog.Warn("couldn't run script", slog.String("error", err.Error()))
 		}
-		res = &backend_service.HttpResponse{
-			Body:       []byte(sBody),
-			StatusCode: content.StatusCode,
-		}
-
 	} else {
-		res = &backend_service.HttpResponse{
-			Body:       content.Data,
-			StatusCode: content.StatusCode,
-		}
+		res.Body = content.Data
 	}
 
 	// Append custom headers
@@ -338,7 +368,6 @@ func (s *BackendServer) ProcessReqsQueue() error {
 			})
 		}
 
-
 		// Store the metadata.
 		for _, m := range metadatas {
 			_, err := s.dbClient.Insert(&m)
@@ -352,7 +381,6 @@ func (s *BackendServer) ProcessReqsQueue() error {
 }
 
 func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile string, wg *sync.WaitGroup) {
-	//dInfo, fileContent, err := s.dLoader.FromUrl(reqID, url, targetFile, &wg)
 	dInfo, _, err := s.dLoader.FromUrl(reqID, url, outputFile, wg)
 	if err != nil {
 		slog.Debug("could not download", slog.String("error", err.Error()))
@@ -362,24 +390,6 @@ func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile stri
 		return
 	}
 	slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
-
-	// Often the first payload is just a script to download the real
-	// stuff. So therefore we want to parse them for URLs. Disabled for
-	// now because this can cause an infinite download loop.
-
-	/*
-		contentTypesToParse := make(map[string]bool)
-		contentTypesToParse["text/x-sh"] = true
-		if fileContent != nil {
-			if _, ok := contentTypesToParse[dInfo.ContentType]; ok {
-				lx.ParseString(string(fileContent))
-			} else {
-				if strings.HasSuffix(url, ".sh") || strings.HasSuffix(url, ".txt") {
-					lx.ParseString(string(fileContent))
-				}
-			}
-		}
-	*/
 
 	// Check if we already downloaded this exact file. If we downloaded it
 	// before, update the existing database record and increase the
@@ -394,12 +404,21 @@ func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile stri
 		if err = s.dbClient.Update(&dm); err != nil {
 			slog.Warn("could not update", slog.String("error", err.Error()))
 		}
-	} else {
+
+		// If the virustotal analysis ID is not set, try to submit the URL.
+		if s.vtMgr != nil && len(dm.VTAnalysisID) == 0 {
+			s.vtMgr.QueueURL(dInfo.OriginalUrl)
+		}
+	} else if errors.Is(err, ksql.ErrRecordNotFound) {
 		dInfo.LastRequestID = reqID
 		dInfo.TimesSeen = 1
 		_, err = s.dbClient.Insert(&dInfo)
 		if err != nil {
 			slog.Warn("error on insert", slog.String("error", err.Error()))
+		}
+
+		if s.vtMgr != nil {
+			s.vtMgr.QueueURL(dInfo.OriginalUrl)
 		}
 	}
 }
@@ -426,6 +445,8 @@ func (s *BackendServer) Start() error {
 	if err != nil {
 		return fmt.Errorf("loading rules: %s", err)
 	}
+
+	s.alertMgr.Start()
 
 	// Setup the rules reloading.
 	rulesTicker := time.NewTicker(time.Second * 60)
@@ -472,4 +493,5 @@ func (s *BackendServer) Stop() {
 	s.safeRulesChan <- true
 	s.reqsProcessChan <- true
 	s.dbClient.Close()
+	s.alertMgr.Stop()
 }

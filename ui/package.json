@@ -8,15 +8,20 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.12.0",
+    "@codemirror/lang-javascript": "^6.2.1",
     "@highlightjs/vue-plugin": "^2.1.0",
     "@vue/compiler-sfc": "^3.3.9",
     "bulma": "^0.9.4",
+    "codemirror": "^6.0.1",
     "core-js": "^3.8.3",
     "highlight.js": "^11.9.0",
     "patch-package": "^6.4.0",
     "primeicons": "^6.0.1",
     "primevue": "^3.43.0",
+    "thememirror": "^2.0.1",
     "vue": "^3.2.26",
+    "vue-codemirror": "^6.1.1",
     "vue-router": "^4.2.5",
     "vue-toast-notification": "^3.1.2"
   },
@@ -40,7 +45,7 @@
     ],
     "parserOptions": {
       "parser": "@babel/eslint-parser",
-      "requireConfigFile":false
+      "requireConfigFile": false
     },
     "rules": {}
   },

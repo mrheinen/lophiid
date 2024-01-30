@@ -7,10 +7,12 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//backend_service",
+        "//pkg/alerting",
         "//pkg/backend",
         "//pkg/database",
         "//pkg/downloader",
         "//pkg/javascript",
+        "//pkg/vt",
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
         "@org_golang_google_grpc//:go_default_library",

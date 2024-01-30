@@ -81,6 +81,13 @@ export default {
             this.$router.push(this.config.downloadsLink);
           },
         },
+        {
+          label: "Honeypots",
+          icon: "pi pi-eye",
+          command: () => {
+            this.$router.push(this.config.honeypotsLink);
+          },
+        },
       ],
     };
   },

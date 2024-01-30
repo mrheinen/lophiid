@@ -87,6 +87,10 @@ func main() {
 
 	r.HandleFunc("/meta/request", as.HandleGetMetadataForRequest).Methods("POST")
 
+	r.HandleFunc("/honeypot/all", as.HandleGetAllHoneypots).Methods("GET")
+	r.HandleFunc("/honeypot/update", as.HandleUpdateHoneypot).Methods("POST")
+	r.HandleFunc("/honeypot/segment", as.HandleSearchHoneypots).Methods("GET")
+
 	handler := cors.Default().Handler(r)
 
 	srv := &http.Server{

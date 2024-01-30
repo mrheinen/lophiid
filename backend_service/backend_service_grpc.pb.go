@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BackendServiceClient interface {
 	HandleProbe(ctx context.Context, in *HandleProbeRequest, opts ...grpc.CallOption) (*HandleProbeResponse, error)
+	SendStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 }
 
 type backendServiceClient struct {
@@ -37,11 +38,21 @@ func (c *backendServiceClient) HandleProbe(ctx context.Context, in *HandleProbeR
 	return out, nil
 }
 
+func (c *backendServiceClient) SendStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/BackendService/SendStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BackendServiceServer is the server API for BackendService service.
 // All implementations must embed UnimplementedBackendServiceServer
 // for forward compatibility
 type BackendServiceServer interface {
 	HandleProbe(context.Context, *HandleProbeRequest) (*HandleProbeResponse, error)
+	SendStatus(context.Context, *StatusRequest) (*StatusResponse, error)
 	mustEmbedUnimplementedBackendServiceServer()
 }
 
@@ -51,6 +62,9 @@ type UnimplementedBackendServiceServer struct {
 
 func (UnimplementedBackendServiceServer) HandleProbe(context.Context, *HandleProbeRequest) (*HandleProbeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HandleProbe not implemented")
+}
+func (UnimplementedBackendServiceServer) SendStatus(context.Context, *StatusRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendStatus not implemented")
 }
 func (UnimplementedBackendServiceServer) mustEmbedUnimplementedBackendServiceServer() {}
 
@@ -83,6 +97,24 @@ func _BackendService_HandleProbe_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BackendService_SendStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BackendServiceServer).SendStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/BackendService/SendStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BackendServiceServer).SendStatus(ctx, req.(*StatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _BackendService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "BackendService",
 	HandlerType: (*BackendServiceServer)(nil),
@@ -90,6 +122,10 @@ var _BackendService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "HandleProbe",
 			Handler:    _BackendService_HandleProbe_Handler,
+		},
+		{
+			MethodName: "SendStatus",
+			Handler:    _BackendService_SendStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

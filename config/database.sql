@@ -27,7 +27,7 @@ CREATE TYPE MATCHING_TYPE AS ENUM ('exact', 'prefix', 'suffix', 'contains', 'reg
 CREATE TYPE METHOD_TYPE AS ENUM ('GET', 'POST', 'HEAD', 'TRACE', 'OPTIONS', 'DELETE', 'PUT', 'ANY');
 CREATE TYPE STATUS_CODE AS ENUM ('200','301', '302', '400', '401', '403', '404', '500');
 
-CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'DECODED_STRING_BASE64');
+CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'WHOIS', 'DECODED_STRING_BASE64');
 
 CREATE TABLE request_metadata (
   id              SERIAL PRIMARY KEY,
@@ -51,7 +51,36 @@ CREATE TABLE content_rule (
   content_id      INT NOT NULL,
   port            INT NOT NULL DEFAULT 0,
   app_id          INT DEFAULT 0,
+  alert           BOOL DEFAULT FALSE,
   CONSTRAINT fk_content_id FOREIGN KEY(content_id) REFERENCES content(id)
+);
+
+CREATE TABLE vt_ipresult (
+  id                 SERIAL PRIMARY KEY,
+  ip                 VARCHAR(52),
+  whois              TEXT,
+  country            VARCHAR(64),
+  asn                INT DEFAULT 0,
+  as_owner           VARCHAR(512),
+  last_analysis_date TIMESTAMP NOT NULL,
+  result_harmless    INT DEFAULT 0,
+  result_malicious   INT DEFAULT 0,
+  result_suspicious  INT DEFAULT 0,
+  result_undetected  INT DEFAULT 0,
+  result_timeout     INT DEFAULT 0,
+  created_at         TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+
+
+-- TODO: store ports here as well. They are already in the proto message.
+CREATE TABLE honeypot (
+  id                 SERIAL PRIMARY KEY,
+  created_at         TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at         TIMESTAMP NOT NULL DEFAULT NOW(),
+  ip                 VARCHAR(52),
+  last_checkin       TIMESTAMP NOT NULL DEFAULT NOW(),
+  default_content_id INT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE app (
@@ -82,6 +111,7 @@ CREATE TABLE downloads (
   last_request_id INT,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   last_seen_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+  vt_analysis_id  VARCHAR(1024) DEFAULT '',
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
 );
 
@@ -133,7 +163,10 @@ GRANT ALL PRIVILEGES ON downloads TO lo;
 GRANT ALL PRIVILEGES ON downloads_id_seq TO lo;
 GRANT ALL PRIVILEGES ON stored_search TO lo;
 GRANT ALL PRIVILEGES ON stored_search_id_seq TO lo;
-
+GRANT ALL PRIVILEGES ON honeypot TO lo;
+GRANT ALL PRIVILEGES ON honeypot_id_seq TO lo;
+GRANT ALL PRIVILEGES ON vt_ipresult TO lo;
+GRANT ALL PRIVILEGES ON vt_ipresult_id_seq TO lo;
 CREATE INDEX requests_idx ON request ( time_received desc );
 CREATE INDEX requests_port_idx ON request (
   time_received desc,

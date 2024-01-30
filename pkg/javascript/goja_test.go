@@ -2,6 +2,7 @@ package javascript
 
 import (
 	"fmt"
+	"loophid/backend_service"
 	"loophid/pkg/database"
 	"testing"
 )
@@ -9,52 +10,69 @@ import (
 func TestRunScriptWithoutValidateOk(t *testing.T) {
 
 	for _, test := range []struct {
-		description    string
-		script         string
-		expectedOutput string
-		expectError    bool
+		description         string
+		script              string
+		expectedOutput      string
+		expectedHeader      string
+		expectedHeaderValue string
+		expectError         bool
 	}{
 		{
-			description:    "runs ok",
-			script:         "function createResponse() { return ['OK', '']; }",
-			expectedOutput: "OK",
-			expectError:    false,
+			description:         "runs ok",
+			script:              "function createResponse() { response.setBody('OK'); }",
+			expectedOutput:      "OK",
+			expectedHeader:      "",
+			expectedHeaderValue: "",
+			expectError:         false,
 		},
 		{
-			description:    "can access request (attribute)",
-			script:         "function createResponse() { return [request.port, '']; }",
-			expectedOutput: "80",
-			expectError:    false,
+			description:         "can access request (attribute)",
+			script:              "function createResponse() { response.setBody(request.port); }",
+			expectedOutput:      "80",
+			expectedHeader:      "",
+			expectedHeaderValue: "",
+			expectError:         false,
 		},
 		{
-			description:    "can access request (method)",
-			script:         "function createResponse() { return [request.modelID(), ''] }",
-			expectedOutput: "42",
-			expectError:    false,
+			description:         "can access request (method)",
+			script:              "function createResponse() { response.setBody(request.modelID()); }",
+			expectedOutput:      "42",
+			expectedHeader:      "",
+			expectedHeaderValue: "",
+			expectError:         false,
 		},
 		{
-			description:    "can access request (method, bodyString)",
-			script:         "function createResponse() { return [request.bodyString(), ''] }",
-			expectedOutput: "the body",
-			expectError:    false,
+			description:         "set response header",
+			script:              "function createResponse() { response.addHeader('key', 'value'); }",
+			expectedOutput:      "",
+			expectedHeader:      "key",
+			expectedHeaderValue: "value",
+			expectError:         false,
+		},
+
+		{
+			description:         "returns error string",
+			script:              "function createResponse() { return 'ERROR'; }",
+			expectedOutput:      "",
+			expectedHeader:      "",
+			expectedHeaderValue: "",
+			expectError:         true,
 		},
 		{
-			description:    "returns error string",
-			script:         "function createResponse() { return [request.port, 'ERROR']; }",
-			expectedOutput: "",
-			expectError:    true,
+			description:         "misses hook",
+			script:              "1+1",
+			expectedOutput:      "",
+			expectedHeader:      "",
+			expectedHeaderValue: "",
+			expectError:         true,
 		},
 		{
-			description:    "misses hook",
-			script:         "1+1",
-			expectedOutput: "",
-			expectError:    true,
-		},
-		{
-			description:    "invalid javascript",
-			script:         "1+1';[/l879.",
-			expectedOutput: "",
-			expectError:    true,
+			description:         "invalid javascript",
+			script:              "1+1';[/l879.",
+			expectedOutput:      "",
+			expectedHeader:      "",
+			expectedHeaderValue: "",
+			expectError:         true,
 		},
 	} {
 
@@ -70,14 +88,30 @@ func TestRunScriptWithoutValidateOk(t *testing.T) {
 
 			jr := NewGojaJavascriptRunner()
 
-			out, err := jr.RunScript(test.script, req, false)
+			res := backend_service.HttpResponse{}
+
+			err := jr.RunScript(test.script, req, &res, false)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
 				return
 			}
 
-			if out != test.expectedOutput {
-				t.Errorf("got %s, wanted %s", out, test.expectedOutput)
+			if string(res.Body) != test.expectedOutput {
+				t.Errorf("got %s, wanted %s", res.Body, test.expectedOutput)
+			}
+
+			if test.expectedHeader != "" {
+				found := false
+				for _, h := range res.Header {
+					if h.Key == test.expectedHeader && h.Value == test.expectedHeaderValue {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					t.Errorf("did not find header: %s in %v", test.expectedHeader, &res)
+				}
 			}
 		})
 
@@ -96,36 +130,27 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 			script: `
 			function __validate() {
 				const res = createResponse();
-				if (res[0] != 'OK') {
-					return "Did not find OK";
+				if (res != '') {
+					return "Found: " + res;
 				}
 			}
 			function createResponse() {
-				return ['OK', ''];
+				return '';
 			}
 			`,
 			expectError: false,
 		},
 		{
-			description: "fails ok",
+			description: "runs NOT ok",
 			script: `
 			function __validate() {
 				const res = createResponse();
-				if (res[0] != 'SOMETHING ELSE') {
-					return "Did not find OK";
+				if (res != '') {
+					return "Found: " + res;
 				}
 			}
 			function createResponse() {
-				return ['OK', ''];
-			}
-			`,
-			expectError: true,
-		},
-		{
-			description: "has no validate method",
-			script: `
-			function createResponse() {
-				return ['OK', ''];
+				return 'OOOPS';
 			}
 			`,
 			expectError: true,
@@ -142,8 +167,9 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 				Body: []byte("the body"),
 			}
 
+			res := backend_service.HttpResponse{}
 			jr := NewGojaJavascriptRunner()
-			_, err := jr.RunScript(test.script, req, true)
+			err := jr.RunScript(test.script, req, &res, true)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
 				return

@@ -20,6 +20,7 @@ var RequestTable = ksql.NewTable("request")
 var AppTable = ksql.NewTable("app")
 var RequestMetadataTable = ksql.NewTable("request_metadata")
 var DownloadTable = ksql.NewTable("downloads")
+var HoneypotTable = ksql.NewTable("honeypot")
 
 type DataModel interface {
 	ModelID() int64
@@ -54,6 +55,7 @@ type ContentRule struct {
 	AppID        int64     `ksql:"app_id" json:"app_id"`
 	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	Alert        bool      `ksql:"alert" json:"alert"`
 }
 
 func (c *ContentRule) ModelID() int64 { return c.ID }
@@ -104,6 +106,17 @@ type RequestSourceContent struct {
 	ContentID int64
 }
 
+type Honeypot struct {
+	ID               int64     `ksql:"id,skipInserts" json:"id"`
+	IP               string    `ksql:"ip" json:"ip"`
+	CreatedAt        time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt        time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	LastCheckin      time.Time `ksql:"last_checkin,skipInserts,skipUpdates" json:"last_checkin"`
+	DefaultContentID int64     `ksql:"default_content_id" json:"default_content_id"`
+}
+
+func (c *Honeypot) ModelID() int64 { return c.ID }
+
 type Application struct {
 	ID        int64     `ksql:"id,skipInserts" json:"id"`
 	Name      string    `ksql:"name" json:"name"`
@@ -133,6 +146,7 @@ type Download struct {
 	FileLocation  string    `ksql:"file_location" json:"file_location"`
 	TimesSeen     int64     `ksql:"times_seen" json:"times_seen"`
 	LastRequestID int64     `ksql:"last_request_id" json:"last_request_id"`
+	VTAnalysisID  string    `ksql:"vt_analysis_id" json:"vt_analysis_id"`
 }
 
 func (c *Download) ModelID() int64 { return c.ID }
@@ -151,6 +165,8 @@ type DatabaseClient interface {
 	GetContentRules() ([]ContentRule, error)
 	GetDownloads() ([]Download, error)
 	GetDownloadBySum(sha256sum string) (Download, error)
+	GetHoneypotByIP(ip string) (Honeypot, error)
+	GetHoneypots() ([]Honeypot, error)
 	GetRequests() ([]Request, error)
 	GetRequestsForSourceIP(ip string) ([]Request, error)
 	GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error)
@@ -158,6 +174,7 @@ type DatabaseClient interface {
 	SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error)
 	SearchContent(offset int64, limit int64, query string) ([]Content, error)
 	SearchDownloads(offset int64, limit int64, query string) ([]Download, error)
+	SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error)
 	GetRequestsDistinctComboLastMonth() ([]Request, error)
 	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 }
@@ -226,6 +243,8 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &RequestMetadataTable
 	case "Download":
 		return &DownloadTable
+	case "Honeypot":
+		return &HoneypotTable
 	default:
 		fmt.Printf("Don't know %s datamodel\n", name)
 		return nil
@@ -287,6 +306,19 @@ func (d *KSQLClient) GetDownloadBySum(sha256sum string) (Download, error) {
 	return dl, err
 }
 
+func (d *KSQLClient) GetHoneypotByIP(ip string) (Honeypot, error) {
+	hp := Honeypot{}
+	err := d.db.QueryOne(d.ctx, &hp, "FROM honeypot WHERE ip = $1", ip)
+	return hp, err
+}
+
+func (d *KSQLClient) GetHoneypots() ([]Honeypot, error) {
+	var rs []Honeypot
+	// TODO: once last_checkin is set, order the result by it.
+	err := d.db.Query(d.ctx, &rs, "FROM honeypot")
+	return rs, err
+}
+
 func (d *KSQLClient) GetRequests() ([]Request, error) {
 	var rs []Request
 	err := d.db.Query(d.ctx, &rs, "FROM request ORDER BY time_received")
@@ -338,7 +370,7 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM content_rule", fmt.Sprintf("ORDER BY app_id DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildQuery(params, "FROM content_rule", fmt.Sprintf("ORDER BY app_id,created_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -398,7 +430,29 @@ func (d *KSQLClient) SearchDownloads(offset int64, limit int64, query string) ([
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
+	// Important: the order by last seen is something that the Virustotal manager
+	// depends on to return the newest entry.
 	query, values, err := buildQuery(params, "FROM downloads", fmt.Sprintf("ORDER BY last_seen_at DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error) {
+	var rs []Honeypot
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Honeypot{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM honeypot", fmt.Sprintf("ORDER BY last_checkin DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -424,7 +478,7 @@ func (d *KSQLClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
 
 func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
 	ct := Content{}
-	err := d.db.QueryOne(d.ctx, &ct, fmt.Sprintf("FROM content WHERE id = %d", id))
+	err := d.db.QueryOne(d.ctx, &ct, "FROM content WHERE id = $1", id)
 	if ct.ID == 0 {
 		return ct, fmt.Errorf("found no content for ID: %d", id)
 	}
@@ -439,7 +493,7 @@ func (d *KSQLClient) GetContent() ([]Content, error) {
 
 func (d *KSQLClient) GetContentRuleByID(id int64) (ContentRule, error) {
 	cr := ContentRule{}
-	err := d.db.QueryOne(d.ctx, &cr, fmt.Sprintf("FROM content_rule WHERE id = %d", id))
+	err := d.db.QueryOne(d.ctx, &cr, "FROM content_rule WHERE id = $1", id)
 	return cr, err
 }
 
@@ -464,6 +518,8 @@ type FakeDatabaseClient struct {
 	RequestsToReturn      []Request
 	DownloadsToReturn     []Download
 	ApplicationToReturn   Application
+	HoneypotToReturn      Honeypot
+	HoneypotErrorToReturn error
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -505,6 +561,12 @@ func (f *FakeDatabaseClient) Update(dm DataModel) error {
 func (f *FakeDatabaseClient) GetApps() ([]Application, error) {
 	return []Application{f.ApplicationToReturn}, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) GetHoneypotByIP(ip string) (Honeypot, error) {
+	return f.HoneypotToReturn, f.HoneypotErrorToReturn
+}
+func (f *FakeDatabaseClient) GetHoneypots() ([]Honeypot, error) {
+	return []Honeypot{}, f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) Delete(dm DataModel) error {
 	return f.ErrorToReturn
 }
@@ -542,4 +604,7 @@ func (f *FakeDatabaseClient) SearchApps(offset int64, limit int64, query string)
 }
 func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query string) ([]Download, error) {
 	return []Download{}, nil
+}
+func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error) {
+	return []Honeypot{}, nil
 }

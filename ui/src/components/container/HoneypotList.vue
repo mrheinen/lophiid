@@ -14,26 +14,26 @@
         </span>
       </form>
 
-      <table class="table is-hoverable" v-if="apps.length > 0">
+      <table class="table is-hoverable" v-if="honeypots.length > 0">
         <thead>
           <th>ID</th>
-          <th>Name</th>
-          <th>Version</th>
-          <th>Vendor</th>
-          <th>OS</th>
+          <th>IP</th>
+          <th>First seen</th>
+          <th>Last checkin</th>
+          <th>Default content</th>
         </thead>
         <tbody>
           <tr
-            v-for="app in apps"
-            @click="setSelectedApp(app.id)"
-            :key="app.id"
-            :class="isSelectedId == app.id ? 'is-selected' : ''"
+            v-for="honeypot in honeypots"
+            @click="setSelected(honeypot.id)"
+            :key="honeypot.id"
+            :class="isSelectedId == honeypot.id ? 'is-selected' : ''"
           >
-            <td>{{ app.id }}</td>
-            <td>{{ app.name }}</td>
-            <td>{{ app.version }}</td>
-            <td>{{ app.vendor }}</td>
-            <td>{{ app.os }}</td>
+            <td>{{ honeypot.id }}</td>
+            <td>{{ honeypot.ip }}</td>
+            <td>{{ honeypot.parsed.created_at }}</td>
+            <td>{{ honeypot.parsed.last_checkin }}</td>
+            <td>{{ honeypot.default_content_id }}</td>
           </tr>
         </tbody>
       </table>
@@ -44,7 +44,7 @@
         class="pi pi-arrow-left pi-style"
       ></i>
       <i
-        v-if="apps.length == limit"
+        v-if="honeypots.length == limit"
         @click="loadNext()"
         class="pi pi-arrow-right pi-style pi-style-right"
       ></i>
@@ -53,7 +53,8 @@
 
     </div>
     <div class="column mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
-      <app-form @update-app="reloadApps()" :app="selectedApp"></app-form>
+     <honey-form @update-honeypot="reloadHoneypots()"
+       :honeypot="selectedHoneypot"></honey-form>
     </div>
   </div>
 </template>
@@ -63,45 +64,43 @@ function dateToString(inDate) {
   const nd = new Date(Date.parse(inDate));
   return nd.toLocaleString();
 }
-import AppForm from "./AppForm.vue";
+import HoneyForm from "./HoneypotForm.vue";
 export default {
   components: {
-    AppForm,
+    HoneyForm,
   },
   inject: ["config"],
   data() {
     return {
-      apps: [],
-      selectedApp: null,
+      honeypots: [],
+      selected: null,
       isSelectedId: 0,
       query: null,
       limit: 24,
       offset: 0,
       keyboardDisabled: false,
-      baseApp: {
+      base: {
         id: 0,
-        name: "",
-        version: "",
-        vendor: "",
-        os: "",
-        time_created: "",
-        time_updated: "",
+        ip: "",
+        parsed: {
+        last_checkin: "",
+        },
       },
     };
   },
   methods: {
     performNewSearch() {
       this.offset = 0;
-      this.loadApps(true);
+      this.loadHoneypots(true);
     },
-    reloadApps() {
-      this.loadApps(true);
+    reloadHoneypots() {
+      this.loadHoneypots(true);
     },
-    setSelectedApp(id) {
+    setSelected(id) {
       var selected = null;
-      for (var i = 0; i < this.apps.length; i++) {
-        if (this.apps[i].id == id) {
-          selected = this.apps[i];
+      for (var i = 0; i < this.honeypots.length; i++) {
+        if (this.honeypots[i].id == id) {
+          selected = this.honeypots[i];
           break;
         }
       }
@@ -109,16 +108,16 @@ export default {
       if (selected == null) {
         console.log("error: could not find ID: " + id);
       } else {
-        this.selectedApp = selected;
+        this.selectedHoneypot = selected;
         this.isSelectedId = id;
       }
     },
-    getFreshAppsLink() {
-      return this.config.appsLink + "/0/" + this.limit;
+    getFreshHoneypotLink() {
+      return this.config.honeypotSegmentLink + "/0/" + this.limit;
     },
-    getAppsLink() {
+    getHoneypotLink() {
       let link =
-        this.config.appsLink + "/" + this.offset + "/" + this.limit;
+        this.config.honeypotSegmentLink + "/" + this.offset + "/" + this.limit;
       if (this.query) {
         link += "?q=" + this.query;
       }
@@ -126,10 +125,10 @@ export default {
       return link;
     },
     setNextSelectedElement() {
-      for (var i = 0; i < this.apps.length; i++) {
-        if (this.apps[i].id == this.isSelectedId) {
-          if (i + 1 < this.apps.length) {
-            this.setSelectedDownload(this.apps[i + 1].id);
+      for (var i = 0; i < this.honeypots.length; i++) {
+        if (this.honeypots[i].id == this.isSelectedId) {
+          if (i + 1 < this.honeypots.length) {
+            this.setSelected(this.honeypots[i + 1].id);
           } else {
             return false;
           }
@@ -139,10 +138,10 @@ export default {
       return true;
     },
     setPrevSelectedElement() {
-      for (var i = this.apps.length - 1; i >= 0; i--) {
-        if (this.apps[i].id == this.isSelectedId) {
+      for (var i = this.honeypots.length - 1; i >= 0; i--) {
+        if (this.honeypots[i].id == this.isSelectedId) {
           if (i - 1 >= 0) {
-            this.setSelectedDownload(this.apps[i - 1].id);
+            this.setSelected(this.honeypots[i - 1].id);
           } else {
             return false;
           }
@@ -153,18 +152,19 @@ export default {
     },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getDownloadsLink());
-      this.loadDownloads(true);
+      this.$router.push(this.getHoneypotLink());
+      this.loadHoneypots(true);
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getDownloadsLink());
-        this.loadDownloads(false);
+        this.$router.push(this.getHoneypotLink());
+        this.loadHoneypots(false);
       }
     },
-    loadApps(selectFirst) {
-      var url = this.config.backendAddress + "/app/segment?offset=" +
+
+    loadHoneypots(selectFirst) {
+      var url = this.config.backendAddress + "/honeypot/segment?offset=" +
         this.offset + "&limit=" + this.limit;
       if (this.query) {
         url += "&q=" + this.query;
@@ -175,20 +175,20 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
-            this.apps = [];
+            this.honeypots = [];
             if (response.data) {
               for (var i = 0; i < response.data.length; i++) {
-                const newApp = Object.assign({}, response.data[i]);
-                newApp.parsed = {};
-                newApp.parsed.created_at = dateToString(newApp.created_at);
-                newApp.parsed.updated_at = dateToString(newApp.updated_at);
-                this.apps.push(newApp);
+                const newHoneypot = Object.assign({}, response.data[i]);
+                newHoneypot.parsed = {};
+                newHoneypot.parsed.last_checkin = dateToString(newHoneypot.last_checkin);
+                newHoneypot.parsed.created_at = dateToString(newHoneypot.created_at);
+                this.honeypots.push(newHoneypot);
               }
 
               if (selectFirst) {
-                this.setSelectedApp(response.data[0].id);
+                this.setSelected(response.data[0].id);
               } else {
-                this.setSelectedApp(response.data[response.data.length - 1].id);
+                this.setSelected(response.data[response.data.length - 1].id);
               }
             }
           }
@@ -196,7 +196,7 @@ export default {
     },
   },
   beforeCreate() {
-    this.selectedApp = this.baseApp;
+    this.selectedHoneypot = this.baseHoneypot;
   },
   created() {
     if (this.$route.params.limit) {
@@ -211,7 +211,7 @@ export default {
       this.query = this.$route.query.q;
     }
 
-    this.loadApps(true);
+    this.loadHoneypots(true);
   },
   mounted() {
     const that = this;

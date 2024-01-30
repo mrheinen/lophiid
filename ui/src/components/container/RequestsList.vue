@@ -214,6 +214,7 @@ export default {
       var selected = null;
       this.selectedMetadata = [];
       this.loadMetadata(id);
+
       for (var i = 0; i < this.requests.length; i++) {
         if (this.requests[i].id == id) {
           selected = this.requests[i];
@@ -248,7 +249,6 @@ export default {
           }
         });
     },
-
     loadRequests(selectFirst) {
       var url =
         this.config.backendAddress +

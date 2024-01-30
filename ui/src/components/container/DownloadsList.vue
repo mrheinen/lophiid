@@ -22,6 +22,7 @@
           <th>Content Type</th>
           <th>Times Seen</th>
           <th>Last seen</th>
+          <th>Actions</th>
         </thead>
         <tbody>
           <tr
@@ -44,6 +45,14 @@
             <td>{{ dl.content_type }}</td>
             <td>{{ dl.times_seen }}</td>
             <td :title="'First seen on: ' + dl.parsed.created_at">{{ dl.parsed.last_seen_at }}</td>
+            <td>
+              <a v-if="dl.parsed.vt_analysis_id"
+                target="_blank"
+                title="view on virustotal"
+                :href="'https://www.virustotal.com/gui/url/' + dl.parsed.vt_analysis_id">
+                <i class="pi pi-bolt"></i>
+              </a>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -195,6 +204,15 @@ export default {
                 newDownload.parsed.last_seen_at = dateToString(
                   newDownload.last_seen_at
                 );
+
+                if (newDownload.vt_analysis_id) {
+                  var parts = newDownload.vt_analysis_id.split('-');
+                  if (parts.length != 3) {
+                    console.log("Cannot parse ID: " + newDownload.vt_analysis_id);
+                  } else {
+                    newDownload.parsed.vt_analysis_id = parts[1];
+                  }
+                }
                 this.downloads.push(newDownload);
               }
 

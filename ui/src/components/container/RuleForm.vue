@@ -211,7 +211,7 @@ export default {
             this.$toast.error(response.message);
           } else {
             this.$toast.success("Saved rule");
-            this.$emit("update-rule");
+            this.$emit("update-rule", ruleToSubmit.id);
           }
         });
     },

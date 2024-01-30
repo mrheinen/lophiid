@@ -2,14 +2,18 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"log/slog"
+	"loophid/backend_service"
 	"loophid/pkg/client"
 	http_server "loophid/pkg/http/server"
 	"strconv"
 	"strings"
+	"time"
 )
 
-var listenPort = flag.String("p", "80", "HTTP server port(s) to listen on. Comma seperated")
+var listenPort = flag.String("p", "80", "HTTP server port(s) to listen on. Comma seperated, prefix with ssl: for SSL enabled ports.")
 var serverLocation = flag.String("s", "localhost:41110", "RPC server location")
 var sslCert = flag.String("c", "", "HTTP SSL certificate file")
 var sslKey = flag.String("k", "", "HTTP SSL certificate key")
@@ -51,31 +55,76 @@ func main() {
 	defer c.Disconnect()
 
 	finish := make(chan bool)
-	var ports []int
+
+	var sports []string
 	if strings.Contains(*listenPort, ",") {
-		for _, p := range strings.Split(*listenPort, ",") {
-			intVal, _ := strconv.Atoi(p)
-			ports = append(ports, intVal)
-		}
+		sports = strings.Split(*listenPort, ",")
 	} else {
-		intVal, _ := strconv.Atoi(*listenPort)
-		ports = append(ports, intVal)
+		sports = append(sports, *listenPort)
 	}
 
-	for _, port := range ports {
-		go func(port int) {
-			var s *http_server.HttpServer
-			if *sslCert != "" && *sslKey != "" {
-				log.Printf("Starting HTTPS server (%d)", port)
-				s = http_server.NewSSLHttpServer(c, int64(port), *sslCert, *sslKey, *myPublicIP)
-			} else {
-				log.Printf("Starting HTTP server (%d)", port)
-				s = http_server.NewHttpServer(c, int64(port), *myPublicIP)
+	var sslPorts []int64
+	var ports []int64
+	for _, p := range sports {
+		if strings.HasPrefix(p, "ssl:") {
+			cp, _ := strings.CutPrefix(p, "ssl:")
+			intCp, err := strconv.Atoi(cp)
+			if err != nil {
+				log.Fatalf("Cannot parse port: %s", p)
 			}
+			sslPorts = append(sslPorts, int64(intCp))
+		} else {
+			intP, err := strconv.Atoi(p)
+			if err != nil {
+				log.Fatalf("Cannot parse port: %s", p)
+			}
+			ports = append(ports, int64(intP))
+		}
+	}
 
+	// Start the plain HTTP servers.
+	for _, port := range ports {
+		go func(port int64) {
+			s := http_server.NewHttpServer(c, port, *myPublicIP)
+			fmt.Printf("Starting server on port: %d\n", port)
 			log.Fatal(s.Start())
 		}(port)
 	}
 
+	// Start the SSL HTTP servers.
+	for _, port := range sslPorts {
+		go func(port int64) {
+			s := http_server.NewSSLHttpServer(c, port, *sslCert, *sslKey, *myPublicIP)
+			fmt.Printf("Starting SSL server on port: %d\n", port)
+			log.Fatal(s.Start())
+		}(port)
+	}
+
+	// Setup the go routing for regularly reporting the status back to the
+	// backend.
+	statusChan := make(chan bool)
+	ticker := time.NewTicker(time.Minute * 5)
+	sReq := backend_service.StatusRequest{
+		Ip:            *myPublicIP,
+		ListenPort:    ports,
+		ListenPortSsl: sslPorts,
+	}
+
+	go func() {
+		for {
+			select {
+			case <-statusChan:
+				ticker.Stop()
+				slog.Info("Status channel stopped")
+				return
+			case <-ticker.C:
+				if _, err := c.SendStatus(&sReq); err != nil {
+					slog.Warn("error sending status", slog.String("error", err.Error()))
+				}
+			}
+		}
+	}()
+
 	<-finish
+	statusChan <- true
 }

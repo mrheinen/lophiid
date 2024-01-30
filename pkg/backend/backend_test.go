@@ -3,11 +3,15 @@ package backend
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"loophid/backend_service"
+	"loophid/pkg/alerting"
 	"loophid/pkg/database"
 	"loophid/pkg/downloader"
 	"loophid/pkg/javascript"
+	"loophid/pkg/vt"
+	"strings"
 	"testing"
 )
 
@@ -143,7 +147,8 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			fakeDownLoader := downloader.FakeDownloader{}
 			fakeJrunner := javascript.FakeJavascriptRunner{}
 
-			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
+			alertManager := alerting.NewAlertManager(42)
+			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
 			if (err != nil) != test.errorExpected {
@@ -167,7 +172,8 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeDownLoader := downloader.FakeDownloader{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
+	alertManager := alerting.NewAlertManager(42)
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
 
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
 		Uri:  "/aa",
@@ -207,8 +213,8 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeDownLoader := downloader.FakeDownloader{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
-
+	alertManager := alerting.NewAlertManager(42)
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
 		Request: &backend_service.HttpRequest{
@@ -257,6 +263,10 @@ func TestHandleProbe(t *testing.T) {
 				Data:   []byte(""),
 				Script: "1+1",
 			},
+			66: {
+				ID:   66,
+				Data: []byte("default"),
+			},
 		},
 		ContentRulesToReturn: []database.ContentRule{
 			{ID: 1, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
@@ -270,7 +280,8 @@ func TestHandleProbe(t *testing.T) {
 		StringToReturn: "this is script",
 		ErrorToReturn:  nil,
 	}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
+	alertManager := alerting.NewAlertManager(42)
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
 	b.Start()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -316,6 +327,20 @@ func TestHandleProbe(t *testing.T) {
 		t.Errorf("got %s, expected %s", res.Response.Body, fakeJrunner.StringToReturn)
 	}
 
+	// Now we test the default content fetching. Set the path to something that
+	// doesn't match any rule.
+	fdbc.HoneypotToReturn = database.Honeypot{
+		DefaultContentID: 66,
+	}
+	probeReq.RequestUri = "/dffsd"
+	res, err = b.HandleProbe(context.Background(), &probeReq)
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+	if !bytes.Equal(res.Response.Body, []byte("default")) {
+		t.Errorf("got %s, expected %s", res.Response.Body, "default")
+	}
+
 	// Now we simulate a database error. Should never occur ;p
 	fdbc.ContentsToReturn = map[int64]database.Content{}
 	res, err = b.HandleProbe(context.Background(), &probeReq)
@@ -328,8 +353,8 @@ func TestProcessQueue(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	fakeDownLoader := downloader.FakeDownloader{}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner)
-
+	alertManager := alerting.NewAlertManager(42)
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
 	req := database.Request{
 		Uri:  "/aaaaa",
 		Body: []byte("body body"),
@@ -342,4 +367,83 @@ func TestProcessQueue(t *testing.T) {
 		t.Errorf("got error: %s", err)
 	}
 
+}
+
+func TestSendStatus(t *testing.T) {
+
+	for _, test := range []struct {
+		description         string
+		getHoneypotRet      database.Honeypot
+		getHoneypotError    error
+		request             *backend_service.StatusRequest
+		expectedErrorString string
+		dbErrorToReturn     error
+	}{
+		{
+			description:      "inserts new honeypot",
+			getHoneypotRet:   database.Honeypot{},
+			getHoneypotError: errors.New("boo"),
+			dbErrorToReturn:  nil,
+			request: &backend_service.StatusRequest{
+				Ip: "1.1.1.1",
+			},
+			expectedErrorString: "",
+		},
+		{
+			description:      "inserts new honeypot fails",
+			getHoneypotRet:   database.Honeypot{},
+			getHoneypotError: errors.New("boo"),
+			dbErrorToReturn:  errors.New("oh oh"),
+			request: &backend_service.StatusRequest{
+				Ip: "1.1.1.1",
+			},
+			expectedErrorString: "error inserting honeypot",
+		},
+		{
+			description:      "updates honeypot fails",
+			getHoneypotRet:   database.Honeypot{},
+			getHoneypotError: nil,
+			dbErrorToReturn:  errors.New("oh oh"),
+			request: &backend_service.StatusRequest{
+				Ip: "1.1.1.1",
+			},
+			expectedErrorString: "error updating honeypot",
+		},
+		{
+			description:      "updates honeypot success",
+			getHoneypotRet:   database.Honeypot{},
+			getHoneypotError: nil,
+			dbErrorToReturn:  nil,
+			request: &backend_service.StatusRequest{
+				Ip: "1.1.1.1",
+			},
+			expectedErrorString: "",
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fmt.Printf("Running: %s\n", test.description)
+
+			fdbc := &database.FakeDatabaseClient{
+				HoneypotToReturn:      test.getHoneypotRet,
+				HoneypotErrorToReturn: test.getHoneypotError,
+				ErrorToReturn:         test.dbErrorToReturn,
+			}
+
+			fakeDownLoader := downloader.FakeDownloader{}
+			fakeJrunner := javascript.FakeJavascriptRunner{}
+
+			alertManager := alerting.NewAlertManager(42)
+			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
+
+			_, err := b.SendStatus(context.Background(), test.request)
+			if err == nil && test.expectedErrorString != "" {
+				t.Errorf("expected error, got none")
+			}
+
+			if err != nil && !strings.Contains(err.Error(), test.expectedErrorString) {
+				t.Errorf("expected error \"%s\", to contain \"%s\"", err, test.expectedErrorString)
+			}
+
+		})
+	}
 }

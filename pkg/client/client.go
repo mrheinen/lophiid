@@ -17,6 +17,7 @@ import (
 type BackendClient interface {
 	Connect(connectString string) error
 	HandleProbeRequest(probeRequest *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error)
+	SendStatus(req *backend_service.StatusRequest) (*backend_service.StatusResponse, error)
 	Disconnect()
 }
 
@@ -28,6 +29,8 @@ type FakeBackendClient struct {
 	HandleProbeReturnResponse *backend_service.HandleProbeResponse
 	HandleProbeCalled         bool
 	CapturedProbeRequest      *backend_service.HandleProbeRequest
+	SendStatusReturnResponse  *backend_service.StatusResponse
+	SendStatusReturnError     error
 }
 
 func (f *FakeBackendClient) Connect(connectString string) error {
@@ -39,6 +42,10 @@ func (f *FakeBackendClient) Disconnect() {}
 func (f *FakeBackendClient) HandleProbeRequest(probeRequest *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
 	f.CapturedProbeRequest = probeRequest
 	return f.HandleProbeReturnResponse, f.HandleProbeReturnError
+}
+
+func (f *FakeBackendClient) SendStatus(req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
+	return f.SendStatusReturnResponse, f.SendStatusReturnError
 }
 
 // InsecureBackendClient is a backend client that does not use SSL.
@@ -88,8 +95,11 @@ func (c *SecureBackendClient) Disconnect() {
 }
 
 func (c *SecureBackendClient) HandleProbeRequest(probeRequest *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
-	resp, err := c.backendClient.HandleProbe(context.Background(), probeRequest)
-	return resp, err
+	return c.backendClient.HandleProbe(context.Background(), probeRequest)
+}
+
+func (c *SecureBackendClient) SendStatus(req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
+	return c.backendClient.SendStatus(context.Background(), req)
 }
 
 // InsecureBackendClient is a backend client that does not use SSL.
@@ -115,6 +125,9 @@ func (c *InsecureBackendClient) Disconnect() {
 }
 
 func (c *InsecureBackendClient) HandleProbeRequest(probeRequest *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
-	resp, err := c.backendClient.HandleProbe(context.Background(), probeRequest)
-	return resp, err
+	return c.backendClient.HandleProbe(context.Background(), probeRequest)
+}
+
+func (c *InsecureBackendClient) SendStatus(req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
+	return c.backendClient.SendStatus(context.Background(), req)
 }

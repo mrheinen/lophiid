@@ -30,7 +30,9 @@
             :class="isSelectedId == content.id ? 'is-selected' : ''"
           >
             <td>{{ content.id }}</td>
-            <td>{{ content.name }} <b class="default" v-if="content.is_default">default</b></td>
+            <td><span v-if="content.script.length > 0" class="pi pi-play"></span>{{ content.name }} <b class="default" v-if="content.is_default">default</b>
+
+            </td>
             <td>{{ content.content_type }}</td>
             <td>{{ content.server }}</td>
             <td>{{ content.parsed.updated_at }}</td>
@@ -119,7 +121,10 @@ export default {
     },
     onUpdateContent(id) {
       console.log("Updated ID " + id);
-      this.reloadContents();
+      const that = this
+      this.loadContents(true, function(){
+        that.setSelectedContent(id)
+      });
     },
     reloadContents() {
       this.loadContents(true, function(){});

@@ -6,6 +6,7 @@ go_library(
     importpath = "loophid/pkg/api",
     visibility = ["//visibility:public"],
     deps = [
+        "//backend_service",
         "//pkg/database",
         "//pkg/javascript",
     ],

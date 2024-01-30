@@ -4,6 +4,7 @@ option go_package = "/backend_service";
 
 service BackendService {
     rpc HandleProbe(HandleProbeRequest) returns (HandleProbeResponse) {}
+    rpc SendStatus(StatusRequest) returns (StatusResponse) {}
 }
 
 // Stores 1:N
@@ -15,6 +16,15 @@ message KeyValues {
 message KeyValue {
   string key = 1;
   string value = 2;
+}
+
+message StatusRequest {
+  string ip = 1;
+  repeated int64 listen_port = 2;
+  repeated int64 listen_port_ssl = 3;
+}
+
+message StatusResponse {
 }
 
 // Parsed URL values. Based on golang url.URL

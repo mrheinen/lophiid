@@ -68,6 +68,12 @@
                     class="pi pi-search"
                   ></i>
                 </a>
+                &nbsp;
+                  <i @click="toggleAlert(rule.id)"
+                    :class="rule.alert ? 'alert' : ''"
+                    title="Enable alerting"
+                    class="pi pi-bell"
+                  ></i>
               </td>
             </tr>
           </tbody>
@@ -87,7 +93,7 @@
     </div>
     <div class="column mright">
       <rule-form
-        @update-rule="reloadRules()"
+        @update-rule="onUpdatedRule"
         @delete-rule="reloadRules()"
         @content-form-open="showContentForm()"
         @app-form-open="showAppForm()"
@@ -147,6 +153,43 @@ export default {
     };
   },
   methods: {
+    toggleAlert(id) {
+
+      var alertRule = null;
+      for (var i=0; i<this.rules.length;i++) {
+        if (this.rules[i].id == id) {
+          alertRule = this.rules[i];
+          break;
+        }
+      }
+
+      if (alertRule == null) {
+        console.log("Could not find rule with ID: " + id);
+        return
+      }
+
+      alertRule.alert = !alertRule.alert;
+      // Copy it so that when we delete the "parsed" section it does not mess up
+      // the UI.
+      var copyRule = Object.assign({}, alertRule);
+
+      delete copyRule.parsed;
+      fetch(this.config.backendAddress + "/contentrule/upsert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          },
+        body: JSON.stringify(copyRule),
+      })
+        .then((response) => response.json())
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            this.$toast.success("Updated rule");
+          }
+        });
+    },
     performNewSearch() {
       this.offset = 0;
       this.loadRules(true, function () {});
@@ -195,6 +238,12 @@ export default {
         }
       }
       return true;
+    },
+    onUpdatedRule(id) {
+      const that = this
+      this.loadRules(true, function () {
+        that.setSelectedRule(id);
+      });
     },
     onAddedContent(id) {
       this.selectedContentId = id;
@@ -450,5 +499,9 @@ td {
 
 table {
   width: 100%;
+}
+
+.alert {
+color: red;
 }
 </style>

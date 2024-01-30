@@ -9,6 +9,8 @@ export default {
   downloadsLink: '/downloads',
   downloadsSegmentLink: '/downloads/:offset/:limit',
   requestsLink: '/requests',
+  honeypotsLink: '/honeypot',
+  honeypotsSegmentLink: '/honeypot/:offset/:limit',
   requestsSegmentLink: '/requests/:offset/:limit',
   requestsSegmentLinkName: 'reqSegmentLink',
   backendAddress: 'http://192.168.1.78:8088',

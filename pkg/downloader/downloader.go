@@ -3,7 +3,6 @@ package downloader
 import (
 	"bytes"
 	"crypto/sha256"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"log/slog"
@@ -17,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 // User agent to send with the requests. We use wget because it is often used in
@@ -36,7 +34,7 @@ type Downloader interface {
 type HTTPDownloader struct {
 	downloadDir     string
 	privateIPBlocks []*net.IPNet
-	httpTimeout     time.Duration
+	httpClient      *http.Client
 }
 
 type FakeDownloader struct {
@@ -58,11 +56,11 @@ func (f *FakeDownloader) FromUrl(reqId int64, fromUrl string, targetFile string,
 
 // NewDownloader returns a Downloader instance. The downloads will be put in sub
 // directories of downloadDir. It is worth to set a relative long timeout
-// with httpTimeout because some IoT devices are very slow.
-func NewHTTPDownloader(downloadDir string, httpTimeout time.Duration) *HTTPDownloader {
+// on the http client because IoT devices can be slow.
+func NewHTTPDownloader(downloadDir string, httpClient *http.Client) *HTTPDownloader {
 	d := HTTPDownloader{
 		downloadDir: downloadDir,
-		httpTimeout: httpTimeout,
+		httpClient:  httpClient,
 	}
 
 	for _, cidr := range []string{
@@ -189,13 +187,18 @@ func (d *HTTPDownloader) FromUrl(reqId int64, fromUrl string, targetFile string,
 
 	// Modify the URL so we connect to the IP we resolved and checked.
 	u, _ := url.Parse(fromUrl)
-	if port == 0 {
-		u.Host = ip.String()
-	} else {
-		u.Host = fmt.Sprintf("%s:%d", ip.String(), port)
+	ipStr := ip.String()
+	// Handle IPv6 IPs.
+	if ip.To4() == nil {
+		ipStr = fmt.Sprintf("[%s]", ipStr)
 	}
 
-	dInfo.Host = u.Host
+	if port == 0 {
+		u.Host = ipStr
+	} else {
+		u.Host = fmt.Sprintf("%s:%d", ipStr, port)
+	}
+
 	dInfo.UsedUrl = u.String()
 	dInfo.FileLocation = targetFile
 
@@ -206,16 +209,14 @@ func (d *HTTPDownloader) FromUrl(reqId int64, fromUrl string, targetFile string,
 
 	defer out.Close()
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return dInfo, nil, fmt.Errorf("creating request for URL: %s, err %s", u.String(), err)
 	}
-
-	client := &http.Client{Transport: tr, Timeout: d.httpTimeout}
-	req, _ := http.NewRequest("GET", u.String(), nil)
 	req.Header.Set("Host", host)
 	req.Header.Set("User-Agent", userAgent)
 
-	resp, err := client.Do(req)
+	resp, err := d.httpClient.Do(req)
 	if err != nil {
 		return dInfo, nil, fmt.Errorf("fetching file: %s", err)
 	}

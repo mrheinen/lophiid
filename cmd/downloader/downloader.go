@@ -1,9 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"loophid/pkg/downloader"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -41,9 +43,14 @@ func main() {
 		fmt.Printf("Unknown log level given. Using info")
 		programLevel.Set(slog.LevelInfo)
 	}
+	// Create the downloader
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr, Timeout: time.Minute * 10}
 
 	var wg sync.WaitGroup
-	nd := downloader.NewHTTPDownloader(*downloadDir, time.Minute*time.Duration(*httpTimeout))
+	nd := downloader.NewHTTPDownloader(*downloadDir, client)
 	wg.Add(1)
 	go func() {
 		targetFile, err := nd.PepareTargetFileDir(fmt.Sprintf("%d", *requestId))

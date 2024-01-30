@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"loophid/backend_service"
 	"loophid/pkg/database"
 
 	"github.com/dop251/goja"
@@ -32,7 +33,7 @@ type Util struct {
 }
 
 type JavascriptRunner interface {
-	RunScript(script string, req database.Request, validate bool) (string, error)
+	RunScript(script string, req database.Request, res *backend_service.HttpResponse, validate bool) error
 }
 
 type GojaJavascriptRunner struct {
@@ -47,20 +48,41 @@ func NewGojaJavascriptRunner() *GojaJavascriptRunner {
 	}
 }
 
+type ResponseWrapper struct {
+	response *backend_service.HttpResponse
+}
+
+func (r *ResponseWrapper) AddHeader(key string, value string) {
+	r.response.Header = append(r.response.Header, &backend_service.KeyValue{
+		Key:   key,
+		Value: value,
+	})
+}
+
+func (r *ResponseWrapper) SetBody(body string) {
+	r.response.Body = []byte(body)
+}
+
+func (r *ResponseWrapper) BodyString() string {
+	return string(r.response.Body)
+}
+
 // The JavascriptRunner will run the given script and makes the given request
 // available as 'request' inside the javascript context.
-func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, validate bool) (string, error) {
+func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, res *backend_service.HttpResponse, validate bool) error {
 	vm := goja.New()
 	// Map all fields with json tags to these tags in javascript. The second
 	// argument "true" will cause the method names to start with a lower case
 	// character.
 	vm.SetFieldNameMapper(goja.TagFieldNameMapper("json", true))
+
 	vm.Set("request", req)
+	vm.Set("response", ResponseWrapper{response: res})
 	vm.Set("util", j.util)
 
 	_, err := vm.RunString(script)
 	if err != nil {
-		return "", fmt.Errorf("couldnt run script: %s", err)
+		return fmt.Errorf("couldnt run script: %s", err)
 	}
 
 	// Validation requires a method called __validate to be present in the script.
@@ -71,39 +93,35 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, va
 		var validateScript func() string
 		ref := vm.Get("__validate")
 		if ref == nil {
-			return "", fmt.Errorf("couldn't find method __validate")
+			return fmt.Errorf("couldn't find method __validate")
 		}
 		err = vm.ExportTo(ref, &validateScript)
 		if err != nil {
-			return "", fmt.Errorf("couldn't export method: %s", err)
+			return fmt.Errorf("couldn't export method: %s", err)
 		}
 
 		if out := validateScript(); out != "" {
-			return "", fmt.Errorf("validation failed: %s", out)
+			return fmt.Errorf("validation failed: %s", out)
 		}
 	}
 
-	var createResponse func() []string
+	var createResponse func() string
 	ref := vm.Get("createResponse")
 	if ref == nil {
-		return "", fmt.Errorf("couldn't find method createResponse")
+		return fmt.Errorf("couldn't find method createResponse")
 	}
 	err = vm.ExportTo(ref, &createResponse)
 	if err != nil {
-		return "", fmt.Errorf("couldn't export method: %s", err)
+		return fmt.Errorf("couldn't export method: %s", err)
 	}
 
-	res := createResponse()
+	scriptOutput := createResponse()
 
-	if len(res) != 2 {
-		return "", fmt.Errorf("unexpected length of result. Len=%d", len(res))
+	if scriptOutput != "" {
+		return fmt.Errorf("%w: %s", ErrScriptComplained, scriptOutput)
 	}
 
-	if res[1] != "" {
-		return "", ErrScriptComplained
-	}
-
-	return res[0], nil
+	return nil
 }
 
 type FakeJavascriptRunner struct {
@@ -111,6 +129,6 @@ type FakeJavascriptRunner struct {
 	ErrorToReturn  error
 }
 
-func (f *FakeJavascriptRunner) RunScript(script string, req database.Request, validate bool) (string, error) {
+func (f *FakeJavascriptRunner) RunScript(script string, req database.Request, res *backend_service.HttpResponse, validate bool) (string, error) {
 	return f.StringToReturn, f.ErrorToReturn
 }

@@ -1,9 +1,22 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "vt",
-    srcs = ["vt.go"],
+    srcs = [
+        "manager.go",
+        "vt.go",
+    ],
     importpath = "loophid/pkg/vt",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_virustotal_vt_go//:vt-go"],
+    deps = [
+        "//pkg/database",
+        "//pkg/util",
+    ],
+)
+
+go_test(
+    name = "vt_test",
+    srcs = ["manager_test.go"],
+    embed = [":vt"],
+    deps = ["//pkg/database"],
 )

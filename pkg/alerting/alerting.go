@@ -46,12 +46,14 @@ func NewAlertManager(alertInterval int) *AlertManager {
 // Start starts the go routine that handles buffered messages. The routing is
 // stopped by the Stop() method.
 func (a *AlertManager) Start() {
+	slog.Info("starting alert manager")
 	ticker := time.NewTicker(time.Minute * time.Duration(a.alertInterval))
 	go func() {
 		for {
 			select {
 			case <-a.bgChan:
 				ticker.Stop()
+				slog.Info("alert manager stopped")
 				return
 			case <-ticker.C:
 				a.EmptyBuffer()
@@ -61,6 +63,7 @@ func (a *AlertManager) Start() {
 }
 
 func (a *AlertManager) Stop() {
+	slog.Info("stopping alert manager")
 	a.bgChan <- true
 }
 

@@ -9,11 +9,14 @@ import (
 	"log"
 	"log/slog"
 	"loophid/backend_service"
+	"loophid/pkg/alerting"
 	"loophid/pkg/backend"
 	"loophid/pkg/database"
 	"loophid/pkg/downloader"
 	"loophid/pkg/javascript"
+	"loophid/pkg/vt"
 	"net"
+	"net/http"
 	"os"
 	"time"
 
@@ -29,6 +32,14 @@ var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 var serverCert = flag.String("ssl-server-cert", "", "server SSL certificate")
 var serverKey = flag.String("ssl-server-key", "", "server SSL key")
 var caCert = flag.String("ssl-cacert", "", "server CA cert")
+
+// Alerting flags
+var alertInterval = flag.Int("alert-interval", 2, "Alert every <interval> minutes")
+var tgApiKey = flag.String("alert-tg-apikey", "", "Telegram API key")
+var tgChannelId = flag.Int64("alert-tg-chanid", 0, "Telegram channel ID")
+
+// Virustotal flags
+var vtApiKey = flag.String("vt-apikey", "", "Virustotal API key")
 
 func main() {
 
@@ -66,19 +77,50 @@ func main() {
 		return
 	}
 
-	jRunner := javascript.NewGojaJavascriptRunner()
+	alertMgr := alerting.NewAlertManager(*alertInterval)
+	alertMgr.AddAlerter(alerting.NewLogAlerter())
+
+	// Enable the telegram alerter.
+	if *tgApiKey != "" && *tgChannelId != 0 {
+		tga := alerting.NewTelegramAlerter(*tgApiKey, *tgChannelId, true)
+		if err = alertMgr.AddAlerter(tga); err != nil {
+			slog.Error("Error initializing telegram alerter", slog.String("error", err.Error()))
+			return
+		}
+	}
 
 	dbc := database.NewKSQLClient(&db)
-	dLoader := downloader.NewHTTPDownloader(*downloadDir, time.Minute*10)
-	bs := backend.NewBackendServer(dbc, dLoader, jRunner)
-	if err := bs.Start(); err != nil {
+
+	var vtMgr vt.VTManager
+	if *vtApiKey == "" {
+		vtMgr = nil
+	} else {
+		// Start the virustotal client/manager
+		vtc := vt.NewVTClient(*vtApiKey, time.Hour*96)
+		vtc.Start()
+
+		vtMgr = vt.NewVTBackgroundManager(dbc, vtc)
+		vtMgr.Start()
+	}
+
+	jRunner := javascript.NewGojaJavascriptRunner()
+
+	// Create the downloader
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr, Timeout: time.Minute * 10}
+
+	dLoader := downloader.NewHTTPDownloader(*downloadDir, client)
+	bs := backend.NewBackendServer(dbc, dLoader, jRunner, alertMgr, vtMgr)
+	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}
 
 	if *serverCert == "" {
 		rpcServer := grpc.NewServer()
 		backend_service.RegisterBackendServiceServer(rpcServer, bs)
-		if err := rpcServer.Serve(listener); err != nil {
+		if err = rpcServer.Serve(listener); err != nil {
 			slog.Error("Error: %s\n", err)
 		}
 		return

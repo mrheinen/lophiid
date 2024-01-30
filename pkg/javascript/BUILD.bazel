@@ -6,6 +6,7 @@ go_library(
     importpath = "loophid/pkg/javascript",
     visibility = ["//visibility:public"],
     deps = [
+        "//backend_service",
         "//pkg/database",
         "@com_github_dop251_goja//:goja",
     ],
@@ -15,5 +16,8 @@ go_test(
     name = "javascript_test",
     srcs = ["goja_test.go"],
     embed = [":javascript"],
-    deps = ["//pkg/database"],
+    deps = [
+        "//backend_service",
+        "//pkg/database",
+    ],
 )

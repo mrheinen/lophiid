@@ -24,13 +24,11 @@
       <input v-if="!scriptMode" type="file" @change="handleFileUpload" />
       <div v-if="scriptMode">
         <label class="label">Content Script</label>
-        <TextArea
-          spellcheck="false"
+        <codemirror
           v-model="localContent.script"
-          autoResize
-          rows="20"
-          cols="70"
-        />
+          :style="{ height: '400px' }"
+          :extensions="extensions"
+        ></codemirror>
       </div>
 
       <br />
@@ -125,6 +123,44 @@
 </template>
 
 <script>
+import { javascript } from "../../../node_modules/@codemirror/lang-javascript";
+import {
+  keymap,
+  highlightActiveLine,
+  highlightSpecialChars,
+  lineNumbers,
+  highlightActiveLineGutter,
+} from "../../../node_modules/@codemirror/view";
+
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from "../../../node_modules/@codemirror/commands";
+
+import {
+  search,
+  searchKeymap,
+  highlightSelectionMatches,
+} from "../../../node_modules/@codemirror/search";
+
+import {
+  autocompletion,
+  completionKeymap,
+  closeBrackets,
+  closeBracketsKeymap,
+} from "../../../node_modules/@codemirror/autocomplete";
+import {
+  indentOnInput,
+  bracketMatching,
+  foldGutter,
+  foldKeymap,
+} from "../../../node_modules/@codemirror/language";
+
+import { lintKeymap } from "../../../node_modules/@codemirror/lint";
+import { solarizedLight } from "../../../node_modules/thememirror/dist";
+
 export default {
   props: ["content"],
   emits: ["update-content", "deleted-content"],
@@ -140,6 +176,32 @@ export default {
       selectedFile: null,
       showContentData: false,
       scriptMode: false,
+      extensions: [
+        solarizedLight,
+        indentOnInput(),
+        history(),
+        bracketMatching(),
+        javascript(),
+        foldGutter(),
+        closeBrackets(),
+        autocompletion(),
+        highlightActiveLine(),
+        highlightSpecialChars(),
+        lineNumbers(),
+        highlightActiveLineGutter(),
+        highlightSelectionMatches(),
+        search({ top: true }),
+        keymap.of([
+          ...closeBracketsKeymap,
+          ...defaultKeymap,
+          ...searchKeymap,
+          ...historyKeymap,
+          ...foldKeymap,
+          ...completionKeymap,
+          ...lintKeymap,
+          indentWithTab,
+        ]),
+      ],
     };
   },
   methods: {
@@ -263,6 +325,9 @@ export default {
   watch: {
     content() {
       this.localContent = Object.assign({}, this.content);
+      if (this.localContent.script && this.localContent.script.length > 0) {
+        this.scriptMode = true;
+      }
     },
   },
   created() {

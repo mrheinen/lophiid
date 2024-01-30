@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "util",
+    srcs = [
+        "general.go",
+        "string_map_cache.go",
+    ],
+    importpath = "loophid/pkg/util",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "util_test",
+    srcs = ["string_map_cache_test.go"],
+    embed = [":util"],
+)

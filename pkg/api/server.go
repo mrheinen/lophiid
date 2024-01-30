@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"loophid/backend_service"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
 	"net/http"
@@ -183,7 +184,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 		// Try running the script with a fake request. This to see if it compiles
 		// and doesn't produce any errors.
 		modifiedScript := fmt.Sprintf("%s\ncreateResponse();", rb.Script)
-		_, err := a.jRunner.RunScript(modifiedScript, database.Request{
+		err := a.jRunner.RunScript(modifiedScript, database.Request{
 			ID:            42,
 			Port:          80,
 			Uri:           "/foo",
@@ -193,7 +194,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 			ContentLength: 42,
 			UserAgent:     "wget",
 			Body:          []byte("this is body"),
-		}, true)
+		}, &backend_service.HttpResponse{}, true)
 
 		// The script itself may complain because of the fake data we provided in
 		// the above request. We therefore ignore it if this happens and really just
@@ -367,8 +368,37 @@ func (a *ApiServer) HandleUpdateRequest(w http.ResponseWriter, req *http.Request
 	a.sendStatus(w, "Updated request", ResultSuccess, nil)
 }
 
+func (a *ApiServer) HandleUpdateHoneypot(w http.ResponseWriter, req *http.Request) {
+	var rb database.Honeypot
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&rb); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	err := a.dbc.Update(&rb)
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("Unable to update honeypot: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "Updated honeypot", ResultSuccess, nil)
+}
+
 func (a *ApiServer) HandleGetAllDownloads(w http.ResponseWriter, req *http.Request) {
 	dls, err := a.dbc.GetDownloads()
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, dls)
+}
+
+func (a *ApiServer) HandleGetAllHoneypots(w http.ResponseWriter, req *http.Request) {
+	dls, err := a.dbc.GetHoneypots()
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
@@ -484,6 +514,31 @@ func (a *ApiServer) HandleSearchDownloads(w http.ResponseWriter, req *http.Reque
 	var rls []database.Download
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchDownloads(iOffset, iLimit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
+func (a *ApiServer) HandleSearchHoneypots(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var rls []database.Honeypot
+	query := req.URL.Query().Get("q")
+	rls, err = a.dbc.SearchHoneypots(iOffset, iLimit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)

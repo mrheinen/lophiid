@@ -8,16 +8,19 @@ go_library(
         "request_queue.go",
         "rule_cache.go",
         "safe_rules.go",
-        "session_cache.go",
     ],
     importpath = "loophid/pkg/backend",
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",
+        "//pkg/alerting",
         "//pkg/database",
         "//pkg/downloader",
         "//pkg/javascript",
+        "//pkg/util",
+        "//pkg/vt",
         "@cc_mvdan_xurls_v2//:xurls",
+        "@com_github_vingarcia_ksql//:ksql",
     ],
 )
 
@@ -28,13 +31,14 @@ go_test(
         "process_test.go",
         "request_queue_test.go",
         "rule_cache_test.go",
-        "session_cache_test.go",
     ],
     embed = [":backend"],
     deps = [
         "//backend_service",
+        "//pkg/alerting",
         "//pkg/database",
         "//pkg/downloader",
         "//pkg/javascript",
+        "//pkg/vt",
     ],
 )

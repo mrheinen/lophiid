@@ -125,19 +125,19 @@ func StringsFromRequest(req *database.Request) []string {
 		}
 	}
 
-	// Parse all query parameters to find base64 strings.
+	// Avoid proxy requests
+	if strings.HasPrefix(req.Uri, "http") {
+		return res
+	}
+
 	qIdx := strings.Index(req.Uri, "?")
 	if qIdx == -1 {
-		// Sometimes the path is the payload. Add it only if the path itself is not
-		// a URL.
-		if !strings.HasPrefix(req.Uri, "http") {
-			res = append(res, decodeURLOrEmptyString(req.Uri))
-		}
 		return res
 	}
 
 	query := req.Uri[qIdx+1:]
 	path := req.Uri[:qIdx]
+
 	res = append(res, decodeURLOrEmptyString(path))
 	params, err := url.ParseQuery(query)
 	// Hack until this is fixed: https://github.com/golang/go/issues/50034
@@ -217,25 +217,6 @@ func (u *URLExtractor) ParseString(s string) {
 	var member struct{}
 	for _, url := range ExtractUrls(s) {
 		u.result[url] = member
-	}
-}
-
-func (u *URLExtractor) ParseStringForHost(s string, h string) {
-	var member struct{}
-	for _, newUrl := range ExtractUrls(s) {
-		p, err := url.Parse(newUrl)
-		if err != nil {
-			continue
-		}
-
-		host := p.Host
-		if strings.Contains(p.Host, ":") {
-			parts := strings.Split(p.Host, ":")
-			host = parts[0]
-		}
-		if host == h {
-			u.result[newUrl] = member
-		}
 	}
 }
 

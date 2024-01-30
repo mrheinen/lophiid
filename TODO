@@ -74,3 +74,18 @@ javascript
 
   Add the ability to block certain IPs or requests.
 
+Allow default page to be set per honeypot. Create UI where you can select the
+default page per honeypot. And show honeypot statistics.
+
+
+Handle IPv6 properly:
+time=2024-01-22T14:18:50.122-05:00 level=DEBUG msg=downloading url=https://load.abadila.best/hikb.sh
+time=2024-01-22T14:18:50.171-05:00 level=DEBUG msg="could not download" error="creating request for URL: https://2606:4700:3030::6815:2ceb/hikb.sh, err parse \"https://2606:4700:3030::6815:2ceb/hikb.sh\": invalid port \":2ceb\" after host"
+
+
+errors.Is(err, ksql.ErrRecordNotFound)
+
+If you update a content, do not reload the contentslist. Test this when updating
+a content somewhere in the middle because it will be deselected and the top one
+is selected which is wrong.
+

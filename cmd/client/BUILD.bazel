@@ -6,6 +6,7 @@ go_library(
     importpath = "loophid/cmd/client",
     visibility = ["//visibility:private"],
     deps = [
+        "//backend_service",
         "//pkg/client",
         "//pkg/http/server",
     ],

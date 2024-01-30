@@ -12,7 +12,11 @@ import RulesList from './components/container/RulesList.vue';
 import RequestsList from './components/container/RequestsList.vue';
 import AppsList from './components/container/AppsList.vue';
 import DownList from './components/container/DownloadsList.vue';
+import HoneyList from './components/container/HoneypotList.vue';
 import PrimeVue from './../node_modules/primevue/config';
+
+import CodeMirror from './../node_modules/vue-codemirror';
+//import javascript from './../node_modules/@codemirror/lang-javascript';
 
 import './../node_modules/bulma/css/bulma.css';
 import './../node_modules/primevue/resources/themes/lara-light-blue/theme.css'
@@ -29,12 +33,14 @@ const router = createRouter({
   routes: [
     {path: Config.contentLink, component: ContentList },
     {path: Config.contentSegmentLink, component: ContentList },
-    {path: Config.downloadsSegmentLink, component: DownList },
     {path: Config.rulesLink, component: RulesList },
     {path: Config.rulesSegmentLink, component: RulesList },
     {path: Config.appsLink, component: AppsList },
     {path: Config.appsSegmentLink, component: AppsList },
     {path: Config.downloadsLink, component: DownList },
+    {path: Config.downloadsSegmentLink, component: DownList },
+    {path: Config.honeypotsLink, component: HoneyList },
+    {path: Config.honeypotsSegmentLink, component: HoneyList },
     {path: Config.requestsLink, component: RequestsList },
     {path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },
   ]
@@ -79,6 +85,16 @@ app.use(store);
 app.use(PrimeVue);
 app.use(ToastPlugin);
 app.use(ConfirmationService);
+app.use(CodeMirror, {
+  // optional default global options
+  autofocus: true,
+  disabled: false,
+  indentWithTab: true,
+  tabSize: 2,
+  placeholder: 'Code goes here...',
+  extensions: [],
+  theme: 'base16-dark'
+})
 
 app.mount('#app');
 

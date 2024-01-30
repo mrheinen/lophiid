@@ -6,7 +6,7 @@ import "log/slog"
 type LogAlerter struct {
 }
 
-func NewStdoutAlerter() *LogAlerter {
+func NewLogAlerter() *LogAlerter {
 	return &LogAlerter{}
 }
 

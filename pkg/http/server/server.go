@@ -12,33 +12,33 @@ import (
 )
 
 type HttpServer struct {
-	mux      *http.ServeMux
-	client   client.BackendClient
-	ssl      bool
-	sslCert  string
-	sslKey   string
-	port     int64
-	publicIP string
+	mux        *http.ServeMux
+	client     client.BackendClient
+	ssl        bool
+	sslCert    string
+	sslKey     string
+	port       int64
+	publicIP   string
 }
 
 // NewHttpServer creates a new initialized HttpServer struct.
 func NewHttpServer(c client.BackendClient, port int64, publicIP string) *HttpServer {
 	return &HttpServer{
-		client:   c,
-		ssl:      false,
-		port:     port,
-		publicIP: publicIP,
+		client:     c,
+		ssl:        false,
+		port:       port,
+		publicIP:   publicIP,
 	}
 }
 
 func NewSSLHttpServer(c client.BackendClient, port int64, sslCert string, sslKey string, publicIP string) *HttpServer {
 	return &HttpServer{
-		client:   c,
-		ssl:      true,
-		sslCert:  sslCert,
-		sslKey:   sslKey,
-		port:     port,
-		publicIP: publicIP,
+		client:     c,
+		ssl:        true,
+		sslCert:    sslCert,
+		sslKey:     sslKey,
+		port:       port,
+		publicIP:   publicIP,
 	}
 }
 
