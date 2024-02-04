@@ -9,6 +9,7 @@ go_library(
         "//backend_service",
         "//pkg/database",
         "//pkg/javascript",
+        "@com_github_vingarcia_ksql//:ksql",
     ],
 )
 

@@ -19,6 +19,7 @@ import (
 	"loophid/pkg/javascript"
 	"loophid/pkg/util"
 	"loophid/pkg/vt"
+	"loophid/pkg/whois"
 
 	"github.com/vingarcia/ksql"
 )
@@ -29,6 +30,7 @@ type BackendServer struct {
 	dLoader         downloader.Downloader
 	jRunner         javascript.JavascriptRunner
 	vtMgr           vt.VTManager
+	whoisMgr        whois.WhoisManager
 	alertMgr        *alerting.AlertManager
 	safeRules       *SafeRules
 	safeRulesChan   chan bool
@@ -39,7 +41,7 @@ type BackendServer struct {
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager) *BackendServer {
 	sCache := util.NewStringMapCache(time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
@@ -49,6 +51,7 @@ func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, 
 		jRunner:         jRunner,
 		alertMgr:        alertMgr,
 		vtMgr:           vtManager,
+		whoisMgr:        wManager,
 		safeRules:       &SafeRules{},
 		safeRulesChan:   make(chan bool),
 		reqsProcessChan: make(chan bool),
@@ -274,7 +277,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	slog.Debug("Fetching content", slog.Int64("content_id", matchedRule.ContentID))
 	content, err := s.dbClient.GetContentByID(matchedRule.ContentID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetching content ID %d: %w", matchedRule.ContentID, err)
 	}
 
 	res := &backend_service.HttpResponse{}
@@ -319,6 +322,11 @@ func (s *BackendServer) LoadRules() error {
 // the database.
 func (s *BackendServer) ProcessReqsQueue() error {
 	for req := s.reqsQueue.Pop(); req != nil; req = s.reqsQueue.Pop() {
+
+		go func(req *database.Request) {
+			s.whoisMgr.LookupIP(req.SourceIP)
+		}(req)
+
 		dm, err := s.dbClient.Insert(req)
 		if err != nil {
 			return fmt.Errorf("error saving request: %s", err)
@@ -337,8 +345,6 @@ func (s *BackendServer) ProcessReqsQueue() error {
 			continue
 		}
 
-		var wg sync.WaitGroup
-
 		// Iterate over the base64 strings and store them. Importantly, while doing
 		// so try to extract links from the decoded content.
 		var metadatas []database.RequestMetadata
@@ -351,6 +357,7 @@ func (s *BackendServer) ProcessReqsQueue() error {
 			})
 		}
 
+		var wg sync.WaitGroup
 		// Iterate over the links and try to download them.
 		for v := range linksMap {
 			targetFile, err := s.dLoader.PepareTargetFileDir(fmt.Sprintf("%d", dm.ModelID()))
@@ -409,16 +416,20 @@ func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile stri
 		if s.vtMgr != nil && len(dm.VTAnalysisID) == 0 {
 			s.vtMgr.QueueURL(dInfo.OriginalUrl)
 		}
-	} else if errors.Is(err, ksql.ErrRecordNotFound) {
-		dInfo.LastRequestID = reqID
-		dInfo.TimesSeen = 1
-		_, err = s.dbClient.Insert(&dInfo)
-		if err != nil {
-			slog.Warn("error on insert", slog.String("error", err.Error()))
-		}
+	} else {
+		if errors.Is(err, ksql.ErrRecordNotFound) {
+			dInfo.LastRequestID = reqID
+			dInfo.TimesSeen = 1
+			_, err = s.dbClient.Insert(&dInfo)
+			if err != nil {
+				slog.Warn("error on insert", slog.String("error", err.Error()))
+			}
 
-		if s.vtMgr != nil {
-			s.vtMgr.QueueURL(dInfo.OriginalUrl)
+			if s.vtMgr != nil {
+				s.vtMgr.QueueURL(dInfo.OriginalUrl)
+			}
+		} else {
+			slog.Warn("unexpected error", slog.String("error", err.Error()))
 		}
 	}
 }
@@ -486,6 +497,10 @@ func (s *BackendServer) Start() error {
 	}()
 
 	return nil
+}
+
+func (s *BackendServer) StartRulesLoading() {
+
 }
 
 func (s *BackendServer) Stop() {

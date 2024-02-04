@@ -116,7 +116,7 @@ func TestUpsertSingleContent(t *testing.T) {
 				StringToReturn: "OK",
 				ErrorToReturn:  test.scriptErr,
 			}
-			s := NewApiServer(&fd, &fakeJrunner)
+			s := NewApiServer(&fd, &fakeJrunner, "apikey")
 
 			buf := new(bytes.Buffer)
 			json.NewEncoder(buf).Encode(test.content)
@@ -194,7 +194,7 @@ func TestGetSingleContent(t *testing.T) {
 				ErrorToReturn: test.err,
 			}
 			fakeJrunner := javascript.FakeJavascriptRunner{}
-			s := NewApiServer(&fd, &fakeJrunner)
+			s := NewApiServer(&fd, &fakeJrunner, "apiKey")
 
 			req := httptest.NewRequest(http.MethodGet, test.queryString, nil)
 			w := httptest.NewRecorder()
@@ -241,7 +241,7 @@ func TestGetSingleContentRule(t *testing.T) {
 	for _, test := range []struct {
 		description string
 		queryString string
-		uri        string
+		uri         string
 		contentId   int64
 		status      string
 		err         error
@@ -249,7 +249,7 @@ func TestGetSingleContentRule(t *testing.T) {
 		{
 			description: "fetch successful",
 			queryString: "/contentrule/get?id=42",
-			uri:        "/this/path",
+			uri:         "/this/path",
 			contentId:   42,
 			status:      ResultSuccess,
 			err:         nil,
@@ -257,7 +257,7 @@ func TestGetSingleContentRule(t *testing.T) {
 		{
 			description: "fetch fails",
 			queryString: "/contentrule/get?id=42",
-			uri:        "/this/path",
+			uri:         "/this/path",
 			contentId:   42,
 			status:      ResultError,
 			err:         errors.New("fail fail"),
@@ -266,7 +266,7 @@ func TestGetSingleContentRule(t *testing.T) {
 		{
 			description: "id parsing fails",
 			queryString: "/contentrule/get?id=FAIL",
-			uri:        "/this/path",
+			uri:         "/this/path",
 			contentId:   42,
 			status:      ResultError,
 			err:         nil,
@@ -277,7 +277,7 @@ func TestGetSingleContentRule(t *testing.T) {
 			fd := database.FakeDatabaseClient{
 				ContentRulesToReturn: []database.ContentRule{
 					{
-						Uri:      test.uri,
+						Uri:       test.uri,
 						ContentID: test.contentId,
 					},
 				},
@@ -285,7 +285,7 @@ func TestGetSingleContentRule(t *testing.T) {
 			}
 
 			fakeJrunner := javascript.FakeJavascriptRunner{}
-			s := NewApiServer(&fd, &fakeJrunner)
+			s := NewApiServer(&fd, &fakeJrunner, "apiKey")
 
 			req := httptest.NewRequest(http.MethodGet, test.queryString, nil)
 			w := httptest.NewRecorder()
@@ -379,7 +379,7 @@ func TestExportApp(t *testing.T) {
 				ContentsToReturn:     test.contents,
 			}
 
-			s := NewApiServer(&fd, &javascript.FakeJavascriptRunner{})
+			s := NewApiServer(&fd, &javascript.FakeJavascriptRunner{}, "apiKey")
 
 			formdata := url.Values{}
 			formdata.Set("id", "42")

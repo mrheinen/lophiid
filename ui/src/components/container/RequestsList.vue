@@ -86,6 +86,7 @@
       <request-view
         :request="selectedRequest"
         :metadata="selectedMetadata"
+        :whois="selectedWhois"
       ></request-view>
     </div>
   </div>
@@ -101,6 +102,7 @@ export default {
   components: {
     RequestView,
   },
+  emits: ["require-auth"],
   inject: ["config"],
   data() {
     return {
@@ -108,6 +110,7 @@ export default {
       requests: [],
       selectedRequest: null,
       selectedMetadata: [],
+      selectedWhois: null,
       query: null,
       isSelectedElement: null,
       isSelectedId: 0,
@@ -141,10 +144,17 @@ export default {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "API-Key": this.$store.getters.apiToken,
           },
         body: JSON.stringify(copyRequest),
       })
-        .then((response) => response.json())
+     .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
@@ -226,19 +236,56 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedRequest = selected;
+        this.loadWhois(selected.source_ip);
         this.isSelectedId = id;
       }
+    },
+    loadWhois(ip) {
+      fetch(this.config.backendAddress + "/whois/ip", {
+        method: "POST",
+        headers: {
+          'API-Key': this.$store.getters.apiToken,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "ip=" + ip,
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+            this.selectedWhois = null;
+          } else {
+            if (response.data) {
+              this.selectedWhois = response.data;
+            } else {
+              this.selectedWhois = null;
+            }
+          }
+        });
     },
 
     loadMetadata(id) {
       fetch(this.config.backendAddress + "/meta/request", {
         method: "POST",
         headers: {
+          'API-Key': this.$store.getters.apiToken,
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: "id=" + id,
       })
-        .then((response) => response.json())
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
@@ -261,8 +308,16 @@ export default {
         url += "&q=" + encodeURIComponent(this.query);
       }
 
-      fetch(url)
-        .then((response) => response.json())
+      fetch(url, { headers: {
+        'API-Key': this.$store.getters.apiToken,
+      }})
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);

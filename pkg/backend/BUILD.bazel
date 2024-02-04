@@ -19,6 +19,7 @@ go_library(
         "//pkg/javascript",
         "//pkg/util",
         "//pkg/vt",
+        "//pkg/whois",
         "@cc_mvdan_xurls_v2//:xurls",
         "@com_github_vingarcia_ksql//:ksql",
     ],
@@ -40,5 +41,6 @@ go_test(
         "//pkg/downloader",
         "//pkg/javascript",
         "//pkg/vt",
+        "//pkg/whois",
     ],
 )

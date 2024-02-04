@@ -132,6 +132,7 @@ func StringsFromRequest(req *database.Request) []string {
 
 	qIdx := strings.Index(req.Uri, "?")
 	if qIdx == -1 {
+		res = append(res, decodeURLOrEmptyString(req.Uri))
 		return res
 	}
 
@@ -139,13 +140,22 @@ func StringsFromRequest(req *database.Request) []string {
 	path := req.Uri[:qIdx]
 
 	res = append(res, decodeURLOrEmptyString(path))
+
 	params, err := url.ParseQuery(query)
-	// Hack until this is fixed: https://github.com/golang/go/issues/50034
-	query = strings.ReplaceAll(query, ";", "+")
+
 	if err != nil {
-		slog.Warn("could not parse query", slog.String("error", err.Error()), slog.String("query", query))
+		slog.Debug("could not parse query", slog.String("error", err.Error()), slog.String("query", query))
 		res = append(res, decodeURLOrEmptyString(query))
 		return res
+	}
+
+	// In cases like /foo?payload the payload part is in the parameter name. In
+	// that case we should add it.
+	if len(params) == 1 {
+		if _, ok := params[decodeURLOrEmptyString(query)]; ok {
+			res = append(res, decodeURLOrEmptyString(query))
+			return res
+		}
 	}
 
 	for _, values := range params {

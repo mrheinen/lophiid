@@ -72,6 +72,7 @@
       <content-form
         @update-content="onUpdateContent"
         @deleted-content="onDeleteContent"
+        @require-auth="$emit('require-auth')"
         :content="selectedContent"
       ></content-form>
     </div>
@@ -89,6 +90,7 @@ export default {
     ContentForm,
   },
   inject: ["config"],
+  emits: ["require-auth"],
   data() {
     return {
       contents: [],
@@ -203,8 +205,16 @@ export default {
         url += "&q=" + this.query;
       }
 
-      fetch(url)
-        .then((response) => response.json())
+      fetch(url, { headers: {
+        'API-Key': this.$store.getters.apiToken,
+      }})
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);

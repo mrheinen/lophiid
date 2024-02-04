@@ -27,7 +27,7 @@ CREATE TYPE MATCHING_TYPE AS ENUM ('exact', 'prefix', 'suffix', 'contains', 'reg
 CREATE TYPE METHOD_TYPE AS ENUM ('GET', 'POST', 'HEAD', 'TRACE', 'OPTIONS', 'DELETE', 'PUT', 'ANY');
 CREATE TYPE STATUS_CODE AS ENUM ('200','301', '302', '400', '401', '403', '404', '500');
 
-CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'WHOIS', 'DECODED_STRING_BASE64');
+CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'DECODED_STRING_BASE64');
 
 CREATE TABLE request_metadata (
   id              SERIAL PRIMARY KEY,
@@ -139,14 +139,13 @@ CREATE TABLE request (
   rule_id         INT
 );
 
-CREATE TABLE stored_search (
+
+CREATE TABLE whois (
   id                   SERIAL PRIMARY KEY,
-  query                VARCHAR(4096),
-  number_matches       INT,
-  number_matches_prev  INT,
-  interval_minutes     INT,
+  data                 TEXT,
+  ip                   VARCHAR(52),
   created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at           TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 GRANT ALL PRIVILEGES ON content TO lo;
@@ -161,8 +160,8 @@ GRANT ALL PRIVILEGES ON request_metadata TO lo;
 GRANT ALL PRIVILEGES ON request_metadata_id_seq TO lo;
 GRANT ALL PRIVILEGES ON downloads TO lo;
 GRANT ALL PRIVILEGES ON downloads_id_seq TO lo;
-GRANT ALL PRIVILEGES ON stored_search TO lo;
-GRANT ALL PRIVILEGES ON stored_search_id_seq TO lo;
+GRANT ALL PRIVILEGES ON whois TO lo;
+GRANT ALL PRIVILEGES ON whois_id_seq TO lo;
 GRANT ALL PRIVILEGES ON honeypot TO lo;
 GRANT ALL PRIVILEGES ON honeypot_id_seq TO lo;
 GRANT ALL PRIVILEGES ON vt_ipresult TO lo;

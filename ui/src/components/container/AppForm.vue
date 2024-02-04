@@ -126,7 +126,7 @@ export default {
     ImportAppForm,
   },
   props: ["app"],
-  emits: ["update-app"],
+  emits: ["update-app", "require-auth"],
   inject: ["config"],
   data() {
     return {
@@ -170,10 +170,17 @@ export default {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "API-Key": this.$store.getters.apiToken,
         },
         body: JSON.stringify(appToSubmit),
       })
-        .then((response) => response.json())
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
@@ -197,10 +204,17 @@ export default {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
+          "API-Key": this.$store.getters.apiToken,
         },
         body: "id=" + id,
       })
-        .then((response) => response.json())
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
@@ -216,10 +230,17 @@ export default {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
+          "API-Key": this.$store.getters.apiToken,
         },
         body: "id=" + id,
       })
-        .then((response) => response.json())
+       .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error("Could not export app");

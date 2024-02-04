@@ -13,6 +13,7 @@ go_library(
         "//pkg/downloader",
         "//pkg/javascript",
         "//pkg/vt",
+        "//pkg/whois",
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
         "@org_golang_google_grpc//:go_default_library",

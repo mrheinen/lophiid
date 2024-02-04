@@ -21,6 +21,7 @@ var AppTable = ksql.NewTable("app")
 var RequestMetadataTable = ksql.NewTable("request_metadata")
 var DownloadTable = ksql.NewTable("downloads")
 var HoneypotTable = ksql.NewTable("honeypot")
+var WhoisTable = ksql.NewTable("whois")
 
 type DataModel interface {
 	ModelID() int64
@@ -151,6 +152,16 @@ type Download struct {
 
 func (c *Download) ModelID() int64 { return c.ID }
 
+type Whois struct {
+	ID        int64     `ksql:"id,skipInserts" json:"id"`
+	IP        string    `ksql:"ip" json:"ip"`
+	Data      string    `ksql:"data" json:"data"`
+	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+}
+
+func (c *Whois) ModelID() int64 { return c.ID }
+
 type DatabaseClient interface {
 	Close()
 	Insert(dm DataModel) (DataModel, error)
@@ -166,6 +177,7 @@ type DatabaseClient interface {
 	GetDownloads() ([]Download, error)
 	GetDownloadBySum(sha256sum string) (Download, error)
 	GetHoneypotByIP(ip string) (Honeypot, error)
+	GetWhoisByIP(ip string) (Whois, error)
 	GetHoneypots() ([]Honeypot, error)
 	GetRequests() ([]Request, error)
 	GetRequestsForSourceIP(ip string) ([]Request, error)
@@ -245,6 +257,8 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &DownloadTable
 	case "Honeypot":
 		return &HoneypotTable
+	case "Whois":
+		return &WhoisTable
 	default:
 		fmt.Printf("Don't know %s datamodel\n", name)
 		return nil
@@ -301,7 +315,7 @@ func (d *KSQLClient) GetDownloadBySum(sha256sum string) (Download, error) {
 	var dl Download
 	err := d.db.QueryOne(d.ctx, &dl, "FROM downloads WHERE sha256sum = $1", sha256sum)
 	if dl.ID == 0 {
-		return dl, fmt.Errorf("found no download for hash: %s", sha256sum)
+		return dl, fmt.Errorf("found no download for hash: %s, %w", sha256sum, err)
 	}
 	return dl, err
 }
@@ -317,6 +331,12 @@ func (d *KSQLClient) GetHoneypots() ([]Honeypot, error) {
 	// TODO: once last_checkin is set, order the result by it.
 	err := d.db.Query(d.ctx, &rs, "FROM honeypot")
 	return rs, err
+}
+
+func (d *KSQLClient) GetWhoisByIP(ip string) (Whois, error) {
+	hp := Whois{}
+	err := d.db.QueryOne(d.ctx, &hp, "FROM whois WHERE ip = $1", ip)
+	return hp, err
 }
 
 func (d *KSQLClient) GetRequests() ([]Request, error) {
@@ -607,4 +627,7 @@ func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query st
 }
 func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error) {
 	return []Honeypot{}, nil
+}
+func (f *FakeDatabaseClient) GetWhoisByIP(ip string) (Whois, error) {
+	return Whois{}, nil
 }

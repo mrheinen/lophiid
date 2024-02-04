@@ -53,8 +53,11 @@
 
     </div>
     <div class="column mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
-     <honey-form @update-honeypot="reloadHoneypots()"
-       :honeypot="selectedHoneypot"></honey-form>
+     <honey-form
+       @update-honeypot="reloadHoneypots()"
+       @require-auth="$emit('require-auth')"
+       :honeypot="selectedHoneypot"
+       ></honey-form>
     </div>
   </div>
 </template>
@@ -69,6 +72,7 @@ export default {
   components: {
     HoneyForm,
   },
+  emits: ["require-auth"],
   inject: ["config"],
   data() {
     return {
@@ -169,8 +173,16 @@ export default {
       if (this.query) {
         url += "&q=" + this.query;
       }
-      fetch(url)
-        .then((response) => response.json())
+     fetch(url, { headers: {
+        'API-Key': this.$store.getters.apiToken,
+      }})
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);

@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//backend_service",
         "//pkg/database",
+        "//pkg/util",
         "@com_github_dop251_goja//:goja",
     ],
 )

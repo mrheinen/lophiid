@@ -12,6 +12,7 @@ import (
 
 	"log/slog"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/vingarcia/ksql"
@@ -49,9 +50,13 @@ func main() {
 		return
 	}
 
+	id := uuid.New()
+
+	fmt.Printf("Starting with API key: %s\n", id.String())
+
 	jRunner := javascript.NewGojaJavascriptRunner()
 	dbc := database.NewKSQLClient(&db)
-	as := api.NewApiServer(dbc, jRunner)
+	as := api.NewApiServer(dbc, jRunner, id.String())
 	defer dbc.Close()
 
 	r := mux.NewRouter()
@@ -91,7 +96,18 @@ func main() {
 	r.HandleFunc("/honeypot/update", as.HandleUpdateHoneypot).Methods("POST")
 	r.HandleFunc("/honeypot/segment", as.HandleSearchHoneypots).Methods("GET")
 
-	handler := cors.Default().Handler(r)
+	r.HandleFunc("/whois/ip", as.HandleGetWhoisForIP).Methods("POST")
+
+	r.Use(as.AuthMW)
+
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedHeaders: []string{"API-Key", "Content-Type"},
+		AllowedMethods: []string{"GET", "POST"},
+		Debug:          true,
+	})
+
+	handler := c.Handler(r)
 
 	srv := &http.Server{
 		Addr:    ":8088",

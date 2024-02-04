@@ -10,11 +10,14 @@ import (
 	"loophid/pkg/javascript"
 	"net/http"
 	"strconv"
+
+	"github.com/vingarcia/ksql"
 )
 
 type ApiServer struct {
 	dbc     database.DatabaseClient
 	jRunner javascript.JavascriptRunner
+	apiKey  string
 }
 
 type HttpResult struct {
@@ -40,11 +43,28 @@ type HttpContentRuleResult struct {
 const ResultSuccess = "OK"
 const ResultError = "ERR"
 
-func NewApiServer(dbc database.DatabaseClient, jRunner javascript.JavascriptRunner) *ApiServer {
+func NewApiServer(dbc database.DatabaseClient, jRunner javascript.JavascriptRunner, apiKey string) *ApiServer {
 	return &ApiServer{
 		dbc,
 		jRunner,
+		apiKey,
 	}
+}
+
+// Auth middleware will compare the clients API key with the one that was used
+// to create the API server instance.
+func (a *ApiServer) AuthMW(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key := r.Header.Get("API-Key")
+
+		if key != a.apiKey {
+			slog.Error("Did not get a valid API key")
+			http.Error(w, "Authentication error", http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (a *ApiServer) sendStatus(w http.ResponseWriter, msg string, result string, data any) {
@@ -275,6 +295,26 @@ func (a *ApiServer) HandleDeleteContent(w http.ResponseWriter, req *http.Request
 	}
 
 	a.sendStatus(w, fmt.Sprintf("Deleted Content with ID: %s", id), ResultSuccess, nil)
+}
+
+func (a *ApiServer) HandleGetWhoisForIP(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	ip := req.Form.Get("ip")
+	res, err := a.dbc.GetWhoisByIP(ip)
+	if err != nil {
+		if errors.Is(err, ksql.ErrRecordNotFound) {
+			a.sendStatus(w, "No result", ResultSuccess, nil)
+			return
+		}
+
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "", ResultSuccess, res)
 }
 
 func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Request) {

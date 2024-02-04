@@ -9,6 +9,7 @@ go_library(
         "//pkg/api",
         "//pkg/database",
         "//pkg/javascript",
+        "@com_github_google_uuid//:uuid",
         "@com_github_gorilla_mux//:mux",
         "@com_github_rs_cors//:cors",
         "@com_github_vingarcia_ksql//:ksql",

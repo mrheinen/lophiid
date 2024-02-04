@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -15,12 +16,14 @@ type StringMapCache struct {
 	mu      sync.Mutex
 	rules   map[string]CacheEntry
 	timeout time.Duration
+	bgChan  chan bool
 }
 
 func NewStringMapCache(timeout time.Duration) *StringMapCache {
 	return &StringMapCache{
 		timeout: timeout,
 		rules:   make(map[string]CacheEntry),
+		bgChan:  make(chan bool),
 	}
 }
 
@@ -58,4 +61,24 @@ func (r *StringMapCache) CleanExpired() (removedCount int64) {
 		}
 	}
 	return removedCount
+}
+
+func (r *StringMapCache) Start() {
+	ticker := time.NewTicker(time.Minute * 1)
+	go func() {
+		for {
+			select {
+			case <-r.bgChan:
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				r.CleanExpired()
+			}
+		}
+	}()
+}
+
+func (r *StringMapCache) Stop() {
+	slog.Info("stopping cache")
+	r.bgChan <- true
 }

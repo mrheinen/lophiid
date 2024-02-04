@@ -317,6 +317,13 @@ def go_dependencies():
         version = "v1.0.2",
     )
     go_repository(
+        name = "com_github_felixge_httpsnoop",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/felixge/httpsnoop",
+        sum = "h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=",
+        version = "v1.0.4",
+    )
+    go_repository(
         name = "com_github_frankban_quicktest",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/frankban/quicktest",
@@ -460,8 +467,15 @@ def go_dependencies():
         name = "com_github_google_uuid",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/google/uuid",
-        sum = "h1:KjJaJ9iWZ3jOFZIf1Lqf4laDRCasjl0BCmnEGxkdLb4=",
-        version = "v1.3.1",
+        sum = "h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=",
+        version = "v1.6.0",
+    )
+    go_repository(
+        name = "com_github_gorilla_handlers",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/gorilla/handlers",
+        sum = "h1:cLTUSsNkgcwhgRqvCNmdbRWG0A3N4F+M2nWKdScwyEE=",
+        version = "v1.5.2",
     )
     go_repository(
         name = "com_github_gorilla_mux",
@@ -656,8 +670,8 @@ def go_dependencies():
         name = "com_github_likexian_whois_parser",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/likexian/whois-parser",
-        sum = "h1:BT6fzO3lj3F07yzVv0YXoaj+K4Ush0/cF+Yp6tvJJgk=",
-        version = "v1.24.9",
+        sum = "h1:Gfr+Q96PIo+HigM4r4rJ0SjN47h+URMRTdGcZ9jDXU4=",
+        version = "v1.24.10",
     )
     go_repository(
         name = "com_github_magiconair_properties",

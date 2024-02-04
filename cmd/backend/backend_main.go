@@ -15,6 +15,7 @@ import (
 	"loophid/pkg/downloader"
 	"loophid/pkg/javascript"
 	"loophid/pkg/vt"
+	"loophid/pkg/whois"
 	"net"
 	"net/http"
 	"os"
@@ -91,6 +92,8 @@ func main() {
 
 	dbc := database.NewKSQLClient(&db)
 
+	whoisManager := whois.NewCachedWhoisManager(dbc)
+
 	var vtMgr vt.VTManager
 	if *vtApiKey == "" {
 		vtMgr = nil
@@ -112,7 +115,7 @@ func main() {
 	client := &http.Client{Transport: tr, Timeout: time.Minute * 10}
 
 	dLoader := downloader.NewHTTPDownloader(*downloadDir, client)
-	bs := backend.NewBackendServer(dbc, dLoader, jRunner, alertMgr, vtMgr)
+	bs := backend.NewBackendServer(dbc, dLoader, jRunner, alertMgr, vtMgr, whoisManager)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

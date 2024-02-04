@@ -23,17 +23,24 @@
     </FieldSet>
   </div>
   <br />
+  <div v-if="localWhois" class="card">
+    <FieldSet legend="WHOIS record" :toggleable="true">
+      <pre class="rawrequest">{{ localWhois.data }}</pre>
+    </FieldSet>
+  </div>
+  <br />
 </template>
 
 <script>
 export default {
-  props: ["request", "metadata", "ipinfo"],
+  props: ["request", "metadata", "whois"],
   inject: ["config"],
   data() {
     return {
       localRequest: {
         parsed: {},
       },
+      localWhois: null,
       localMetadata: [],
       localBase64Metadata: [],
       localLinkMetadata: [],
@@ -42,6 +49,14 @@ export default {
   watch: {
     request() {
       this.localRequest = Object.assign({}, this.request);
+    },
+
+    whois() {
+      if (this.whois == null) {
+        this.localWhois = null
+      } else {
+        this.localWhois = Object.assign({}, this.whois);
+      }
     },
     metadata() {
       this.localBase64Metadata = [];

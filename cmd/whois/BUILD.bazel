@@ -5,7 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "loophid/cmd/whois",
     visibility = ["//visibility:private"],
-    deps = ["@com_github_likexian_whois//:go_default_library"],
+    deps = ["@com_github_likexian_whois//:whois"],
 )
 
 go_binary(

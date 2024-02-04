@@ -178,3 +178,98 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 
 	}
 }
+
+func TestRunScriptUsesCache(t *testing.T) {
+
+	for _, test := range []struct {
+		description string
+		script1     string
+		script2     string
+		request1    database.Request
+		request2    database.Request
+		expectError bool
+	}{
+		{
+			description: "runs ok",
+			script1: `
+			function createResponse() {
+				util.cache.set("hello", "world");
+				return '';
+			}
+			`,
+			script2: `
+			function createResponse() {
+				const ret = util.cache.get("hello");
+				if (ret == "world") {
+          return '';
+				}
+				return "got: " + ret;
+			}
+			`,
+			request1: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+			},
+			request2: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+			},
+			expectError: false,
+		},
+		{
+			description: "fails because two different source IPs",
+			script1: `
+			function createResponse() {
+				util.cache.set("hello", "world");
+				return '';
+			}
+			`,
+			script2: `
+			function createResponse() {
+				const ret = util.cache.get("hello");
+				if (ret == "world") {
+          return '';
+				}
+				return "got: " + ret;
+			}
+			`,
+			request1: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+			},
+			request2: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "3.3.3.3",
+				HoneypotIP: "2.2.2.2",
+			},
+			expectError: true,
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+
+			fmt.Printf("Running test: %s\n", test.description)
+			res := backend_service.HttpResponse{}
+			jr := NewGojaJavascriptRunner()
+
+			jr.RunScript(test.script1, test.request1, &res, false)
+			err := jr.RunScript(test.script2, test.request2, &res, false)
+			if (err != nil) != test.expectError {
+				t.Errorf("got error: %s", err)
+				return
+			}
+		})
+
+	}
+}

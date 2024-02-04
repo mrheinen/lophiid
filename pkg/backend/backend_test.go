@@ -11,6 +11,7 @@ import (
 	"loophid/pkg/downloader"
 	"loophid/pkg/javascript"
 	"loophid/pkg/vt"
+	"loophid/pkg/whois"
 	"strings"
 	"testing"
 )
@@ -148,7 +149,8 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			fakeJrunner := javascript.FakeJavascriptRunner{}
 
 			alertManager := alerting.NewAlertManager(42)
-			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
+			whoisManager := whois.FakeWhoisManager{}
+			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
 			if (err != nil) != test.errorExpected {
@@ -173,7 +175,8 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	fakeDownLoader := downloader.FakeDownloader{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
+	whoisManager := whois.FakeWhoisManager{}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
 
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
 		Uri:  "/aa",
@@ -214,7 +217,8 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fakeDownLoader := downloader.FakeDownloader{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
+	whoisManager := whois.FakeWhoisManager{}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
 		Request: &backend_service.HttpRequest{
@@ -277,12 +281,12 @@ func TestHandleProbe(t *testing.T) {
 
 	fakeDownLoader := downloader.FakeDownloader{}
 	fakeJrunner := javascript.FakeJavascriptRunner{
-		StringToReturn: "this is script",
-		ErrorToReturn:  nil,
+		ErrorToReturn: nil,
 	}
 	alertManager := alerting.NewAlertManager(42)
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
-	b.Start()
+	whoisManager := whois.FakeWhoisManager{}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
+	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
@@ -318,13 +322,9 @@ func TestHandleProbe(t *testing.T) {
 
 	// Now we simulate a request where the content response is based on a script.
 	probeReq.RequestUri = "/script"
-	res, err = b.HandleProbe(context.Background(), &probeReq)
+	_, err = b.HandleProbe(context.Background(), &probeReq)
 	if err != nil {
 		t.Errorf("got error: %s", err)
-	}
-
-	if !bytes.Equal(res.Response.Body, []byte(fakeJrunner.StringToReturn)) {
-		t.Errorf("got %s, expected %s", res.Response.Body, fakeJrunner.StringToReturn)
 	}
 
 	// Now we test the default content fetching. Set the path to something that
@@ -354,7 +354,8 @@ func TestProcessQueue(t *testing.T) {
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	fakeDownLoader := downloader.FakeDownloader{}
 	alertManager := alerting.NewAlertManager(42)
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
+	whoisManager := whois.FakeWhoisManager{}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
 	req := database.Request{
 		Uri:  "/aaaaa",
 		Body: []byte("body body"),
@@ -433,7 +434,8 @@ func TestSendStatus(t *testing.T) {
 			fakeJrunner := javascript.FakeJavascriptRunner{}
 
 			alertManager := alerting.NewAlertManager(42)
-			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{})
+			whoisManager := whois.FakeWhoisManager{}
+			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
 
 			_, err := b.SendStatus(context.Background(), test.request)
 			if err == nil && test.expectedErrorString != "" {

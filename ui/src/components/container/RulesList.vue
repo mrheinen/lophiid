@@ -1,10 +1,16 @@
 <template>
   <PrimeDialog v-model:visible="contentFormVisible" modal header="Add content">
-    <ContentForm @update-content="onAddedContent"></ContentForm>
+    <ContentForm
+    @update-content="onAddedContent"
+    @require-auth="$emit('require-auth')"
+    ></ContentForm>
   </PrimeDialog>
 
   <PrimeDialog v-model:visible="appFormVisible" modal header="Add application">
-    <AppForm @update-app="onAddedApp"></AppForm>
+    <AppForm
+    @update-app="onAddedApp"
+    @require-auth="$emit('require-auth')"
+    ></AppForm>
   </PrimeDialog>
 
   <div class="columns">
@@ -97,6 +103,7 @@
         @delete-rule="reloadRules()"
         @content-form-open="showContentForm()"
         @app-form-open="showAppForm()"
+        @require-auth="$emit('require-auth')"
         :rule="selectedRule"
         :contentid="selectedContentId"
         :appid="selectedAppId"
@@ -127,6 +134,7 @@ export default {
     AppForm,
   },
   inject: ["config"],
+  emits: ["require-auth"],
   data() {
     return {
       limit: 24,
@@ -174,14 +182,23 @@ export default {
       var copyRule = Object.assign({}, alertRule);
 
       delete copyRule.parsed;
+
+
       fetch(this.config.backendAddress + "/contentrule/upsert", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "API-Key": this.$store.getters.apiToken,
           },
         body: JSON.stringify(copyRule),
       })
-        .then((response) => response.json())
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
@@ -280,8 +297,17 @@ export default {
     },
     loadApps() {
       this.appsLoading = true;
-      fetch(this.config.backendAddress + "/app/all")
-        .then((response) => response.json())
+
+      fetch(this.config.backendAddress + "/app/all", { headers: {
+        'API-Key': this.$store.getters.apiToken,
+      }})
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
@@ -315,8 +341,19 @@ export default {
       }
       this.rulesLoading = true;
       this.loadApps();
-      fetch(url)
-        .then((response) => response.json())
+
+      fetch(url, { headers: {
+        'API-Key': this.$store.getters.apiToken,
+      }})
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit('require-auth');
+          } else {
+            return response.json()
+          }
+        })
+
+
         .then((response) => {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);

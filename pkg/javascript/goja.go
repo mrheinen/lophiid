@@ -7,6 +7,8 @@ import (
 	"io"
 	"loophid/backend_service"
 	"loophid/pkg/database"
+	"loophid/pkg/util"
+	"time"
 
 	"github.com/dop251/goja"
 )
@@ -24,12 +26,22 @@ func (c Crypto) Md5sum(s string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+type Time struct {
+}
+
+// Sleep allows a program to sleep the specified duration in milliseconds.
+func (t Time) Sleep(msec int) {
+	time.Sleep(time.Duration(msec) * time.Millisecond)
+}
+
 // Contains helper structs for use inside javascript. The following methods are
 // available:
 //
 // util.crypto.md5sum("string") returns an md5 checksum of the given string.
 type Util struct {
-	Crypto Crypto `json:"crypto"`
+	Crypto Crypto       `json:"crypto"`
+	Time   Time         `json:"time"`
+	Cache  CacheWrapper `json:"cache"`
 }
 
 type JavascriptRunner interface {
@@ -37,17 +49,41 @@ type JavascriptRunner interface {
 }
 
 type GojaJavascriptRunner struct {
-	util Util
+	strCache *util.StringMapCache
 }
 
 func NewGojaJavascriptRunner() *GojaJavascriptRunner {
+	// The string cache timeout should be a low and targetted
+	// for the use case of holding something in cache between
+	// a couple requests for the same source.
+	cache := util.NewStringMapCache(time.Minute * 30)
+	cache.Start()
 	return &GojaJavascriptRunner{
-		util: Util{
-			Crypto: Crypto{},
-		},
+		strCache: cache,
 	}
 }
 
+type CacheWrapper struct {
+	keyPrefix string
+	strCache  *util.StringMapCache
+}
+
+func (c *CacheWrapper) Set(key string, value string) {
+	fkey := fmt.Sprintf("%s-%s", c.keyPrefix, key)
+	c.strCache.Store(fkey, value)
+}
+
+func (c *CacheWrapper) Get(key string) string {
+	fkey := fmt.Sprintf("%s-%s", c.keyPrefix, key)
+	val, err := c.strCache.Get(fkey)
+	if err != nil {
+		return ""
+	}
+	return val.(string)
+}
+
+// ResponseWrapper wraps the response and makes it available via methods in the
+// javascript context.
 type ResponseWrapper struct {
 	response *backend_service.HttpResponse
 }
@@ -75,10 +111,17 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 	// argument "true" will cause the method names to start with a lower case
 	// character.
 	vm.SetFieldNameMapper(goja.TagFieldNameMapper("json", true))
+	vm.Set("util", Util{
+		Crypto: Crypto{},
+		Time:   Time{},
+		Cache: CacheWrapper{
+			keyPrefix: fmt.Sprintf("%s%s", req.SourceIP, req.HoneypotIP),
+			strCache:  j.strCache,
+		},
+	})
 
 	vm.Set("request", req)
 	vm.Set("response", ResponseWrapper{response: res})
-	vm.Set("util", j.util)
 
 	_, err := vm.RunString(script)
 	if err != nil {
@@ -129,6 +172,6 @@ type FakeJavascriptRunner struct {
 	ErrorToReturn  error
 }
 
-func (f *FakeJavascriptRunner) RunScript(script string, req database.Request, res *backend_service.HttpResponse, validate bool) (string, error) {
-	return f.StringToReturn, f.ErrorToReturn
+func (f *FakeJavascriptRunner) RunScript(script string, req database.Request, res *backend_service.HttpResponse, validate bool) error {
+	return f.ErrorToReturn
 }
