@@ -49,14 +49,14 @@ type JavascriptRunner interface {
 }
 
 type GojaJavascriptRunner struct {
-	strCache *util.StringMapCache
+	strCache *util.StringMapCache[string]
 }
 
 func NewGojaJavascriptRunner() *GojaJavascriptRunner {
 	// The string cache timeout should be a low and targetted
 	// for the use case of holding something in cache between
 	// a couple requests for the same source.
-	cache := util.NewStringMapCache(time.Minute * 30)
+	cache := util.NewStringMapCache[string](time.Minute * 30)
 	cache.Start()
 	return &GojaJavascriptRunner{
 		strCache: cache,
@@ -65,7 +65,7 @@ func NewGojaJavascriptRunner() *GojaJavascriptRunner {
 
 type CacheWrapper struct {
 	keyPrefix string
-	strCache  *util.StringMapCache
+	strCache  *util.StringMapCache[string]
 }
 
 func (c *CacheWrapper) Set(key string, value string) {
@@ -79,7 +79,7 @@ func (c *CacheWrapper) Get(key string) string {
 	if err != nil {
 		return ""
 	}
-	return val.(string)
+	return *val
 }
 
 // ResponseWrapper wraps the response and makes it available via methods in the

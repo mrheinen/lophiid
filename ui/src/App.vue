@@ -24,7 +24,7 @@
   <div class="columns">
     <div class="column is-full">
       <!-- use key below to let the page re-render when the API key changes -->
-      <router-view :key="apiKey" @require-auth="requireAuth"></router-view>
+      <router-view :key="apiKey + $route.fullPath" @require-auth="requireAuth"></router-view>
     </div>
   </div>
 </template>

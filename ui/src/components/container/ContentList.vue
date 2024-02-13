@@ -211,11 +211,15 @@ export default {
         .then((response) => {
           if (response.status == 403) {
             this.$emit('require-auth');
+            return null;
           } else {
             return response.json()
           }
         })
         .then((response) => {
+          if (!response) {
+            return;
+          }
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {

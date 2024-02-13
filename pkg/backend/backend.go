@@ -36,13 +36,13 @@ type BackendServer struct {
 	safeRulesChan   chan bool
 	reqsProcessChan chan bool
 	reqsQueue       *RequestQueue
-	sessionCache    *util.StringMapCache
+	sessionCache    *util.StringMapCache[database.ContentRule]
 	ruleVsCache     *RuleVsContentCache
 }
 
 // NewBackendServer creates a new instance of the backend server.
 func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager) *BackendServer {
-	sCache := util.NewStringMapCache(time.Minute * 30)
+	sCache := util.NewStringMapCache[database.ContentRule](time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
 	return &BackendServer{
@@ -171,7 +171,7 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 	lastMatchedRule, err := s.sessionCache.Get(req.SourceIP)
 	var lastMatchedAppId int64
 	if err == nil {
-		lastMatchedAppId = lastMatchedRule.(database.ContentRule).AppID
+		lastMatchedAppId = lastMatchedRule.AppID
 	} else {
 		lastMatchedAppId = -1
 	}
@@ -287,7 +287,19 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		err := s.jRunner.RunScript(content.Script, *sReq, res, false)
 		if err != nil {
 			slog.Warn("couldn't run script", slog.String("error", err.Error()))
+		} else {
+			sReq.ContentDynamic = true
+			if len(res.GetHeader()) > 0 {
+				for _, h := range res.GetHeader() {
+					sReq.RawResponse = fmt.Sprintf("%s\n%s: %s", sReq.RawResponse, h.GetKey(), h.GetValue())
+				}
+
+				sReq.RawResponse = fmt.Sprintf("%s\n\n%s", sReq.RawResponse, string(res.Body))
+			} else {
+				sReq.RawResponse = string(res.Body)
+			}
 		}
+
 	} else {
 		res.Body = content.Data
 	}

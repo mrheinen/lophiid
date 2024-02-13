@@ -77,6 +77,7 @@ func (v *VTBackgroundManager) Start() {
 			}
 		}
 	}()
+
 }
 
 func (v *VTBackgroundManager) Stop() {

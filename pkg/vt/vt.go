@@ -27,14 +27,14 @@ type VTClientInterface interface {
 // received results.
 type VTClient struct {
 	apiKey   string
-	ipCache  *util.StringMapCache
-	urlCache *util.StringMapCache
+	ipCache  *util.StringMapCache[CheckIPResponse]
+	urlCache *util.StringMapCache[SubmitURLResponse]
 	bgChan   chan bool
 }
 
 func NewVTClient(apikey string, cacheTimeout time.Duration) *VTClient {
-	ic := util.NewStringMapCache(cacheTimeout)
-	uc := util.NewStringMapCache(cacheTimeout)
+	ic := util.NewStringMapCache[CheckIPResponse](cacheTimeout)
+	uc := util.NewStringMapCache[SubmitURLResponse](cacheTimeout)
 	return &VTClient{
 		apiKey:   apikey,
 		ipCache:  ic,
@@ -42,6 +42,7 @@ func NewVTClient(apikey string, cacheTimeout time.Duration) *VTClient {
 	}
 }
 
+// The response for an IP request.
 type CheckIPResponse struct {
 	Data CheckIPData `json:"data"`
 }
@@ -69,19 +70,35 @@ type AnalysisStats struct {
 
 // Submit URL data
 type SubmitURLResponse struct {
+	Data SubmitURLAnalysisData `json:"data"`
+}
+
+type SubmitURLAnalysisData struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
+}
+
+// The URL analysis response.
+type URLAnalysisResponse struct {
 	Data URLAnalysisData `json:"data"`
 }
 
 type URLAnalysisData struct {
-	Type string `json:"type"`
-	ID   string `json:"id"`
+	Type       string                `json:"type"`
+	ID         string                `json:"id"`
+	Attributes URLAnalysisAttributes `json:"attributes"`
+}
+
+type URLAnalysisAttributes struct {
+	LastAnalysisDate  int64         `json:"last_analysis_date"`
+	LastAnalysisStats AnalysisStats `json:"last_analysis_stats"`
 }
 
 func (v *VTClient) CheckIP(ip string) (CheckIPResponse, error) {
 	// First check if we have a cached entry for this IP.
 	cacheEntry, err := v.ipCache.Get(ip)
 	if err == nil {
-		return cacheEntry.(CheckIPResponse), nil
+		return *cacheEntry, nil
 	}
 
 	url := fmt.Sprintf("https://www.virustotal.com/api/v3/ip_addresses/%s", ip)
@@ -116,7 +133,7 @@ func (v *VTClient) SubmitURL(url string) (SubmitURLResponse, error) {
 	// First check if we have a cached entry for this URL.
 	cacheEntry, err := v.urlCache.Get(url)
 	if err == nil {
-		return cacheEntry.(SubmitURLResponse), nil
+		return *cacheEntry, nil
 	}
 
 	var ret SubmitURLResponse
@@ -149,6 +166,37 @@ func (v *VTClient) SubmitURL(url string) (SubmitURLResponse, error) {
 	}
 
 	v.urlCache.Store(url, ret)
+	return ret, nil
+}
+
+func (v *VTClient) GetURLAnalysis(id string) (URLAnalysisResponse, error) {
+	var ret URLAnalysisResponse
+	vtUrl := fmt.Sprintf("https://www.virustotal.com/api/v3/urls/%s", id)
+
+	req, _ := http.NewRequest("GET", vtUrl, nil)
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("x-apikey", v.apiKey)
+	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return ret, fmt.Errorf("while fetching: %s", err)
+	}
+
+	if res.StatusCode == 204 || res.StatusCode == 429 {
+		return ret, ErrQuotaReached
+	}
+
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return ret, fmt.Errorf("cannot read response: %s", err)
+	}
+
+	if err = json.Unmarshal(body, &ret); err != nil {
+		return ret, fmt.Errorf("while unmarshalling: %s", err)
+	}
+
 	return ret, nil
 }
 

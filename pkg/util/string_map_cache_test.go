@@ -6,7 +6,7 @@ import (
 )
 
 func TestStringMapCache(t *testing.T) {
-	c := NewStringMapCache(time.Second * 0)
+	c := NewStringMapCache[string](time.Second * 0)
 	testIp := "127.0.0.1"
 
 	// Store the test rule and a few extra
@@ -19,9 +19,8 @@ func TestStringMapCache(t *testing.T) {
 		t.Errorf("got error: %s", err)
 	}
 
-	testRet := ret.(string)
-	if testRet != "22" {
-		t.Errorf("expected 22 but got %s",  testRet)
+	if *ret != "22" {
+		t.Errorf("expected 22 but got %s", *ret)
 	}
 
 	rc := c.CleanExpired()
@@ -32,12 +31,12 @@ func TestStringMapCache(t *testing.T) {
 	// Cache is empty, try to remove something
 	ret, err = c.Get(testIp)
 	if err == nil {
-		t.Errorf("expected error but got rule %v", ret)
+		t.Errorf("expected error but got rule %v", *ret)
 	}
 }
 
 func TestStringMapCacheDoesNotExpire(t *testing.T) {
-	c := NewStringMapCache(time.Hour * 3)
+	c := NewStringMapCache[string](time.Hour * 3)
 	testIp := "127.0.0.1"
 	c.Store(testIp, "22")
 
@@ -46,9 +45,8 @@ func TestStringMapCacheDoesNotExpire(t *testing.T) {
 		t.Errorf("got error: %s", err)
 	}
 
-	testRet := ret.(string)
-	if testRet != "22" {
-		t.Errorf("expected 22 but got %s", testRet)
+	if *ret != "22" {
+		t.Errorf("expected 22 but got %s", *ret)
 	}
 
 	rc := c.CleanExpired()

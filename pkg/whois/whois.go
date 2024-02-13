@@ -17,14 +17,14 @@ type WhoisManager interface {
 
 type CachedWhoisManager struct {
 	dbClient database.DatabaseClient
-	ipCache  util.StringMapCache
+	ipCache  util.StringMapCache[bool]
 	mu       sync.Mutex
 }
 
 func NewCachedWhoisManager(dbClient database.DatabaseClient) *CachedWhoisManager {
 	return &CachedWhoisManager{
 		dbClient: dbClient,
-		ipCache:  *util.NewStringMapCache(time.Hour * 12),
+		ipCache:  *util.NewStringMapCache[bool](time.Hour * 12),
 	}
 }
 

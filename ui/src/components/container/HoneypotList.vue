@@ -30,7 +30,7 @@
             :class="isSelectedId == honeypot.id ? 'is-selected' : ''"
           >
             <td>{{ honeypot.id }}</td>
-            <td>{{ honeypot.ip }}</td>
+            <td><a :href="'/requests?q=honeypot_ip:' + honeypot.ip">{{ honeypot.ip }}</a></td>
             <td>{{ honeypot.parsed.created_at }}</td>
             <td>{{ honeypot.parsed.last_checkin }}</td>
             <td>{{ honeypot.default_content_id }}</td>

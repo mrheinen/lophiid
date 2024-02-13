@@ -70,9 +70,9 @@ func ParseQuery(q string, validFields []string) ([]SearchRequestsParam, error) {
 		outsideParam = false
 
 		// This is the start of a keyword. To begin with, we check if the !
-		// character is there to indicate we want a negative match.
+		// or - character is there to indicate we want a negative match.
 		not := false
-		if q[i] == '!' {
+		if q[i] == '!' || q[i] == '-' {
 			not = true
 			i++
 		}

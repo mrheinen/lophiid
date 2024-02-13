@@ -12,7 +12,7 @@
     <FieldSet legend="Metadata" :toggleable="true">
       <div v-for="meta in localBase64Metadata" :key="meta.id">
         <br />
-        <div style="width: 700px;">
+        <div style="width: 700px">
           <h6 class="subtitle is-6">Decoded base64 string</h6>
           <highlightjs autodetect :code="meta.data" />
         </div>
@@ -23,11 +23,19 @@
     </FieldSet>
   </div>
   <br />
+  <div v-if="localRequest.content_dynamic == true" class="card">
+    <FieldSet legend="Customized response" :toggleable="true">
+      <pre class="rawrequest">{{ localRequest.raw_response }}</pre>
+    </FieldSet>
+  </div>
+
+  <br />
   <div v-if="localWhois" class="card">
     <FieldSet legend="WHOIS record" :toggleable="true">
       <pre class="rawrequest">{{ localWhois.data }}</pre>
     </FieldSet>
   </div>
+
   <br />
 </template>
 
@@ -53,7 +61,7 @@ export default {
 
     whois() {
       if (this.whois == null) {
-        this.localWhois = null
+        this.localWhois = null;
       } else {
         this.localWhois = Object.assign({}, this.whois);
       }
@@ -106,7 +114,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 8px;
 }
 </style>

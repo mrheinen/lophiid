@@ -6,6 +6,9 @@ CREATE DATABASE lophiid;
 
 CREATE USER lo WITH PASSWORD 'test';
 
+CREATE TYPE MATCHING_TYPE AS ENUM ('exact', 'prefix', 'suffix', 'contains', 'regex');
+CREATE TYPE METHOD_TYPE AS ENUM ('GET', 'POST', 'HEAD', 'TRACE', 'OPTIONS', 'DELETE', 'PUT', 'ANY');
+CREATE TYPE STATUS_CODE AS ENUM ('200','301', '302', '400', '401', '403', '404', '500');
 
 CREATE TABLE content (
   id              SERIAL PRIMARY KEY,
@@ -16,27 +19,42 @@ CREATE TABLE content (
   script          TEXT,
   content_type    VARCHAR(256) NOT NULL,
   server          VARCHAR(256) NOT NULL,
-  status_code     STATUS_CODE NOT NULL DEFAULT "200"
-  is_default      BOOLEAN DEFAULT FALSE
+  status_code     STATUS_CODE NOT NULL DEFAULT '200',
+  is_default      BOOLEAN DEFAULT FALSE,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 
-CREATE TYPE MATCHING_TYPE AS ENUM ('exact', 'prefix', 'suffix', 'contains', 'regex');
-CREATE TYPE METHOD_TYPE AS ENUM ('GET', 'POST', 'HEAD', 'TRACE', 'OPTIONS', 'DELETE', 'PUT', 'ANY');
-CREATE TYPE STATUS_CODE AS ENUM ('200','301', '302', '400', '401', '403', '404', '500');
 
-CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'DECODED_STRING_BASE64');
+CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'SCRIPT_RESPONSE_BODY', 'DECODED_STRING_BASE64');
 
-CREATE TABLE request_metadata (
+CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
+  proto           VARCHAR(10),
+  host            VARCHAR(2048),
+  port            INT,
+  method          VARCHAR(10),
+  uri             VARCHAR(2048),
+  path            VARCHAR(2048),
+  referer         VARCHAR(2048),
+  content_length  INT,
+  user_agent      VARCHAR(2048),
+  body            BYTEA NOT NULL DEFAULT ''::bytea,
+  source_ip       VARCHAR(512),
+  source_port     INT,
+  raw             TEXT,
+  raw_response    TEXT,
+  time_received   TIMESTAMP NOT NULL DEFAULT NOW(),
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  request_id      INT,
-  type            METADATA_TYPE NOT NULL,
-  data            TEXT,
-  CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
+  updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  honeypot_ip     VARCHAR(15),
+  starred         BOOL default FALSE,
+  content_dynamic BOOL default FALSE,
+  content_id      INT,
+  rule_id         INT
 );
+
 
 CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,
@@ -69,6 +87,15 @@ CREATE TABLE vt_ipresult (
   result_undetected  INT DEFAULT 0,
   result_timeout     INT DEFAULT 0,
   created_at         TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE request_metadata (
+  id              SERIAL PRIMARY KEY,
+  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  request_id      INT,
+  type            METADATA_TYPE NOT NULL,
+  data            TEXT,
+  CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
 );
 
 
@@ -112,31 +139,12 @@ CREATE TABLE downloads (
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   last_seen_at    TIMESTAMP NOT NULL DEFAULT NOW(),
   vt_analysis_id  VARCHAR(1024) DEFAULT '',
+  vt_analysis_harmless   INT DEFAULT 0,
+  vt_analysis_malicious  INT DEFAULT 0,
+  vt_analysis_suspicious INT DEFAULT 0,
+  vt_analysis_undetected INT DEFAULT 0,
+  vt_analysis_timeout    INT DEFAULT 0,
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
-);
-
-CREATE TABLE request (
-  id              SERIAL PRIMARY KEY,
-  proto           VARCHAR(10),
-  host            VARCHAR(2048),
-  port            INT,
-  method          VARCHAR(10),
-  uri             VARCHAR(2048),
-  path            VARCHAR(2048),
-  referer         VARCHAR(2048),
-  content_length  INT,
-  user_agent      VARCHAR(2048),
-  body            BYTEA NOT NULL DEFAULT ''::bytea,
-  source_ip       VARCHAR(512),
-  source_port     INT,
-  raw             TEXT,
-  time_received   TIMESTAMP NOT NULL DEFAULT NOW(),
-  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  honeypot_ip     VARCHAR(15),
-  starred         BOOL default FALSE,
-  content_id      INT,
-  rule_id         INT
 );
 
 

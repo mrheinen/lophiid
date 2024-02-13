@@ -180,6 +180,10 @@ func ExtractUrls(data string) []string {
 			parts := strings.Split(entry, ";")
 			entry = parts[0]
 		}
+		if strings.Contains(entry, "+") {
+			parts := strings.Split(entry, "+")
+			entry = parts[0]
+		}
 		centry := strings.TrimSpace(entry)
 		if _, ok := retmap[centry]; !ok {
 			retmap[centry] = true
