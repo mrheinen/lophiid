@@ -1,15 +1,15 @@
 <template>
   <PrimeDialog v-model:visible="contentFormVisible" modal header="Add content">
     <ContentForm
-    @update-content="onAddedContent"
-    @require-auth="$emit('require-auth')"
+      @update-content="onAddedContent"
+      @require-auth="$emit('require-auth')"
     ></ContentForm>
   </PrimeDialog>
 
   <PrimeDialog v-model:visible="appFormVisible" modal header="Add application">
     <AppForm
-    @update-app="onAddedApp"
-    @require-auth="$emit('require-auth')"
+      @update-app="onAddedApp"
+      @require-auth="$emit('require-auth')"
     ></AppForm>
   </PrimeDialog>
 
@@ -75,11 +75,12 @@
                   ></i>
                 </a>
                 &nbsp;
-                  <i @click="toggleAlert(rule.id)"
-                    :class="rule.alert ? 'alert' : ''"
-                    title="Enable alerting"
-                    class="pi pi-bell"
-                  ></i>
+                <i
+                  @click="toggleAlert(rule.id)"
+                  :class="rule.alert ? 'alert' : ''"
+                  title="Enable alerting"
+                  class="pi pi-bell"
+                ></i>
               </td>
             </tr>
           </tbody>
@@ -162,9 +163,8 @@ export default {
   },
   methods: {
     toggleAlert(id) {
-
       var alertRule = null;
-      for (var i=0; i<this.rules.length;i++) {
+      for (var i = 0; i < this.rules.length; i++) {
         if (this.rules[i].id == id) {
           alertRule = this.rules[i];
           break;
@@ -173,7 +173,7 @@ export default {
 
       if (alertRule == null) {
         console.log("Could not find rule with ID: " + id);
-        return
+        return;
       }
 
       alertRule.alert = !alertRule.alert;
@@ -183,20 +183,19 @@ export default {
 
       delete copyRule.parsed;
 
-
       fetch(this.config.backendAddress + "/contentrule/upsert", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "API-Key": this.$store.getters.apiToken,
-          },
+        },
         body: JSON.stringify(copyRule),
       })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
@@ -257,7 +256,7 @@ export default {
       return true;
     },
     onUpdatedRule(id) {
-      const that = this
+      const that = this;
       this.loadRules(true, function () {
         that.setSelectedRule(id);
       });
@@ -298,17 +297,23 @@ export default {
     loadApps() {
       this.appsLoading = true;
 
-      fetch(this.config.backendAddress + "/app/all", { headers: {
-        'API-Key': this.$store.getters.apiToken,
-      }})
+      fetch(this.config.backendAddress + "/app/all", {
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+        },
+      })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
+            return null;
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
+          if (!response) {
+            return;
+          }
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
@@ -342,19 +347,24 @@ export default {
       this.rulesLoading = true;
       this.loadApps();
 
-      fetch(url, { headers: {
-        'API-Key': this.$store.getters.apiToken,
-      }})
+      fetch(url, {
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+        },
+      })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
+            return null;
           } else {
-            return response.json()
+            return response.json();
           }
         })
 
-
         .then((response) => {
+          if (!response) {
+            return;
+          }
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
@@ -374,16 +384,10 @@ export default {
                 } else {
                   if (newRule.uri.length > 0) {
                     newRule.parsed.uri_body += "uri:";
-                    newRule.parsed.uri_body += truncateString(
-                      newRule.uri,
-                      40
-                    );
+                    newRule.parsed.uri_body += truncateString(newRule.uri, 40);
                   } else {
                     newRule.parsed.uri_body += "body:";
-                    newRule.parsed.uri_body += truncateString(
-                      newRule.body,
-                      40
-                    );
+                    newRule.parsed.uri_body += truncateString(newRule.body, 40);
                   }
                 }
 
@@ -476,8 +480,11 @@ export default {
     // values.
     var that = this;
     this.loadRules(true, function () {
-      if (that.$route.query.uri || that.$route.query.method ||
-        that.$route.query.content_id) {
+      if (
+        that.$route.query.uri ||
+        that.$route.query.method ||
+        that.$route.query.content_id
+      ) {
         var newRule = Object.assign({}, that.baseRule);
 
         if (that.$route.query.uri) {
@@ -539,6 +546,6 @@ table {
 }
 
 .alert {
-color: red;
+  color: red;
 }
 </style>

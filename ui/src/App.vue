@@ -71,5 +71,9 @@ export default {
  margin-right: 10px;
 };
 
+.card {
+  padding-bottom: 10px;
+}
+
 
 </style>

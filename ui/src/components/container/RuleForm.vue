@@ -40,18 +40,6 @@
           &nbsp;
           <i @click="onAppFormOpen()" class="pi pi-plus-circle"></i>
         </div>
-      </FieldSet>
-      <FieldSet legend="Advanced settings" :toggleable="true" :collapsed="true">
-        <div>
-          <label class="label">Host</label>
-          <InputText
-            id="host"
-            type="text"
-            placeholder="Hostname to serve this on"
-            v-model="localRule.host"
-          />
-        </div>
-
         <div>
           <label class="label">Body</label>
           <InputText
@@ -105,7 +93,6 @@
             </div>
           </div>
         </div>
-      </FieldSet>
       <br />
       <PrimeButton
         :label="localRule.id > 0 ? 'Submit' : 'Add'"
@@ -124,6 +111,7 @@
         @click="requireConfirmation($event)"
         label="Delete"
       ></PrimeButton>
+      </FieldSet>
     </div>
 
     <ConfirmPopup group="headless">

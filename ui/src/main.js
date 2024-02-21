@@ -13,6 +13,8 @@ import RequestsList from './components/container/RequestsList.vue';
 import AppsList from './components/container/AppsList.vue';
 import DownList from './components/container/DownloadsList.vue';
 import HoneyList from './components/container/HoneypotList.vue';
+import QueryList from './components/container/QueryList.vue';
+import TagList from './components/container/TagList.vue';
 import PrimeVue from './../node_modules/primevue/config';
 
 import CodeMirror from './../node_modules/vue-codemirror';
@@ -41,6 +43,10 @@ const router = createRouter({
     {path: Config.downloadsSegmentLink, component: DownList },
     {path: Config.honeypotsLink, component: HoneyList },
     {path: Config.honeypotsSegmentLink, component: HoneyList },
+    {path: Config.storedqueryLink, component: QueryList },
+    {path: Config.storedquerySegmentLink, component: QueryList },
+    {path: Config.tagsLink, component: TagList },
+    {path: Config.tagsSegmentLink, component: TagList },
     {path: Config.requestsLink, component: RequestsList },
     {path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },
   ]
@@ -58,6 +64,8 @@ import ConfirmPopup from './../node_modules/primevue/confirmpopup';
 import Dialog from './../node_modules/primevue/dialog';
 import CheckBox from './../node_modules/primevue/checkbox';
 import MenuBar from './../node_modules/primevue/menubar';
+import MultiSelect from './../node_modules/primevue/multiselect';
+import ColorPicker from './../node_modules/primevue/colorpicker';
 
 import ConfirmationService from './../node_modules/primevue/confirmationservice';
 
@@ -78,7 +86,9 @@ app.component('ConfirmPopup', ConfirmPopup);
 app.component('PrimeButton', Button);
 app.component('PrimeDialog', Dialog);
 app.component('CheckBox', CheckBox);
+app.component('MultiSelect', MultiSelect);
 app.component('MenuBar', MenuBar);
+app.component('ColorPicker', ColorPicker);
 app.use(hljsVuePlugin);
 app.use(router);
 app.use(store);

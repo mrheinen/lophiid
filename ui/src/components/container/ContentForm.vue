@@ -80,6 +80,7 @@
     </FieldSet>
     <br />
 
+    <div class="button-group">
     <PrimeButton
       :label="localContent.id > 0 ? 'Submit' : 'Add'"
       @click="submitForm()"
@@ -97,6 +98,7 @@
       @click="requireConfirmation($event)"
       label="Delete"
     ></PrimeButton>
+    </div>
   </div>
   <ConfirmPopup group="headless">
     <template #container="{ message, acceptCallback, rejectCallback }">
@@ -350,4 +352,10 @@ export default {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+
+.button-group {
+  padding: 1.25em;
+}
+
+</style>

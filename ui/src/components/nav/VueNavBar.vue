@@ -88,6 +88,29 @@ export default {
             this.$router.push(this.config.honeypotsLink);
           },
         },
+        {
+          label: "Queries",
+          icon: "pi pi-search",
+          items: [
+            {
+              label: "Manage queries",
+              icon: "pi pi-search",
+              command: () => {
+                this.$router.push(this.config.storedqueryLink);
+              }
+            },
+            {
+              label: "Manage tags",
+              icon: "pi pi-tag",
+              command: () => {
+                this.$router.push(this.config.tagsLink);
+              }
+            },
+          ],
+        },
+
+
+
       ],
     };
   },

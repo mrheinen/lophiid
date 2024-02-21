@@ -1,13 +1,6 @@
 Secure grpc calls with this article
 https://dev.to/techschoolguru/how-to-secure-grpc-connection-with-ssl-tls-in-go-4ph
 
-Allow notes and links to be added to content. Also store software somewhere.
-Maybe even CVEs.
-
-Create a page with links to all content rules. Only indexable by Google ;P
-
-Allow bruteforcing of login pages.
-
 Check regex for contentrule when creating or updating the entry
 
 Add autocomplete for web IU things like the content type field.
@@ -23,69 +16,44 @@ Fix routing
 
 Add source IP to rule so we can mess with specific targets.
 
-Add export option for rules and content.
-
 Add statistics.
-
-Allow request searching per content ID, rule indexable
 
 Test with a fresh database.
 
 Allow response duration to be set.
 
-XXL fetch malware.
-
-Detect and decode base64.
-
 Add tags to the requests overview and show information. E.g. [payload] [base64]
 
 Add authentication of honeypot
 
-Add authentication to web UI
-
-Add xsrf protection to web UI
-
-Allow a content to be set as the default.
-
 Add settings menu.  Including default page to serve and virus total API
 Add virus total api
-
-Prevent recursive downloads if the IP of a honeypot is used as payload in a
-request. This is a reason why we need to know what honeypots there are.
 
 XL - Allow honeypots to self register. They will receive a default configuration
 which can be edited via the UI.
 
-XL - Allow alerts to be configured for rules
-
 XL - Create reports. Daily report per email.
-
-Allow a hostname to be specified for a rule.
 
 Allow content to be uploaded in a zip.
 
-Check database error handling in case no record is found.
-
 Add yara Support
-Add v8 scripted response.
 
 Support http://192.168.1.78:8081/requests/0/24?q=source_ip:161.142.198.183 with
 javascript
 
-  Add the ability to block certain IPs or requests.
+Add the ability to block certain IPs or requests.
 
-Allow default page to be set per honeypot. Create UI where you can select the
-default page per honeypot. And show honeypot statistics.
+Add sqlite support. Update tests to use sqlite database.
 
+Add logic for queries to be run automatically and apply tags to the matching
+requests.
 
-Handle IPv6 properly:
-time=2024-01-22T14:18:50.122-05:00 level=DEBUG msg=downloading url=https://load.abadila.best/hikb.sh
-time=2024-01-22T14:18:50.171-05:00 level=DEBUG msg="could not download" error="creating request for URL: https://2606:4700:3030::6815:2ceb/hikb.sh, err parse \"https://2606:4700:3030::6815:2ceb/hikb.sh\": invalid port \":2ceb\" after host"
+Update downloads page and add a details page with information from virustotal
+about the specific IP.
 
+Add download link to the downloads page.
 
-errors.Is(err, ksql.ErrRecordNotFound)
+Add support for abuseipdb and urlhaus.
 
-If you update a content, do not reload the contentslist. Test this when updating
-a content somewhere in the middle because it will be deselected and the top one
-is selected which is wrong.
+Add support for netcat, ftp and tcp bash payloads.
 

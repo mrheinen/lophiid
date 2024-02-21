@@ -1,33 +1,37 @@
 <template>
   <div>
-    <input type="hidden" name="id" v-model="localHoneypot.id" />
+    <input type="hidden" name="id" v-model="localTag.id" />
     <div class="card">
     <FieldSet legend="Settings" :toggleable="true">
       <div>
-        <label class="label">IP</label>
+        <label class="label">Name</label>
         <InputText
-          id="title"
-          type="text"
-          placeholder=""
-          disabled="true"
-          v-model="localHoneypot.ip"
+        id="title"
+        type="text"
+        placeholder=""
+        v-model="localTag.name"
+        />
+      </div>
+      <div>
+        <label class="label">HTML Color</label>
+        <ColorPicker
+          v-model="localTag.color_html"
+          format="hex"
+        />
+      </div>
+      <div>
+        <label class="label">Description</label>
+        <InputText
+        id="description"
+        type="text"
+        placeholder=""
+        v-model="localTag.description"
         />
       </div>
 
-      <div>
-        <label class="label">Content ID</label>
-        <InputNumber
-          v-model="localHoneypot.default_content_id"
-          inputId="minmax"
-          :useGrouping="false"
-          :min="0"
-          :max="65535"
-        />
-     &nbsp;
-      </div>
       <br/>
     <PrimeButton
-      :label="localHoneypot.id > 0 ? 'Submit' : 'Add'"
+      :label="localTag.id > 0 ? 'Submit' : 'Add'"
       @click="submitForm()"
     >
     </PrimeButton>
@@ -73,12 +77,12 @@
 
 <script>
 export default {
-  props: ["honeypot"],
-  emits: ["update-honeypot", "delete-honeypot", "require-auth"],
+  props: ["tag"],
+  emits: ["update-tag", "delete-tag", "require-auth"],
   inject: ["config"],
   data() {
     return {
-      localHoneypot: {},
+      localTag: {},
     };
   },
   methods: {
@@ -88,28 +92,28 @@ export default {
         group: "headless",
         message: "Are you sure? You cannot undo this.",
         accept: () => {
-          if (this.localHoneypot.id) {
-            this.deleteHoneypot(this.localHoneypot.id);
+          if (this.localTag.id) {
+            this.deleteTag(this.localTag.id);
           }
         },
         reject: () => {},
       });
     },
     resetForm() {
-      this.localHoneypot = {};
+      this.localTag = {};
     },
     submitForm() {
-      const honeypotToSubmit = Object.assign({}, this.localHoneypot);
+      const tagToSubmit = Object.assign({}, this.localTag);
       // Remove the added fields.
-      delete honeypotToSubmit.parsed;
+      delete tagToSubmit.parsed;
 
-      fetch(this.config.backendAddress + "/honeypot/update", {
+      fetch(this.config.backendAddress + "/tag/upsert", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "API-Key": this.$store.getters.apiToken,
         },
-        body: JSON.stringify(honeypotToSubmit),
+        body: JSON.stringify(tagToSubmit),
       })
         .then((response) => {
           if (response.status == 403) {
@@ -122,14 +126,19 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
-            this.$toast.success("Saved entry");
-            this.$emit("update-honeypot", this.localHoneypot.id);
+            if (response.data && response.data.length > 0) {
+              this.$toast.success("Added entry");
+              this.$emit("update-tag", response.data[0].id);
+            } else {
+              this.$toast.success("Updated entry");
+              this.$emit("update-tag", this.localTag.id);
+            }
           }
         });
     },
 
-    deleteHoneypot(id) {
-      fetch(this.config.backendAddress + "/honeypot/delete", {
+    deleteTag(id) {
+      fetch(this.config.backendAddress + "/tag/delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -150,14 +159,14 @@ export default {
           } else {
             this.$toast.success("Deleted entry");
             this.resetForm();
-            this.$emit("delete-honeypot");
+            this.$emit("delete-tag");
           }
         });
     },
   },
   watch: {
-    honeypot() {
-      this.localHoneypot = Object.assign({}, this.honeypot);
+    tag() {
+      this.localTag = Object.assign({}, this.tag);
     },
   },
   created() {
@@ -166,7 +175,4 @@ export default {
 };
 </script>
 
-<style scoped>
-
-
-</style>
+<style scoped></style>

@@ -13,26 +13,24 @@
         </span>
       </form>
 
-      <table class="table is-hoverable" v-if="apps.length > 0">
+      <table class="table is-hoverable" v-if="tags.length > 0">
         <thead>
           <th>ID</th>
           <th>Name</th>
-          <th>Version</th>
-          <th>Vendor</th>
-          <th>OS</th>
+          <th>HTML Color</th>
+          <th>Description</th>
         </thead>
         <tbody>
           <tr
-            v-for="app in apps"
-            @click="setSelectedApp(app.id)"
-            :key="app.id"
-            :class="isSelectedId == app.id ? 'is-selected' : ''"
+            v-for="t in tags"
+            @click="setSelected(t.id)"
+            :key="t.id"
+            :class="isSelectedId == t.id ? 'is-selected' : ''"
           >
-            <td>{{ app.id }}</td>
-            <td>{{ app.name }}</td>
-            <td>{{ app.version }}</td>
-            <td>{{ app.vendor }}</td>
-            <td>{{ app.os }}</td>
+            <td>{{ t.id }}</td>
+            <td>{{ t.name }}</td>
+            <td><span :style="'background-color:#' + t.color_html">#{{ t.color_html }}</span></td>
+            <td>{{ t.description }}</td>
           </tr>
         </tbody>
       </table>
@@ -43,7 +41,7 @@
         class="pi pi-arrow-left pi-style"
       ></i>
       <i
-        v-if="apps.length == limit"
+        v-if="tags.length == limit"
         @click="loadNext()"
         class="pi pi-arrow-right pi-style pi-style-right"
       ></i>
@@ -53,12 +51,12 @@
       @focusin="keyboardDisabled = true"
       @focusout="keyboardDisabled = false"
     >
-      <app-form
-        @update-app="onUpdateApps"
-        @delete-app="onDeleteApp"
+      <tag-form
+        @update-tag="onUpdateTag"
+        @delete-tag="onDeleteTag"
         @require-auth="$emit('require-auth')"
-        :app="selectedApp"
-      ></app-form>
+        :tag="selectedTag"
+      ></tag-form>
     </div>
   </div>
 </template>
@@ -68,53 +66,51 @@ function dateToString(inDate) {
   const nd = new Date(Date.parse(inDate));
   return nd.toLocaleString();
 }
-import AppForm from "./AppForm.vue";
+import TagForm from "./TagForm.vue";
 export default {
   components: {
-    AppForm,
+    TagForm,
   },
-  inject: ["config"],
   emits: ["require-auth"],
+  inject: ["config"],
   data() {
     return {
-      apps: [],
-      selectedApp: null,
+      tags: [],
+      selectedTag: null,
       isSelectedId: 0,
       query: null,
       limit: 24,
       offset: 0,
       keyboardDisabled: false,
-      baseApp: {
+      baseTag: {
         id: 0,
-        name: "",
-        version: "",
-        vendor: "",
-        os: "",
-        time_created: "",
-        time_updated: "",
+        query: "",
+        record_count: 0,
+        parsed: {
+          last_ran_at: "",
+        },
       },
     };
   },
   methods: {
-    onDeleteApp() {
-      this.loadApps(true, function () {});
-    },
-    onUpdateApps(id) {
-      console.log("Updated ID " + id);
+    onUpdateTag(id) {
       const that = this;
-      this.loadApps(true, function () {
-        that.setSelectedApp(id);
+      this.loadTags(true, function () {
+        that.setSelected(id);
       });
+    },
+    onDeleteTag() {
+      this.loadTags(true, function () {});
     },
     performNewSearch() {
       this.offset = 0;
-      this.loadApps(true, function () {});
+      this.loadTags(true, function () {});
     },
-    setSelectedApp(id) {
+    setSelected(id) {
       var selected = null;
-      for (var i = 0; i < this.apps.length; i++) {
-        if (this.apps[i].id == id) {
-          selected = this.apps[i];
+      for (var i = 0; i < this.tags.length; i++) {
+        if (this.tags[i].id == id) {
+          selected = this.tags[i];
           break;
         }
       }
@@ -122,15 +118,20 @@ export default {
       if (selected == null) {
         console.log("error: could not find ID: " + id);
       } else {
-        this.selectedApp = selected;
+        this.selectedTag = selected;
         this.isSelectedId = id;
       }
     },
-    getFreshAppsLink() {
-      return this.config.appsLink + "/0/" + this.limit;
+    getFreshTagLink() {
+      return this.config.tagsSegmentLink + "/0/" + this.limit;
     },
-    getAppsLink() {
-      let link = this.config.appsLink + "/" + this.offset + "/" + this.limit;
+    getTagLink() {
+      let link =
+        this.config.tagsSegmentLink +
+        "/" +
+        this.offset +
+        "/" +
+        this.limit;
       if (this.query) {
         link += "?q=" + this.query;
       }
@@ -138,10 +139,10 @@ export default {
       return link;
     },
     setNextSelectedElement() {
-      for (var i = 0; i < this.apps.length; i++) {
-        if (this.apps[i].id == this.isSelectedId) {
-          if (i + 1 < this.apps.length) {
-            this.setSelectedApp(this.apps[i + 1].id);
+      for (var i = 0; i < this.tags.length; i++) {
+        if (this.tags[i].id == this.isSelectedId) {
+          if (i + 1 < this.tags.length) {
+            this.setSelected(this.tags[i + 1].id);
           } else {
             return false;
           }
@@ -151,10 +152,10 @@ export default {
       return true;
     },
     setPrevSelectedElement() {
-      for (var i = this.apps.length - 1; i >= 0; i--) {
-        if (this.apps[i].id == this.isSelectedId) {
+      for (var i = this.tags.length - 1; i >= 0; i--) {
+        if (this.tags[i].id == this.isSelectedId) {
           if (i - 1 >= 0) {
-            this.setSelectedApp(this.apps[i - 1].id);
+            this.setSelected(this.tags[i - 1].id);
           } else {
             return false;
           }
@@ -165,27 +166,27 @@ export default {
     },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getAppsLink());
-      this.loadApps(true, function () {});
+      this.$router.push(this.getTagLink());
+      this.loadTags(true, function () {});
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getAppsLink());
-        this.loadApps(false, function () {});
+        this.$router.push(this.getTagLink());
+        this.loadTags(false, function () {});
       }
     },
-    loadApps(selectFirst, callback) {
+
+    loadTags(selectFirst, callback) {
       var url =
         this.config.backendAddress +
-        "/app/segment?offset=" +
+        "/tag/segment?offset=" +
         this.offset +
         "&limit=" +
         this.limit;
       if (this.query) {
         url += "&q=" + this.query;
       }
-
       fetch(url, {
         headers: {
           "API-Key": this.$store.getters.apiToken,
@@ -206,20 +207,19 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
-            this.apps = [];
-            if (response.data) {
+            this.tags = [];
+            if (response.data && response.data.length > 0) {
               for (var i = 0; i < response.data.length; i++) {
-                const newApp = Object.assign({}, response.data[i]);
-                newApp.parsed = {};
-                newApp.parsed.created_at = dateToString(newApp.created_at);
-                newApp.parsed.updated_at = dateToString(newApp.updated_at);
-                this.apps.push(newApp);
+                const newTag = Object.assign({}, response.data[i]);
+                newTag.parsed = {};
+                newTag.parsed.created_at = dateToString(newTag.created_at);
+                this.tags.push(newTag);
               }
 
               if (selectFirst) {
-                this.setSelectedApp(response.data[0].id);
+                this.setSelected(response.data[0].id);
               } else {
-                this.setSelectedApp(response.data[response.data.length - 1].id);
+                this.setSelected(response.data[response.data.length - 1].id);
               }
             }
           }
@@ -228,7 +228,7 @@ export default {
     },
   },
   beforeCreate() {
-    this.selectedApp = this.baseApp;
+    this.selectedTag = this.baseTag;
   },
   created() {
     if (this.$route.params.limit) {
@@ -243,7 +243,7 @@ export default {
       this.query = this.$route.query.q;
     }
 
-    this.loadApps(true, function () {});
+    this.loadTags(true, function () {});
   },
   mounted() {
     const that = this;

@@ -96,7 +96,15 @@ func main() {
 	r.HandleFunc("/honeypot/update", as.HandleUpdateHoneypot).Methods("POST")
 	r.HandleFunc("/honeypot/segment", as.HandleSearchHoneypots).Methods("GET")
 
+	r.HandleFunc("/tag/upsert", as.HandleUpsertSingleTag).Methods("POST")
+	r.HandleFunc("/tag/segment", as.HandleSearchTags).Methods("GET")
+	r.HandleFunc("/tag/delete", as.HandleDeleteTag).Methods("POST")
+
 	r.HandleFunc("/whois/ip", as.HandleGetWhoisForIP).Methods("POST")
+
+	r.HandleFunc("/storedquery/segment", as.HandleSearchStoredQueries).Methods("GET")
+	r.HandleFunc("/storedquery/upsert", as.HandleUpsertStoredQuery).Methods("POST")
+	r.HandleFunc("/storedquery/delete", as.HandleDeleteStoredQuery).Methods("POST")
 
 	r.Use(as.AuthMW)
 
@@ -104,7 +112,7 @@ func main() {
 		AllowedOrigins: []string{"*"},
 		AllowedHeaders: []string{"API-Key", "Content-Type"},
 		AllowedMethods: []string{"GET", "POST"},
-		Debug:          true,
+		Debug:          false,
 	})
 
 	handler := c.Handler(r)

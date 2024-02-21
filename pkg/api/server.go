@@ -10,6 +10,7 @@ import (
 	"loophid/pkg/javascript"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/vingarcia/ksql"
 )
@@ -42,6 +43,18 @@ type HttpContentRuleResult struct {
 
 const ResultSuccess = "OK"
 const ResultError = "ERR"
+
+// StoredQueryJSON is a representation of database.StoredQuery but able to be
+// JSON marshalled
+type StoredQueryJSON struct {
+	ID          int64     `json:"id"`
+	Query       string    `json:"query"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	LastRanAt   time.Time `json:"last_ran_at"`
+	RecordCount int64     `json:"record_count"`
+	TagsToApply []string  `json:"tags_to_apply"`
+}
 
 func NewApiServer(dbc database.DatabaseClient, jRunner javascript.JavascriptRunner, apiKey string) *ApiServer {
 	return &ApiServer{
@@ -106,7 +119,7 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	if rb.ID == 0 {
 		dm, err := a.dbc.Insert(&rb)
 		if err != nil {
-			errMsg := fmt.Sprintf("Unable to update %d: %s", dm.ModelID(), err.Error())
+			errMsg := fmt.Sprintf("unable to update %d: %s", dm.ModelID(), err.Error())
 			a.sendStatus(w, errMsg, ResultError, nil)
 			return
 		}
@@ -229,7 +242,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 		// This is an insert
 		dm, err := a.dbc.Insert(&rb)
 		if err != nil {
-			a.sendStatus(w, fmt.Sprintf("Unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
+			a.sendStatus(w, fmt.Sprintf("unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
 			return
 		}
 
@@ -239,7 +252,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 
 		err := a.dbc.Update(&rb)
 		if err != nil {
-			a.sendStatus(w, fmt.Sprintf("Unable to update content: %s", err.Error()), ResultError, nil)
+			a.sendStatus(w, fmt.Sprintf("unable to update content: %s", err.Error()), ResultError, nil)
 			return
 		}
 
@@ -338,7 +351,7 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 		// This is an insert
 		dm, err := a.dbc.Insert(&rb)
 		if err != nil {
-			a.sendStatus(w, fmt.Sprintf("Unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
+			a.sendStatus(w, fmt.Sprintf("unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
 			return
 		}
 
@@ -348,7 +361,7 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 
 		err := a.dbc.Update(&rb)
 		if err != nil {
-			a.sendStatus(w, fmt.Sprintf("Unable to update app: %s", err.Error()), ResultError, nil)
+			a.sendStatus(w, fmt.Sprintf("unable to update app: %s", err.Error()), ResultError, nil)
 			return
 		}
 
@@ -379,6 +392,29 @@ func (a *ApiServer) HandleDeleteApp(w http.ResponseWriter, req *http.Request) {
 	a.sendStatus(w, fmt.Sprintf("Deleted Application with ID: %s", id), ResultSuccess, nil)
 }
 
+func (a *ApiServer) HandleDeleteTag(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	id := req.Form.Get("id")
+	name := req.Form.Get("name")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	err = a.dbc.Delete(&database.Tag{ID: intID, Name: name})
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, fmt.Sprintf("Deleted tag with ID: %s, Name: %s", id, name), ResultSuccess, nil)
+}
+
 func (a *ApiServer) HandleGetAllApps(w http.ResponseWriter, req *http.Request) {
 	apps, err := a.dbc.GetApps()
 	if err != nil {
@@ -401,7 +437,7 @@ func (a *ApiServer) HandleUpdateRequest(w http.ResponseWriter, req *http.Request
 
 	err := a.dbc.Update(&rb)
 	if err != nil {
-		a.sendStatus(w, fmt.Sprintf("Unable to update request: %s", err.Error()), ResultError, nil)
+		a.sendStatus(w, fmt.Sprintf("unable to update request: %s", err.Error()), ResultError, nil)
 		return
 	}
 
@@ -421,11 +457,141 @@ func (a *ApiServer) HandleUpdateHoneypot(w http.ResponseWriter, req *http.Reques
 
 	err := a.dbc.Update(&rb)
 	if err != nil {
-		a.sendStatus(w, fmt.Sprintf("Unable to update honeypot: %s", err.Error()), ResultError, nil)
+		a.sendStatus(w, fmt.Sprintf("unable to update honeypot: %s", err.Error()), ResultError, nil)
 		return
 	}
 
 	a.sendStatus(w, "Updated honeypot", ResultSuccess, nil)
+}
+
+func (a *ApiServer) HandleUpsertSingleTag(w http.ResponseWriter, req *http.Request) {
+	var rb database.Tag
+	rb.ID = 0
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&rb); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if rb.Name == "" || rb.ColorHtml == "" {
+		a.sendStatus(w, "Name and html color are required", ResultError, nil)
+		return
+	}
+
+	if rb.ID == 0 {
+		// This is an insert
+		dm, err := a.dbc.Insert(&rb)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
+			return
+		}
+
+		a.sendStatus(w, fmt.Sprintf("Added new tag (id: %d)", dm.ModelID()), ResultSuccess, []database.DataModel{dm})
+		return
+	} else {
+
+		err := a.dbc.Update(&rb)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("unable to update tag: %s", err.Error()), ResultError, nil)
+			return
+		}
+
+		a.sendStatus(w, "Updated tag", ResultSuccess, nil)
+		return
+	}
+}
+
+func (a *ApiServer) HandleDeleteStoredQuery(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	err = a.dbc.Delete(&database.StoredQuery{ID: intID})
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, fmt.Sprintf("Deleted StoredQuery with ID: %s", id), ResultSuccess, nil)
+}
+
+func (a *ApiServer) HandleUpsertStoredQuery(w http.ResponseWriter, req *http.Request) {
+	var qj database.StoredQuery
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&qj); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if qj.ID != 0 {
+		err := a.dbc.Update(&qj)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("unable to update stored Query: %s", err.Error()), ResultError, nil)
+			return
+		}
+	} else {
+		q, err := a.dbc.Insert(&qj)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("unable to insert stored Query: %s", err.Error()), ResultError, nil)
+			return
+		}
+		qj.ID = q.ModelID()
+	}
+
+	currentTags, err := a.dbc.SearchTagPerQuery(0, 100, fmt.Sprintf("query_id:%d", qj.ID))
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("unable to query tags: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	existingTagsMap := make(map[int64]database.TagPerQuery)
+	submittedTagsMap := make(map[int64]bool)
+	for _, t := range currentTags {
+		existingTagsMap[t.TagID] = t
+	}
+
+	// Check which tags to add.
+	for _, t := range qj.TagsToApply {
+		submittedTagsMap[t.TagID] = true
+		if _, ok := existingTagsMap[t.TagID]; !ok {
+			fmt.Printf("Adding new query tag: %+v\n", t)
+			_, err := a.dbc.Insert(&database.TagPerQuery{
+				TagID:   t.TagID,
+				QueryID: qj.ID,
+			})
+
+			if err != nil {
+				slog.Warn("Could not add query tag", slog.String("error", err.Error()))
+			}
+		}
+	}
+
+	// Check which tags to remove.
+	for k, v := range existingTagsMap {
+		if _, ok := submittedTagsMap[k]; !ok {
+			fmt.Printf("Removing query tag: %d\n", v.TagID)
+			err := a.dbc.Delete(&v)
+			if err != nil {
+				slog.Warn("Could not delete query tag", slog.String("error", err.Error()))
+			}
+		}
+	}
+
+	a.sendStatus(w, "Saved changes", ResultSuccess, qj)
 }
 
 func (a *ApiServer) HandleGetAllDownloads(w http.ResponseWriter, req *http.Request) {
@@ -579,6 +745,56 @@ func (a *ApiServer) HandleSearchHoneypots(w http.ResponseWriter, req *http.Reque
 	var rls []database.Honeypot
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchHoneypots(iOffset, iLimit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
+func (a *ApiServer) HandleSearchStoredQueries(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var qs []database.StoredQuery
+	query := req.URL.Query().Get("q")
+	qs, err = a.dbc.SearchStoredQuery(iOffset, iLimit, query)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "", ResultSuccess, qs)
+}
+
+func (a *ApiServer) HandleSearchTags(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var rls []database.Tag
+	query := req.URL.Query().Get("q")
+	rls, err = a.dbc.SearchTags(iOffset, iLimit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)

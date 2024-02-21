@@ -13,26 +13,28 @@
         </span>
       </form>
 
-      <table class="table is-hoverable" v-if="apps.length > 0">
+      <table class="table is-hoverable" v-if="queries.length > 0">
         <thead>
           <th>ID</th>
-          <th>Name</th>
-          <th>Version</th>
-          <th>Vendor</th>
-          <th>OS</th>
+          <th>First seen</th>
+          <th>Last ran</th>
+          <th>Count</th>
+          <th>Query</th>
         </thead>
         <tbody>
           <tr
-            v-for="app in apps"
-            @click="setSelectedApp(app.id)"
-            :key="app.id"
-            :class="isSelectedId == app.id ? 'is-selected' : ''"
+            v-for="query in queries"
+            @click="setSelected(query.id)"
+            :key="query.id"
+            :class="isSelectedId == query.id ? 'is-selected' : ''"
           >
-            <td>{{ app.id }}</td>
-            <td>{{ app.name }}</td>
-            <td>{{ app.version }}</td>
-            <td>{{ app.vendor }}</td>
-            <td>{{ app.os }}</td>
+            <td>{{ query.id }}</td>
+            <td>{{ query.parsed.created_at }}</td>
+            <td>{{ query.parsed.last_ran_at }}</td>
+            <td>{{ query.record_count }}</td>
+            <td>
+              <a :href="'/requests?q=' + query.query">{{ query.query }}</a>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -43,7 +45,7 @@
         class="pi pi-arrow-left pi-style"
       ></i>
       <i
-        v-if="apps.length == limit"
+        v-if="queries.length == limit"
         @click="loadNext()"
         class="pi pi-arrow-right pi-style pi-style-right"
       ></i>
@@ -53,12 +55,12 @@
       @focusin="keyboardDisabled = true"
       @focusout="keyboardDisabled = false"
     >
-      <app-form
-        @update-app="onUpdateApps"
-        @delete-app="onDeleteApp"
+      <query-form
+        @update-query="onUpdateQuery"
+        @delete-query="onDeleteQuery"
         @require-auth="$emit('require-auth')"
-        :app="selectedApp"
-      ></app-form>
+        :query="selectedQuery"
+      ></query-form>
     </div>
   </div>
 </template>
@@ -68,53 +70,51 @@ function dateToString(inDate) {
   const nd = new Date(Date.parse(inDate));
   return nd.toLocaleString();
 }
-import AppForm from "./AppForm.vue";
+import QueryForm from "./QueryForm.vue";
 export default {
   components: {
-    AppForm,
+    QueryForm,
   },
-  inject: ["config"],
   emits: ["require-auth"],
+  inject: ["config"],
   data() {
     return {
-      apps: [],
-      selectedApp: null,
+      queries: [],
+      selected: null,
       isSelectedId: 0,
       query: null,
       limit: 24,
       offset: 0,
       keyboardDisabled: false,
-      baseApp: {
+      base: {
         id: 0,
-        name: "",
-        version: "",
-        vendor: "",
-        os: "",
-        time_created: "",
-        time_updated: "",
+        query: "",
+        record_count: 0,
+        parsed: {
+          last_ran_at: "",
+        },
       },
     };
   },
   methods: {
-    onDeleteApp() {
-      this.loadApps(true, function () {});
-    },
-    onUpdateApps(id) {
-      console.log("Updated ID " + id);
+    onUpdateQuery(id) {
       const that = this;
-      this.loadApps(true, function () {
-        that.setSelectedApp(id);
+      this.loadQueries(true, function () {
+        that.setSelected(id);
       });
+    },
+    onDeleteQuery() {
+      this.loadQueries(true, function () {});
     },
     performNewSearch() {
       this.offset = 0;
-      this.loadApps(true, function () {});
+      this.loadQueries(true, function () {});
     },
-    setSelectedApp(id) {
+    setSelected(id) {
       var selected = null;
-      for (var i = 0; i < this.apps.length; i++) {
-        if (this.apps[i].id == id) {
-          selected = this.apps[i];
+      for (var i = 0; i < this.queries.length; i++) {
+        if (this.queries[i].id == id) {
+          selected = this.queries[i];
           break;
         }
       }
@@ -122,15 +122,20 @@ export default {
       if (selected == null) {
         console.log("error: could not find ID: " + id);
       } else {
-        this.selectedApp = selected;
+        this.selectedQuery = selected;
         this.isSelectedId = id;
       }
     },
-    getFreshAppsLink() {
-      return this.config.appsLink + "/0/" + this.limit;
+    getFreshQueryLink() {
+      return this.config.storedquerySegmentLink + "/0/" + this.limit;
     },
-    getAppsLink() {
-      let link = this.config.appsLink + "/" + this.offset + "/" + this.limit;
+    getQueryLink() {
+      let link =
+        this.config.storedquerySegmentLink +
+        "/" +
+        this.offset +
+        "/" +
+        this.limit;
       if (this.query) {
         link += "?q=" + this.query;
       }
@@ -138,10 +143,10 @@ export default {
       return link;
     },
     setNextSelectedElement() {
-      for (var i = 0; i < this.apps.length; i++) {
-        if (this.apps[i].id == this.isSelectedId) {
-          if (i + 1 < this.apps.length) {
-            this.setSelectedApp(this.apps[i + 1].id);
+      for (var i = 0; i < this.queries.length; i++) {
+        if (this.queries[i].id == this.isSelectedId) {
+          if (i + 1 < this.queries.length) {
+            this.setSelected(this.queries[i + 1].id);
           } else {
             return false;
           }
@@ -151,10 +156,10 @@ export default {
       return true;
     },
     setPrevSelectedElement() {
-      for (var i = this.apps.length - 1; i >= 0; i--) {
-        if (this.apps[i].id == this.isSelectedId) {
+      for (var i = this.queries.length - 1; i >= 0; i--) {
+        if (this.queries[i].id == this.isSelectedId) {
           if (i - 1 >= 0) {
-            this.setSelectedApp(this.apps[i - 1].id);
+            this.setSelected(this.queries[i - 1].id);
           } else {
             return false;
           }
@@ -165,27 +170,27 @@ export default {
     },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getAppsLink());
-      this.loadApps(true, function () {});
+      this.$router.push(this.getQueryLink());
+      this.loadQueries(true, function () {});
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getAppsLink());
-        this.loadApps(false, function () {});
+        this.$router.push(this.getQueryLink());
+        this.loadQueries(false, function () {});
       }
     },
-    loadApps(selectFirst, callback) {
+
+    loadQueries(selectFirst, callback) {
       var url =
         this.config.backendAddress +
-        "/app/segment?offset=" +
+        "/storedquery/segment?offset=" +
         this.offset +
         "&limit=" +
         this.limit;
       if (this.query) {
         url += "&q=" + this.query;
       }
-
       fetch(url, {
         headers: {
           "API-Key": this.$store.getters.apiToken,
@@ -206,20 +211,22 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
-            this.apps = [];
-            if (response.data) {
+            this.queries = [];
+            if (response.data && response.data.length > 0) {
               for (var i = 0; i < response.data.length; i++) {
-                const newApp = Object.assign({}, response.data[i]);
-                newApp.parsed = {};
-                newApp.parsed.created_at = dateToString(newApp.created_at);
-                newApp.parsed.updated_at = dateToString(newApp.updated_at);
-                this.apps.push(newApp);
+                const newQuery = Object.assign({}, response.data[i]);
+                newQuery.parsed = {};
+                newQuery.parsed.created_at = dateToString(newQuery.created_at);
+                newQuery.parsed.last_ran_at = dateToString(
+                  newQuery.last_ran_at
+                );
+                this.queries.push(newQuery);
               }
 
               if (selectFirst) {
-                this.setSelectedApp(response.data[0].id);
+                this.setSelected(response.data[0].id);
               } else {
-                this.setSelectedApp(response.data[response.data.length - 1].id);
+                this.setSelected(response.data[response.data.length - 1].id);
               }
             }
           }
@@ -228,7 +235,7 @@ export default {
     },
   },
   beforeCreate() {
-    this.selectedApp = this.baseApp;
+    this.selectedQuery = this.baseQuery;
   },
   created() {
     if (this.$route.params.limit) {
@@ -243,7 +250,7 @@ export default {
       this.query = this.$route.query.q;
     }
 
-    this.loadApps(true, function () {});
+    this.loadQueries(true, function () {});
   },
   mounted() {
     const that = this;

@@ -7,6 +7,7 @@
 
   <div>
     <input type="hidden" name="id" v-model="localApp.id" />
+    <div class="card">
     <FieldSet legend="Settings" :toggleable="true">
       <div>
         <label class="label">Name</label>
@@ -59,7 +60,7 @@
           v-model="localApp.link"
         />
       </div>
-    </FieldSet>
+    <br/>
 
     <PrimeButton
       :label="localApp.id > 0 ? 'Submit' : 'Add'"
@@ -91,6 +92,8 @@
       @click="showImportForm()"
       label="Import"
     ></PrimeButton>
+    </FieldSet>
+    </div>
 
     <ConfirmPopup group="headless">
       <template #container="{ message, acceptCallback, rejectCallback }">
@@ -126,7 +129,7 @@ export default {
     ImportAppForm,
   },
   props: ["app"],
-  emits: ["update-app", "require-auth"],
+  emits: ["update-app", "delete-app", "require-auth"],
   inject: ["config"],
   data() {
     return {
@@ -221,7 +224,7 @@ export default {
           } else {
             this.$toast.success("Deleted entry");
             this.resetForm();
-            this.$emit("update-app");
+            this.$emit("delete-app");
           }
         });
     },

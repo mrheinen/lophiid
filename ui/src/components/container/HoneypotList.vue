@@ -1,7 +1,6 @@
 <template>
   <div class="columns">
-    <div class="column is-three-fifths" style="margin-left: 15px;">
-
+    <div class="column is-three-fifths" style="margin-left: 15px">
       <form @submit.prevent="performNewSearch()">
         <span class="p-input-icon-left" style="width: 100%">
           <i class="pi pi-search" />
@@ -30,7 +29,11 @@
             :class="isSelectedId == honeypot.id ? 'is-selected' : ''"
           >
             <td>{{ honeypot.id }}</td>
-            <td><a :href="'/requests?q=honeypot_ip:' + honeypot.ip">{{ honeypot.ip }}</a></td>
+            <td>
+              <a :href="'/requests?q=honeypot_ip:' + honeypot.ip">{{
+                honeypot.ip
+              }}</a>
+            </td>
             <td>{{ honeypot.parsed.created_at }}</td>
             <td>{{ honeypot.parsed.last_checkin }}</td>
             <td>{{ honeypot.default_content_id }}</td>
@@ -48,16 +51,18 @@
         @click="loadNext()"
         class="pi pi-arrow-right pi-style pi-style-right"
       ></i>
-
-
-
     </div>
-    <div class="column mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
-     <honey-form
-       @update-honeypot="reloadHoneypots()"
-       @require-auth="$emit('require-auth')"
-       :honeypot="selectedHoneypot"
-       ></honey-form>
+    <div
+      class="column mright"
+      @focusin="keyboardDisabled = true"
+      @focusout="keyboardDisabled = false"
+    >
+      <honey-form
+        @update-honeypot="onUpdateHoneypot"
+        @delete-honeypot="onDeleteHoneypot"
+        @require-auth="$emit('require-auth')"
+        :honeypot="selectedHoneypot"
+      ></honey-form>
     </div>
   </div>
 </template>
@@ -87,18 +92,25 @@ export default {
         id: 0,
         ip: "",
         parsed: {
-        last_checkin: "",
+          last_checkin: "",
         },
       },
     };
   },
   methods: {
+    onUpdateHoneypot(id) {
+      console.log("Updated ID " + id);
+      const that = this;
+      this.loadHoneypots(true, function () {
+        that.setSelected(id);
+      });
+    },
+    onDeleteHoneypot() {
+      this.loadHoneypots(true, function () {});
+    },
     performNewSearch() {
       this.offset = 0;
-      this.loadHoneypots(true);
-    },
-    reloadHoneypots() {
-      this.loadHoneypots(true);
+      this.loadHoneypots(true, function () {});
     },
     setSelected(id) {
       var selected = null;
@@ -157,33 +169,43 @@ export default {
     loadNext() {
       this.offset += this.limit;
       this.$router.push(this.getHoneypotLink());
-      this.loadHoneypots(true);
+      this.loadHoneypots(true, function () {});
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
         this.$router.push(this.getHoneypotLink());
-        this.loadHoneypots(false);
+        this.loadHoneypots(false, function () {});
       }
     },
 
-    loadHoneypots(selectFirst) {
-      var url = this.config.backendAddress + "/honeypot/segment?offset=" +
-        this.offset + "&limit=" + this.limit;
+    loadHoneypots(selectFirst, callback) {
+      var url =
+        this.config.backendAddress +
+        "/honeypot/segment?offset=" +
+        this.offset +
+        "&limit=" +
+        this.limit;
       if (this.query) {
         url += "&q=" + this.query;
       }
-     fetch(url, { headers: {
-        'API-Key': this.$store.getters.apiToken,
-      }})
+      fetch(url, {
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+        },
+      })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
+            return null;
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
+          if (!response) {
+            return;
+          }
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
@@ -192,8 +214,12 @@ export default {
               for (var i = 0; i < response.data.length; i++) {
                 const newHoneypot = Object.assign({}, response.data[i]);
                 newHoneypot.parsed = {};
-                newHoneypot.parsed.last_checkin = dateToString(newHoneypot.last_checkin);
-                newHoneypot.parsed.created_at = dateToString(newHoneypot.created_at);
+                newHoneypot.parsed.last_checkin = dateToString(
+                  newHoneypot.last_checkin
+                );
+                newHoneypot.parsed.created_at = dateToString(
+                  newHoneypot.created_at
+                );
                 this.honeypots.push(newHoneypot);
               }
 
@@ -204,6 +230,7 @@ export default {
               }
             }
           }
+          callback();
         });
     },
   },
@@ -223,7 +250,7 @@ export default {
       this.query = this.$route.query.q;
     }
 
-    this.loadHoneypots(true);
+    this.loadHoneypots(true, function(){});
   },
   mounted() {
     const that = this;
@@ -245,9 +272,7 @@ export default {
 };
 </script>
 
-
 <style scoped>
-
 #date {
   width: 170px;
 }

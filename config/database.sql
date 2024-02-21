@@ -148,6 +148,61 @@ CREATE TABLE downloads (
 );
 
 
+CREATE TABLE stored_query (
+  id                   SERIAL PRIMARY KEY,
+  query                VARCHAR(8192),
+  description          TEXT,
+  created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+  record_count         INT DEFAULT 0,
+  times_run            INT DEFAULT 0,
+  last_ran_at          TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+
+CREATE TABLE tag (
+  id                   SERIAL,
+  name                 VARCHAR(64) NOT NULL,
+  color_html           VARCHAR(8),
+  description          TEXT,
+  created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(id)
+);
+
+-- If a query or a tag gets deleted, we also want this one gone.
+CREATE TABLE tag_per_query (
+  id SERIAL PRIMARY KEY,
+  tag_id INT,
+  query_id INT,
+  CONSTRAINT fk_per_query_tag_id
+    FOREIGN KEY (tag_id) REFERENCES tag(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_per_query_stored_query_id
+    FOREIGN KEY (query_id) REFERENCES stored_query(id)
+    ON DELETE CASCADE
+);
+
+-- If a request or a tag gets deleted, we also want this one gone.
+CREATE TABLE tag_per_request (
+  id SERIAL,
+  tag_id INT,
+  request_id INT,
+  tag_per_query_id INT,
+  CONSTRAINT fk_per_request_tag_id
+    FOREIGN KEY (tag_id) REFERENCES tag(id)
+    ON DELETE CASCADE,
+  -- this one is important. We want to optionally store the ID of tag_per_query
+  -- entries and delete on cascade here. This so that when a tag is removed from
+  -- a query, we will also delete all the tags that that query put on requests.
+  CONSTRAINT fk_tag_per_query_id
+    FOREIGN KEY (tag_per_query_id) REFERENCES tag_per_query(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_per_request_request_id
+    FOREIGN KEY (request_id) REFERENCES request(id)
+    ON DELETE CASCADE
+);
+
 CREATE TABLE whois (
   id                   SERIAL PRIMARY KEY,
   data                 TEXT,
@@ -174,6 +229,19 @@ GRANT ALL PRIVILEGES ON honeypot TO lo;
 GRANT ALL PRIVILEGES ON honeypot_id_seq TO lo;
 GRANT ALL PRIVILEGES ON vt_ipresult TO lo;
 GRANT ALL PRIVILEGES ON vt_ipresult_id_seq TO lo;
+GRANT ALL PRIVILEGES ON stored_query TO lo;
+GRANT ALL PRIVILEGES ON stored_query_id_seq TO lo;
+GRANT ALL PRIVILEGES ON tag TO lo;
+GRANT ALL PRIVILEGES ON tag_id_seq TO lo;
+
+GRANT ALL PRIVILEGES ON tag_per_query TO lo;
+GRANT ALL PRIVILEGES ON tag_per_query_id_seq TO lo;
+GRANT ALL PRIVILEGES ON tag_per_request TO lo;
+GRANT ALL PRIVILEGES ON tag_per_request_id_seq TO lo;
+
+
+
+
 CREATE INDEX requests_idx ON request ( time_received desc );
 CREATE INDEX requests_port_idx ON request (
   time_received desc,

@@ -22,6 +22,10 @@ var RequestMetadataTable = ksql.NewTable("request_metadata")
 var DownloadTable = ksql.NewTable("downloads")
 var HoneypotTable = ksql.NewTable("honeypot")
 var WhoisTable = ksql.NewTable("whois")
+var StoredQueryTable = ksql.NewTable("stored_query")
+var TagTable = ksql.NewTable("tag")
+var TagPerRequestTable = ksql.NewTable("tag_per_request")
+var TagPerQueryTable = ksql.NewTable("tag_per_query")
 
 type DataModel interface {
 	ModelID() int64
@@ -164,6 +168,47 @@ type Whois struct {
 
 func (c *Whois) ModelID() int64 { return c.ID }
 
+type StoredQuery struct {
+	ID          int64         `ksql:"id,skipInserts" json:"id"`
+	Query       string        `ksql:"query" json:"query"`
+	Description string        `ksql:"description" json:"description"`
+	CreatedAt   time.Time     `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt   time.Time     `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	LastRanAt   time.Time     `ksql:"last_ran_at" json:"last_ran_at"`
+	RecordCount int64         `ksql:"record_count" json:"record_count"`
+	TagsToApply []TagPerQuery `json:"tags_to_apply"`
+}
+
+func (c *StoredQuery) ModelID() int64 { return c.ID }
+
+type Tag struct {
+	ID          int64     `ksql:"id,skipInserts" json:"id"`
+	Name        string    `ksql:"name" json:"name"`
+	ColorHtml   string    `ksql:"color_html" json:"color_html"`
+	Description string    `ksql:"description" json:"description"`
+	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+}
+
+func (c *Tag) ModelID() int64 { return c.ID }
+
+type TagPerQuery struct {
+	ID      int64 `ksql:"id,skipInserts" json:"id"`
+	TagID   int64 `ksql:"tag_id" json:"tag_id"`
+	QueryID int64 `ksql:"query_id" json:"query_id"`
+}
+
+func (c *TagPerQuery) ModelID() int64 { return c.ID }
+
+type TagPerRequest struct {
+	ID            int64 `ksql:"id,skipInserts" json:"id"`
+	TagID         int64 `ksql:"tag_id" json:"tag_id"`
+	RequestID     int64 `ksql:"request_id" json:"request_id"`
+	TagPerQueryID int64 `ksql:"tag_per_query_id" json:"tag_per_query_id"`
+}
+
+func (c *TagPerRequest) ModelID() int64 { return c.ID }
+
 type DatabaseClient interface {
 	Close()
 	Insert(dm DataModel) (DataModel, error)
@@ -189,6 +234,9 @@ type DatabaseClient interface {
 	SearchContent(offset int64, limit int64, query string) ([]Content, error)
 	SearchDownloads(offset int64, limit int64, query string) ([]Download, error)
 	SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error)
+	SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error)
+	SearchTags(offset int64, limit int64, query string) ([]Tag, error)
+	SearchTagPerQuery(offset int64, limit int64, query string) ([]TagPerQuery, error)
 	GetRequestsDistinctComboLastMonth() ([]Request, error)
 	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 }
@@ -261,6 +309,14 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &HoneypotTable
 	case "Whois":
 		return &WhoisTable
+	case "StoredQuery":
+		return &StoredQueryTable
+	case "Tag":
+		return &TagTable
+	case "TagPerQuery":
+		return &TagPerQueryTable
+	case "TagPerRequest":
+		return &TagPerRequestTable
 	default:
 		fmt.Printf("Don't know %s datamodel\n", name)
 		return nil
@@ -486,6 +542,79 @@ func (d *KSQLClient) SearchHoneypots(offset int64, limit int64, query string) ([
 	return rs, err
 }
 
+func (d *KSQLClient) SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error) {
+	var rs []StoredQuery
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(StoredQuery{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM stored_query", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+
+	// For each query, add the tags to the query entry.
+	var retQueries []StoredQuery
+	for _, qEntry := range rs {
+		tags, err := d.SearchTagPerQuery(0, 100, fmt.Sprintf("query_id:%d", qEntry.ID))
+		if err != nil {
+			return rs, fmt.Errorf("cannot get tags for query: %s", err.Error())
+		}
+
+		qEntry.TagsToApply = append(qEntry.TagsToApply, tags...)
+		retQueries = append(retQueries, qEntry)
+	}
+
+	return retQueries, err
+}
+
+func (d *KSQLClient) SearchTags(offset int64, limit int64, query string) ([]Tag, error) {
+	var rs []Tag
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Tag{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM tag", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) SearchTagPerQuery(offset int64, limit int64, query string) ([]TagPerQuery, error) {
+	var rs []TagPerQuery
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(TagPerQuery{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM tag_per_query", fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
 func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error) {
 	var md []RequestMetadata
 	err := d.db.Query(d.ctx, &md, "FROM request_metadata WHERE request_id = $1 ORDER BY type", id)
@@ -632,4 +761,13 @@ func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query st
 }
 func (f *FakeDatabaseClient) GetWhoisByIP(ip string) (Whois, error) {
 	return Whois{}, nil
+}
+func (f *FakeDatabaseClient) SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error) {
+	return []StoredQuery{}, nil
+}
+func (f *FakeDatabaseClient) SearchTags(offset int64, limit int64, query string) ([]Tag, error) {
+	return []Tag{}, nil
+}
+func (f *FakeDatabaseClient) SearchTagPerQuery(offset int64, limit int64, query string) ([]TagPerQuery, error) {
+	return []TagPerQuery{}, nil
 }

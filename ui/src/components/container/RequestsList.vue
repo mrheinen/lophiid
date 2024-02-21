@@ -48,24 +48,34 @@
             </td>
             <td>{{ req.port }}</td>
             <td>
-              <a :href="'/content?q=id:' + req.content_id">{{ req.content_id }}</a>
+              <a :href="'/content?q=id:' + req.content_id">{{
+                req.content_id
+              }}</a>
             </td>
             <td>
               <a :href="'/rules?q=id:' + req.rule_id">{{ req.rule_id }}</a>
             </td>
             <td>
-              <a :href="'/rules?uri=' + encodeURIComponent(req.uri) + '&method=' + req.method">
+              <a
+                :href="
+                  '/rules?uri=' +
+                  encodeURIComponent(req.uri) +
+                  '&method=' +
+                  req.method
+                "
+              >
                 <i
                   title="create a rule for this"
                   class="pi pi-arrow-circle-right"
                 ></i>
               </a>
               &nbsp;
-              <i @click="toggleStarred(req.id)"
+              <i
+                @click="toggleStarred(req.id)"
                 :class="req.starred ? 'starred' : ''"
-                    title="Star this request"
-                    class="pi pi-star"
-                  ></i>
+                title="Star this request"
+                class="pi pi-star"
+              ></i>
             </td>
           </tr>
         </tbody>
@@ -120,9 +130,8 @@ export default {
   },
   methods: {
     toggleStarred(id) {
-
       var starRequest = null;
-      for (var i=0; i<this.requests.length;i++) {
+      for (var i = 0; i < this.requests.length; i++) {
         if (this.requests[i].id == id) {
           starRequest = this.requests[i];
           break;
@@ -131,7 +140,7 @@ export default {
 
       if (starRequest == null) {
         console.log("Could not find request with ID: " + id);
-        return
+        return;
       }
 
       starRequest.starred = !starRequest.starred;
@@ -145,14 +154,14 @@ export default {
         headers: {
           "Content-Type": "application/json",
           "API-Key": this.$store.getters.apiToken,
-          },
+        },
         body: JSON.stringify(copyRequest),
       })
-     .then((response) => {
+        .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
@@ -244,16 +253,16 @@ export default {
       fetch(this.config.backendAddress + "/whois/ip", {
         method: "POST",
         headers: {
-          'API-Key': this.$store.getters.apiToken,
+          "API-Key": this.$store.getters.apiToken,
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: "ip=" + ip,
       })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
@@ -274,16 +283,16 @@ export default {
       fetch(this.config.backendAddress + "/meta/request", {
         method: "POST",
         headers: {
-          'API-Key': this.$store.getters.apiToken,
+          "API-Key": this.$store.getters.apiToken,
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: "id=" + id,
       })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
@@ -308,17 +317,23 @@ export default {
         url += "&q=" + encodeURIComponent(this.query);
       }
 
-      fetch(url, { headers: {
-        'API-Key': this.$store.getters.apiToken,
-      }})
+      fetch(url, {
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+        },
+      })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
+            return null;
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
+          if (!response) {
+            return;
+          }
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
