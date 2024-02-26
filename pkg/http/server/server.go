@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"loophid/backend_service"
 	"loophid/pkg/client"
 	"net/http"
 	"net/http/httputil"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -17,28 +20,47 @@ type HttpServer struct {
 	ssl        bool
 	sslCert    string
 	sslKey     string
+	listenAddr string
 	port       int64
 	publicIP   string
 }
 
 // NewHttpServer creates a new initialized HttpServer struct.
-func NewHttpServer(c client.BackendClient, port int64, publicIP string) *HttpServer {
+func NewHttpServer(c client.BackendClient, listenAddr string, publicIP string) *HttpServer {
+	// TODO: IPv6 this.
+	parts := strings.Split(listenAddr, ":")
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		slog.Warn("could not parse listen address", slog.String("error", err.Error()))
+		return nil
+	}
+
 	return &HttpServer{
 		client:     c,
 		ssl:        false,
-		port:       port,
+		listenAddr: listenAddr,
 		publicIP:   publicIP,
+		port:       int64(port),
 	}
 }
 
-func NewSSLHttpServer(c client.BackendClient, port int64, sslCert string, sslKey string, publicIP string) *HttpServer {
+func NewSSLHttpServer(c client.BackendClient, listenAddr string, sslCert string, sslKey string, publicIP string) *HttpServer {
+	parts := strings.Split(listenAddr, ":")
+	port, err := strconv.Atoi(parts[1])
+
+	if err != nil {
+		slog.Warn("could not parse listen address", slog.String("error", err.Error()))
+		return nil
+	}
+
 	return &HttpServer{
 		client:     c,
 		ssl:        true,
 		sslCert:    sslCert,
 		sslKey:     sslKey,
-		port:       port,
+		listenAddr: listenAddr,
 		publicIP:   publicIP,
+		port:       int64(port),
 	}
 }
 
@@ -47,12 +69,10 @@ func (h *HttpServer) Start() error {
 	h.mux = http.NewServeMux()
 	h.mux.HandleFunc("/", h.catchAll)
 
-	listen_string := fmt.Sprintf(":%d", h.port)
-
 	if h.ssl {
-		return http.ListenAndServeTLS(listen_string, h.sslCert, h.sslKey, h.mux)
+		return http.ListenAndServeTLS(h.listenAddr, h.sslCert, h.sslKey, h.mux)
 	}
-	return http.ListenAndServe(listen_string, h.mux)
+	return http.ListenAndServe(h.listenAddr, h.mux)
 
 }
 

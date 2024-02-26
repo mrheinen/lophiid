@@ -12,8 +12,6 @@ For a new rule, show how many requests would have matched.
 Refactor the timed events in the backend (e.g. loading rules). Also make
 cleaning of expired items from cache a timed event.
 
-Fix routing
-
 Add source IP to rule so we can mess with specific targets.
 
 Add statistics.
@@ -57,3 +55,4 @@ Add support for abuseipdb and urlhaus.
 
 Add support for netcat, ftp and tcp bash payloads.
 
+Allow content to be set default for all new honeypots.

@@ -150,7 +150,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 
 			alertManager := alerting.NewAlertManager(42)
 			whoisManager := whois.FakeWhoisManager{}
-			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
+			queryRunner := FakeQueryRunner{
+				ErrorToReturn: nil,
+			}
+			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
 			if (err != nil) != test.errorExpected {
@@ -176,7 +179,11 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
 	whoisManager := whois.FakeWhoisManager{}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
+
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
 		Uri:  "/aa",
@@ -218,7 +225,11 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
 	whoisManager := whois.FakeWhoisManager{}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
 		Request: &backend_service.HttpRequest{
@@ -285,7 +296,10 @@ func TestHandleProbe(t *testing.T) {
 	}
 	alertManager := alerting.NewAlertManager(42)
 	whoisManager := whois.FakeWhoisManager{}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -355,7 +369,11 @@ func TestProcessQueue(t *testing.T) {
 	fakeDownLoader := downloader.FakeDownloader{}
 	alertManager := alerting.NewAlertManager(42)
 	whoisManager := whois.FakeWhoisManager{}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+
+	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 	req := database.Request{
 		Uri:  "/aaaaa",
 		Body: []byte("body body"),
@@ -435,7 +453,11 @@ func TestSendStatus(t *testing.T) {
 
 			alertManager := alerting.NewAlertManager(42)
 			whoisManager := whois.FakeWhoisManager{}
-			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager)
+			queryRunner := FakeQueryRunner{
+				ErrorToReturn: nil,
+			}
+
+			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 
 			_, err := b.SendStatus(context.Background(), test.request)
 			if err == nil && test.expectedErrorString != "" {

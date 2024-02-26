@@ -850,6 +850,50 @@ func (a *ApiServer) HandleGetMetadataForRequest(w http.ResponseWriter, req *http
 	a.sendStatus(w, "", ResultSuccess, mds)
 }
 
+func (a *ApiServer) HandleGetTagsForRequest(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	mds, err := a.dbc.SearchTagPerRequest(0, 200, fmt.Sprintf("request_id:%d", intID))
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "", ResultSuccess, mds)
+}
+
+func (a *ApiServer) HandleGetTagsForRequestFull(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	mds, err := a.dbc.GetTagPerRequestFullForRequest(intID)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "", ResultSuccess, mds)
+}
+
 type AppExport struct {
 	App      *database.Application
 	Rules    []database.ContentRule

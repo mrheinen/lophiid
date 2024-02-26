@@ -115,7 +115,9 @@ func main() {
 	client := &http.Client{Transport: tr, Timeout: time.Minute * 10}
 
 	dLoader := downloader.NewHTTPDownloader(*downloadDir, client)
-	bs := backend.NewBackendServer(dbc, dLoader, jRunner, alertMgr, vtMgr, whoisManager)
+
+	queryRunner := backend.NewQueryRunnerImpl(dbc)
+	bs := backend.NewBackendServer(dbc, dLoader, jRunner, alertMgr, vtMgr, whoisManager, queryRunner)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

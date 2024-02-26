@@ -1,25 +1,90 @@
 <template>
   <div class="card">
     <FieldSet legend="Raw request" :toggleable="true">
-      <pre class="rawrequest" v-if="localRequest.raw">{{
+      <pre v-on:focus="$event.target.select()" ref="rawrequest"  class="rawrequest" v-if="localRequest.raw">{{
         localRequest.raw
       }}</pre>
+
+      <br />
+      <div style="float: right;">
+      <i @click="copyToClipboard()" title="copy to clipboard" class="pi pi-copy pointer"></i>
+      &nbsp;
+      <i @click="decodeUri()" title="decode uri" class="pi pi-percentage pointer"></i>
+      </div>
     </FieldSet>
   </div>
 
   <br />
+  <div class="card">
+    <FieldSet legend="Request details" :toggleable="true">
+
+
+      <table>
+        <tbody>
+          <tr>
+            <th>Request ID</th>
+            <td>
+                {{localRequest.id}}
+            </td>
+          </tr>
+
+
+          <tr>
+            <th>Content ID</th>
+            <td>
+              <a :href="'/content?q=id:' + localRequest.content_id">
+                {{localRequest.content_id}}
+              </a>
+            </td>
+          </tr>
+
+          <tr>
+            <th>Rule ID</th>
+            <td>
+              <a :href="'/rules?q=id:' + localRequest.rule_id">
+                {{localRequest.rule_id}}
+              </a>
+            </td>
+
+
+          </tr>
+          <tr v-if="localRequest.tags">
+            <th>Tags</th>
+            <td>
+              <div v-for="tag in localRequest.tags" :key="tag.tag.id">
+                {{ tag.tag.name }}&nbsp;
+              </div>
+            </td>
+          </tr>
+
+
+
+        </tbody>
+      </table>
+
+
+
+    </FieldSet>
+  </div>
+  <br />
+
   <div v-if="metadata.length" class="card">
     <FieldSet legend="Metadata" :toggleable="true">
       <div v-for="meta in localBase64Metadata" :key="meta.id">
         <br />
         <div style="width: 700px">
-          <h6 class="subtitle is-6">Decoded base64 string</h6>
+          <label class="label">Decoded base64 string</label>
           <highlightjs autodetect :code="meta.data" />
         </div>
       </div>
-      <div v-for="meta in localLinkMetadata" :key="meta.id">
-        <p>{{ meta.data }}</p>
+      <div v-if="localLinkMetadata">
+        <label class="label">Extracted URLs</label>
+        <div v-for="meta in localLinkMetadata" :key="meta.id">
+          <p>{{ meta.data }}</p>
+        </div>
       </div>
+
+
     </FieldSet>
   </div>
   <br />
@@ -40,6 +105,33 @@
 </template>
 
 <script>
+
+  function copyToClipboardHelper(textToCopy) {
+    // Navigator clipboard api needs a secure context (https)
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(textToCopy);
+    } else {
+      // Use the 'out of viewport hidden text area' trick
+      const textArea = document.createElement("textarea");
+      textArea.value = textToCopy;
+
+      // Move textarea out of the viewport so it's not visible
+      textArea.style.position = "absolute";
+      textArea.style.left = "-999999px";
+
+      document.body.prepend(textArea);
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+      } catch (error) {
+        console.error(error);
+      } finally {
+        textArea.remove();
+      }
+    }
+  }
+
 export default {
   props: ["request", "metadata", "whois"],
   inject: ["config"],
@@ -53,6 +145,15 @@ export default {
       localBase64Metadata: [],
       localLinkMetadata: [],
     };
+  },
+  methods: {
+    copyToClipboard() {
+      copyToClipboardHelper(this.$refs.rawrequest.textContent)
+      this.$toast.info("Copied");
+    },
+    decodeUri() {
+     this.$refs.rawrequest.textContent = decodeURIComponent(this.$refs.rawrequest.textContent)
+    }
   },
   watch: {
     request() {
@@ -116,6 +217,16 @@ table {
 
 th,
 td {
-  padding: 8px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-right: 8px;
+}
+
+th {
+  color: #616060;
+}
+
+.pointer {
+  cursor: pointer;
 }
 </style>

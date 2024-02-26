@@ -66,29 +66,30 @@ type ContentRule struct {
 func (c *ContentRule) ModelID() int64 { return c.ID }
 
 type Request struct {
-	ID             int64     `ksql:"id,skipInserts" json:"id"`
-	Proto          string    `ksql:"proto" json:"proto"`
-	Host           string    `ksql:"host" json:"host"`
-	Port           int64     `ksql:"port" json:"port"`
-	Method         string    `ksql:"method" json:"method"`
-	Uri            string    `ksql:"uri" json:"uri"`
-	Path           string    `ksql:"path" json:"path"`
-	Referer        string    `ksql:"referer" json:"referer"`
-	ContentLength  int64     `ksql:"content_length" json:"content_length"`
-	UserAgent      string    `ksql:"user_agent" json:"user_agent"`
-	Body           []byte    `ksql:"body" json:"body"`
-	HoneypotIP     string    `ksql:"honeypot_ip" json:"honeypot_ip"`
-	SourceIP       string    `ksql:"source_ip" json:"source_ip"`
-	SourcePort     int64     `ksql:"source_port" json:"source_port"`
-	Raw            string    `ksql:"raw" json:"raw"`
-	RawResponse    string    `ksql:"raw_response" json:"raw_response"`
-	TimeReceived   time.Time `ksql:"time_received,skipUpdates" json:"time_received"`
-	CreatedAt      time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
-	ContentID      int64     `ksql:"content_id" json:"content_id"`
-	ContentDynamic bool      `ksql:"content_dynamic" json:"content_dynamic"`
-	RuleID         int64     `ksql:"rule_id" json:"rule_id"`
-	Starred        bool      `ksql:"starred" json:"starred"`
+	ID             int64               `ksql:"id,skipInserts" json:"id"`
+	Proto          string              `ksql:"proto" json:"proto"`
+	Host           string              `ksql:"host" json:"host"`
+	Port           int64               `ksql:"port" json:"port"`
+	Method         string              `ksql:"method" json:"method"`
+	Uri            string              `ksql:"uri" json:"uri"`
+	Path           string              `ksql:"path" json:"path"`
+	Referer        string              `ksql:"referer" json:"referer"`
+	ContentLength  int64               `ksql:"content_length" json:"content_length"`
+	UserAgent      string              `ksql:"user_agent" json:"user_agent"`
+	Body           []byte              `ksql:"body" json:"body"`
+	HoneypotIP     string              `ksql:"honeypot_ip" json:"honeypot_ip"`
+	SourceIP       string              `ksql:"source_ip" json:"source_ip"`
+	SourcePort     int64               `ksql:"source_port" json:"source_port"`
+	Raw            string              `ksql:"raw" json:"raw"`
+	RawResponse    string              `ksql:"raw_response" json:"raw_response"`
+	TimeReceived   time.Time           `ksql:"time_received,skipUpdates" json:"time_received"`
+	CreatedAt      time.Time           `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt      time.Time           `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	ContentID      int64               `ksql:"content_id" json:"content_id"`
+	ContentDynamic bool                `ksql:"content_dynamic" json:"content_dynamic"`
+	RuleID         int64               `ksql:"rule_id" json:"rule_id"`
+	Starred        bool                `ksql:"starred" json:"starred"`
+	Tags           []TagPerRequestFull `json:"tags"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }
@@ -209,6 +210,11 @@ type TagPerRequest struct {
 
 func (c *TagPerRequest) ModelID() int64 { return c.ID }
 
+type TagPerRequestFull struct {
+	TagPerRequest TagPerRequest `tablename:"tag_per_request" json:"tag_per_request"`
+	Tag           Tag           `tablename:"tag" json:"tag"`
+}
+
 type DatabaseClient interface {
 	Close()
 	Insert(dm DataModel) (DataModel, error)
@@ -237,6 +243,9 @@ type DatabaseClient interface {
 	SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]TagPerQuery, error)
+	SearchTagPerRequest(offset int64, limit int64, query string) ([]TagPerRequest, error)
+	GetTagPerRequestFullForRequest(id int64) ([]TagPerRequestFull, error)
+	GetTagsPerRequestForRequestID(id int64) ([]TagPerRequest, error)
 	GetRequestsDistinctComboLastMonth() ([]Request, error)
 	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 }
@@ -386,7 +395,6 @@ func (d *KSQLClient) GetHoneypotByIP(ip string) (Honeypot, error) {
 
 func (d *KSQLClient) GetHoneypots() ([]Honeypot, error) {
 	var rs []Honeypot
-	// TODO: once last_checkin is set, order the result by it.
 	err := d.db.Query(d.ctx, &rs, "FROM honeypot")
 	return rs, err
 }
@@ -395,6 +403,12 @@ func (d *KSQLClient) GetWhoisByIP(ip string) (Whois, error) {
 	hp := Whois{}
 	err := d.db.QueryOne(d.ctx, &hp, "FROM whois WHERE ip = $1", ip)
 	return hp, err
+}
+
+func (d *KSQLClient) GetTagsPerRequestForRequestID(id int64) ([]TagPerRequest, error) {
+	var tags []TagPerRequest
+	err := d.db.Query(d.ctx, &tags, "FROM tag_per_request WHERE request_id = $1", id)
+	return tags, err
 }
 
 func (d *KSQLClient) GetRequests() ([]Request, error) {
@@ -435,9 +449,25 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
 	start := time.Now()
 	err = d.db.Query(d.ctx, &rs, query, values...)
+
+	if err != nil {
+		return rs, fmt.Errorf("error querying requests: %w", err)
+	}
+
+	var ret []Request
+	for _, req := range rs {
+		tags, err := d.GetTagPerRequestFullForRequest(req.ID)
+		if err != nil {
+			slog.Warn("error getting tags for request", slog.String("error", err.Error()))
+			req.Tags = []TagPerRequestFull{}
+		} else {
+			req.Tags = append(req.Tags, tags...)
+		}
+		ret = append(ret, req)
+	}
 	elapsed := time.Since(start)
 	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	return ret, err
 }
 
 func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
@@ -615,6 +645,34 @@ func (d *KSQLClient) SearchTagPerQuery(offset int64, limit int64, query string) 
 	return rs, err
 }
 
+func (d *KSQLClient) SearchTagPerRequest(offset int64, limit int64, query string) ([]TagPerRequest, error) {
+	var rs []TagPerRequest
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(TagPerRequest{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildQuery(params, "FROM tag_per_request", fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+// GetTagPerRequestFullForRequest returns a TagPerRequestFull struct which
+// contains a join of the TagPerRequest and Tag structs.
+func (d *KSQLClient) GetTagPerRequestFullForRequest(id int64) ([]TagPerRequestFull, error) {
+	var md []TagPerRequestFull
+	err := d.db.Query(d.ctx, &md, "FROM tag_per_request JOIN tag ON tag.id = tag_per_request.tag_id AND tag_per_request.request_id = $1", id)
+	return md, err
+}
+
 func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error) {
 	var md []RequestMetadata
 	err := d.db.Query(d.ctx, &md, "FROM request_metadata WHERE request_id = $1 ORDER BY type", id)
@@ -661,16 +719,20 @@ func (d *KSQLClient) DeleteContentRule(id int64) error {
 // FakeDatabaseClient is a struct specifically for testing users of the
 // DatabaseClient interface
 type FakeDatabaseClient struct {
-	ContentIDToReturn     int64
-	ContentsToReturn      map[int64]Content
-	ErrorToReturn         error
-	ContentRuleIDToReturn int64
-	ContentRulesToReturn  []ContentRule
-	RequestsToReturn      []Request
-	DownloadsToReturn     []Download
-	ApplicationToReturn   Application
-	HoneypotToReturn      Honeypot
-	HoneypotErrorToReturn error
+	ContentIDToReturn      int64
+	ContentsToReturn       map[int64]Content
+	ErrorToReturn          error
+	ContentRuleIDToReturn  int64
+	ContentRulesToReturn   []ContentRule
+	RequestsToReturn       []Request
+	DownloadsToReturn      []Download
+	ApplicationToReturn    Application
+	HoneypotToReturn       Honeypot
+	HoneypotErrorToReturn  error
+	QueriesToReturn        []StoredQuery
+	QueriesToReturnError   error
+	TagPerQueryReturn      []TagPerQuery
+	TagPerQueryReturnError error
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -763,11 +825,20 @@ func (f *FakeDatabaseClient) GetWhoisByIP(ip string) (Whois, error) {
 	return Whois{}, nil
 }
 func (f *FakeDatabaseClient) SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error) {
-	return []StoredQuery{}, nil
+	return f.QueriesToReturn, f.QueriesToReturnError
 }
 func (f *FakeDatabaseClient) SearchTags(offset int64, limit int64, query string) ([]Tag, error) {
 	return []Tag{}, nil
 }
 func (f *FakeDatabaseClient) SearchTagPerQuery(offset int64, limit int64, query string) ([]TagPerQuery, error) {
-	return []TagPerQuery{}, nil
+	return f.TagPerQueryReturn, f.TagPerQueryReturnError
+}
+func (f *FakeDatabaseClient) SearchTagPerRequest(offset int64, limit int64, query string) ([]TagPerRequest, error) {
+	return []TagPerRequest{}, nil
+}
+func (f *FakeDatabaseClient) GetTagsPerRequestForRequestID(id int64) ([]TagPerRequest, error) {
+	return []TagPerRequest{}, nil
+}
+func (f *FakeDatabaseClient) GetTagPerRequestFullForRequest(id int64) ([]TagPerRequestFull, error) {
+	return []TagPerRequestFull{}, nil
 }

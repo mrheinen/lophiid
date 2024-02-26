@@ -75,5 +75,17 @@ export default {
   padding-bottom: 10px;
 }
 
+th {
+  color: #616060 !important;
+}
+
+label {
+  color: #616060 !important;
+  margin-top: 0.5em;
+};
+
+.linkpointer {
+  cursor: pointer !important;
+}
 
 </style>

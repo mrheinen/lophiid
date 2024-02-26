@@ -29,6 +29,8 @@ type BackendServer struct {
 	dbClient        database.DatabaseClient
 	dLoader         downloader.Downloader
 	jRunner         javascript.JavascriptRunner
+	qRunner         QueryRunner
+	qRunnerChan     chan bool
 	vtMgr           vt.VTManager
 	whoisMgr        whois.WhoisManager
 	alertMgr        *alerting.AlertManager
@@ -41,7 +43,7 @@ type BackendServer struct {
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner) *BackendServer {
 	sCache := util.NewStringMapCache[database.ContentRule](time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
@@ -49,6 +51,8 @@ func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, 
 		dbClient:        c,
 		dLoader:         dLoader,
 		jRunner:         jRunner,
+		qRunner:         qRunner,
+		qRunnerChan:     make(chan bool),
 		alertMgr:        alertMgr,
 		vtMgr:           vtManager,
 		whoisMgr:        wManager,
@@ -508,6 +512,27 @@ func (s *BackendServer) Start() error {
 		}
 	}()
 
+	if err := s.qRunner.Run(); err != nil {
+		slog.Warn("error running queries", slog.String("error", err.Error()))
+	}
+	// Setup the requests processing
+	/*
+		qRunnerTicker := time.NewTicker(time.Second * 60)
+		go func() {
+			for {
+				select {
+				case <-s.reqsProcessChan:
+					qRunnerTicker.Stop()
+					return
+				case <-qRunnerTicker.C:
+					if err := s.qRunner.Run(); err != nil {
+						slog.Warn("error running queries", slog.String("error", err.Error()))
+					}
+				}
+			}
+		}()
+	*/
+
 	return nil
 }
 
@@ -519,6 +544,7 @@ func (s *BackendServer) Stop() {
 	// Stop the rules loading.
 	s.safeRulesChan <- true
 	s.reqsProcessChan <- true
+	s.qRunnerChan <- true
 	s.dbClient.Close()
 	s.alertMgr.Stop()
 }

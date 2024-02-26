@@ -15,14 +15,11 @@
 
       <table class="table is-hoverable" v-if="requests.length > 0">
         <thead>
-          <th id="date">Date</th>
+          <th>Date</th>
           <th>Honeypot</th>
           <th>Method</th>
           <th>Uri</th>
           <th>Src Host</th>
-          <th>Port</th>
-          <th>CID</th>
-          <th>RID</th>
           <th>Actions</th>
         </thead>
         <tbody>
@@ -32,28 +29,30 @@
             :key="req.id"
             :class="isSelectedId == req.id ? 'is-selected' : ''"
           >
-            <td>{{ req.parsed.received_at }}</td>
-            <td>{{ req.honeypot_ip }}</td>
-            <td v-if="req.method == 'POST'">
+            <td class="date">{{ req.parsed.received_at }}</td>
+            <td class="honeypot">{{ req.honeypot_ip }}:{{ req.port }}</td>
+            <td class="method" v-if="req.method == 'POST'">
               {{ req.method }} ({{ req.content_length }})
             </td>
-            <td v-else>{{ req.method }}</td>
-            <td>{{ req.parsed.uri }}</td>
-            <td>
+            <td class="method" v-else>{{ req.method }}</td>
+            <td class="uri">
+              <div>
+                <div style="float: left">
+                  {{ req.parsed.uri }}
+                </div>
+                <div style="float: left">
+                  <div v-for="t in req.tags" :key="t.tag.id">
+                    <div class="mytag">{{ t.tag.name }}</div>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="sourceip">
               <a
                 :href="getFreshRequestLink() + '?q=source_ip:' + req.source_ip"
               >
                 {{ req.source_ip }}</a
               >
-            </td>
-            <td>{{ req.port }}</td>
-            <td>
-              <a :href="'/content?q=id:' + req.content_id">{{
-                req.content_id
-              }}</a>
-            </td>
-            <td>
-              <a :href="'/rules?q=id:' + req.rule_id">{{ req.rule_id }}</a>
             </td>
             <td>
               <a
@@ -74,7 +73,7 @@
                 @click="toggleStarred(req.id)"
                 :class="req.starred ? 'starred' : ''"
                 title="Star this request"
-                class="pi pi-star"
+                class="pi pi-star pointer"
               ></i>
             </td>
           </tr>
@@ -401,8 +400,43 @@ export default {
 </script>
 
 <style scoped>
-#date {
+
+table th {
+  color: #616060 !important;
+}
+
+.mytag {
+  font-size: 0.65rem;
+  display: inline-block;
+  background-color: #ddd;
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 5px;
+  margin-left: 10px;
+}
+.date {
   width: 170px;
+  white-space: nowrap;
+}
+
+.method {
+  white-space: nowrap;
+}
+
+.honeypot {
+  width: 140px;
+}
+
+.sourceip {
+  width: 100px;
+}
+
+.uri {
+  width: 80%;
+}
+
+.pointer {
+  cursor: pointer;
 }
 
 table {

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "backend.go",
         "process.go",
+        "queries.go",
         "request_queue.go",
         "rule_cache.go",
         "safe_rules.go",
@@ -30,6 +31,7 @@ go_test(
     srcs = [
         "backend_test.go",
         "process_test.go",
+        "queries_test.go",
         "request_queue_test.go",
         "rule_cache_test.go",
     ],

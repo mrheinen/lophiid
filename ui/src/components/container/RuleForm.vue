@@ -23,7 +23,7 @@
             :max="65535"
           />
           &nbsp;
-          <i @click="onContentFormOpen()" class="pi pi-plus-circle"></i>
+          <i @click="onContentFormOpen()" class="pi pi-plus-circle pointer"></i>
         </div>
 
         <div>
@@ -38,7 +38,7 @@
           />
 
           &nbsp;
-          <i @click="onAppFormOpen()" class="pi pi-plus-circle"></i>
+          <i @click="onAppFormOpen()" class="pi pi-plus-circle pointer"></i>
         </div>
         <div>
           <label class="label">Body</label>
@@ -293,5 +293,9 @@ export default {
 textarea {
   width: 100%;
   height: 400px;
+}
+
+.pointer {
+  cursor: pointer;
 }
 </style>

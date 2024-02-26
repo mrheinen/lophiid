@@ -1,6 +1,7 @@
 package http_server
 
 import (
+	"fmt"
 	"io"
 	"loophid/backend_service"
 	"loophid/pkg/client"
@@ -11,6 +12,7 @@ import (
 
 func TestCatchAllOk(t *testing.T) {
 	var port int64 = 8888
+	listenAddr := fmt.Sprintf("127.0.0.1:%d", port)
 
 	expectedResponseBody := []byte("hello123")
 	expectedHeader := "Content-Type"
@@ -34,7 +36,7 @@ func TestCatchAllOk(t *testing.T) {
 	}
 
 	// Call the actual code.
-	s := NewHttpServer(&bc, port, "127.0.0.1")
+	s := NewHttpServer(&bc, listenAddr, "127.0.0.1")
 	req := httptest.NewRequest(http.MethodGet, "/test?aa=bb&cc=dd", nil)
 	w := httptest.NewRecorder()
 	s.catchAll(w, req)

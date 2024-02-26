@@ -79,7 +79,7 @@
                   @click="toggleAlert(rule.id)"
                   :class="rule.alert ? 'alert' : ''"
                   title="Enable alerting"
-                  class="pi pi-bell"
+                  class="pi pi-bell pointer"
                 ></i>
               </td>
             </tr>
@@ -547,5 +547,9 @@ table {
 
 .alert {
   color: red;
+}
+
+.pointer {
+  cursor: pointer;
 }
 </style>

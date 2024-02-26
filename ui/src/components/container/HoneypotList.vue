@@ -129,11 +129,11 @@ export default {
       }
     },
     getFreshHoneypotLink() {
-      return this.config.honeypotSegmentLink + "/0/" + this.limit;
+      return this.config.honeypotsLink + "/0/" + this.limit;
     },
     getHoneypotLink() {
       let link =
-        this.config.honeypotSegmentLink + "/" + this.offset + "/" + this.limit;
+        this.config.honeypotsLink + "/" + this.offset + "/" + this.limit;
       if (this.query) {
         link += "?q=" + this.query;
       }

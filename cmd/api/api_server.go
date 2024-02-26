@@ -100,6 +100,8 @@ func main() {
 	r.HandleFunc("/tag/segment", as.HandleSearchTags).Methods("GET")
 	r.HandleFunc("/tag/delete", as.HandleDeleteTag).Methods("POST")
 
+	r.HandleFunc("/tagforrequest/get", as.HandleGetTagsForRequestFull).Methods("POST")
+
 	r.HandleFunc("/whois/ip", as.HandleGetWhoisForIP).Methods("POST")
 
 	r.HandleFunc("/storedquery/segment", as.HandleSearchStoredQueries).Methods("GET")
