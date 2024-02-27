@@ -161,6 +161,8 @@ func (v *VTClient) SubmitURL(url string) (SubmitURLResponse, error) {
 		return ret, fmt.Errorf("cannot read response: %s", err)
 	}
 
+	fmt.Printf("XXX: %s", string(body))
+
 	if err = json.Unmarshal(body, &ret); err != nil {
 		return ret, fmt.Errorf("while unmarshalling: %s", err)
 	}

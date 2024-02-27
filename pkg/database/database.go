@@ -149,12 +149,17 @@ type Download struct {
 	OriginalUrl   string    `ksql:"original_url" json:"original_url"`
 	UsedUrl       string    `ksql:"used_url" json:"used_url"`
 	IP            string    `ksql:"ip" json:"ip"`
-	SHA256sum     string    `ksql:"sha256sum" json:"sha265sum"`
+	SHA256sum     string    `ksql:"sha256sum" json:"sha256sum"`
 	Host          string    `ksql:"host" json:"host"`
 	FileLocation  string    `ksql:"file_location" json:"file_location"`
 	TimesSeen     int64     `ksql:"times_seen" json:"times_seen"`
 	LastRequestID int64     `ksql:"last_request_id" json:"last_request_id"`
 	VTAnalysisID  string    `ksql:"vt_analysis_id" json:"vt_analysis_id"`
+	VTAnalysisHarmless   int64     `ksql:"vt_analysis_harmless" json:"vt_analysis_harmless"`
+	VTAnalysisMalicious  int64     `ksql:"vt_analysis_malicious" json:"vt_analysis_malicious"`
+	VTAnalysisSuspicious int64     `ksql:"vt_analysis_suspicious" json:"vt_analysis_suspicious"`
+	VTAnalysisUndetected int64     `ksql:"vt_analysis_undetected" json:"vt_analysis_undetected"`
+	VTAnalysisTimeout    int64     `ksql:"vt_analysis_timeout" json:"vt_analysis_timeout"`
 }
 
 func (c *Download) ModelID() int64 { return c.ID }
@@ -442,7 +447,7 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM request", fmt.Sprintf("ORDER BY time_received DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM request", fmt.Sprintf("ORDER BY time_received DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -478,7 +483,7 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM content_rule", fmt.Sprintf("ORDER BY app_id,created_at DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM content_rule", fmt.Sprintf("ORDER BY app_id,created_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -498,7 +503,7 @@ func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]C
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM content", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM content", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -518,7 +523,7 @@ func (d *KSQLClient) SearchApps(offset int64, limit int64, query string) ([]Appl
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM app", fmt.Sprintf("OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM app", fmt.Sprintf("OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -540,7 +545,7 @@ func (d *KSQLClient) SearchDownloads(offset int64, limit int64, query string) ([
 
 	// Important: the order by last seen is something that the Virustotal manager
 	// depends on to return the newest entry.
-	query, values, err := buildQuery(params, "FROM downloads", fmt.Sprintf("ORDER BY last_seen_at DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM downloads", fmt.Sprintf("ORDER BY last_seen_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -560,7 +565,7 @@ func (d *KSQLClient) SearchHoneypots(offset int64, limit int64, query string) ([
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM honeypot", fmt.Sprintf("ORDER BY last_checkin DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM honeypot", fmt.Sprintf("ORDER BY last_checkin DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -580,7 +585,7 @@ func (d *KSQLClient) SearchStoredQuery(offset int64, limit int64, query string) 
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM stored_query", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM stored_query", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -613,7 +618,7 @@ func (d *KSQLClient) SearchTags(offset int64, limit int64, query string) ([]Tag,
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM tag", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM tag", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -633,7 +638,7 @@ func (d *KSQLClient) SearchTagPerQuery(offset int64, limit int64, query string) 
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM tag_per_query", fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM tag_per_query", fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -653,7 +658,7 @@ func (d *KSQLClient) SearchTagPerRequest(offset int64, limit int64, query string
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildQuery(params, "FROM tag_per_request", fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM tag_per_request", fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}

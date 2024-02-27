@@ -69,8 +69,7 @@
       ></i>
     </div>
     <div class="column mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
-      <!--     <app-form @update-app="reloadDownloads()" :app="selectedApp"></app-form>
- -->
+       <downloads-form :download="selectedDownload"></downloads-form>
     </div>
   </div>
 </template>
@@ -80,10 +79,10 @@ function dateToString(inDate) {
   const nd = new Date(Date.parse(inDate));
   return nd.toLocaleString();
 }
-//import DownloadForm from "./AppForm.vue";
+import DownloadsForm from "./DownloadsForm.vue";
 export default {
   components: {
-    // DownloadForm,
+     DownloadsForm,
   },
   inject: ["config"],
   emits: ['require-auth'],

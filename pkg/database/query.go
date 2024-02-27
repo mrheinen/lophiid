@@ -31,10 +31,11 @@ type SearchRequestsParam struct {
 //
 // The separator between the keyword and value indicates what kind of matching
 // is wanted. The supported seperators are:
-//    :    - match exactly
-//    >    - greater than
-//    <    - lower than
-//    ~    - like/contains (use with percentages)
+//
+//	:    - match exactly
+//	>    - greater than
+//	<    - lower than
+//	~    - like/contains (use with percentages)
 //
 // Example queries are below. Note that keywords are dependent on the type of
 // data being queried. These examples are for requests data.
@@ -56,15 +57,27 @@ type SearchRequestsParam struct {
 //
 // Finally, you can search date fields with < and >
 // method:GET created_at<2024-01-6
-
-func ParseQuery(q string, validFields []string) ([]SearchRequestsParam, error) {
-	var ret []SearchRequestsParam
+func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error) {
+	var ret [][]SearchRequestsParam
 	outsideParam := true
 
+	currentParams := make([]SearchRequestsParam, 0)
 	for i := 0; i < len(q); {
 		if outsideParam && unicode.IsSpace(rune(q[i])) {
 			i++
 			continue
+		}
+
+		if i < (len(q) - 2) {
+			if q[i] == 'O' && q[i+1] == 'R' {
+				i += 2
+
+				fmt.Printf("ONE: %+v\n", currentParams)
+				ret = append(ret, currentParams)
+				currentParams = make([]SearchRequestsParam, 0)
+				continue
+
+			}
 		}
 
 		outsideParam = false
@@ -138,12 +151,18 @@ func ParseQuery(q string, validFields []string) ([]SearchRequestsParam, error) {
 			return ret, fmt.Errorf("unknown seperator %c", separator)
 		}
 
-		ret = append(ret, SearchRequestsParam{
+		fmt.Printf("PPPP %s\n", keyword.String())
+		currentParams = append(currentParams, SearchRequestsParam{
 			key:      keyword.String(),
 			value:    value.String(),
 			matching: whereType,
 			not:      not,
 		})
+	}
+
+	if len(currentParams) > 0 {
+		fmt.Printf("YYYYY\n")
+		ret = append(ret, currentParams)
 	}
 
 	return ret, nil
@@ -153,54 +172,77 @@ func getWhereClause(index int, s *SearchRequestsParam) (string, error) {
 	switch s.matching {
 	case IS:
 		if s.not {
-			return fmt.Sprintf("%s != $%d ", s.key, index), nil
+			return fmt.Sprintf("%s != $%d", s.key, index), nil
 		}
-		return fmt.Sprintf("%s = $%d ", s.key, index), nil
+		return fmt.Sprintf("%s = $%d", s.key, index), nil
 	case LIKE:
 		if !strings.Contains(s.value, "%") {
 			s.value = fmt.Sprintf("%s%%", s.value)
 		}
 
 		if s.not {
-			return fmt.Sprintf("%s NOT LIKE $%d ", s.key, index), nil
+			return fmt.Sprintf("%s NOT LIKE $%d", s.key, index), nil
 		}
-		return fmt.Sprintf("%s LIKE $%d ", s.key, index), nil
+		return fmt.Sprintf("%s LIKE $%d", s.key, index), nil
 	case LOWER_THAN:
 		if s.not {
-			return fmt.Sprintf("%s >= $%d ", s.key, index), nil
+			return fmt.Sprintf("%s >= $%d", s.key, index), nil
 		}
-		return fmt.Sprintf("%s < $%d ", s.key, index), nil
+		return fmt.Sprintf("%s < $%d", s.key, index), nil
 
 	case GREATER_THAN:
 		if s.not {
-			return fmt.Sprintf("%s <= $%d ", s.key, index), nil
+			return fmt.Sprintf("%s <= $%d", s.key, index), nil
 		}
-		return fmt.Sprintf("%s > $%d ", s.key, index), nil
+		return fmt.Sprintf("%s > $%d", s.key, index), nil
 	}
 
 	return "", fmt.Errorf("could not match %+v", s)
 }
 
-func buildQuery(params []SearchRequestsParam, queryPrefix string, querySuffix string) (string, []interface{}, error) {
+// buildComposedQuery creates a query from the given array of parameters arrays.
+// Each seperate parameter array is treated as a subquery and they are combined
+// with OR.
+func buildComposedQuery(params [][]SearchRequestsParam, queryPrefix string, querySuffix string) (string, []interface{}, error) {
 	baseQuery := queryPrefix
 
-	idx := 1
 	var values []interface{}
-	for _, param := range params {
-		wc, err := getWhereClause(idx, &param)
-		if err != nil {
-			return "", nil, err
+
+	var subQueries []string
+	valueIdx := 1
+	for _, paramSet := range params {
+		subQuery := ""
+		for i, param := range paramSet {
+
+			wc, err := getWhereClause(valueIdx, &param)
+			if err != nil {
+				return "", nil, err
+			}
+
+			if i == 0 {
+				subQuery = wc
+				values = append(values, param.value)
+			} else {
+				subQuery = fmt.Sprintf("%s AND %s", subQuery, wc)
+				values = append(values, param.value)
+			}
+			valueIdx += 1
 		}
-		if idx == 1 {
-			baseQuery = fmt.Sprintf("%s WHERE %s", baseQuery, wc)
-			values = append(values, param.value)
-		} else {
-			baseQuery = fmt.Sprintf("%s AND %s", baseQuery, wc)
-			values = append(values, param.value)
-		}
-		idx++
+
+		subQueries = append(subQueries, subQuery)
 	}
 
+	if len(subQueries) > 0 {
+		baseQuery = fmt.Sprintf("%s WHERE", baseQuery)
+		for i, q := range subQueries {
+			if i == 0 {
+				baseQuery = fmt.Sprintf("%s (%s)", baseQuery, q)
+			} else {
+				baseQuery = fmt.Sprintf("%s OR (%s)", baseQuery, q)
+			}
+		}
+
+	}
 	baseQuery = fmt.Sprintf("%s %s", baseQuery, querySuffix)
 	return baseQuery, values, nil
 }

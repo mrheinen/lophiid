@@ -56,3 +56,10 @@ Add support for abuseipdb and urlhaus.
 Add support for netcat, ftp and tcp bash payloads.
 
 Allow content to be set default for all new honeypots.
+
+
+Store that a request was alerted so you can searcg on reqyests that triggered an
+alert.
+
+Add OR support to search
+
