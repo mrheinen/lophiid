@@ -429,7 +429,7 @@ func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile stri
 		}
 
 		// If the virustotal analysis ID is not set, try to submit the URL.
-		if s.vtMgr != nil && len(dm.VTAnalysisID) == 0 {
+		if s.vtMgr != nil && len(dm.VTURLAnalysisID) == 0 {
 			s.vtMgr.QueueURL(dInfo.OriginalUrl)
 		}
 	} else {
@@ -515,23 +515,24 @@ func (s *BackendServer) Start() error {
 	if err := s.qRunner.Run(); err != nil {
 		slog.Warn("error running queries", slog.String("error", err.Error()))
 	}
-	// Setup the requests processing
-	/*
-		qRunnerTicker := time.NewTicker(time.Second * 60)
-		go func() {
-			for {
-				select {
-				case <-s.reqsProcessChan:
-					qRunnerTicker.Stop()
-					return
-				case <-qRunnerTicker.C:
-					if err := s.qRunner.Run(); err != nil {
-						slog.Warn("error running queries", slog.String("error", err.Error()))
-					}
+
+	qRunnerTicker := time.NewTicker(time.Minute * 5)
+	go func() {
+		for {
+			select {
+			case <-s.qRunnerChan:
+				qRunnerTicker.Stop()
+				return
+			case <-qRunnerTicker.C:
+				start := time.Now()
+				if err := s.qRunner.Run(); err != nil {
+					slog.Warn("error running queries", slog.String("error", err.Error()))
 				}
+				elapsed := time.Since(start)
+				slog.Debug("query RUNNER took", slog.String("elapsed", elapsed.String()))
 			}
-		}()
-	*/
+		}
+	}()
 
 	return nil
 }

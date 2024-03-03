@@ -11,6 +11,7 @@ import (
 type VTManager interface {
 	ProcessURLQueue() error
 	QueueURL(ip string)
+	SubmitFiles() error
 	Start()
 	Stop()
 }
@@ -20,6 +21,9 @@ type FakeVTManager struct {
 }
 
 func (f *FakeVTManager) ProcessURLQueue() error {
+	return f.ErrorToReturn
+}
+func (f *FakeVTManager) SubmitFiles() error {
 	return f.ErrorToReturn
 }
 func (f *FakeVTManager) QueueURL(ip string) {}
@@ -57,7 +61,7 @@ func (v *VTBackgroundManager) URLQueueLen() int {
 
 func (v *VTBackgroundManager) Start() {
 	slog.Info("Starting VT manager")
-	ticker := time.NewTicker(time.Second * 60)
+	ticker := time.NewTicker(time.Second * 300)
 	go func() {
 		for {
 			select {
@@ -66,13 +70,25 @@ func (v *VTBackgroundManager) Start() {
 				slog.Info("VT manager stopped")
 				return
 			case <-ticker.C:
+				slog.Debug("Fetching analysis")
+				err := v.GetFileAnalysis()
+				if err != nil {
+					slog.Warn("error fetching file analysis", slog.String("error", err.Error()))
+				}
+
 				slog.Debug("Processing URL queue", slog.Int("queue_len", len(v.urlQueue)))
-				if err := v.ProcessURLQueue(); err != nil {
+				if err = v.ProcessURLQueue(); err != nil {
 					if err == ErrQuotaReached {
 						slog.Debug("Reached VT quota (URL queue)")
 					} else {
 						slog.Warn("error processing URL queue", slog.String("error", err.Error()))
 					}
+				}
+
+				slog.Debug("Submitting files")
+				err = v.SubmitFiles()
+				if err != nil {
+					slog.Warn("error submitting file", slog.String("error", err.Error()))
 				}
 			}
 		}
@@ -83,6 +99,76 @@ func (v *VTBackgroundManager) Start() {
 func (v *VTBackgroundManager) Stop() {
 	slog.Info("Stopping VT manager")
 	v.bgChan <- true
+}
+
+func (v *VTBackgroundManager) SubmitFiles() error {
+	dls, err := v.dbClient.SearchDownloads(0, 10, "vt_file_analysis_submitted:false")
+	if err != nil {
+		return fmt.Errorf("error searching: %w", err)
+	}
+
+	for _, dl := range dls {
+		slog.Info("Submitting file", slog.String("file", dl.FileLocation))
+		cRes, err := v.vtClient.SubmitFile(dl.FileLocation)
+		if err != nil {
+			slog.Warn("error submitting file", slog.String("error", err.Error()))
+		} else {
+			dl.VTFileAnalysisID = cRes.Data.ID
+		}
+
+		dl.VTFileAnalysisSubmitted = true
+		err = v.dbClient.Update(&dl)
+		if err != nil {
+			return fmt.Errorf("error updating download: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// Prefered engines for which we store the results for displaying in the UI
+var PreferedFileResultEngines = []string{"Fortinet", "Avast", "BitDefender", "Microsoft", "McAfee", "TrendMicro"}
+
+func (v *VTBackgroundManager) GetFileAnalysis() error {
+	dls, err := v.dbClient.SearchDownloads(0, 10, "vt_file_analysis_done:false")
+	if err != nil {
+		return fmt.Errorf("error searching: %w", err)
+	}
+
+	for _, dl := range dls {
+		slog.Info("Fetching analysis for file", slog.String("file", dl.FileLocation))
+		cRes, err := v.vtClient.GetFileAnalysis(dl.VTFileAnalysisID)
+		if err != nil {
+			slog.Warn("error fetching analysis", slog.String("error", err.Error()))
+			continue
+		}
+
+		if cRes.Data.Attributes.Status != "completed" {
+			continue
+		}
+
+		dl.VTAnalysisMalicious = cRes.Data.Attributes.Stats.Malicious
+		dl.VTAnalysisUndetected = cRes.Data.Attributes.Stats.Undetected
+		dl.VTAnalysisSuspicious = cRes.Data.Attributes.Stats.Suspicious
+		dl.VTAnalysisTimeout = cRes.Data.Attributes.Stats.Timeout
+		dl.VTAnalysisHarmless = cRes.Data.Attributes.Stats.Harmless
+		dl.VTFileAnalysisDone = true
+
+		// Append only the results from our prefered engines.
+		for _, en := range PreferedFileResultEngines {
+			if result, ok := cRes.Data.Attributes.Results[en]; ok && result.Result != "" {
+				newResult := fmt.Sprintf("%s: %s", en, result.Result)
+				dl.VTFileAnalysisResult = append(dl.VTFileAnalysisResult, newResult)
+			}
+		}
+
+		err = v.dbClient.Update(&dl)
+		if err != nil {
+			return fmt.Errorf("error updating download: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (v *VTBackgroundManager) ProcessURLQueue() error {
@@ -112,7 +198,8 @@ func (v *VTBackgroundManager) ProcessURLQueue() error {
 			slog.Warn("did not find database entry for URL", slog.String("url", k))
 		} else {
 			dl := dls[0]
-			dl.VTAnalysisID = cRes.Data.ID
+			dl.VTURLAnalysisID = cRes.Data.ID
+
 			if err := v.dbClient.Update(&dl); err != nil {
 				slog.Warn("error updating download", slog.String("url", k), slog.String("error", err.Error()))
 			}

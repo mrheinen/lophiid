@@ -42,7 +42,7 @@
             <tr
               v-for="rule in appRules"
               @click="setSelectedRule(rule.id)"
-              :key="rule.id"
+              :key="rule.id + rule.alert"
               :class="isSelectedId == rule.id ? 'is-selected' : ''"
             >
               <td
@@ -76,10 +76,13 @@
                 </a>
                 &nbsp;
                 <i
-                  @click="toggleAlert(rule.id)"
-                  :class="rule.alert ? 'alert' : ''"
+                  @click="toggleAlert(rule)"
                   title="Enable alerting"
-                  class="pi pi-bell pointer"
+                  :class="
+                    rule.alert
+                      ? 'pi pi-bell pointer alert'
+                      : 'pi pi-bell pointer'
+                  "
                 ></i>
               </td>
             </tr>
@@ -141,6 +144,7 @@ export default {
       limit: 24,
       offset: 0,
       rules: [],
+      ruleAlertClass: "pi pi-bell pointer",
       searchIsFocused: false,
       rulesLoading: false,
       apps: {},
@@ -162,21 +166,21 @@ export default {
     };
   },
   methods: {
-    toggleAlert(id) {
+    toggleAlert(rule) {
       var alertRule = null;
       for (var i = 0; i < this.rules.length; i++) {
-        if (this.rules[i].id == id) {
+        if (this.rules[i].id == rule.id) {
           alertRule = this.rules[i];
+          rule.alert = !rule.alert;
           break;
         }
       }
 
       if (alertRule == null) {
-        console.log("Could not find rule with ID: " + id);
+        console.log("Could not find rule with ID: " + rule.id);
         return;
       }
 
-      alertRule.alert = !alertRule.alert;
       // Copy it so that when we delete the "parsed" section it does not mess up
       // the UI.
       var copyRule = Object.assign({}, alertRule);

@@ -41,8 +41,10 @@
                   {{ req.parsed.uri }}
                 </div>
                 <div style="float: left">
-                  <div v-for="t in req.tags" :key="t.tag.id">
-                    <div class="mytag">{{ t.tag.name }}</div>
+                  <div>
+                    <div v-for="t in req.tags" :key="t.tag.id" :title="t.tag.description" class="mytag">
+                      {{ t.tag.name }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -408,7 +410,7 @@ table th {
 .mytag {
   font-size: 0.65rem;
   display: inline-block;
-  background-color: #ddd;
+  background-color: #d7e7dc;
   padding-right: 3px;
   padding-left: 3px;
   border-radius: 5px;

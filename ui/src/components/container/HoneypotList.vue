@@ -20,6 +20,7 @@
           <th>First seen</th>
           <th>Last checkin</th>
           <th>Default content</th>
+          <th># 24 hours</th>
         </thead>
         <tbody>
           <tr
@@ -37,6 +38,7 @@
             <td>{{ honeypot.parsed.created_at }}</td>
             <td>{{ honeypot.parsed.last_checkin }}</td>
             <td>{{ honeypot.default_content_id }}</td>
+            <td>{{ honeypot.request_count_last_day }}</td>
           </tr>
         </tbody>
       </table>

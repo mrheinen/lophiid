@@ -172,6 +172,22 @@ func TestParseQuery(t *testing.T) {
 			},
 		},
 		{
+			description:   "Label",
+			queryString:   "label:mother",
+			errorContains: "",
+			validFields:   []string{"label"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "label",
+						value:    "mother",
+						matching: 0,
+						not:      false,
+					},
+				},
+			},
+		},
+		{
 			description:   "unknown keyword",
 			queryString:   "foo:bar",
 			errorContains: "unknown search",
@@ -297,6 +313,22 @@ func TestBuildComposedQuery(t *testing.T) {
 					{
 						key:      "port",
 						value:    "80",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "label yield ok query",
+			errorContains: "",
+			queryPrefix:   "SELECT * FROM table",
+			querySuffix:   "LIMIT 10",
+			resultQuery:   "SELECT * FROM table WHERE (id IN (SELECT tag_per_request.request_id FROM tag_per_request join tag ON tag.id = tag_per_request.tag_id AND tag.name = $1)) LIMIT 10",
+			params: [][]SearchRequestsParam{
+				{
+					{
+						key:      "label",
+						value:    "wget",
 						matching: IS,
 					},
 				},

@@ -6,8 +6,9 @@ import (
 )
 
 type FakeVTClient struct {
-	SubmitURLResponseToReturn SubmitURLResponse
-	ErrorToReturn             error
+	SubmitURLResponseToReturn    SubmitURLResponse
+	FileAnalysisResponseToReturn FileAnalysisResponse
+	ErrorToReturn                error
 }
 
 func (f *FakeVTClient) Start() {}
@@ -17,6 +18,12 @@ func (f *FakeVTClient) SubmitURL(url string) (SubmitURLResponse, error) {
 }
 func (f *FakeVTClient) CheckIP(ip string) (CheckIPResponse, error) {
 	return CheckIPResponse{}, nil
+}
+func (f *FakeVTClient) SubmitFile(filename string) (AnalysisResponse, error) {
+	return AnalysisResponse{}, nil
+}
+func (f *FakeVTClient) GetFileAnalysis(id string) (FileAnalysisResponse, error) {
+	return f.FileAnalysisResponseToReturn, f.ErrorToReturn
 }
 
 func TestProcessURLQueue(t *testing.T) {
@@ -61,8 +68,49 @@ func TestProcessURLQueue(t *testing.T) {
 			if mgr.URLQueueLen() != test.expectedQueueLenAfter {
 				t.Errorf("expected %d, got %d", test.expectedQueueLenAfter, mgr.URLQueueLen())
 			}
-
 		})
+	}
+}
 
+func TestManagerGetFileAnalysis(t *testing.T) {
+
+	fakeDBClient := database.FakeDatabaseClient{
+		DownloadsToReturn: []database.Download{
+			{
+				ID:                 42,
+				VTFileAnalysisDone: false,
+				VTFileAnalysisID:   "AAAA",
+			},
+		},
+	}
+
+	fakeVTClient := FakeVTClient{
+
+		FileAnalysisResponseToReturn: FileAnalysisResponse{
+			Data: FileAnalysisData{
+				Attributes: FileAnalysisAttributes{
+					Stats: AnalysisStats{
+						Malicious:  10,
+						Undetected: 10,
+						Suspicious: 10,
+						Harmless:   10,
+						Timeout:    10,
+					},
+					Status: "completed",
+					Results: map[string]EngineResult{
+						"Fortinet": {
+							Result: "something/Virus",
+						},
+					},
+				},
+			},
+		},
+		ErrorToReturn: nil,
+	}
+
+	mgr := NewVTBackgroundManager(&fakeDBClient, &fakeVTClient)
+	err := mgr.GetFileAnalysis()
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }

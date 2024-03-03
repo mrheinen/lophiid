@@ -1,13 +1,17 @@
 package vt
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"loophid/pkg/util"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -21,24 +25,28 @@ type VTClientInterface interface {
 	Stop()
 	CheckIP(ip string) (CheckIPResponse, error)
 	SubmitURL(url string) (SubmitURLResponse, error)
+	SubmitFile(filename string) (AnalysisResponse, error)
+	GetFileAnalysis(id string) (FileAnalysisResponse, error)
 }
 
 // VTClient is a virustotal client that uses a cache for storing already
 // received results.
 type VTClient struct {
-	apiKey   string
-	ipCache  *util.StringMapCache[CheckIPResponse]
-	urlCache *util.StringMapCache[SubmitURLResponse]
-	bgChan   chan bool
+	apiKey     string
+	ipCache    *util.StringMapCache[CheckIPResponse]
+	urlCache   *util.StringMapCache[SubmitURLResponse]
+	bgChan     chan bool
+	httpClient *http.Client
 }
 
-func NewVTClient(apikey string, cacheTimeout time.Duration) *VTClient {
+func NewVTClient(apikey string, cacheTimeout time.Duration, httpClient *http.Client) *VTClient {
 	ic := util.NewStringMapCache[CheckIPResponse](cacheTimeout)
 	uc := util.NewStringMapCache[SubmitURLResponse](cacheTimeout)
 	return &VTClient{
-		apiKey:   apikey,
-		ipCache:  ic,
-		urlCache: uc,
+		apiKey:     apikey,
+		ipCache:    ic,
+		urlCache:   uc,
+		httpClient: httpClient,
 	}
 }
 
@@ -61,11 +69,11 @@ type CheckIPAttributes struct {
 }
 
 type AnalysisStats struct {
-	Harmless   int `json:"harmless"`
-	Malicious  int `json:"malicious"`
-	Suspicious int `json:"suspicious"`
-	Undetected int `json:"undetected"`
-	Timeout    int `json:"timeout"`
+	Harmless   int64 `json:"harmless"`
+	Malicious  int64 `json:"malicious"`
+	Suspicious int64 `json:"suspicious"`
+	Undetected int64 `json:"undetected"`
+	Timeout    int64 `json:"timeout"`
 }
 
 // Submit URL data
@@ -79,19 +87,44 @@ type SubmitURLAnalysisData struct {
 }
 
 // The URL analysis response.
-type URLAnalysisResponse struct {
-	Data URLAnalysisData `json:"data"`
+type AnalysisResponse struct {
+	Data AnalysisData `json:"data"`
 }
 
-type URLAnalysisData struct {
-	Type       string                `json:"type"`
-	ID         string                `json:"id"`
-	Attributes URLAnalysisAttributes `json:"attributes"`
+type AnalysisData struct {
+	Type       string             `json:"type"`
+	ID         string             `json:"id"`
+	Attributes AnalysisAttributes `json:"attributes"`
 }
 
-type URLAnalysisAttributes struct {
+type AnalysisAttributes struct {
 	LastAnalysisDate  int64         `json:"last_analysis_date"`
 	LastAnalysisStats AnalysisStats `json:"last_analysis_stats"`
+}
+
+// The File analysis response.
+type FileAnalysisResponse struct {
+	Data FileAnalysisData `json:"data"`
+}
+
+type FileAnalysisData struct {
+	Type       string                 `json:"type"`
+	ID         string                 `json:"id"`
+	Attributes FileAnalysisAttributes `json:"attributes"`
+}
+
+type FileAnalysisAttributes struct {
+	Date    int64                   `json:"date"`
+	Status  string                  `json:"status"`
+	Stats   AnalysisStats           `json:"stats"`
+	Results map[string]EngineResult `json:"results"`
+}
+
+type EngineResult struct {
+	Method     string `json:"method"`
+	EngineName string `json:"engine_name"`
+	Category   string `json:"category"`
+	Result     string `json:"result"`
 }
 
 func (v *VTClient) CheckIP(ip string) (CheckIPResponse, error) {
@@ -107,7 +140,7 @@ func (v *VTClient) CheckIP(ip string) (CheckIPResponse, error) {
 	req.Header.Add("x-apikey", v.apiKey)
 
 	var ret CheckIPResponse
-	res, err := http.DefaultClient.Do(req)
+	res, err := v.httpClient.Do(req)
 	if err != nil {
 		return ret, fmt.Errorf("while fetching: %s", err)
 	}
@@ -146,7 +179,7 @@ func (v *VTClient) SubmitURL(url string) (SubmitURLResponse, error) {
 	req.Header.Add("x-apikey", v.apiKey)
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := v.httpClient.Do(req)
 	if err != nil {
 		return ret, fmt.Errorf("while fetching: %s", err)
 	}
@@ -161,8 +194,6 @@ func (v *VTClient) SubmitURL(url string) (SubmitURLResponse, error) {
 		return ret, fmt.Errorf("cannot read response: %s", err)
 	}
 
-	fmt.Printf("XXX: %s", string(body))
-
 	if err = json.Unmarshal(body, &ret); err != nil {
 		return ret, fmt.Errorf("while unmarshalling: %s", err)
 	}
@@ -171,8 +202,8 @@ func (v *VTClient) SubmitURL(url string) (SubmitURLResponse, error) {
 	return ret, nil
 }
 
-func (v *VTClient) GetURLAnalysis(id string) (URLAnalysisResponse, error) {
-	var ret URLAnalysisResponse
+func (v *VTClient) GetURLAnalysis(id string) (AnalysisResponse, error) {
+	var ret AnalysisResponse
 	vtUrl := fmt.Sprintf("https://www.virustotal.com/api/v3/urls/%s", id)
 
 	req, _ := http.NewRequest("GET", vtUrl, nil)
@@ -180,7 +211,92 @@ func (v *VTClient) GetURLAnalysis(id string) (URLAnalysisResponse, error) {
 	req.Header.Add("x-apikey", v.apiKey)
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := v.httpClient.Do(req)
+	if err != nil {
+		return ret, fmt.Errorf("while fetching: %s", err)
+	}
+
+	if res.StatusCode == 204 || res.StatusCode == 429 {
+		return ret, ErrQuotaReached
+	}
+
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return ret, fmt.Errorf("cannot read response: %s", err)
+	}
+
+	if err = json.Unmarshal(body, &ret); err != nil {
+		return ret, fmt.Errorf("while unmarshalling: %s", err)
+	}
+
+	return ret, nil
+}
+
+// GetAnalysis returns the Analysis response for a URL or File ID.
+func (v *VTClient) GetFileAnalysis(id string) (FileAnalysisResponse, error) {
+	var ret FileAnalysisResponse
+	vtUrl := fmt.Sprintf("https://www.virustotal.com/api/v3/analyses/%s", id)
+
+	req, _ := http.NewRequest("GET", vtUrl, nil)
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("x-apikey", v.apiKey)
+	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+
+	res, err := v.httpClient.Do(req)
+	if err != nil {
+		return ret, fmt.Errorf("while fetching: %s", err)
+	}
+
+	if res.StatusCode == 204 || res.StatusCode == 429 {
+		return ret, ErrQuotaReached
+	}
+
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return ret, fmt.Errorf("cannot read response: %s", err)
+	}
+
+	if err = json.Unmarshal(body, &ret); err != nil {
+		return ret, fmt.Errorf("while unmarshalling: %s", err)
+	}
+
+	return ret, nil
+}
+
+// SubmitFile send the file for analysis to VirusTotal.
+func (v *VTClient) SubmitFile(pathWithFilename string) (AnalysisResponse, error) {
+	var ret AnalysisResponse
+	vtUrl := "https://www.virustotal.com/api/v3/files"
+
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+	file, err := os.Open(pathWithFilename)
+	if err != nil {
+		return ret, fmt.Errorf("opening file: %w", err)
+	}
+	defer file.Close()
+
+	fileWithoutPath := filepath.Base(pathWithFilename)
+	fw, err := w.CreateFormFile("file", fileWithoutPath)
+	if err != nil {
+		return ret, fmt.Errorf("creating file form: %w", err)
+	}
+
+	if _, err = io.Copy(fw, file); err != nil {
+		return ret, fmt.Errorf("copying file in form: %w", err)
+	}
+
+	// Close the multipart writer to finalize the request
+	w.Close()
+
+	req, _ := http.NewRequest("POST", vtUrl, &buf)
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("x-apikey", v.apiKey)
+	req.Header.Add("content-type", w.FormDataContentType())
+
+	res, err := v.httpClient.Do(req)
 	if err != nil {
 		return ret, fmt.Errorf("while fetching: %s", err)
 	}

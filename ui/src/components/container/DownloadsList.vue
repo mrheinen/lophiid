@@ -31,26 +31,51 @@
             :key="dl.id"
             :class="isSelectedId == dl.id ? 'is-selected' : ''"
           >
-            <td> {{ dl.id }} </td>
+            <td>{{ dl.id }}</td>
             <td>
-              <a :href="'/requests?q=id:' + dl.request_id">{{ dl.request_id }}</a>
+              <a :href="'/requests?q=id:' + dl.request_id">{{
+                dl.request_id
+              }}</a>
             </td>
             <td v-if="dl.last_request_id">
-              <a :href="'/requests?q=id:' + dl.last_request_id">{{ dl.last_request_id }}</a>
+              <a :href="'/requests?q=id:' + dl.last_request_id">{{
+                dl.last_request_id
+              }}</a>
             </td>
             <td v-else>
-              <a :href="'/requests?q=id:' + dl.request_id">{{ dl.request_id }}</a>
+              <a :href="'/requests?q=id:' + dl.request_id">{{
+                dl.request_id
+              }}</a>
             </td>
             <td>{{ dl.original_url }}</td>
             <td>{{ dl.content_type }}</td>
             <td>{{ dl.times_seen }}</td>
-            <td :title="'First seen on: ' + dl.parsed.created_at">{{ dl.parsed.last_seen_at }}</td>
+            <td :title="'First seen on: ' + dl.parsed.created_at">
+              {{ dl.parsed.last_seen_at }}
+            </td>
             <td>
-              <a v-if="dl.parsed.vt_analysis_id"
+              <a
+                v-if="dl.parsed.vt_url_analysis_id"
                 target="_blank"
-                title="view on virustotal"
-                :href="'https://www.virustotal.com/gui/url/' + dl.parsed.vt_analysis_id">
+                title="view URL analysis on virustotal"
+                :href="
+                  'https://www.virustotal.com/gui/url/' +
+                  dl.parsed.vt_url_analysis_id
+                "
+              >
                 <i class="pi pi-bolt"></i>
+              </a>
+
+              <a
+                v-if="dl.parsed.vt_file_analysis_id"
+                target="_blank"
+                title="view file analysis on virustotal"
+                :href="
+                  'https://www.virustotal.com/gui/file-analysis/' +
+                  dl.parsed.vt_file_analysis_id
+                "
+              >
+                <i class="pi pi-exclamation-triangle"></i>
               </a>
             </td>
           </tr>
@@ -68,8 +93,12 @@
         class="pi pi-arrow-right pi-style pi-style-right"
       ></i>
     </div>
-    <div class="column mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
-       <downloads-form :download="selectedDownload"></downloads-form>
+    <div
+      class="column mright"
+      @focusin="keyboardDisabled = true"
+      @focusout="keyboardDisabled = false"
+    >
+      <downloads-form :download="selectedDownload"></downloads-form>
     </div>
   </div>
 </template>
@@ -82,10 +111,10 @@ function dateToString(inDate) {
 import DownloadsForm from "./DownloadsForm.vue";
 export default {
   components: {
-     DownloadsForm,
+    DownloadsForm,
   },
   inject: ["config"],
-  emits: ['require-auth'],
+  emits: ["require-auth"],
   data() {
     return {
       downloads: [],
@@ -181,20 +210,26 @@ export default {
     },
 
     loadDownloads(selectFirst) {
-      var url = this.config.backendAddress + "/downloads/segment?offset=" +
-        this.offset + "&limit=" + this.limit;
+      var url =
+        this.config.backendAddress +
+        "/downloads/segment?offset=" +
+        this.offset +
+        "&limit=" +
+        this.limit;
       if (this.query) {
         url += "&q=" + this.query;
       }
-      fetch(url, { headers: {
-        'API-Key': this.$store.getters.apiToken,
-      }})
+      fetch(url, {
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+        },
+      })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
             return null;
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
@@ -216,21 +251,46 @@ export default {
                   newDownload.last_seen_at
                 );
 
-                if (newDownload.vt_analysis_id) {
-                  var parts = newDownload.vt_analysis_id.split('-');
+                newDownload.parsed.sha256sum =
+                  newDownload.sha256sum.substr(0, 16) + "...";
+
+                if (newDownload.vt_url_analysis_id) {
+                  var parts = newDownload.vt_url_analysis_id.split("-");
                   if (parts.length != 3) {
-                    console.log("Cannot parse ID: " + newDownload.vt_analysis_id);
+                    console.log(
+                      "Cannot parse ID: " + newDownload.vt_url_analysis_id
+                    );
                   } else {
-                    newDownload.parsed.vt_analysis_id = parts[1];
+                    newDownload.parsed.vt_url_analysis_id = parts[1];
                   }
                 }
+
+                if (newDownload.vt_file_analysis_id) {
+                  newDownload.parsed.vt_file_analysis_id = newDownload.vt_file_analysis_id;
+                }
+
+                if (newDownload.vt_file_analysis_done && newDownload.vt_file_analysis_result) {
+                  newDownload.parsed.vt_file_analysis_result = [];
+                  newDownload.vt_file_analysis_result.forEach((re) => {
+                    var eparts = re.split(/:(.*)/s)
+                    newDownload.parsed.vt_file_analysis_result.push(
+                      {
+                        engine: eparts[0],
+                        result: eparts[1],
+                      }
+                    )
+                  })
+                }
+
                 this.downloads.push(newDownload);
               }
 
               if (selectFirst) {
                 this.setSelectedDownload(response.data[0].id);
               } else {
-                this.setSelectedDownload(response.data[response.data.length - 1].id);
+                this.setSelectedDownload(
+                  response.data[response.data.length - 1].id
+                );
               }
             }
           }
@@ -272,12 +332,10 @@ export default {
       }
     });
   },
-
 };
 </script>
 
 <style scoped>
-
 #date {
   width: 170px;
 }

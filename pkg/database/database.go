@@ -10,6 +10,7 @@ import (
 
 	"loophid/pkg/util"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vingarcia/ksql"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
 )
@@ -115,12 +116,13 @@ type RequestSourceContent struct {
 }
 
 type Honeypot struct {
-	ID               int64     `ksql:"id,skipInserts" json:"id"`
-	IP               string    `ksql:"ip" json:"ip"`
-	CreatedAt        time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt        time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
-	LastCheckin      time.Time `ksql:"last_checkin,skipInserts,skipUpdates" json:"last_checkin"`
-	DefaultContentID int64     `ksql:"default_content_id" json:"default_content_id"`
+	ID                   int64     `ksql:"id,skipInserts" json:"id"`
+	IP                   string    `ksql:"ip" json:"ip"`
+	CreatedAt            time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt            time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	LastCheckin          time.Time `ksql:"last_checkin,skipInserts,skipUpdates" json:"last_checkin"`
+	DefaultContentID     int64     `ksql:"default_content_id" json:"default_content_id"`
+	RequestsCountLastDay int64     `json:"request_count_last_day"`
 }
 
 func (c *Honeypot) ModelID() int64 { return c.ID }
@@ -139,27 +141,31 @@ type Application struct {
 func (c *Application) ModelID() int64 { return c.ID }
 
 type Download struct {
-	ID            int64     `ksql:"id,skipInserts" json:"id"`
-	RequestID     int64     `ksql:"request_id" json:"request_id"`
-	Size          int64     `ksql:"size" json:"size"`
-	Port          int64     `ksql:"port" json:"port"`
-	CreatedAt     time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	LastSeenAt    time.Time `ksql:"last_seen_at,timeNowUTC" json:"last_seen_at"`
-	ContentType   string    `ksql:"content_type" json:"content_type"`
-	OriginalUrl   string    `ksql:"original_url" json:"original_url"`
-	UsedUrl       string    `ksql:"used_url" json:"used_url"`
-	IP            string    `ksql:"ip" json:"ip"`
-	SHA256sum     string    `ksql:"sha256sum" json:"sha256sum"`
-	Host          string    `ksql:"host" json:"host"`
-	FileLocation  string    `ksql:"file_location" json:"file_location"`
-	TimesSeen     int64     `ksql:"times_seen" json:"times_seen"`
-	LastRequestID int64     `ksql:"last_request_id" json:"last_request_id"`
-	VTAnalysisID  string    `ksql:"vt_analysis_id" json:"vt_analysis_id"`
-	VTAnalysisHarmless   int64     `ksql:"vt_analysis_harmless" json:"vt_analysis_harmless"`
-	VTAnalysisMalicious  int64     `ksql:"vt_analysis_malicious" json:"vt_analysis_malicious"`
-	VTAnalysisSuspicious int64     `ksql:"vt_analysis_suspicious" json:"vt_analysis_suspicious"`
-	VTAnalysisUndetected int64     `ksql:"vt_analysis_undetected" json:"vt_analysis_undetected"`
-	VTAnalysisTimeout    int64     `ksql:"vt_analysis_timeout" json:"vt_analysis_timeout"`
+	ID                      int64                    `ksql:"id,skipInserts" json:"id"`
+	RequestID               int64                    `ksql:"request_id" json:"request_id"`
+	Size                    int64                    `ksql:"size" json:"size"`
+	Port                    int64                    `ksql:"port" json:"port"`
+	CreatedAt               time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	LastSeenAt              time.Time                `ksql:"last_seen_at,timeNowUTC" json:"last_seen_at"`
+	ContentType             string                   `ksql:"content_type" json:"content_type"`
+	OriginalUrl             string                   `ksql:"original_url" json:"original_url"`
+	UsedUrl                 string                   `ksql:"used_url" json:"used_url"`
+	IP                      string                   `ksql:"ip" json:"ip"`
+	SHA256sum               string                   `ksql:"sha256sum" json:"sha256sum"`
+	Host                    string                   `ksql:"host" json:"host"`
+	FileLocation            string                   `ksql:"file_location" json:"file_location"`
+	TimesSeen               int64                    `ksql:"times_seen" json:"times_seen"`
+	LastRequestID           int64                    `ksql:"last_request_id" json:"last_request_id"`
+	VTURLAnalysisID         string                   `ksql:"vt_url_analysis_id" json:"vt_url_analysis_id"`
+	VTFileAnalysisID        string                   `ksql:"vt_file_analysis_id" json:"vt_file_analysis_id"`
+	VTFileAnalysisSubmitted bool                     `ksql:"vt_file_analysis_submitted" json:"vt_file_analysis_submitted"`
+	VTFileAnalysisDone      bool                     `ksql:"vt_file_analysis_done" json:"vt_file_analysis_done"`
+	VTFileAnalysisResult    pgtype.FlatArray[string] `ksql:"vt_file_analysis_result" json:"vt_file_analysis_result"`
+	VTAnalysisHarmless      int64                    `ksql:"vt_analysis_harmless" json:"vt_analysis_harmless"`
+	VTAnalysisMalicious     int64                    `ksql:"vt_analysis_malicious" json:"vt_analysis_malicious"`
+	VTAnalysisSuspicious    int64                    `ksql:"vt_analysis_suspicious" json:"vt_analysis_suspicious"`
+	VTAnalysisUndetected    int64                    `ksql:"vt_analysis_undetected" json:"vt_analysis_undetected"`
+	VTAnalysisTimeout       int64                    `ksql:"vt_analysis_timeout" json:"vt_analysis_timeout"`
 }
 
 func (c *Download) ModelID() int64 { return c.ID }
@@ -401,7 +407,22 @@ func (d *KSQLClient) GetHoneypotByIP(ip string) (Honeypot, error) {
 func (d *KSQLClient) GetHoneypots() ([]Honeypot, error) {
 	var rs []Honeypot
 	err := d.db.Query(d.ctx, &rs, "FROM honeypot")
-	return rs, err
+
+	var ret []Honeypot
+	type Count struct {
+		Count int64 `ksql:"cnt"`
+	}
+	for _, h := range rs {
+		var cnt Count
+		err = d.db.QueryOne(d.ctx, &cnt, "SELECT COUNT(*) as cnt FROM request WHERE honeypot_ip = $1", h.IP)
+		if err != nil {
+			return rs, fmt.Errorf("error fetching count: %w", err)
+		}
+
+		h.RequestsCountLastDay = cnt.Count
+		ret = append(ret, h)
+	}
+	return ret, err
 }
 
 func (d *KSQLClient) GetWhoisByIP(ip string) (Whois, error) {
@@ -442,7 +463,9 @@ func (d *KSQLClient) GetRequestsSegment(offset int64, limit int64, source_ip *st
 func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]Request, error) {
 	var rs []Request
 
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(Request{}))
+	allowedFields := getDatamodelDatabaseFields(Request{})
+	allowedFields = append(allowedFields, "label")
+	params, err := ParseQuery(query, allowedFields)
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
@@ -573,8 +596,23 @@ func (d *KSQLClient) SearchHoneypots(offset int64, limit int64, query string) ([
 	start := time.Now()
 	err = d.db.Query(d.ctx, &rs, query, values...)
 	elapsed := time.Since(start)
+
+	var ret []Honeypot
+	type Count struct {
+		Count int64 `ksql:"cnt"`
+	}
+	for _, h := range rs {
+		var cnt Count
+		err = d.db.QueryOne(d.ctx, &cnt, "SELECT COUNT(*) as cnt FROM request WHERE honeypot_ip = $1 AND time_received >= date_trunc('day', current_date - interval '1'day);", h.IP)
+		if err != nil {
+			return rs, fmt.Errorf("error fetching count: %w", err)
+		}
+
+		h.RequestsCountLastDay = cnt.Count
+		ret = append(ret, h)
+	}
 	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	return ret, err
 }
 
 func (d *KSQLClient) SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error) {
@@ -821,7 +859,7 @@ func (f *FakeDatabaseClient) SearchApps(offset int64, limit int64, query string)
 	return []Application{f.ApplicationToReturn}, nil
 }
 func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query string) ([]Download, error) {
-	return []Download{}, nil
+	return f.DownloadsToReturn, nil
 }
 func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error) {
 	return []Honeypot{}, nil

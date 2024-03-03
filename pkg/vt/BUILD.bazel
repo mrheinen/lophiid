@@ -16,7 +16,10 @@ go_library(
 
 go_test(
     name = "vt_test",
-    srcs = ["manager_test.go"],
+    srcs = [
+        "manager_test.go",
+        "vt_test.go",
+    ],
     embed = [":vt"],
     deps = ["//pkg/database"],
 )

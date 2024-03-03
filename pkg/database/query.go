@@ -72,7 +72,6 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 			if q[i] == 'O' && q[i+1] == 'R' {
 				i += 2
 
-				fmt.Printf("ONE: %+v\n", currentParams)
 				ret = append(ret, currentParams)
 				currentParams = make([]SearchRequestsParam, 0)
 				continue
@@ -151,7 +150,6 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 			return ret, fmt.Errorf("unknown seperator %c", separator)
 		}
 
-		fmt.Printf("PPPP %s\n", keyword.String())
 		currentParams = append(currentParams, SearchRequestsParam{
 			key:      keyword.String(),
 			value:    value.String(),
@@ -161,11 +159,32 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 	}
 
 	if len(currentParams) > 0 {
-		fmt.Printf("YYYYY\n")
 		ret = append(ret, currentParams)
 	}
 
 	return ret, nil
+}
+
+// getLabelWhereClause returns the where clause for the request label search.
+func getLabelWhereClause(index int, s *SearchRequestsParam) (string, error) {
+	switch s.matching {
+	case IS:
+		if s.not {
+			return fmt.Sprintf("id IN (SELECT tag_per_request.request_id FROM tag_per_request join tag ON tag.id = tag_per_request.tag_id AND tag.name != $%d)", index), nil
+		}
+		return fmt.Sprintf("id IN (SELECT tag_per_request.request_id FROM tag_per_request join tag ON tag.id = tag_per_request.tag_id AND tag.name = $%d)", index), nil
+	case LIKE:
+		if !strings.Contains(s.value, "%") {
+			s.value = fmt.Sprintf("%s%%", s.value)
+		}
+
+		if s.not {
+			return fmt.Sprintf("id IN (SELECT tag_per_request.request_id FROM tag_per_request join tag ON tag.id = tag_per_request.tag_id AND tag.name NOT LIKE $%d)", index), nil
+		}
+		return fmt.Sprintf("id IN (SELECT tag_per_request.request_id FROM tag_per_request join tag ON tag.id = tag_per_request.tag_id AND tag.name LIKE $%d)", index), nil
+	}
+
+	return "", fmt.Errorf("could not match %+v", s)
 }
 
 func getWhereClause(index int, s *SearchRequestsParam) (string, error) {
@@ -214,9 +233,18 @@ func buildComposedQuery(params [][]SearchRequestsParam, queryPrefix string, quer
 		subQuery := ""
 		for i, param := range paramSet {
 
-			wc, err := getWhereClause(valueIdx, &param)
-			if err != nil {
-				return "", nil, err
+			var wc string
+			var err error
+			if param.key == "label" {
+				wc, err = getLabelWhereClause(valueIdx, &param)
+				if err != nil {
+					return "", nil, err
+				}
+			} else {
+				wc, err = getWhereClause(valueIdx, &param)
+				if err != nil {
+					return "", nil, err
+				}
 			}
 
 			if i == 0 {
@@ -241,7 +269,6 @@ func buildComposedQuery(params [][]SearchRequestsParam, queryPrefix string, quer
 				baseQuery = fmt.Sprintf("%s OR (%s)", baseQuery, q)
 			}
 		}
-
 	}
 	baseQuery = fmt.Sprintf("%s %s", baseQuery, querySuffix)
 	return baseQuery, values, nil

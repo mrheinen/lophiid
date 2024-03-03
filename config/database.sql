@@ -138,7 +138,11 @@ CREATE TABLE downloads (
   last_request_id INT,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   last_seen_at    TIMESTAMP NOT NULL DEFAULT NOW(),
-  vt_analysis_id  VARCHAR(1024) DEFAULT '',
+  vt_file_analysis_result VARCHAR(1024) ARRAY;
+  vt_url_analysis_id  VARCHAR(1024) DEFAULT '',
+  vt_file_analysis_id  VARCHAR(1024) DEFAULT '',
+  vt_file_analysis_submitted  BOOL default false,
+  vt_file_analysis_done  BOOL default false,
   vt_analysis_harmless   INT DEFAULT 0,
   vt_analysis_malicious  INT DEFAULT 0,
   vt_analysis_suspicious INT DEFAULT 0,
@@ -251,6 +255,11 @@ CREATE INDEX requests_port_idx ON request (
 CREATE INDEX requests_source_ip_idx ON request (
   time_received desc,
   source_ip desc
+);
+
+CREATE INDEX requests_honeypot_ip_idx ON request (
+  time_received desc,
+  honeypot_ip
 );
 
 CREATE INDEX requests_uri_idx ON request (

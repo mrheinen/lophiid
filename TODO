@@ -63,3 +63,16 @@ alert.
 
 Add OR support to search
 
+SELECT r.*
+FROM requests r
+JOIN labels l ON r.id = l.request_id
+WHERE l.name = 'your_desired_name';
+
+SELECT *
+FROM requests
+WHERE id IN (SELECT request_id FROM labels WHERE name = 'your_desired_name');
+
+SELECT * from request where id in (select tag_per_request.request_id from tag_per_request join tag on tag.id = tag_per_request.tag_id AND tag.name = 'wget') ;
+
+
+

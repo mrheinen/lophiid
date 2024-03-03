@@ -91,15 +91,19 @@ func main() {
 	}
 
 	dbc := database.NewKSQLClient(&db)
-
 	whoisManager := whois.NewCachedWhoisManager(dbc)
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	httpClient := &http.Client{Transport: tr, Timeout: time.Minute * 10}
 
 	var vtMgr vt.VTManager
 	if *vtApiKey == "" {
 		vtMgr = nil
 	} else {
 		// Start the virustotal client/manager
-		vtc := vt.NewVTClient(*vtApiKey, time.Hour*96)
+		vtc := vt.NewVTClient(*vtApiKey, time.Hour*96, httpClient)
 		vtc.Start()
 
 		vtMgr = vt.NewVTBackgroundManager(dbc, vtc)
@@ -108,13 +112,7 @@ func main() {
 
 	jRunner := javascript.NewGojaJavascriptRunner()
 
-	// Create the downloader
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr, Timeout: time.Minute * 10}
-
-	dLoader := downloader.NewHTTPDownloader(*downloadDir, client)
+	dLoader := downloader.NewHTTPDownloader(*downloadDir, httpClient)
 
 	queryRunner := backend.NewQueryRunnerImpl(dbc)
 	bs := backend.NewBackendServer(dbc, dLoader, jRunner, alertMgr, vtMgr, whoisManager, queryRunner)
