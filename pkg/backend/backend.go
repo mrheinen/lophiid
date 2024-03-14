@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"net"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -376,14 +378,8 @@ func (s *BackendServer) ProcessReqsQueue() error {
 		var wg sync.WaitGroup
 		// Iterate over the links and try to download them.
 		for v := range linksMap {
-			targetFile, err := s.dLoader.PepareTargetFileDir(fmt.Sprintf("%d", dm.ModelID()))
-			if err != nil {
-				slog.Warn("error preparing file", slog.String("error", err.Error()))
-				continue
-			}
-
 			wg.Add(1)
-			go s.DownloadPayload(dm.ModelID(), v, targetFile, &wg)
+			go s.DownloadPayload(dm.ModelID(), v, &wg, true)
 			metadatas = append(metadatas, database.RequestMetadata{
 				Type:      lx.MetaType(),
 				Data:      string(v),
@@ -403,8 +399,22 @@ func (s *BackendServer) ProcessReqsQueue() error {
 	return nil
 }
 
-func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile string, wg *sync.WaitGroup) {
-	dInfo, _, err := s.dLoader.FromUrl(reqID, url, outputFile, wg)
+func (s *BackendServer) DownloadPayload(reqID int64, downloadUrl string, wg *sync.WaitGroup, parseContent bool) {
+
+	consumableContentTypes := map[string]bool{
+		"application/x-shellscript": true,
+		"text/x-sh":                 true,
+		"text/plain":                true,
+	}
+
+	outputFile, err := s.dLoader.PepareTargetFileDir(fmt.Sprintf("%d", reqID))
+	if err != nil {
+		slog.Warn("error preparing file", slog.String("error", err.Error()))
+		return
+	}
+
+	dInfo, fileContent, err := s.dLoader.FromUrl(reqID, downloadUrl, outputFile, wg)
+
 	if err != nil {
 		slog.Debug("could not download", slog.String("error", err.Error()))
 		if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
@@ -414,6 +424,37 @@ func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile stri
 	}
 	slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
 
+	contentParts := strings.Split(dInfo.ContentType, ";")
+	_, hasGoodContent := consumableContentTypes[contentParts[0]]
+	if parseContent && (hasGoodContent || strings.HasSuffix(dInfo.UsedUrl, ".sh")) {
+		linksMap := make(map[string]struct{})
+		lx := NewURLExtractor(linksMap)
+		lx.ParseString(string(fileContent))
+
+		for k := range linksMap {
+			u, err := url.Parse(downloadUrl)
+			if err != nil {
+				slog.Debug("couldnt parse content download link", slog.String("error", err.Error()))
+				continue
+			}
+
+			host := u.Host
+			if strings.Contains(host, ":") {
+				host, _, _ = net.SplitHostPort(u.Host)
+			}
+
+			if host == dInfo.Host {
+				slog.Info("Downloading link from payload", slog.String("url", k))
+				wg.Add(1)
+				go s.DownloadPayload(reqID, k, wg, false)
+			}
+		}
+	}
+
+	go func(ip string) {
+		s.whoisMgr.LookupIP(ip)
+	}(dInfo.IP)
+
 	// Check if we already downloaded this exact file. If we downloaded it
 	// before, update the existing database record and increase the
 	// times_seen counter. Else add a new record.
@@ -421,6 +462,10 @@ func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile stri
 	if err == nil {
 		dm.TimesSeen = dm.TimesSeen + 1
 		dm.LastRequestID = reqID
+		dm.LastSeenAt = time.Now()
+		// Set to the latest HTTP response.
+		dm.RawHttpResponse = dInfo.RawHttpResponse
+
 		if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
 			slog.Debug("could not cleanup", slog.String("error", err.Error()))
 		}
@@ -436,6 +481,7 @@ func (s *BackendServer) DownloadPayload(reqID int64, url string, outputFile stri
 		if errors.Is(err, ksql.ErrRecordNotFound) {
 			dInfo.LastRequestID = reqID
 			dInfo.TimesSeen = 1
+			dInfo.LastSeenAt = time.Now()
 			_, err = s.dbClient.Insert(&dInfo)
 			if err != nil {
 				slog.Warn("error on insert", slog.String("error", err.Error()))

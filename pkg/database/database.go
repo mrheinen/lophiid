@@ -146,7 +146,7 @@ type Download struct {
 	Size                    int64                    `ksql:"size" json:"size"`
 	Port                    int64                    `ksql:"port" json:"port"`
 	CreatedAt               time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	LastSeenAt              time.Time                `ksql:"last_seen_at,timeNowUTC" json:"last_seen_at"`
+	LastSeenAt              time.Time                `ksql:"last_seen_at" json:"last_seen_at"`
 	ContentType             string                   `ksql:"content_type" json:"content_type"`
 	OriginalUrl             string                   `ksql:"original_url" json:"original_url"`
 	UsedUrl                 string                   `ksql:"used_url" json:"used_url"`
@@ -156,6 +156,7 @@ type Download struct {
 	FileLocation            string                   `ksql:"file_location" json:"file_location"`
 	TimesSeen               int64                    `ksql:"times_seen" json:"times_seen"`
 	LastRequestID           int64                    `ksql:"last_request_id" json:"last_request_id"`
+	RawHttpResponse         string                   `ksql:"raw_http_response" json:"raw_http_response"`
 	VTURLAnalysisID         string                   `ksql:"vt_url_analysis_id" json:"vt_url_analysis_id"`
 	VTFileAnalysisID        string                   `ksql:"vt_file_analysis_id" json:"vt_file_analysis_id"`
 	VTFileAnalysisSubmitted bool                     `ksql:"vt_file_analysis_submitted" json:"vt_file_analysis_submitted"`

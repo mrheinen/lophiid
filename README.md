@@ -1,7 +1,7 @@
 # lophiid
 
-Lophiid is a distributed honeypot framework designed to many sensors to
-be controlled by a single backend.
+Lophiid is a distributed honeypot allowing many sensors to be controlled
+by a single backend.
 
 One of the ideas behind lophiid is that attacks are widespread and having
 multiple sensors spread over the Internet will allow multiple opportunities to

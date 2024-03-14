@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"regexp"
@@ -228,6 +229,15 @@ func (d *HTTPDownloader) FromUrl(reqId int64, fromUrl string, targetFile string,
 	contentType := resp.Header.Get("Content-Type")
 	if contentType != "" {
 		dInfo.ContentType = contentType
+	}
+
+	rawRespBytes, err := httputil.DumpResponse(resp, false)
+	if err != nil {
+		slog.Debug("could no dump raw response", slog.String("error", err.Error()))
+		// We allow this error and do not return here. The raw response really is
+		// optional and not worth do ditch all the other information for.
+	} else {
+		dInfo.RawHttpResponse = string(rawRespBytes)
 	}
 
 	respBytes, err := io.ReadAll(resp.Body)

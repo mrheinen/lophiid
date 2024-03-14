@@ -20,8 +20,6 @@ Test with a fresh database.
 
 Allow response duration to be set.
 
-Add tags to the requests overview and show information. E.g. [payload] [base64]
-
 Add authentication of honeypot
 
 Add settings menu.  Including default page to serve and virus total API
@@ -39,15 +37,7 @@ Add yara Support
 Support http://192.168.1.78:8081/requests/0/24?q=source_ip:161.142.198.183 with
 javascript
 
-Add the ability to block certain IPs or requests.
-
 Add sqlite support. Update tests to use sqlite database.
-
-Add logic for queries to be run automatically and apply tags to the matching
-requests.
-
-Update downloads page and add a details page with information from virustotal
-about the specific IP.
 
 Add download link to the downloads page.
 
@@ -57,22 +47,22 @@ Add support for netcat, ftp and tcp bash payloads.
 
 Allow content to be set default for all new honeypots.
 
-
-Store that a request was alerted so you can searcg on reqyests that triggered an
+Store that a request was alerted so you can search on requests that triggered an
 alert.
 
-Add OR support to search
+Show warning and ask for confirmation when saving a query from which a label was
+removed. This because the label will also be removed from all the requests.
 
-SELECT r.*
-FROM requests r
-JOIN labels l ON r.id = l.request_id
-WHERE l.name = 'your_desired_name';
+Add labels from rules.
 
-SELECT *
-FROM requests
-WHERE id IN (SELECT request_id FROM labels WHERE name = 'your_desired_name');
+Add sorting
 
-SELECT * from request where id in (select tag_per_request.request_id from tag_per_request join tag on tag.id = tag_per_request.tag_id AND tag.name = 'wget') ;
+Check that the stored queries do not overrun the ticker interval.
 
+Add ACTION to rule and allow IGNORE to be added.  Skipping certain requests
+entirely.
+
+If a payload is a shell script, download files that have the same IP as the IP
+where the payload is hosted.
 
 

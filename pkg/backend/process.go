@@ -34,7 +34,7 @@ func roughDecodeURL(encoded string) string {
 	var ret strings.Builder
 	ret.Grow(len(encoded))
 	for i := 0; i < len(encoded); {
-		if encoded[i] != '%' || i > len(encoded)-2 {
+		if encoded[i] != '%' || i > len(encoded)-3 {
 			ret.WriteByte(encoded[i])
 			i += 1
 			continue
@@ -54,15 +54,22 @@ func roughDecodeURL(encoded string) string {
 	return ret.String()
 }
 
+// isFormUrlEncoded purpose is to determine whether a body string is a URL
+// encoded form or not.
+func isFormUrlEncoded(body string) bool {
+	return regexp.MustCompile(`^[a-zA-Z0-9_]+=`).MatchString(body)
+}
+
 // decodeURLOrEmptyString attempts to decode the string. It first uses the url
 // package decoding which is strict but very complete. If that fails then it
 // will fall back to a very simplistic search/replace decode function.
-func decodeURLOrEmptyString(encoded string) string {
-	// This is a special case and in preparation of the Base64 encoding we do
-	// later on. We may have to rethink whether to keep this here or move it
-	// somewhere else.  Anyway, a + in the URL is a space.
-	decoded := strings.ReplaceAll(encoded, "+", " ")
-	decoded = strings.ReplaceAll(decoded, ";", " ")
+func decodeURLOrEmptyString(encoded string, removeSpace bool) string {
+	// TODO: reconsider this hack.
+	decoded := strings.ReplaceAll(encoded, ";", " ")
+
+	if removeSpace {
+		decoded = strings.ReplaceAll(decoded, "+", " ")
+	}
 
 	ret, err := decodeURL(decoded)
 	if err != nil {
@@ -97,17 +104,14 @@ func StringsFromRequest(req *database.Request) []string {
 	// TODO: Make this cleaner and access the actual
 	// header instead of grepping the entire request.
 	if strings.Contains(req.Raw, "application/x-www-form-urlencoded") {
-		// Hack until this is fixed: https://github.com/golang/go/issues/50034
 		body := string(req.Body)
 		params, err := url.ParseQuery(body)
-		if err != nil {
-			slog.Warn("could not parse body query", slog.String("error", err.Error()),
-				slog.String("body", body))
-			res = append(res, decodeURLOrEmptyString(body))
+		if err != nil || !isFormUrlEncoded(body) {
+			res = append(res, decodeURLOrEmptyString(body, false))
 		} else {
 			for _, values := range params {
 				for _, p := range values {
-					res = append(res, decodeURLOrEmptyString(p))
+					res = append(res, decodeURLOrEmptyString(p, false))
 				}
 			}
 		}
@@ -117,7 +121,7 @@ func StringsFromRequest(req *database.Request) []string {
 		if err == nil && len(params) > 2 {
 			for _, values := range params {
 				for _, p := range values {
-					res = append(res, decodeURLOrEmptyString(p))
+					res = append(res, decodeURLOrEmptyString(p, false))
 				}
 			}
 		} else {
@@ -132,35 +136,35 @@ func StringsFromRequest(req *database.Request) []string {
 
 	qIdx := strings.Index(req.Uri, "?")
 	if qIdx == -1 {
-		res = append(res, decodeURLOrEmptyString(req.Uri))
+		res = append(res, decodeURLOrEmptyString(req.Uri, true))
 		return res
 	}
 
 	query := req.Uri[qIdx+1:]
 	path := req.Uri[:qIdx]
 
-	res = append(res, decodeURLOrEmptyString(path))
+	res = append(res, decodeURLOrEmptyString(path, true))
 
 	params, err := url.ParseQuery(query)
 
 	if err != nil {
 		slog.Debug("could not parse query", slog.String("error", err.Error()), slog.String("query", query))
-		res = append(res, decodeURLOrEmptyString(query))
+		res = append(res, decodeURLOrEmptyString(query, true))
 		return res
 	}
 
 	// In cases like /foo?payload the payload part is in the parameter name. In
 	// that case we should add it.
 	if len(params) == 1 {
-		if _, ok := params[decodeURLOrEmptyString(query)]; ok {
-			res = append(res, decodeURLOrEmptyString(query))
+		if _, ok := params[decodeURLOrEmptyString(query, true)]; ok {
+			res = append(res, decodeURLOrEmptyString(query, true))
 			return res
 		}
 	}
 
 	for _, values := range params {
 		for _, p := range values {
-			res = append(res, decodeURLOrEmptyString(p))
+			res = append(res, decodeURLOrEmptyString(p, true))
 		}
 	}
 	return res

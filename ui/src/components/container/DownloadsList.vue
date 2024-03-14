@@ -98,7 +98,7 @@
       @focusin="keyboardDisabled = true"
       @focusout="keyboardDisabled = false"
     >
-      <downloads-form :download="selectedDownload"></downloads-form>
+      <downloads-form :whois="selectedWhois" :download="selectedDownload"></downloads-form>
     </div>
   </div>
 </template>
@@ -119,6 +119,7 @@ export default {
     return {
       downloads: [],
       selectedDownload: null,
+      selectedWhois: null,
       isSelectedId: 0,
       query: null,
       limit: 24,
@@ -155,6 +156,7 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedDownload = selected;
+        this.loadWhois(selected.ip);
         this.isSelectedId = id;
       }
     },
@@ -208,7 +210,35 @@ export default {
         this.loadDownloads(false);
       }
     },
-
+    loadWhois(ip) {
+      fetch(this.config.backendAddress + "/whois/ip", {
+        method: "POST",
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "ip=" + ip,
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+            this.selectedWhois = null;
+          } else {
+            if (response.data) {
+              this.selectedWhois = response.data;
+            } else {
+              this.selectedWhois = null;
+            }
+          }
+        });
+    },
     loadDownloads(selectFirst) {
       var url =
         this.config.backendAddress +

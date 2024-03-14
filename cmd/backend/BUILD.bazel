@@ -14,10 +14,12 @@ go_library(
         "//pkg/javascript",
         "//pkg/vt",
         "//pkg/whois",
+        "@com_github_kkyr_fig//:fig",
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//reflection",
     ],
 )
 

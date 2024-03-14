@@ -49,9 +49,13 @@
             </tr>
           </tbody>
         </table>
-        <br/>
-        <div v-if="localDownload.vt_file_analysis_submitted">
-              <label class="label">Virus total results</label>
+      </FieldSet>
+    </div>
+    <br/>
+    <div v-if="localDownload.vt_file_analysis_submitted" class="card">
+      <FieldSet legend="VirusTotal results" :toggleable="true">
+        <div>
+          <label class="label">Virus total results</label>
           <table class="slightlyright">
             <tbody>
               <tr>
@@ -92,23 +96,37 @@
               </tbody>
             </table>
           </div>
-
         </div>
-      </FieldSet>
-    </div>
+       </FieldSet>
+      </div>
+
+  <br/>
+    <RawHttpCard v-if="localDownload.raw_http_response" label="HTTP response headers" :data="localDownload.raw_http_response"></RawHttpCard>
+    <br/>
+      <div v-if="localWhois" class="card">
+         <FieldSet legend="WHOIS record" :toggleable="true">
+            <pre class="whois">{{ localWhois.data }}</pre>
+          </FieldSet>
+       </div>
+
+
   </div>
 </template>
 
 <script>
 import { copyToClipboardHelper } from "../../helpers.js";
+import RawHttpCard from '../cards/RawHttpCard.vue';
 
 export default {
-  components: {},
-  props: ["download"],
+  components: {
+    RawHttpCard
+  },
+  props: ["download", "whois"],
   emits: ["require-auth"],
   inject: ["config"],
   data() {
     return {
+      localWhois: null,
       localDownload: {
         parsed: {},
       },
@@ -162,12 +180,29 @@ export default {
     download() {
       this.localDownload = Object.assign({}, this.download);
     },
+    whois() {
+      if (this.whois == null) {
+        this.localWhois = null;
+      } else {
+        this.localWhois = Object.assign({}, this.whois);
+      }
+    },
   },
   created() {},
 };
 </script>
 
 <style scoped>
+
+pre.whois {
+  max-height: 400px;
+  max-width: 700px;
+  overflow: auto;
+  background-color: #eeeeee;
+  word-break: normal !important;
+  word-wrap: normal !important;
+  white-space: pre !important;
+}
 
 .slightlyright {
   margin-left: 15px;

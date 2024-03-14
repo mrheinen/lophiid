@@ -25,7 +25,7 @@ type Alerter interface {
 
 type AlertManager struct {
 	alerters      []Alerter
-	alertInterval int
+	alertInterval time.Duration
 	msgBuffer     map[string]int
 	mu            sync.Mutex
 	bgChan        chan bool
@@ -33,7 +33,7 @@ type AlertManager struct {
 
 // Returns a new alert manager. The interval indicates in minutes the time
 // during which message should be buffered, aggregated and then send.
-func NewAlertManager(alertInterval int) *AlertManager {
+func NewAlertManager(alertInterval time.Duration) *AlertManager {
 	am := &AlertManager{
 		alertInterval: alertInterval,
 		msgBuffer:     make(map[string]int),
@@ -47,7 +47,7 @@ func NewAlertManager(alertInterval int) *AlertManager {
 // stopped by the Stop() method.
 func (a *AlertManager) Start() {
 	slog.Info("starting alert manager")
-	ticker := time.NewTicker(time.Minute * time.Duration(a.alertInterval))
+	ticker := time.NewTicker(a.alertInterval)
 	go func() {
 		for {
 			select {

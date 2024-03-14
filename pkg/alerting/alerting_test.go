@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strings"
 	"testing"
+	"time"
 )
 
 type FakeAlerter struct {
@@ -28,7 +29,7 @@ func TestSendMessageOk(t *testing.T) {
 		sendMessageError: nil,
 	}
 
-	am := NewAlertManager(42)
+	am := NewAlertManager(time.Minute)
 	if err := am.AddAlerter(&fa); err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
@@ -61,7 +62,7 @@ func TestSendBufferedMessageOk(t *testing.T) {
 		sendMessageError: nil,
 	}
 
-	am := NewAlertManager(1)
+	am := NewAlertManager(time.Minute)
 	if err := am.AddAlerter(&fa); err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}

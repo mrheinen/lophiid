@@ -1,33 +1,5 @@
 <template>
-  <div class="card">
-    <FieldSet legend="Raw request" :toggleable="true">
-      <pre
-        v-on:focus="$event.target.select()"
-        ref="rawrequest"
-        class="rawrequest"
-        v-if="localRequest.raw"
-        >{{ localRequest.raw }}</pre
-      >
-
-      <br />
-      <div style="float: right">
-        <i
-          @click="copyToClipboard()"
-          title="copy to clipboard"
-          class="pi pi-copy pointer"
-        ></i>
-        &nbsp;
-        <i
-          @click="decodeUri()"
-          title="decode uri"
-          class="pi pi-percentage pointer"
-        ></i>
-      </div>
-    </FieldSet>
-  </div>
-
-  <br />
-  <div class="card">
+    <div class="card">
     <FieldSet legend="Request details" :toggleable="true">
       <table>
         <tbody>
@@ -68,25 +40,27 @@
     </FieldSet>
   </div>
   <br />
+  <RawHttpCard v-id="localRequest.raw" label="HTTP request"
+    :data="localRequest.raw"></RawHttpCard>
+  <br />
 
   <div v-if="metadata.length" class="card">
     <FieldSet legend="Metadata" :toggleable="true">
       <div v-for="meta in localBase64Metadata" :key="meta.id">
-        <br />
         <div style="width: 700px">
           <label class="label">Decoded base64 string</label>
           <highlightjs autodetect :code="meta.data" />
         </div>
       </div>
-      <div v-if="localLinkMetadata">
+      <div v-if="localLinkMetadata.length">
         <label class="label">Extracted URLs</label>
         <div v-for="meta in localLinkMetadata" :key="meta.id">
           <p>{{ meta.data }}</p>
         </div>
       </div>
     </FieldSet>
+     <br />
   </div>
-  <br />
   <div v-if="localRequest.content_dynamic == true" class="card">
     <FieldSet legend="Customized response" :toggleable="true">
       <pre class="rawrequest">{{ localRequest.raw_response }}</pre>
@@ -96,7 +70,7 @@
   <br />
   <div v-if="localWhois" class="card">
     <FieldSet legend="WHOIS record" :toggleable="true">
-      <pre class="rawrequest">{{ localWhois.data }}</pre>
+      <pre class="whois">{{ localWhois.data }}</pre>
     </FieldSet>
   </div>
 
@@ -104,9 +78,9 @@
 </template>
 
 <script>
-import { copyToClipboardHelper } from "../../helpers.js";
-
+import RawHttpCard from '../cards/RawHttpCard.vue';
 export default {
+  components: { RawHttpCard },
   props: ["request", "metadata", "whois"],
   inject: ["config"],
   data() {
@@ -121,15 +95,6 @@ export default {
     };
   },
   methods: {
-    copyToClipboard() {
-      copyToClipboardHelper(this.$refs.rawrequest.textContent);
-      this.$toast.info("Copied");
-    },
-    decodeUri() {
-      this.$refs.rawrequest.textContent = decodeURIComponent(
-        this.$refs.rawrequest.textContent
-      );
-    },
   },
   watch: {
     request() {
@@ -161,7 +126,17 @@ export default {
 </script>
 
 <style scoped>
-pre.rawrequest {
+code.hljs {
+  height: 400px;
+  width: 700px;
+  overflow: auto;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+pre.whois {
   max-height: 400px;
   max-width: 700px;
   overflow: auto;
@@ -169,26 +144,6 @@ pre.rawrequest {
   word-break: normal !important;
   word-wrap: normal !important;
   white-space: pre !important;
-}
-
-code.hljs {
-  height: 400px;
-  width: 700px;
-  overflow: auto;
-}
-
-pre.decoded {
-  max-height: 100px;
-  max-width: 700px;
-  overflow: auto;
-  background-color: #eeeeee;
-  word-break: normal !important;
-  word-wrap: normal !important;
-  white-space: pre !important;
-}
-
-table {
-  border-collapse: collapse;
 }
 
 th,
@@ -202,7 +157,4 @@ th {
   color: #616060;
 }
 
-.pointer {
-  cursor: pointer;
-}
 </style>
