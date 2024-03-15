@@ -29,6 +29,8 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+var configFile = flag.String("c", "", "Config file")
+
 type Config struct {
 	Backend struct {
 		LogLevel string `fig:"log_level" default:"debug"`
@@ -66,7 +68,7 @@ func main() {
 	flag.Parse()
 
 	var cfg Config
-	if err := fig.Load(&cfg); err != nil {
+	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
 		fmt.Printf("Could not parse config: %s\n", err)
 		return
 	}

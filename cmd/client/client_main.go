@@ -8,45 +8,66 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/client"
 	http_server "loophid/pkg/http/server"
-	"strings"
 	"time"
+
+	"github.com/kkyr/fig"
 )
 
-var listenString = flag.String("p", "80", "HTTP server port(s) to listen on. Comma seperated, prefix with ssl: for SSL enabled ports.")
-var serverLocation = flag.String("s", "localhost:41110", "RPC server location")
-var sslCert = flag.String("c", "", "HTTP SSL certificate file")
-var sslKey = flag.String("k", "", "HTTP SSL certificate key")
-var caCert = flag.String("ssl-cacert", "", "gRPC CA certificate")
-var clientCert = flag.String("ssl-client-cert", "", "gRPC client certificate")
-var clientKey = flag.String("ssl-client-key", "", "gRPC client key")
+var configFile = flag.String("c", "", "Config file")
 
-// Used for reporting
-var myPublicIP = flag.String("i", "", "My public IP address")
+type Config struct {
+	HTTPListener struct {
+		IP   string `fig:"ip"`
+		Port []int  `fig:"port"`
+	} `fig:"http_listener"`
+	HTTPSListener struct {
+		IP      string `fig:"ip"`
+		SSLCert string `fig:"ssl_cert"`
+		SSLKey  string `fig:"ssl_key"`
+		Port    []int  `fig:"port"`
+	} `fig:"https_listener"`
+
+	BackendClient struct {
+		BackendAddress string `fig:"backend_address" validate:"required"`
+		BackendPort    int    `fig:"backend_port" default:"41110"`
+		GRPCSSLCert    string `fig:"grpc_ssl_cert"`
+		GRPCSSLKey     string `fig:"grpc_ssl_key"`
+		GRPCCACert     string `fig:"grpc_ca_cert"`
+	} `fig:"backend_client" validate:"required"`
+}
 
 func main() {
 
 	flag.Parse()
 
-	if *myPublicIP == "" {
-		log.Fatal("Provide the public IP address with -i ")
+	var cfg Config
+	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
+		fmt.Printf("Could not parse config: %s\n", err)
+		return
 	}
 
+	if cfg.HTTPSListener.IP == "" && cfg.HTTPListener.IP == "" {
+		fmt.Printf("No listener IPs specified\n")
+		return
+	}
+
+	// Create the backend client.
 	var c client.BackendClient
-	if *caCert != "" && *clientCert != "" && *clientKey != "" {
-		sParts := strings.Split(*serverLocation, ":")
-		log.Printf("Creating secure backend client. Server: %s", sParts[0])
+	if cfg.BackendClient.GRPCCACert != "" && cfg.BackendClient.GRPCSSLCert != "" && cfg.BackendClient.GRPCSSLKey != "" {
+		log.Printf("Creating secure backend client. Server: %s", cfg.BackendClient.BackendAddress)
 		c = &client.SecureBackendClient{
-			CACert:     *caCert,
-			ClientCert: *clientCert,
-			ClientKey:  *clientKey,
-			ServerFQDN: sParts[0],
+			CACert:     cfg.BackendClient.GRPCCACert,
+			ClientCert: cfg.BackendClient.GRPCSSLCert,
+			ClientKey:  cfg.BackendClient.GRPCSSLKey,
+			ServerFQDN: cfg.BackendClient.BackendAddress,
 		}
-		if err := c.Connect(*serverLocation); err != nil {
+		if err := c.Connect(fmt.Sprintf("%s:%d", cfg.BackendClient.BackendAddress, cfg.BackendClient.BackendPort)); err != nil {
 			log.Fatalf("%s", err)
 		}
 	} else {
+		log.Printf("Creating insecure backend client. Server: %s", cfg.BackendClient.BackendAddress)
 		c = &client.InsecureBackendClient{}
-		if err := c.Connect(*serverLocation); err != nil {
+		if err := c.Connect(fmt.Sprintf("%s:%d", cfg.BackendClient.BackendAddress, cfg.BackendClient.BackendPort)); err != nil {
 			log.Fatalf("%s", err)
 		}
 	}
@@ -55,48 +76,32 @@ func main() {
 
 	finish := make(chan bool)
 
-	var allListenAddresses []string
-	if strings.Contains(*listenString, ",") {
-		allListenAddresses = strings.Split(*listenString, ",")
-	} else {
-		allListenAddresses = append(allListenAddresses, *listenString)
-	}
-
-	var sslListenAddresses []string
-	var httpListenAddresses []string
-	for _, p := range allListenAddresses {
-		if strings.HasPrefix(p, "ssl:") {
-			cp, _ := strings.CutPrefix(p, "ssl:")
-			sslListenAddresses = append(sslListenAddresses, cp)
-		} else {
-			httpListenAddresses = append(httpListenAddresses, p)
-		}
-	}
-
-	// Start the plain HTTP servers.
-	for _, listenAddr := range httpListenAddresses {
-		go func(port string) {
-			s := http_server.NewHttpServer(c, port, *myPublicIP)
-			fmt.Printf("Starting server on : %s\n", port)
+	for _, port := range cfg.HTTPListener.Port {
+		go func(listenAddress string) {
+			s := http_server.NewHttpServer(c, listenAddress, cfg.HTTPListener.IP)
+			fmt.Printf("Starting server on : %s\n", listenAddress)
 			log.Fatal(s.Start())
-		}(listenAddr)
+		}(fmt.Sprintf("%s:%d", cfg.HTTPListener.IP, port))
 	}
 
-	// Start the SSL HTTP servers.
-	for _, listenAddr := range sslListenAddresses {
-		go func(port string) {
-			s := http_server.NewSSLHttpServer(c, port, *sslCert, *sslKey, *myPublicIP)
-			fmt.Printf("Starting SSL server on : %s\n", port)
+	for _, port := range cfg.HTTPSListener.Port {
+		go func(listenAddress string) {
+			s := http_server.NewSSLHttpServer(c, listenAddress, cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPSListener.IP)
+			fmt.Printf("Starting SSL server on : %s\n", listenAddress)
 			log.Fatal(s.Start())
-		}(listenAddr)
+		}(fmt.Sprintf("%s:%d", cfg.HTTPSListener.IP, port))
 	}
 
 	// Setup the go routing for regularly reporting the status back to the
 	// backend.
 	statusChan := make(chan bool)
 	ticker := time.NewTicker(time.Minute * 5)
+	ip := cfg.HTTPSListener.IP
+	if ip == "" {
+		ip = cfg.HTTPListener.IP
+	}
 	sReq := backend_service.StatusRequest{
-		Ip: *myPublicIP,
+		Ip: ip,
 		//ListenPort:    ports,
 		//ListenPortSsl: sslPorts,
 	}

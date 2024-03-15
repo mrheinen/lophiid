@@ -345,6 +345,7 @@ func (s *BackendServer) ProcessReqsQueue() error {
 			s.whoisMgr.LookupIP(req.SourceIP)
 		}(req)
 
+		fmt.Printf("Saving request\n")
 		dm, err := s.dbClient.Insert(req)
 		if err != nil {
 			return fmt.Errorf("error saving request: %s", err)

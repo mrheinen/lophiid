@@ -1,0 +1,31 @@
+backend:
+  log_level: debug
+  downloader:
+    # Location where downloaded malware will be stored.
+    malware_download_dir: /home/niels/malware/
+    # The malware downloaded HTTP client timeout. This should be relatively high
+    # because sometimes malware is served from very slow IoT devices.
+    http_timeout: 10m
+  listener:
+    # IP and port where the backend needs to listen on.
+    listen_address: localhost:41110
+  database:
+    # URL to the postgresql database
+    url: postgres://username:password@localhost/lophiid
+    # How many open concurrent database connections are allowed.
+    max_open_connections: 30
+
+alerting:
+  # The alerting interval.  Alerts are aggregated and send every <interval>.
+  interval: 2m
+  telegram:
+    # Telegram API key and channel ID.
+    api_key: AAAAAAAAAAAAAAAAAAAA
+    channel_id: 111111
+
+virustotal:
+  # Your virus total API key.
+  api_key: AAAAAAAAAAAAAAAAAA
+  # HTTP timeout for communication with virustotal.
+  http_timeout: 2m
+
