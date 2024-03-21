@@ -267,8 +267,7 @@ func getDatamodelDatabaseFields(datamodel interface{}) []string {
 	t := reflect.TypeOf(datamodel)
 	for i := 0; i < t.NumField(); i++ {
 		tvalue := t.Field(i).Tag.Get("ksql")
-		tMetadataByRequestID(id int64) ([]RequestMetadata, error)
-  }   if tvalue != "" {
+		if tvalue != "" {
 			idx := strings.Index(tvalue, ",")
 			if idx != -1 {
 				tvalue = tvalue[:idx]
