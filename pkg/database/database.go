@@ -12,7 +12,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vingarcia/ksql"
-	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
 )
 
 var ContentTable = ksql.NewTable("content")
@@ -268,7 +267,8 @@ func getDatamodelDatabaseFields(datamodel interface{}) []string {
 	t := reflect.TypeOf(datamodel)
 	for i := 0; i < t.NumField(); i++ {
 		tvalue := t.Field(i).Tag.Get("ksql")
-		if tvalue != "" {
+		tMetadataByRequestID(id int64) ([]RequestMetadata, error)
+  }   if tvalue != "" {
 			idx := strings.Index(tvalue, ",")
 			if idx != -1 {
 				tvalue = tvalue[:idx]
@@ -289,17 +289,6 @@ func NewKSQLClient(db *ksql.DB) *KSQLClient {
 		db:  db,
 		ctx: context.Background(),
 	}
-}
-
-// db, err := kpgx.New(ctx, "postgres://lo:test@localhost/lophiid", ksql.Config{
-func (d *KSQLClient) Init(connectString string) error {
-
-	db, err := kpgx.New(d.ctx, connectString, ksql.Config{
-		MaxOpenConns: 3,
-	})
-
-	d.db = &db
-	return err
 }
 
 func (d *KSQLClient) Close() {
@@ -777,6 +766,8 @@ type FakeDatabaseClient struct {
 	QueriesToReturnError   error
 	TagPerQueryReturn      []TagPerQuery
 	TagPerQueryReturnError error
+	WhoisToReturn          Whois
+	WhoisErrorToReturn     error
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -866,7 +857,7 @@ func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query st
 	return []Honeypot{}, nil
 }
 func (f *FakeDatabaseClient) GetWhoisByIP(ip string) (Whois, error) {
-	return Whois{}, nil
+	return Whois{}, f.WhoisErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error) {
 	return f.QueriesToReturn, f.QueriesToReturnError

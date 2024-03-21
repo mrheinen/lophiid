@@ -277,6 +277,22 @@ CREATE INDEX requests_created_at_idx ON request (
   created_at DESC
 );
 
+CREATE INDEX query_id_tag_per_query_idx ON tag_per_query (
+  query_id DESC
+);
+
+CREATE INDEX request_id_tag_per_request_idx ON tag_per_request (
+  request_id DESC
+);
+
+CREATE INDEX ip_per_whois_idx ON whois (
+  ip
+);
+
+
+
+
+
 
 
 

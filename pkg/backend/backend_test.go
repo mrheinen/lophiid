@@ -14,6 +14,8 @@ import (
 	"loophid/pkg/whois"
 	"strings"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestGetMatchedRuleBasic(t *testing.T) {
@@ -153,7 +155,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			queryRunner := FakeQueryRunner{
 				ErrorToReturn: nil,
 			}
-			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+
+			reg := prometheus.NewRegistry()
+			bMetrics := CreateBackendMetrics(reg)
+			b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
 			if (err != nil) != test.errorExpected {
@@ -183,8 +188,9 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
-
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
 		Uri:  "/aa",
 		Port: 80,
@@ -228,8 +234,9 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
-
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
 		Request: &backend_service.HttpRequest{
@@ -299,7 +306,9 @@ func TestHandleProbe(t *testing.T) {
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -372,16 +381,16 @@ func TestProcessQueue(t *testing.T) {
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
-
-	b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 	req := database.Request{
 		Uri:  "/aaaaa",
 		Body: []byte("body body"),
 		Raw:  "nothing",
 	}
 
-	b.reqsQueue.Push(&req)
-	err := b.ProcessReqsQueue()
+	err := b.ProcessRequest(&req)
 	if err != nil {
 		t.Errorf("got error: %s", err)
 	}
@@ -456,8 +465,9 @@ func TestSendStatus(t *testing.T) {
 			queryRunner := FakeQueryRunner{
 				ErrorToReturn: nil,
 			}
-
-			b := NewBackendServer(fdbc, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+			reg := prometheus.NewRegistry()
+			bMetrics := CreateBackendMetrics(reg)
+			b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
 
 			_, err := b.SendStatus(context.Background(), test.request)
 			if err == nil && test.expectedErrorString != "" {

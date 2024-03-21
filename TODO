@@ -62,7 +62,7 @@ Check that the stored queries do not overrun the ticker interval.
 Add ACTION to rule and allow IGNORE to be added.  Skipping certain requests
 entirely.
 
-If a payload is a shell script, download files that have the same IP as the IP
-where the payload is hosted.
+Add option to ad header to content. E.g. last-modified such as used in the palo
+alto exploits <M-Right>https://devco.re/blog/2019/07/17/attacking-ssl-vpn-part-1-PreAuth-RCE-on-Palo-Alto-GlobalProtect-with-Uber-as-case-study/
 
-
+Update whois handler and make a work group, remove lock.

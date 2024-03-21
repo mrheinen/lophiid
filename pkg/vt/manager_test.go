@@ -3,6 +3,8 @@ package vt
 import (
 	"loophid/pkg/database"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type FakeVTClient struct {
@@ -57,7 +59,8 @@ func TestProcessURLQueue(t *testing.T) {
 				ErrorToReturn:             test.errorToReturn,
 			}
 
-			mgr := NewVTBackgroundManager(&fakeDBClient, &fakeVTClient)
+			metrics := CreateVTMetrics(prometheus.NewRegistry())
+			mgr := NewVTBackgroundManager(&fakeDBClient, metrics, &fakeVTClient)
 			mgr.QueueURL("http://www")
 
 			err := mgr.ProcessURLQueue()
@@ -108,7 +111,8 @@ func TestManagerGetFileAnalysis(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 
-	mgr := NewVTBackgroundManager(&fakeDBClient, &fakeVTClient)
+	metrics := CreateVTMetrics(prometheus.NewRegistry())
+	mgr := NewVTBackgroundManager(&fakeDBClient, metrics, &fakeVTClient)
 	err := mgr.GetFileAnalysis()
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)

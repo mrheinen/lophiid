@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "agent",
+    srcs = ["agent.go"],
+    importpath = "loophid/pkg/agent",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//backend_service",
+        "//pkg/client",
+        "//pkg/http/server",
+    ],
+)

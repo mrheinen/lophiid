@@ -2,14 +2,19 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "javascript",
-    srcs = ["goja.go"],
+    srcs = [
+        "goja.go",
+        "metrics.go",
+    ],
     importpath = "loophid/pkg/javascript",
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",
         "//pkg/database",
+        "//pkg/metrics",
         "//pkg/util",
         "@com_github_dop251_goja//:goja",
+        "@com_github_prometheus_client_golang//prometheus",
     ],
 )
 
@@ -20,5 +25,7 @@ go_test(
     deps = [
         "//backend_service",
         "//pkg/database",
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/testutil",
     ],
 )

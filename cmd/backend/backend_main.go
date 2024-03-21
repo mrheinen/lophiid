@@ -21,12 +21,16 @@ import (
 	"os"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kkyr/fig"
-	"github.com/vingarcia/ksql"
+	lwhois "github.com/likexian/whois"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var configFile = flag.String("c", "", "Config file")
@@ -38,6 +42,7 @@ type Config struct {
 		Database struct {
 			Url                string `fig:"url" validate:"required"`
 			MaxOpenConnections int    `fig:"max_open_connections" default:"20"`
+			MinOpenConnections int    `fig:"min_open_connections" default:"5"`
 		} `fig:"database" validation:"required"`
 		Listener struct {
 			ListenAddress string `fig:"listen_address" default:"localhost:41110"`
@@ -61,6 +66,14 @@ type Config struct {
 		ApiKey            string        `fig:"api_key"`
 		HttpClientTimeout time.Duration `fig:"http_timeout" default:"2m"`
 	} `fig:"virustotal"`
+	Metrics struct {
+		ListenAddress string `fig:"listen_address" default:"localhost:8998"`
+	} `fig:"prometheus"`
+	WhoisManager struct {
+		ClientTimeout       time.Duration `fig:"client_timeout" default:"2s"`
+		CacheExpirationTime time.Duration `fig:"cache_expiration_time" default:"12h"`
+		MaxAttempts         int           `fig:"max_attempts" default:"3"`
+	} `fig:"whois_manager"`
 }
 
 func main() {
@@ -91,20 +104,42 @@ func main() {
 		programLevel.Set(slog.LevelInfo)
 	}
 
+	metricsRegistry := prometheus.NewRegistry()
+	http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
+	go http.ListenAndServe(cfg.Metrics.ListenAddress, nil)
+
 	listener, err := net.Listen("tcp", cfg.Backend.Listener.ListenAddress)
 	if err != nil {
 		slog.Error("Error: %s\n", err)
 		return
 	}
 
-	db, err := kpgx.New(context.Background(), cfg.Backend.Database.Url, ksql.Config{
-		MaxOpenConns: cfg.Backend.Database.MaxOpenConnections,
-	})
+	// Create the database handle.
+	pgxConf, err := pgxpool.ParseConfig(cfg.Backend.Database.Url)
 	if err != nil {
-		slog.Error("Error opening database: %s", err)
+		slog.Error("Error parsing database url: %s", err)
 		return
 	}
 
+	// Details for the config are here: https://pkg.go.dev/github.com/jackc/pgx/v5/pgxpool#Config
+	pgxConf.MaxConns = int32(cfg.Backend.Database.MaxOpenConnections)
+	pgxConf.MinConns = int32(cfg.Backend.Database.MinOpenConnections)
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), pgxConf)
+	if err != nil {
+		slog.Error("Error parsing database config: %s", err)
+		return
+	}
+
+	db, err := kpgx.NewFromPgxPool(pool)
+	if err != nil {
+		slog.Error("Error creating database: %s", err)
+		return
+	}
+
+	dbc := database.NewKSQLClient(&db)
+
+	// Create the alert manager.
 	alertMgr := alerting.NewAlertManager(cfg.Alerting.Interval)
 	alertMgr.AddAlerter(alerting.NewLogAlerter())
 
@@ -117,8 +152,10 @@ func main() {
 		}
 	}
 
-	dbc := database.NewKSQLClient(&db)
-	whoisManager := whois.NewCachedWhoisManager(dbc)
+	whoisClient := lwhois.NewClient()
+	whoisClient.SetTimeout(cfg.WhoisManager.ClientTimeout)
+	whoisManager := whois.NewCachedWhoisManager(dbc, whoisClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts)
+	whoisManager.Start()
 
 	insecureHttpTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -138,17 +175,20 @@ func main() {
 		vtc := vt.NewVTClient(cfg.VirusTotal.ApiKey, time.Hour*96, vtHttpClient)
 		vtc.Start()
 
-		vtMgr = vt.NewVTBackgroundManager(dbc, vtc)
+		metrics := vt.CreateVTMetrics(metricsRegistry)
+		vtMgr = vt.NewVTBackgroundManager(dbc, metrics, vtc)
 		vtMgr.Start()
 	}
 
 	downloadHttpClient := &http.Client{Transport: insecureHttpTransport, Timeout: cfg.Backend.Downloader.HttpClientTimeout}
 	dLoader := downloader.NewHTTPDownloader(cfg.Backend.Downloader.MalwareDownloadDir, downloadHttpClient)
 
-	jRunner := javascript.NewGojaJavascriptRunner()
-
+	jRunner := javascript.NewGojaJavascriptRunner(javascript.CreateGoJaMetrics(metricsRegistry))
 	queryRunner := backend.NewQueryRunnerImpl(dbc)
-	bs := backend.NewBackendServer(dbc, dLoader, jRunner, alertMgr, vtMgr, whoisManager, queryRunner)
+
+	bMetrics := backend.CreateBackendMetrics(metricsRegistry)
+
+	bs := backend.NewBackendServer(dbc, bMetrics, dLoader, jRunner, alertMgr, vtMgr, whoisManager, queryRunner)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}
@@ -194,5 +234,7 @@ func main() {
 	if err := s.Serve(listener); err != nil {
 		slog.Error("Error: %s\n", err)
 	}
+
+	// TODO: Implement proper shutdown
 
 }

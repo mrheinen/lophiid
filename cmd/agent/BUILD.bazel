@@ -6,9 +6,10 @@ go_library(
     importpath = "loophid/cmd/client",
     visibility = ["//visibility:private"],
     deps = [
-        "//backend_service",
+        "//pkg/agent",
         "//pkg/client",
         "//pkg/http/server",
+        "@com_github_kkyr_fig//:fig",
     ],
 )
 

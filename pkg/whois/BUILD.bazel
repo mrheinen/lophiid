@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "whois",
@@ -8,6 +8,12 @@ go_library(
     deps = [
         "//pkg/database",
         "//pkg/util",
-        "@com_github_likexian_whois//:whois",
     ],
+)
+
+go_test(
+    name = "whois_test",
+    srcs = ["whois_test.go"],
+    embed = [":whois"],
+    deps = ["//pkg/database"],
 )

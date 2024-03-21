@@ -30,20 +30,24 @@ func (f *FakeVTManager) QueueURL(ip string) {}
 func (f *FakeVTManager) Start()             {}
 func (f *FakeVTManager) Stop()              {}
 
+// ProbeRequestToDatabaseRequest transforms aHandleProbeRequest to a
+
 type VTBackgroundManager struct {
 	vtClient VTClientInterface
 	dbClient database.DatabaseClient
 	urlQmu   sync.Mutex
 	urlQueue map[string]bool
 	bgChan   chan bool
+	metrics  *VTMetrics
 }
 
-func NewVTBackgroundManager(dbClient database.DatabaseClient, vtClient VTClientInterface) *VTBackgroundManager {
+func NewVTBackgroundManager(dbClient database.DatabaseClient, metrics *VTMetrics, vtClient VTClientInterface) *VTBackgroundManager {
 	return &VTBackgroundManager{
 		vtClient: vtClient,
 		dbClient: dbClient,
 		urlQueue: make(map[string]bool),
 		bgChan:   make(chan bool),
+		metrics:  metrics,
 	}
 }
 
@@ -71,7 +75,9 @@ func (v *VTBackgroundManager) Start() {
 				return
 			case <-ticker.C:
 				slog.Debug("Fetching analysis")
+				startTime := time.Now()
 				err := v.GetFileAnalysis()
+				v.metrics.fileSubmitResponseTime.Observe(time.Since(startTime).Seconds())
 				if err != nil {
 					slog.Warn("error fetching file analysis", slog.String("error", err.Error()))
 				}
@@ -109,7 +115,10 @@ func (v *VTBackgroundManager) SubmitFiles() error {
 
 	for _, dl := range dls {
 		slog.Info("Submitting file", slog.String("file", dl.FileLocation))
+		startTime := time.Now()
 		cRes, err := v.vtClient.SubmitFile(dl.FileLocation)
+		v.metrics.fileSubmitResponseTime.Observe(time.Since(startTime).Seconds())
+		v.metrics.apiCallsCount.WithLabelValues("file_submit").Add(1)
 		if err != nil {
 			slog.Warn("error submitting file", slog.String("error", err.Error()))
 		} else {
@@ -138,6 +147,7 @@ func (v *VTBackgroundManager) GetFileAnalysis() error {
 	for _, dl := range dls {
 		slog.Info("Fetching analysis for file", slog.String("file", dl.FileLocation))
 		cRes, err := v.vtClient.GetFileAnalysis(dl.VTFileAnalysisID)
+		v.metrics.apiCallsCount.WithLabelValues("get_analysis").Add(1)
 		if err != nil {
 			slog.Warn("error fetching analysis", slog.String("error", err.Error()))
 			continue
@@ -180,7 +190,10 @@ func (v *VTBackgroundManager) ProcessURLQueue() error {
 	}
 
 	for k := range v.urlQueue {
+		startTime := time.Now()
 		cRes, err := v.vtClient.SubmitURL(k)
+		v.metrics.urlSubmitResponseTime.Observe(time.Since(startTime).Seconds())
+		v.metrics.apiCallsCount.WithLabelValues("submit_url").Add(1)
 		if err != nil {
 			return err
 		}

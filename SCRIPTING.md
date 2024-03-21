@@ -92,3 +92,10 @@ methods are exposed.
 
 ## Response object
 
+
+
+## methods
+
+### util.encoding.base64.encode
+### util.encoding.base64.decode
+

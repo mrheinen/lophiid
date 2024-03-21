@@ -5,6 +5,9 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/database"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestRunScriptWithoutValidateOk(t *testing.T) {
@@ -86,7 +89,9 @@ func TestRunScriptWithoutValidateOk(t *testing.T) {
 				Body: []byte("the body"),
 			}
 
-			jr := NewGojaJavascriptRunner()
+			reg := prometheus.NewRegistry()
+			metrics := CreateGoJaMetrics(reg)
+			jr := NewGojaJavascriptRunner(metrics)
 
 			res := backend_service.HttpResponse{}
 
@@ -168,7 +173,10 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 			}
 
 			res := backend_service.HttpResponse{}
-			jr := NewGojaJavascriptRunner()
+
+			reg := prometheus.NewRegistry()
+			metrics := CreateGoJaMetrics(reg)
+			jr := NewGojaJavascriptRunner(metrics)
 			err := jr.RunScript(test.script, req, &res, true)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
@@ -261,13 +269,22 @@ func TestRunScriptUsesCache(t *testing.T) {
 
 			fmt.Printf("Running test: %s\n", test.description)
 			res := backend_service.HttpResponse{}
-			jr := NewGojaJavascriptRunner()
+			reg := prometheus.NewRegistry()
+			metrics := CreateGoJaMetrics(reg)
+			jr := NewGojaJavascriptRunner(metrics)
 
 			jr.RunScript(test.script1, test.request1, &res, false)
 			err := jr.RunScript(test.script2, test.request2, &res, false)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
 				return
+			}
+
+			if !test.expectError {
+				metric := testutil.ToFloat64(metrics.javascriptSuccessCount.WithLabelValues(RunSuccess))
+				if metric != 2 {
+					t.Errorf("expected success metrics to be 2, got %f", metric)
+				}
 			}
 		})
 

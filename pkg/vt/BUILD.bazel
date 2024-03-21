@@ -4,13 +4,16 @@ go_library(
     name = "vt",
     srcs = [
         "manager.go",
+        "metrics.go",
         "vt.go",
     ],
     importpath = "loophid/pkg/vt",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",
+        "//pkg/metrics",
         "//pkg/util",
+        "@com_github_prometheus_client_golang//prometheus",
     ],
 )
 
@@ -21,5 +24,8 @@ go_test(
         "vt_test.go",
     ],
     embed = [":vt"],
-    deps = ["//pkg/database"],
+    deps = [
+        "//pkg/database",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
 )

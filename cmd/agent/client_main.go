@@ -4,11 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"log/slog"
-	"loophid/backend_service"
+	"loophid/pkg/agent"
 	"loophid/pkg/client"
 	http_server "loophid/pkg/http/server"
-	"time"
 
 	"github.com/kkyr/fig"
 )
@@ -16,6 +14,9 @@ import (
 var configFile = flag.String("c", "", "Config file")
 
 type Config struct {
+	General struct {
+		PublicIP string `fig:"public_ip" validate:"required"`
+	} `fig:"general"`
 	HTTPListener struct {
 		IP   string `fig:"ip"`
 		Port []int  `fig:"port"`
@@ -28,8 +29,8 @@ type Config struct {
 	} `fig:"https_listener"`
 
 	BackendClient struct {
-		BackendAddress string `fig:"backend_address" validate:"required"`
-		BackendPort    int    `fig:"backend_port" default:"41110"`
+		BackendAddress string `fig:"ip" validate:"required"`
+		BackendPort    int    `fig:"port" default:"41110"`
 		GRPCSSLCert    string `fig:"grpc_ssl_cert"`
 		GRPCSSLKey     string `fig:"grpc_ssl_key"`
 		GRPCCACert     string `fig:"grpc_ca_cert"`
@@ -76,51 +77,17 @@ func main() {
 
 	finish := make(chan bool)
 
+	var httpServers []*http_server.HttpServer
 	for _, port := range cfg.HTTPListener.Port {
-		go func(listenAddress string) {
-			s := http_server.NewHttpServer(c, listenAddress, cfg.HTTPListener.IP)
-			fmt.Printf("Starting server on : %s\n", listenAddress)
-			log.Fatal(s.Start())
-		}(fmt.Sprintf("%s:%d", cfg.HTTPListener.IP, port))
+		httpServers = append(httpServers, http_server.NewHttpServer(c, fmt.Sprintf("%s:%d", cfg.HTTPListener.IP, port), cfg.HTTPListener.IP))
 	}
 
 	for _, port := range cfg.HTTPSListener.Port {
-		go func(listenAddress string) {
-			s := http_server.NewSSLHttpServer(c, listenAddress, cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPSListener.IP)
-			fmt.Printf("Starting SSL server on : %s\n", listenAddress)
-			log.Fatal(s.Start())
-		}(fmt.Sprintf("%s:%d", cfg.HTTPSListener.IP, port))
+		httpServers = append(httpServers, http_server.NewSSLHttpServer(c, fmt.Sprintf("%s:%d", cfg.HTTPListener.IP, port), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPListener.IP))
 	}
 
-	// Setup the go routing for regularly reporting the status back to the
-	// backend.
-	statusChan := make(chan bool)
-	ticker := time.NewTicker(time.Minute * 5)
-	ip := cfg.HTTPSListener.IP
-	if ip == "" {
-		ip = cfg.HTTPListener.IP
-	}
-	sReq := backend_service.StatusRequest{
-		Ip: ip,
-		//ListenPort:    ports,
-		//ListenPortSsl: sslPorts,
-	}
-
-	go func() {
-		for {
-			select {
-			case <-statusChan:
-				ticker.Stop()
-				slog.Info("Status channel stopped")
-				return
-			case <-ticker.C:
-				if _, err := c.SendStatus(&sReq); err != nil {
-					slog.Warn("error sending status", slog.String("error", err.Error()))
-				}
-			}
-		}
-	}()
+	agent := agent.NewAgent(c, httpServers, cfg.General.PublicIP)
+	agent.Start()
 
 	<-finish
-	statusChan <- true
 }

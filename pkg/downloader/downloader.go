@@ -135,8 +135,13 @@ func (d *HTTPDownloader) getIPForUrl(targetUrl string) (string, net.IP, int, err
 
 func (d *HTTPDownloader) PepareTargetFileDir(subdir string) (string, error) {
 	targetDir := fmt.Sprintf("%s/%s", d.downloadDir, subdir)
-	if _, err := os.Stat(targetDir); err != nil {
-		if err := os.Mkdir(targetDir, 0755); err != nil {
+
+	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+		// Due to concurrency, it is possible that between the check for whether the
+		// directory exists and creating one, the directory is already created.
+		// Therefore we double check here that any error during creation is no
+		// ErrExist which we'll allow.
+		if err := os.Mkdir(targetDir, 0755); err != nil && !os.IsExist(err) {
 			return "", err
 		}
 	}
@@ -214,7 +219,7 @@ func (d *HTTPDownloader) FromUrl(reqId int64, fromUrl string, targetFile string,
 	if err != nil {
 		return dInfo, nil, fmt.Errorf("creating request for URL: %s, err %s", u.String(), err)
 	}
-	req.Header.Set("Host", host)
+	req.Host = host
 	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := d.httpClient.Do(req)

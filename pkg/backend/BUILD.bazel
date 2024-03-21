@@ -4,6 +4,7 @@ go_library(
     name = "backend",
     srcs = [
         "backend.go",
+        "metrics.go",
         "process.go",
         "queries.go",
         "request_queue.go",
@@ -18,10 +19,12 @@ go_library(
         "//pkg/database",
         "//pkg/downloader",
         "//pkg/javascript",
+        "//pkg/metrics",
         "//pkg/util",
         "//pkg/vt",
         "//pkg/whois",
         "@cc_mvdan_xurls_v2//:xurls",
+        "@com_github_prometheus_client_golang//prometheus",
         "@com_github_vingarcia_ksql//:ksql",
     ],
 )
@@ -44,5 +47,6 @@ go_test(
         "//pkg/javascript",
         "//pkg/vt",
         "//pkg/whois",
+        "@com_github_prometheus_client_golang//prometheus",
     ],
 )

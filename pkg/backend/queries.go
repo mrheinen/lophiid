@@ -72,7 +72,6 @@ func (q *QueryRunnerImpl) Run() error {
 		}
 
 		for _, req := range reqs {
-			// Get the tags for this request.
 			tagsPerReq, err := q.dbc.GetTagsPerRequestForRequestID(req.ID)
 			if err != nil {
 				return fmt.Errorf("fetching tags_per_request failed: %w", err)
@@ -88,7 +87,6 @@ func (q *QueryRunnerImpl) Run() error {
 				}
 
 				if !hasTag {
-
 					tagToAdd := database.TagPerRequest{
 						TagPerQueryID: t.ID,
 						RequestID:     req.ID,

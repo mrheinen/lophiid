@@ -2,9 +2,11 @@ package javascript
 
 import (
 	"crypto/md5"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"loophid/backend_service"
 	"loophid/pkg/database"
 	"loophid/pkg/util"
@@ -26,6 +28,29 @@ func (c Crypto) Md5sum(s string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+// Contains helper methods to decode strings.
+type Encoding struct {
+	Base64 Base64 `json:"base64"`
+}
+
+type Base64 struct {
+}
+
+// util.encoding.base64.decode()
+func (d Base64) Decode(s string) string {
+	dec, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		slog.Warn("unable to decode string", slog.String("input", s), slog.String("error", err.Error()))
+		return ""
+	}
+	return string(dec)
+}
+
+// util.encoding.base64.encode()
+func (d Base64) Encode(s string) string {
+	return base64.RawStdEncoding.EncodeToString([]byte(s))
+}
+
 type Time struct {
 }
 
@@ -39,9 +64,10 @@ func (t Time) Sleep(msec int) {
 //
 // util.crypto.md5sum("string") returns an md5 checksum of the given string.
 type Util struct {
-	Crypto Crypto       `json:"crypto"`
-	Time   Time         `json:"time"`
-	Cache  CacheWrapper `json:"cache"`
+	Crypto   Crypto       `json:"crypto"`
+	Time     Time         `json:"time"`
+	Cache    CacheWrapper `json:"cache"`
+	Encoding Encoding     `json:"encoding"`
 }
 
 type JavascriptRunner interface {
@@ -50,9 +76,10 @@ type JavascriptRunner interface {
 
 type GojaJavascriptRunner struct {
 	strCache *util.StringMapCache[string]
+	metrics  *GojaMetrics
 }
 
-func NewGojaJavascriptRunner() *GojaJavascriptRunner {
+func NewGojaJavascriptRunner(metrics *GojaMetrics) *GojaJavascriptRunner {
 	// The string cache timeout should be a low and targetted
 	// for the use case of holding something in cache between
 	// a couple requests for the same source.
@@ -60,6 +87,7 @@ func NewGojaJavascriptRunner() *GojaJavascriptRunner {
 	cache.Start()
 	return &GojaJavascriptRunner{
 		strCache: cache,
+		metrics:  metrics,
 	}
 }
 
@@ -106,6 +134,9 @@ func (r *ResponseWrapper) BodyString() string {
 // The JavascriptRunner will run the given script and makes the given request
 // available as 'request' inside the javascript context.
 func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, res *backend_service.HttpResponse, validate bool) error {
+
+	startTime := time.Now()
+
 	vm := goja.New()
 	// Map all fields with json tags to these tags in javascript. The second
 	// argument "true" will cause the method names to start with a lower case
@@ -118,6 +149,7 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 			keyPrefix: fmt.Sprintf("%s%s", req.SourceIP, req.HoneypotIP),
 			strCache:  j.strCache,
 		},
+		Encoding: Encoding{},
 	})
 
 	vm.Set("request", req)
@@ -125,6 +157,7 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 
 	_, err := vm.RunString(script)
 	if err != nil {
+		j.metrics.javascriptSuccessCount.WithLabelValues(RunFailed).Add(1)
 		return fmt.Errorf("couldnt run script: %s", err)
 	}
 
@@ -151,6 +184,7 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 	var createResponse func() string
 	ref := vm.Get("createResponse")
 	if ref == nil {
+		j.metrics.javascriptSuccessCount.WithLabelValues(RunFailed).Add(1)
 		return fmt.Errorf("couldn't find method createResponse")
 	}
 	err = vm.ExportTo(ref, &createResponse)
@@ -161,8 +195,11 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 	scriptOutput := createResponse()
 
 	if scriptOutput != "" {
+		j.metrics.javascriptSuccessCount.WithLabelValues(RunFailed).Add(1)
 		return fmt.Errorf("%w: %s", ErrScriptComplained, scriptOutput)
 	}
+	j.metrics.javascriptSuccessCount.WithLabelValues(RunSuccess).Add(1)
+	j.metrics.javascriptSuccessExecutionTime.Observe(time.Since(startTime).Seconds())
 
 	return nil
 }

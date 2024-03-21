@@ -39,13 +39,14 @@ type BackendServer struct {
 	safeRules       *SafeRules
 	safeRulesChan   chan bool
 	reqsProcessChan chan bool
-	reqsQueue       *RequestQueue
+	reqsQueue       chan *database.Request
 	sessionCache    *util.StringMapCache[database.ContentRule]
 	ruleVsCache     *RuleVsContentCache
+	metrics         *BackendMetrics
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner) *BackendServer {
 	sCache := util.NewStringMapCache[database.ContentRule](time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
@@ -61,9 +62,10 @@ func NewBackendServer(c database.DatabaseClient, dLoader downloader.Downloader, 
 		safeRules:       &SafeRules{},
 		safeRulesChan:   make(chan bool),
 		reqsProcessChan: make(chan bool),
-		reqsQueue:       &RequestQueue{},
+		reqsQueue:       make(chan *database.Request, 200),
 		sessionCache:    sCache,
 		ruleVsCache:     rCache,
+		metrics:         metrics,
 	}
 }
 
@@ -249,17 +251,22 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
 	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()))
 
+	rpcStartTime := time.Now()
 	sReq, err := s.ProbeRequestToDatabaseRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
+	s.metrics.requestsPerPort.WithLabelValues(fmt.Sprintf("%d", sReq.Port)).Add(1)
+	s.metrics.methodPerRequest.WithLabelValues(sReq.Method).Add(1)
+	s.metrics.honeypotRequests.WithLabelValues(sReq.HoneypotIP).Add(1)
+	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
 	// Put it in the queue so it can be stored async in the db. We don't know if
 	// the fetching and serving of content below works. However, we assume it will
 	// on purpose so that when a rule has multiple content and one is
 	// failing/gone; the next request that matches the rule will be skipping this
 	// content.
-	defer s.reqsQueue.Push(sReq)
+	s.reqsQueue <- sReq
 
 	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq)
 	if err != nil {
@@ -320,6 +327,8 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		Value: content.Server,
 	})
 
+	s.metrics.rpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
+
 	return &backend_service.HandleProbeResponse{
 		Response: res,
 	}, nil
@@ -335,75 +344,94 @@ func (s *BackendServer) LoadRules() error {
 	return nil
 }
 
-// ProcessReqsQueue empties the reqsQueue and stores the requests in the
-// database. It also extracts metadata from the requests and stores that also in
-// the database.
-func (s *BackendServer) ProcessReqsQueue() error {
-	for req := s.reqsQueue.Pop(); req != nil; req = s.reqsQueue.Pop() {
-
-		go func(req *database.Request) {
-			s.whoisMgr.LookupIP(req.SourceIP)
-		}(req)
-
-		fmt.Printf("Saving request\n")
-		dm, err := s.dbClient.Insert(req)
-		if err != nil {
-			return fmt.Errorf("error saving request: %s", err)
-		}
-
-		// Extract base64 strings
-		b64Map := make(map[string][]byte)
-		ex := NewBase64Extractor(b64Map, true)
-		ex.ParseRequest(req)
-
-		linksMap := make(map[string]struct{})
-		lx := NewURLExtractor(linksMap)
-		lx.ParseRequest(req)
-
-		if len(b64Map) == 0 && len(linksMap) == 0 {
-			continue
-		}
-
-		// Iterate over the base64 strings and store them. Importantly, while doing
-		// so try to extract links from the decoded content.
-		var metadatas []database.RequestMetadata
-		for _, v := range b64Map {
-			lx.ParseString(string(v))
-			metadatas = append(metadatas, database.RequestMetadata{
-				Type:      ex.MetaType(),
-				Data:      string(v),
-				RequestID: dm.ModelID(),
-			})
-		}
-
-		var wg sync.WaitGroup
-		// Iterate over the links and try to download them.
-		for v := range linksMap {
-			wg.Add(1)
-			go s.DownloadPayload(dm.ModelID(), v, &wg, true)
-			metadatas = append(metadatas, database.RequestMetadata{
-				Type:      lx.MetaType(),
-				Data:      string(v),
-				RequestID: dm.ModelID(),
-			})
-		}
-
-		// Store the metadata.
-		for _, m := range metadatas {
-			_, err := s.dbClient.Insert(&m)
-			if err != nil {
-				slog.Warn("Could not save metadata for request", slog.String("error", err.Error()))
+func (s *BackendServer) ProcessReqsQueue() {
+	for {
+		select {
+		case req := <-s.reqsQueue:
+			// TODO: consider doing the next line in a goroutine. Doing so might need
+			// some of the logic in ProcessRequest to change. For example, the whois
+			// lookup will be inefficient when quickly called for the requests from
+			// the same IP.
+			startTime := time.Now()
+			if err := s.ProcessRequest(req); err != nil {
+				slog.Warn("process request queue error", slog.String("error", err.Error()))
 			}
+			s.metrics.reqsQueueResponseTime.Observe(time.Since(startTime).Seconds())
+
+		case <-s.reqsProcessChan:
+			slog.Info("Process request queue done")
+			return
 		}
-		wg.Wait()
 	}
+
+}
+
+func (s *BackendServer) ProcessRequest(req *database.Request) error {
+
+	go func(req *database.Request) {
+		startTime := time.Now()
+		s.whoisMgr.LookupIP(req.SourceIP)
+		s.metrics.whoisResponseTime.Observe(time.Since(startTime).Seconds())
+	}(req)
+
+	dm, err := s.dbClient.Insert(req)
+	if err != nil {
+		return fmt.Errorf("error saving request: %s", err)
+	}
+
+	// Extract base64 strings
+	b64Map := make(map[string][]byte)
+	ex := NewBase64Extractor(b64Map, true)
+	ex.ParseRequest(req)
+
+	linksMap := make(map[string]struct{})
+	lx := NewURLExtractor(linksMap)
+	lx.ParseRequest(req)
+
+	if len(b64Map) == 0 && len(linksMap) == 0 {
+		return nil
+	}
+
+	// Iterate over the base64 strings and store them. Importantly, while doing
+	// so try to extract links from the decoded content.
+	var metadatas []database.RequestMetadata
+	for _, v := range b64Map {
+		lx.ParseString(string(v))
+		metadatas = append(metadatas, database.RequestMetadata{
+			Type:      ex.MetaType(),
+			Data:      string(v),
+			RequestID: dm.ModelID(),
+		})
+	}
+
+	var wg sync.WaitGroup
+	// Iterate over the links and try to download them.
+	for v := range linksMap {
+		wg.Add(1)
+		go s.DownloadPayload(dm.ModelID(), v, &wg, true)
+		metadatas = append(metadatas, database.RequestMetadata{
+			Type:      lx.MetaType(),
+			Data:      string(v),
+			RequestID: dm.ModelID(),
+		})
+	}
+
+	// Store the metadata.
+	for _, m := range metadatas {
+		_, err := s.dbClient.Insert(&m)
+		if err != nil {
+			slog.Warn("Could not save metadata for request", slog.String("error", err.Error()))
+		}
+	}
+
+	wg.Wait()
 	return nil
 }
 
 func (s *BackendServer) DownloadPayload(reqID int64, downloadUrl string, wg *sync.WaitGroup, parseContent bool) {
-
 	consumableContentTypes := map[string]bool{
 		"application/x-shellscript": true,
+		"application/x-sh":          true,
 		"text/x-sh":                 true,
 		"text/plain":                true,
 	}
@@ -411,10 +439,13 @@ func (s *BackendServer) DownloadPayload(reqID int64, downloadUrl string, wg *syn
 	outputFile, err := s.dLoader.PepareTargetFileDir(fmt.Sprintf("%d", reqID))
 	if err != nil {
 		slog.Warn("error preparing file", slog.String("error", err.Error()))
+		wg.Done()
 		return
 	}
 
+	startTime := time.Now()
 	dInfo, fileContent, err := s.dLoader.FromUrl(reqID, downloadUrl, outputFile, wg)
+	s.metrics.downloadResponseTime.Observe(time.Since(startTime).Seconds())
 
 	if err != nil {
 		slog.Debug("could not download", slog.String("error", err.Error()))
@@ -427,13 +458,17 @@ func (s *BackendServer) DownloadPayload(reqID int64, downloadUrl string, wg *syn
 
 	contentParts := strings.Split(dInfo.ContentType, ";")
 	_, hasGoodContent := consumableContentTypes[contentParts[0]]
-	if parseContent && (hasGoodContent || strings.HasSuffix(dInfo.UsedUrl, ".sh")) {
+	if parseContent && (hasGoodContent ||
+		strings.HasSuffix(dInfo.UsedUrl, ".sh") ||
+		strings.HasSuffix(dInfo.UsedUrl, ".pl") ||
+		strings.HasSuffix(dInfo.UsedUrl, ".bat") ||
+		strings.HasSuffix(dInfo.UsedUrl, ".py")) {
 		linksMap := make(map[string]struct{})
 		lx := NewURLExtractor(linksMap)
 		lx.ParseString(string(fileContent))
 
 		for k := range linksMap {
-			u, err := url.Parse(downloadUrl)
+			u, err := url.Parse(k)
 			if err != nil {
 				slog.Debug("couldnt parse content download link", slog.String("error", err.Error()))
 				continue
@@ -453,7 +488,9 @@ func (s *BackendServer) DownloadPayload(reqID int64, downloadUrl string, wg *syn
 	}
 
 	go func(ip string) {
+		startTime := time.Now()
 		s.whoisMgr.LookupIP(ip)
+		s.metrics.whoisResponseTime.Observe(time.Since(startTime).Seconds())
 	}(dInfo.IP)
 
 	// Check if we already downloaded this exact file. If we downloaded it
@@ -521,6 +558,7 @@ func (s *BackendServer) Start() error {
 	}
 
 	s.alertMgr.Start()
+	go s.ProcessReqsQueue()
 
 	// Setup the rules reloading.
 	rulesTicker := time.NewTicker(time.Second * 60)
@@ -545,25 +583,7 @@ func (s *BackendServer) Start() error {
 		}
 	}()
 
-	// Setup the requests processing
-	reqsTicker := time.NewTicker(time.Second * 10)
-	go func() {
-		for {
-			select {
-			case <-s.reqsProcessChan:
-				reqsTicker.Stop()
-				return
-			case <-reqsTicker.C:
-				s.ProcessReqsQueue()
-			}
-		}
-	}()
-
-	if err := s.qRunner.Run(); err != nil {
-		slog.Warn("error running queries", slog.String("error", err.Error()))
-	}
-
-	qRunnerTicker := time.NewTicker(time.Minute * 5)
+	qRunnerTicker := time.NewTicker(time.Minute * 10)
 	go func() {
 		for {
 			select {
@@ -575,8 +595,7 @@ func (s *BackendServer) Start() error {
 				if err := s.qRunner.Run(); err != nil {
 					slog.Warn("error running queries", slog.String("error", err.Error()))
 				}
-				elapsed := time.Since(start)
-				slog.Debug("query RUNNER took", slog.String("elapsed", elapsed.String()))
+				s.metrics.qRunnerResponseTime.Observe(time.Since(start).Seconds())
 			}
 		}
 	}()

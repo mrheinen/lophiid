@@ -123,8 +123,8 @@ func TestFromUrl(t *testing.T) {
 		hdrs := make(http.Header)
 		hdrs.Add("Content-Type", testContentType)
 
-		if req.Header.Get("Host") != testHost {
-			t.Errorf("expected host %s, but got %s", req.Header.Get("Host"), testHost)
+		if req.Host != testHost {
+			t.Errorf("expected host %s, but got %s", testHost, req.Host)
 		}
 
 		return &http.Response{
@@ -150,6 +150,10 @@ func TestFromUrl(t *testing.T) {
 
 	if !bytes.Equal(rData, testBody) {
 		t.Errorf("expected %s, got %s", testBody, rData)
+	}
+
+	if rDown.Host != testHost {
+		t.Errorf("expected \"%s\", got \"%s\"", testHost, rDown.Host)
 	}
 
 	if rDown.OriginalUrl != testUrl {
