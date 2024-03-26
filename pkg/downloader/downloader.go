@@ -14,8 +14,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
-	"strings"
 	"sync"
 )
 
@@ -96,41 +94,6 @@ func (d *HTTPDownloader) isPrivateIP(ip net.IP) bool {
 		}
 	}
 	return false
-}
-
-func (d *HTTPDownloader) getIPForUrl(targetUrl string) (string, net.IP, int, error) {
-	var rHost string
-	var rIP net.IP
-	rHostPort := 0
-
-	u, err := url.Parse(targetUrl)
-	if err != nil {
-		return rHost, rIP, rHostPort, err
-	}
-
-	rHost = u.Host
-	if strings.Contains(rHost, ":") {
-		parts := strings.Split(rHost, ":")
-		// TODO: handle IPv6 properly.
-		if len(parts) != 2 {
-			return rHost, rIP, rHostPort, fmt.Errorf("cannot handle host: %s", rHost)
-		}
-		rHost = parts[0]
-		rHostPort, err = strconv.Atoi(parts[1])
-		if err != nil {
-			return rHost, rIP, rHostPort, fmt.Errorf("cannot handle host port: %d", rHostPort)
-		}
-	}
-
-	rIP = net.ParseIP(rHost)
-	if rIP == nil {
-		netIps, err := net.LookupIP(rHost)
-		if err != nil {
-			return rHost, rIP, rHostPort, err
-		}
-		rIP = netIps[0]
-	}
-	return rHost, rIP, rHostPort, err
 }
 
 func (d *HTTPDownloader) PepareTargetFileDir(subdir string) (string, error) {

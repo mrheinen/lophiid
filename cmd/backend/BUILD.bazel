@@ -10,7 +10,6 @@ go_library(
         "//pkg/alerting",
         "//pkg/backend",
         "//pkg/database",
-        "//pkg/downloader",
         "//pkg/javascript",
         "//pkg/vt",
         "//pkg/whois",

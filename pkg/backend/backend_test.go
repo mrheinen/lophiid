@@ -8,7 +8,6 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/alerting"
 	"loophid/pkg/database"
-	"loophid/pkg/downloader"
 	"loophid/pkg/javascript"
 	"loophid/pkg/vt"
 	"loophid/pkg/whois"
@@ -147,7 +146,6 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			fmt.Printf("Running: %s\n", test.description)
 
 			fdbc := &database.FakeDatabaseClient{}
-			fakeDownLoader := downloader.FakeDownloader{}
 			fakeJrunner := javascript.FakeJavascriptRunner{}
 
 			alertManager := alerting.NewAlertManager(42)
@@ -158,7 +156,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 
 			reg := prometheus.NewRegistry()
 			bMetrics := CreateBackendMetrics(reg)
-			b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
 			if (err != nil) != test.errorExpected {
@@ -180,7 +178,6 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	}
 
 	fdbc := &database.FakeDatabaseClient{}
-	fakeDownLoader := downloader.FakeDownloader{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
 	whoisManager := whois.FakeWhoisManager{}
@@ -190,7 +187,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	}
 	reg := prometheus.NewRegistry()
 	bMetrics := CreateBackendMetrics(reg)
-	b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
 		Uri:  "/aa",
 		Port: 80,
@@ -227,7 +224,6 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 
 func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
-	fakeDownLoader := downloader.FakeDownloader{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
 	whoisManager := whois.FakeWhoisManager{}
@@ -236,7 +232,7 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	}
 	reg := prometheus.NewRegistry()
 	bMetrics := CreateBackendMetrics(reg)
-	b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
 		Request: &backend_service.HttpRequest{
@@ -297,7 +293,6 @@ func TestHandleProbe(t *testing.T) {
 		},
 	}
 
-	fakeDownLoader := downloader.FakeDownloader{}
 	fakeJrunner := javascript.FakeJavascriptRunner{
 		ErrorToReturn: nil,
 	}
@@ -308,7 +303,7 @@ func TestHandleProbe(t *testing.T) {
 	}
 	reg := prometheus.NewRegistry()
 	bMetrics := CreateBackendMetrics(reg)
-	b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "')
 	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -375,7 +370,6 @@ func TestHandleProbe(t *testing.T) {
 func TestProcessQueue(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
-	fakeDownLoader := downloader.FakeDownloader{}
 	alertManager := alerting.NewAlertManager(42)
 	whoisManager := whois.FakeWhoisManager{}
 	queryRunner := FakeQueryRunner{
@@ -383,7 +377,7 @@ func TestProcessQueue(t *testing.T) {
 	}
 	reg := prometheus.NewRegistry()
 	bMetrics := CreateBackendMetrics(reg)
-	b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
 	req := database.Request{
 		Uri:  "/aaaaa",
 		Body: []byte("body body"),
@@ -457,7 +451,6 @@ func TestSendStatus(t *testing.T) {
 				ErrorToReturn:         test.dbErrorToReturn,
 			}
 
-			fakeDownLoader := downloader.FakeDownloader{}
 			fakeJrunner := javascript.FakeJavascriptRunner{}
 
 			alertManager := alerting.NewAlertManager(42)
@@ -467,7 +460,7 @@ func TestSendStatus(t *testing.T) {
 			}
 			reg := prometheus.NewRegistry()
 			bMetrics := CreateBackendMetrics(reg)
-			b := NewBackendServer(fdbc, bMetrics, &fakeDownLoader, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner)
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
 
 			_, err := b.SendStatus(context.Background(), test.request)
 			if err == nil && test.expectedErrorString != "" {
@@ -479,5 +472,52 @@ func TestSendStatus(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestSendStatusSendsCommands(t *testing.T) {
+
+	fdbc := &database.FakeDatabaseClient{
+		HoneypotToReturn:      database.Honeypot{},
+		HoneypotErrorToReturn: nil,
+		ErrorToReturn:         nil,
+	}
+
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeWhoisManager{}
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+
+	testHoneypotIP := "1.1.1.1"
+	testUrl := "http://test"
+
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
+
+	statusRequest := backend_service.StatusRequest{
+		Ip: testHoneypotIP,
+	}
+
+	b.downloadQueue[testHoneypotIP] = []backend_service.CommandDownloadFile{
+		{
+			Url: testUrl,
+		},
+	}
+
+	resp, err := b.SendStatus(context.Background(), &statusRequest)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if len(resp.GetCommand()) != 1 {
+		t.Errorf("expected 1 command. Got %d", len(resp.GetCommand()))
+	}
+
+	resUrl := resp.GetCommand()[0].GetDownloadCmd().Url
+	if resUrl != testUrl {
+		t.Errorf("expected %s, got %s", testUrl, resUrl)
 	}
 }

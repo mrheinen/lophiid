@@ -150,6 +150,7 @@ type Download struct {
 	OriginalUrl             string                   `ksql:"original_url" json:"original_url"`
 	UsedUrl                 string                   `ksql:"used_url" json:"used_url"`
 	IP                      string                   `ksql:"ip" json:"ip"`
+	HoneypotIP              string                   `ksql:"honeypot_ip" json:"honeypot_ip"`
 	SHA256sum               string                   `ksql:"sha256sum" json:"sha256sum"`
 	Host                    string                   `ksql:"host" json:"host"`
 	FileLocation            string                   `ksql:"file_location" json:"file_location"`

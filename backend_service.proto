@@ -3,8 +3,9 @@ syntax = "proto3";
 option go_package = "/backend_service";
 
 service BackendService {
-    rpc HandleProbe(HandleProbeRequest) returns (HandleProbeResponse) {}
-    rpc SendStatus(StatusRequest) returns (StatusResponse) {}
+  rpc HandleProbe(HandleProbeRequest) returns (HandleProbeResponse) {}
+  rpc SendStatus(StatusRequest) returns (StatusResponse) {}
+  rpc HandleUploadFile(UploadFileRequest) returns (UploadFileResponse) {}
 }
 
 // Stores 1:N
@@ -12,11 +13,32 @@ message KeyValues {
   string key = 1;
   repeated string value = 2;
 }
+
 // Stores 1:1
 message KeyValue {
   string key = 1;
   string value = 2;
 }
+
+message DownloadInfo {
+  string url = 1; // Origin of the file.
+  string original_url = 2; 
+  string host_header = 3;
+  string user_agent = 4;
+  string content_type = 5;
+  bytes data = 6; // The content of the file.
+  double duration_sec = 7;
+  string raw_http_response = 8;
+  string ip = 9;
+  string honeypot_ip = 10;
+}
+
+message UploadFileRequest {
+  int64 request_id = 1;
+  DownloadInfo info = 2;
+}
+
+message UploadFileResponse {}
 
 message StatusRequest {
   string ip = 1;
@@ -25,6 +47,28 @@ message StatusRequest {
 }
 
 message StatusResponse {
+  repeated Command command = 1;
+}
+
+// Commands are send from the server to the client. The client will poll the
+// server regularly with SendStatus and in the response it will receive
+// commands.
+message CommandDownloadFile {
+  string url = 1;
+  string host_header = 2;
+  string user_agent = 3;
+  int64 request_id = 4;
+  string original_url = 5;
+  string ip = 6;
+}
+
+message CommandBlockURL {}
+
+message Command {
+  oneof command {
+    CommandDownloadFile download_cmd = 1;
+    CommandBlockURL block_url_cmd = 2;
+  }
 }
 
 // Parsed URL values. Based on golang url.URL
@@ -43,25 +87,25 @@ message ParsedURL {
 
 // HttpRequest represents the HTTP request that is received from client.
 message HttpRequest {
-    int64 time_received = 1;
-    string proto = 2;
-    string method = 3;
-    int64 content_length = 4;
-    ParsedURL parsed_url = 5;
-    repeated KeyValue header = 6;
-    // TODO: Add cookies, parsed form data
-    bytes  body = 7;
-    string remote_address = 8;
-    string honeypot_ip = 9;
-    string raw = 10;
+  int64 time_received = 1;
+  string proto = 2;
+  string method = 3;
+  int64 content_length = 4;
+  ParsedURL parsed_url = 5;
+  repeated KeyValue header = 6;
+  // TODO: Add cookies, parsed form data
+  bytes body = 7;
+  string remote_address = 8;
+  string honeypot_ip = 9;
+  string raw = 10;
 }
 
 // Contains all information needed to send an HTTP reply.
 message HttpResponse {
-    string status_code = 1;
-    bytes body = 2;
-    repeated KeyValue header = 3;
-    repeated KeyValue cookie = 4;
+  string status_code = 1;
+  bytes body = 2;
+  repeated KeyValue header = 3;
+  repeated KeyValue cookie = 4;
 }
 
 message HandleProbeRequest {
@@ -70,6 +114,5 @@ message HandleProbeRequest {
 }
 
 message HandleProbeResponse {
-    HttpResponse response = 1;
+  HttpResponse response = 1;
 }
-

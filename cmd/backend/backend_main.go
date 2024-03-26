@@ -12,7 +12,6 @@ import (
 	"loophid/pkg/alerting"
 	"loophid/pkg/backend"
 	"loophid/pkg/database"
-	"loophid/pkg/downloader"
 	"loophid/pkg/javascript"
 	"loophid/pkg/vt"
 	"loophid/pkg/whois"
@@ -51,8 +50,7 @@ type Config struct {
 			CACert        string `fig:"ssl_ca_cert"`
 		} `fig:"listener" validate:"required"`
 		Downloader struct {
-			MalwareDownloadDir string        `fig:"malware_download_dir" validate:"required"`
-			HttpClientTimeout  time.Duration `fig:"http_timeout" default:"10m"`
+			MalwareDownloadDir string `fig:"malware_download_dir" validate:"required"`
 		} `fig:"downloader"`
 	} `fig:"backend"`
 	Alerting struct {
@@ -157,10 +155,6 @@ func main() {
 	whoisManager := whois.NewCachedWhoisManager(dbc, whoisClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts)
 	whoisManager.Start()
 
-	insecureHttpTransport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
 	secureHttpTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
 	}
@@ -180,15 +174,12 @@ func main() {
 		vtMgr.Start()
 	}
 
-	downloadHttpClient := &http.Client{Transport: insecureHttpTransport, Timeout: cfg.Backend.Downloader.HttpClientTimeout}
-	dLoader := downloader.NewHTTPDownloader(cfg.Backend.Downloader.MalwareDownloadDir, downloadHttpClient)
-
 	jRunner := javascript.NewGojaJavascriptRunner(javascript.CreateGoJaMetrics(metricsRegistry))
 	queryRunner := backend.NewQueryRunnerImpl(dbc)
 
 	bMetrics := backend.CreateBackendMetrics(metricsRegistry)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, dLoader, jRunner, alertMgr, vtMgr, whoisManager, queryRunner)
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, cfg.Backend.Downloader.MalwareDownloadDir)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

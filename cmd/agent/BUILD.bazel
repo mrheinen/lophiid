@@ -15,6 +15,19 @@ go_library(
 
 go_binary(
     name = "client",
-    embed = [":client_lib"],
+    embed = [":agent_lib"],
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "agent_lib",
+    srcs = ["client_main.go"],
+    importpath = "loophid/cmd/agent",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/agent",
+        "//pkg/client",
+        "//pkg/http/server",
+        "@com_github_kkyr_fig//:fig",
+    ],
 )

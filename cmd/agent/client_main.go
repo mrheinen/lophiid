@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
 	"loophid/pkg/agent"
 	"loophid/pkg/client"
 	http_server "loophid/pkg/http/server"
+	"net/http"
+	"time"
 
 	"github.com/kkyr/fig"
 )
@@ -28,12 +31,16 @@ type Config struct {
 		Port    []int  `fig:"port"`
 	} `fig:"https_listener"`
 
+	Downloader struct {
+		HttpClientTimeout time.Duration `fig:"http_client_timeout" default:"10m"`
+	} `fig:"downloader"`
 	BackendClient struct {
-		BackendAddress string `fig:"ip" validate:"required"`
-		BackendPort    int    `fig:"port" default:"41110"`
-		GRPCSSLCert    string `fig:"grpc_ssl_cert"`
-		GRPCSSLKey     string `fig:"grpc_ssl_key"`
-		GRPCCACert     string `fig:"grpc_ca_cert"`
+		StatusInterval time.Duration `fig:"status_interval" default:"10s"`
+		BackendAddress string        `fig:"ip" validate:"required"`
+		BackendPort    int           `fig:"port" default:"41110"`
+		GRPCSSLCert    string        `fig:"grpc_ssl_cert"`
+		GRPCSSLKey     string        `fig:"grpc_ssl_key"`
+		GRPCCACert     string        `fig:"grpc_ca_cert"`
 	} `fig:"backend_client" validate:"required"`
 }
 
@@ -86,7 +93,14 @@ func main() {
 		httpServers = append(httpServers, http_server.NewSSLHttpServer(c, fmt.Sprintf("%s:%d", cfg.HTTPListener.IP, port), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPListener.IP))
 	}
 
-	agent := agent.NewAgent(c, httpServers, cfg.General.PublicIP)
+	// Create the http client. It will allow long timeouts to download from slow
+	// IoT devices. Additionally it will not care about secure SSL.
+	insecureHttpTransport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	downloadHttpClient := &http.Client{Transport: insecureHttpTransport, Timeout: cfg.Downloader.HttpClientTimeout}
+	agent := agent.NewAgent(c, httpServers, downloadHttpClient, cfg.BackendClient.StatusInterval, cfg.General.PublicIP)
 	agent.Start()
 
 	<-finish

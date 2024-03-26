@@ -9,3 +9,4 @@ func GetStructName(m interface{}) string {
 		return t.Name()
 	}
 }
+

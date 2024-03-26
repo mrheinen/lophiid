@@ -1,13 +1,17 @@
 package backend
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/rand"
 	"net"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,55 +21,61 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/alerting"
 	"loophid/pkg/database"
-	"loophid/pkg/downloader"
 	"loophid/pkg/javascript"
 	"loophid/pkg/util"
 	"loophid/pkg/vt"
 	"loophid/pkg/whois"
 
 	"github.com/vingarcia/ksql"
+	//"github.com/vingarcia/ksql"
 )
+
+// User agent to use for downloading.
+var userAgent = "Wget/1.13.4 (linux-gnu)"
 
 type BackendServer struct {
 	backend_service.BackendServiceServer
-	dbClient        database.DatabaseClient
-	dLoader         downloader.Downloader
-	jRunner         javascript.JavascriptRunner
-	qRunner         QueryRunner
-	qRunnerChan     chan bool
-	vtMgr           vt.VTManager
-	whoisMgr        whois.WhoisManager
-	alertMgr        *alerting.AlertManager
-	safeRules       *SafeRules
-	safeRulesChan   chan bool
-	reqsProcessChan chan bool
-	reqsQueue       chan *database.Request
-	sessionCache    *util.StringMapCache[database.ContentRule]
-	ruleVsCache     *RuleVsContentCache
-	metrics         *BackendMetrics
+	dbClient           database.DatabaseClient
+	jRunner            javascript.JavascriptRunner
+	qRunner            QueryRunner
+	qRunnerChan        chan bool
+	vtMgr              vt.VTManager
+	whoisMgr           whois.WhoisManager
+	alertMgr           *alerting.AlertManager
+	safeRules          *SafeRules
+	safeRulesChan      chan bool
+	reqsProcessChan    chan bool
+	malwareDownloadDir string
+	reqsQueue          chan *database.Request
+	sessionCache       *util.StringMapCache[database.ContentRule]
+	ruleVsCache        *RuleVsContentCache
+	downloadQueue      map[string][]backend_service.CommandDownloadFile
+	downloadQueueMu    sync.Mutex
+	metrics            *BackendMetrics
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, dLoader downloader.Downloader, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner, malwareDownloadDir string) *BackendServer {
 	sCache := util.NewStringMapCache[database.ContentRule](time.Minute * 30)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
 	return &BackendServer{
-		dbClient:        c,
-		dLoader:         dLoader,
-		jRunner:         jRunner,
-		qRunner:         qRunner,
-		qRunnerChan:     make(chan bool),
-		alertMgr:        alertMgr,
-		vtMgr:           vtManager,
-		whoisMgr:        wManager,
-		safeRules:       &SafeRules{},
-		safeRulesChan:   make(chan bool),
-		reqsProcessChan: make(chan bool),
-		reqsQueue:       make(chan *database.Request, 200),
-		sessionCache:    sCache,
-		ruleVsCache:     rCache,
-		metrics:         metrics,
+		dbClient:           c,
+		jRunner:            jRunner,
+		qRunner:            qRunner,
+		qRunnerChan:        make(chan bool),
+		alertMgr:           alertMgr,
+		vtMgr:              vtManager,
+		whoisMgr:           wManager,
+		safeRules:          &SafeRules{},
+		safeRulesChan:      make(chan bool),
+		reqsProcessChan:    make(chan bool),
+		reqsQueue:          make(chan *database.Request, 500),
+		downloadQueue:      make(map[string][]backend_service.CommandDownloadFile),
+		sessionCache:       sCache,
+		ruleVsCache:        rCache,
+		metrics:            metrics,
+		malwareDownloadDir: malwareDownloadDir,
 	}
 }
 
@@ -243,7 +253,173 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		slog.Info("status: updating honeypot ", slog.String("ip", req.GetIp()))
 	}
 
-	return &backend_service.StatusResponse{}, nil
+	// Check if there are any downloads scheduled for this honeypot.
+	s.downloadQueueMu.Lock()
+	defer s.downloadQueueMu.Unlock()
+	cmds, ok := s.downloadQueue[req.GetIp()]
+	if !ok || len(cmds) == 0 {
+		return &backend_service.StatusResponse{}, nil
+	}
+
+	ret := &backend_service.StatusResponse{}
+	for idx, _ := range cmds {
+		ret.Command = append(ret.Command, &backend_service.Command{
+			Command: &backend_service.Command_DownloadCmd{
+				DownloadCmd: &cmds[idx],
+			},
+		})
+	}
+
+	delete(s.downloadQueue, req.GetIp())
+	return ret, nil
+}
+
+func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo database.Download) {
+	consumableContentTypes := map[string]bool{
+		"application/x-shellscript": true,
+		"application/x-sh":          true,
+		"text/x-sh":                 true,
+		"text/plain":                true,
+	}
+
+	contentParts := strings.Split(dInfo.ContentType, ";")
+	_, hasGoodContent := consumableContentTypes[contentParts[0]]
+	if !hasGoodContent &&
+		!strings.HasSuffix(dInfo.UsedUrl, ".sh") ||
+		!strings.HasSuffix(dInfo.UsedUrl, ".pl") ||
+		!strings.HasSuffix(dInfo.UsedUrl, ".bat") ||
+		!strings.HasSuffix(dInfo.UsedUrl, ".py") {
+		return
+	}
+
+	linksMap := make(map[string]struct{})
+	lx := NewURLExtractor(linksMap)
+	lx.ParseString(string(fileContent))
+
+	for k := range linksMap {
+		u, err := url.Parse(k)
+		if err != nil {
+			slog.Debug("couldnt parse content download link", slog.String("error", err.Error()))
+			continue
+		}
+
+		host := u.Host
+		if strings.Contains(host, ":") {
+			host, _, _ = net.SplitHostPort(u.Host)
+		}
+
+		if host == dInfo.Host {
+			slog.Info("Downloading link from payload", slog.String("url", k))
+
+			ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(k)
+			if err != nil {
+				slog.Warn("error converting URL", slog.String("error", err.Error()))
+				continue
+			}
+
+			fmt.Printf("XXX Adding EXTRA EXTRA URL to the queue (original: %s, modified: %s)\n", k, ipBasedUrl)
+			s.downloadQueueMu.Lock()
+			s.downloadQueue[dInfo.HoneypotIP] = append(s.downloadQueue[dInfo.HoneypotIP], backend_service.CommandDownloadFile{
+				Url:         ipBasedUrl,
+				HostHeader:  hostHeader,
+				RequestId:   dInfo.RequestID,
+				UserAgent:   userAgent,
+				OriginalUrl: k,
+				Ip:          ip,
+			})
+			s.downloadQueueMu.Unlock()
+		}
+	}
+}
+
+func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_service.UploadFileRequest) (*backend_service.UploadFileResponse, error) {
+	rpcStartTime := time.Now()
+	retResponse := &backend_service.UploadFileResponse{}
+
+	slog.Debug("Got upload from URL", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
+	// Store the download information in the database.
+	dInfo := database.Download{}
+	dInfo.SHA256sum = fmt.Sprintf("%x", sha256.Sum256(req.GetInfo().GetData()))
+
+	s.metrics.downloadResponseTime.Observe(req.GetInfo().GetDurationSec())
+
+	dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
+	if err == nil {
+		dm.TimesSeen = dm.TimesSeen + 1
+		dm.LastRequestID = req.RequestId
+		dm.LastSeenAt = time.Now()
+		// Set to the latest HTTP response.
+		dm.RawHttpResponse = req.GetInfo().GetRawHttpResponse()
+
+		if err = s.dbClient.Update(&dm); err != nil {
+			slog.Warn("could not update", slog.String("error", err.Error()))
+		}
+
+		if s.vtMgr != nil && len(dm.VTURLAnalysisID) == 0 {
+			slog.Warn("URL analysis ID is not set!")
+			s.vtMgr.QueueURL(dInfo.OriginalUrl)
+		}
+
+		slog.Debug("Updated existing entry for URL upload", slog.String("url", req.GetInfo().GetOriginalUrl()))
+		s.metrics.fileUploadRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
+		return &backend_service.UploadFileResponse{}, nil
+	}
+
+	if !errors.Is(err, ksql.ErrRecordNotFound) {
+		slog.Warn("unexpected database error", slog.String("error", err.Error()))
+		return &backend_service.UploadFileResponse{}, fmt.Errorf("unexpected database error: %w", err)
+	}
+
+	s.whoisMgr.LookupIP(req.GetInfo().GetIp())
+
+	targetDir := fmt.Sprintf("%s/%d", s.malwareDownloadDir, req.RequestId)
+	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+		// Due to concurrency, it is possible that between the check for whether the
+		// directory exists and creating one, the directory is already created.
+		// Therefore we double check here that any error during creation is no
+		// ErrExist which we'll allow.
+		if err := os.Mkdir(targetDir, 0755); err != nil && !os.IsExist(err) {
+			return retResponse, err
+		}
+	}
+
+	targetFile := fmt.Sprintf("%s/%d", targetDir, rand.Intn(100000))
+	outFileHandle, err := os.Create(targetFile)
+	if err != nil {
+		return retResponse, fmt.Errorf("creating file: %s", err)
+	}
+
+	bytesWritten, err := io.Copy(outFileHandle, bytes.NewReader(req.GetInfo().GetData()))
+
+	dInfo.Size = bytesWritten
+	dInfo.RequestID = req.RequestId
+	dInfo.FileLocation = targetFile
+	dInfo.ContentType = req.GetInfo().GetContentType()
+	dInfo.OriginalUrl = req.GetInfo().GetOriginalUrl()
+	dInfo.UsedUrl = req.GetInfo().GetUrl()
+	dInfo.Host = req.GetInfo().GetHostHeader()
+	dInfo.IP = req.GetInfo().GetIp()
+	dInfo.HoneypotIP = req.GetInfo().GetHoneypotIp()
+	dInfo.LastRequestID = req.RequestId
+	dInfo.TimesSeen = 1
+	dInfo.LastSeenAt = time.Now()
+
+	_, err = s.dbClient.Insert(&dInfo)
+	if err != nil {
+		slog.Warn("error on insert", slog.String("error", err.Error()))
+		return &backend_service.UploadFileResponse{}, fmt.Errorf("unexpected database error on insert: %w", err)
+	}
+
+	slog.Debug("Added entry for URL upload", slog.String("url", req.GetInfo().GetOriginalUrl()))
+	if s.vtMgr != nil {
+		slog.Debug("Adding URL to VT queue", slog.String("url", req.GetInfo().GetOriginalUrl()))
+		s.vtMgr.QueueURL(dInfo.OriginalUrl)
+	}
+
+	s.MaybeExtractLinksFromPayload(req.GetInfo().GetData(), dInfo)
+
+	s.metrics.fileUploadRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
+	return &backend_service.UploadFileResponse{}, nil
 }
 
 // HandleProbe receives requests from te honeypots and tells them how to
@@ -368,11 +544,7 @@ func (s *BackendServer) ProcessReqsQueue() {
 
 func (s *BackendServer) ProcessRequest(req *database.Request) error {
 
-	go func(req *database.Request) {
-		startTime := time.Now()
-		s.whoisMgr.LookupIP(req.SourceIP)
-		s.metrics.whoisResponseTime.Observe(time.Since(startTime).Seconds())
-	}(req)
+	s.whoisMgr.LookupIP(req.SourceIP)
 
 	dm, err := s.dbClient.Insert(req)
 	if err != nil {
@@ -404,11 +576,26 @@ func (s *BackendServer) ProcessRequest(req *database.Request) error {
 		})
 	}
 
-	var wg sync.WaitGroup
 	// Iterate over the links and try to download them.
 	for v := range linksMap {
-		wg.Add(1)
-		go s.DownloadPayload(dm.ModelID(), v, &wg, true)
+		ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(v)
+		if err != nil {
+			slog.Warn("error converting URL", slog.String("error", err.Error()))
+			continue
+		}
+
+		fmt.Printf("XXX Adding URL to the queue (original: %s, modified: %s)\n", v, ipBasedUrl)
+		s.downloadQueueMu.Lock()
+		s.downloadQueue[req.HoneypotIP] = append(s.downloadQueue[req.HoneypotIP], backend_service.CommandDownloadFile{
+			Url:         ipBasedUrl,
+			HostHeader:  hostHeader,
+			RequestId:   dm.ModelID(),
+			UserAgent:   userAgent,
+			OriginalUrl: v,
+			Ip:          ip,
+		})
+		s.downloadQueueMu.Unlock()
+
 		metadatas = append(metadatas, database.RequestMetadata{
 			Type:      lx.MetaType(),
 			Data:      string(v),
@@ -424,116 +611,110 @@ func (s *BackendServer) ProcessRequest(req *database.Request) error {
 		}
 	}
 
-	wg.Wait()
 	return nil
 }
 
-func (s *BackendServer) DownloadPayload(reqID int64, downloadUrl string, wg *sync.WaitGroup, parseContent bool) {
-	consumableContentTypes := map[string]bool{
-		"application/x-shellscript": true,
-		"application/x-sh":          true,
-		"text/x-sh":                 true,
-		"text/plain":                true,
-	}
-
-	outputFile, err := s.dLoader.PepareTargetFileDir(fmt.Sprintf("%d", reqID))
-	if err != nil {
-		slog.Warn("error preparing file", slog.String("error", err.Error()))
-		wg.Done()
-		return
-	}
-
-	startTime := time.Now()
-	dInfo, fileContent, err := s.dLoader.FromUrl(reqID, downloadUrl, outputFile, wg)
-	s.metrics.downloadResponseTime.Observe(time.Since(startTime).Seconds())
-
-	if err != nil {
-		slog.Debug("could not download", slog.String("error", err.Error()))
-		if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
-			slog.Debug("could not cleanup", slog.String("error", err.Error()))
+/*
+	func (s *BackendServer) DownloadPayload(reqID int64, downloadUrl string, wg *sync.WaitGroup, parseContent bool) {
+		consumableContentTypes := map[string]bool{
+			"application/x-shellscript": true,
+			"application/x-sh":          true,
+			"text/x-sh":                 true,
+			"text/plain":                true,
 		}
-		return
-	}
-	slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
 
-	contentParts := strings.Split(dInfo.ContentType, ";")
-	_, hasGoodContent := consumableContentTypes[contentParts[0]]
-	if parseContent && (hasGoodContent ||
-		strings.HasSuffix(dInfo.UsedUrl, ".sh") ||
-		strings.HasSuffix(dInfo.UsedUrl, ".pl") ||
-		strings.HasSuffix(dInfo.UsedUrl, ".bat") ||
-		strings.HasSuffix(dInfo.UsedUrl, ".py")) {
-		linksMap := make(map[string]struct{})
-		lx := NewURLExtractor(linksMap)
-		lx.ParseString(string(fileContent))
 
-		for k := range linksMap {
-			u, err := url.Parse(k)
-			if err != nil {
-				slog.Debug("couldnt parse content download link", slog.String("error", err.Error()))
-				continue
-			}
-
-			host := u.Host
-			if strings.Contains(host, ":") {
-				host, _, _ = net.SplitHostPort(u.Host)
-			}
-
-			if host == dInfo.Host {
-				slog.Info("Downloading link from payload", slog.String("url", k))
-				wg.Add(1)
-				go s.DownloadPayload(reqID, k, wg, false)
-			}
-		}
-	}
-
-	go func(ip string) {
 		startTime := time.Now()
-		s.whoisMgr.LookupIP(ip)
-		s.metrics.whoisResponseTime.Observe(time.Since(startTime).Seconds())
-	}(dInfo.IP)
+		dInfo, fileContent, err := s.dLoader.FromUrl(reqID, downloadUrl, outputFile, wg)
+		s.metrics.downloadResponseTime.Observe(time.Since(startTime).Seconds())
 
-	// Check if we already downloaded this exact file. If we downloaded it
-	// before, update the existing database record and increase the
-	// times_seen counter. Else add a new record.
-	dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
-	if err == nil {
-		dm.TimesSeen = dm.TimesSeen + 1
-		dm.LastRequestID = reqID
-		dm.LastSeenAt = time.Now()
-		// Set to the latest HTTP response.
-		dm.RawHttpResponse = dInfo.RawHttpResponse
+		if err != nil {
+			slog.Debug("could not download", slog.String("error", err.Error()))
+			if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
+				slog.Debug("could not cleanup", slog.String("error", err.Error()))
+			}
+			return
+		}
+		slog.Debug("downloaded file", slog.String("file_info", fmt.Sprintf("%v", dInfo)))
 
-		if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
-			slog.Debug("could not cleanup", slog.String("error", err.Error()))
-		}
-		if err = s.dbClient.Update(&dm); err != nil {
-			slog.Warn("could not update", slog.String("error", err.Error()))
+		contentParts := strings.Split(dInfo.ContentType, ";")
+		_, hasGoodContent := consumableContentTypes[contentParts[0]]
+		if parseContent && (hasGoodContent ||
+			strings.HasSuffix(dInfo.UsedUrl, ".sh") ||
+			strings.HasSuffix(dInfo.UsedUrl, ".pl") ||
+			strings.HasSuffix(dInfo.UsedUrl, ".bat") ||
+			strings.HasSuffix(dInfo.UsedUrl, ".py")) {
+			linksMap := make(map[string]struct{})
+			lx := NewURLExtractor(linksMap)
+			lx.ParseString(string(fileContent))
+
+			for k := range linksMap {
+				u, err := url.Parse(k)
+				if err != nil {
+					slog.Debug("couldnt parse content download link", slog.String("error", err.Error()))
+					continue
+				}
+
+				host := u.Host
+				if strings.Contains(host, ":") {
+					host, _, _ = net.SplitHostPort(u.Host)
+				}
+
+				if host == dInfo.Host {
+					slog.Info("Downloading link from payload", slog.String("url", k))
+					wg.Add(1)
+					go s.DownloadPayload(reqID, k, wg, false)
+				}
+			}
 		}
 
-		// If the virustotal analysis ID is not set, try to submit the URL.
-		if s.vtMgr != nil && len(dm.VTURLAnalysisID) == 0 {
-			s.vtMgr.QueueURL(dInfo.OriginalUrl)
-		}
-	} else {
-		if errors.Is(err, ksql.ErrRecordNotFound) {
-			dInfo.LastRequestID = reqID
-			dInfo.TimesSeen = 1
-			dInfo.LastSeenAt = time.Now()
-			_, err = s.dbClient.Insert(&dInfo)
-			if err != nil {
-				slog.Warn("error on insert", slog.String("error", err.Error()))
+		go func(ip string) {
+			startTime := time.Now()
+			s.whoisMgr.LookupIP(ip)
+			s.metrics.whoisResponseTime.Observe(time.Since(startTime).Seconds())
+		}(dInfo.IP)
+
+		// Check if we already downloaded this exact file. If we downloaded it
+		// before, update the existing database record and increase the
+		// times_seen counter. Else add a new record.
+		dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
+		if err == nil {
+			dm.TimesSeen = dm.TimesSeen + 1
+			dm.LastRequestID = reqID
+			dm.LastSeenAt = time.Now()
+			// Set to the latest HTTP response.
+			dm.RawHttpResponse = dInfo.RawHttpResponse
+
+			if err = s.dLoader.CleanupTargetFileDir(fmt.Sprintf("%d", reqID), outputFile); err != nil {
+				slog.Debug("could not cleanup", slog.String("error", err.Error()))
+			}
+			if err = s.dbClient.Update(&dm); err != nil {
+				slog.Warn("could not update", slog.String("error", err.Error()))
 			}
 
-			if s.vtMgr != nil {
+			// If the virustotal analysis ID is not set, try to submit the URL.
+			if s.vtMgr != nil && len(dm.VTURLAnalysisID) == 0 {
 				s.vtMgr.QueueURL(dInfo.OriginalUrl)
 			}
 		} else {
-			slog.Warn("unexpected error", slog.String("error", err.Error()))
+			if errors.Is(err, ksql.ErrRecordNotFound) {
+				dInfo.LastRequestID = reqID
+				dInfo.TimesSeen = 1
+				dInfo.LastSeenAt = time.Now()
+				_, err = s.dbClient.Insert(&dInfo)
+				if err != nil {
+					slog.Warn("error on insert", slog.String("error", err.Error()))
+				}
+
+				if s.vtMgr != nil {
+					s.vtMgr.QueueURL(dInfo.OriginalUrl)
+				}
+			} else {
+				slog.Warn("unexpected error", slog.String("error", err.Error()))
+			}
 		}
 	}
-}
-
+*/
 func (s *BackendServer) loadRuleIdContentIdCombos() error {
 	// Load the rule/content ID combos into the cache.
 	reqs, err := s.dbClient.GetRequestsDistinctComboLastMonth()

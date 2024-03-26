@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 type BackendServiceClient interface {
 	HandleProbe(ctx context.Context, in *HandleProbeRequest, opts ...grpc.CallOption) (*HandleProbeResponse, error)
 	SendStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	HandleUploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error)
 }
 
 type backendServiceClient struct {
@@ -47,12 +48,22 @@ func (c *backendServiceClient) SendStatus(ctx context.Context, in *StatusRequest
 	return out, nil
 }
 
+func (c *backendServiceClient) HandleUploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error) {
+	out := new(UploadFileResponse)
+	err := c.cc.Invoke(ctx, "/BackendService/HandleUploadFile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BackendServiceServer is the server API for BackendService service.
 // All implementations must embed UnimplementedBackendServiceServer
 // for forward compatibility
 type BackendServiceServer interface {
 	HandleProbe(context.Context, *HandleProbeRequest) (*HandleProbeResponse, error)
 	SendStatus(context.Context, *StatusRequest) (*StatusResponse, error)
+	HandleUploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error)
 	mustEmbedUnimplementedBackendServiceServer()
 }
 
@@ -65,6 +76,9 @@ func (UnimplementedBackendServiceServer) HandleProbe(context.Context, *HandlePro
 }
 func (UnimplementedBackendServiceServer) SendStatus(context.Context, *StatusRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendStatus not implemented")
+}
+func (UnimplementedBackendServiceServer) HandleUploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HandleUploadFile not implemented")
 }
 func (UnimplementedBackendServiceServer) mustEmbedUnimplementedBackendServiceServer() {}
 
@@ -115,6 +129,24 @@ func _BackendService_SendStatus_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BackendService_HandleUploadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BackendServiceServer).HandleUploadFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/BackendService/HandleUploadFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BackendServiceServer).HandleUploadFile(ctx, req.(*UploadFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _BackendService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "BackendService",
 	HandlerType: (*BackendServiceServer)(nil),
@@ -126,6 +158,10 @@ var _BackendService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendStatus",
 			Handler:    _BackendService_SendStatus_Handler,
+		},
+		{
+			MethodName: "HandleUploadFile",
+			Handler:    _BackendService_HandleUploadFile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

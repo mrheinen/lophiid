@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "agent",
@@ -8,6 +8,16 @@ go_library(
     deps = [
         "//backend_service",
         "//pkg/client",
+        "//pkg/http/server",
+    ],
+)
+
+go_test(
+    name = "agent_test",
+    srcs = ["agent_test.go"],
+    embed = [":agent"],
+    deps = [
+        "//backend_service",
         "//pkg/http/server",
     ],
 )

@@ -66,3 +66,11 @@ Add option to ad header to content. E.g. last-modified such as used in the palo
 alto exploits <M-Right>https://devco.re/blog/2019/07/17/attacking-ssl-vpn-part-1-PreAuth-RCE-on-Palo-Alto-GlobalProtect-with-Uber-as-case-study/
 
 Update whois handler and make a work group, remove lock.
+
+Do the pings and nc lokups
+
+
+panic: sync: WaitGroup is reused before previous Wait has returned
+
+
+
