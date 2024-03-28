@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -30,6 +31,20 @@ func IsIPPrivate(ip net.IP) bool {
 func ConvertURLToIPBased(targetUrl string) (string, string, string, error) {
 	var rIP net.IP
 	rHostPort := 0
+
+	// Regex match targetUrl to see if it starts with a URL scheme.
+	matched, err := regexp.MatchString("^[a-z]+://", targetUrl)
+	if err != nil {
+		return "", "", "", fmt.Errorf("unable to match regex on URL: %s  %s", targetUrl, err)
+	}
+
+	if matched {
+		if !strings.HasPrefix(targetUrl, "http") {
+			return "", "", "", fmt.Errorf("unable to support scheme for URL: %s ", targetUrl)
+		}
+	} else {
+		targetUrl = fmt.Sprintf("http://%s", targetUrl)
+	}
 
 	u, err := url.Parse(targetUrl)
 	if err != nil {
@@ -58,7 +73,7 @@ func ConvertURLToIPBased(targetUrl string) (string, string, string, error) {
 	if rIP == nil {
 		netIps, err := net.LookupIP(dnsIP)
 		if err != nil {
-			return "", "", "", fmt.Errorf("error doing DNS lookup: %w", err)
+			return "", "", "", fmt.Errorf("error doing DNS lookup of %s: %w", dnsIP, err)
 		}
 		rIP = netIps[0]
 	}

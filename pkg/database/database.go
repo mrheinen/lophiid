@@ -89,6 +89,7 @@ type Request struct {
 	ContentDynamic bool                `ksql:"content_dynamic" json:"content_dynamic"`
 	RuleID         int64               `ksql:"rule_id" json:"rule_id"`
 	Starred        bool                `ksql:"starred" json:"starred"`
+	BaseHash       string              `ksql:"base_hash" json:"base_hash"`
 	Tags           []TagPerRequestFull `json:"tags"`
 }
 
@@ -147,6 +148,7 @@ type Download struct {
 	CreatedAt               time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	LastSeenAt              time.Time                `ksql:"last_seen_at" json:"last_seen_at"`
 	ContentType             string                   `ksql:"content_type" json:"content_type"`
+	DetectedContentType     string                   `ksql:"detected_content_type" json:"detected_content_type"`
 	OriginalUrl             string                   `ksql:"original_url" json:"original_url"`
 	UsedUrl                 string                   `ksql:"used_url" json:"used_url"`
 	IP                      string                   `ksql:"ip" json:"ip"`
@@ -768,6 +770,7 @@ type FakeDatabaseClient struct {
 	TagPerQueryReturnError error
 	WhoisToReturn          Whois
 	WhoisErrorToReturn     error
+	LastDataModelSeen      interface{}
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -801,9 +804,11 @@ func (f *FakeDatabaseClient) GetRequestsSegment(offset int64, limit int64, sourc
 	return []Request{}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) Insert(dm DataModel) (DataModel, error) {
+	f.LastDataModelSeen = dm
 	return dm, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) Update(dm DataModel) error {
+	f.LastDataModelSeen = dm
 	return f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetApps() ([]Application, error) {
@@ -842,7 +847,10 @@ func (f *FakeDatabaseClient) GetDownloads() ([]Download, error) {
 	return f.DownloadsToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetDownloadBySum(sha256sum string) (Download, error) {
-	return f.DownloadsToReturn[0], f.ErrorToReturn
+	if f.DownloadsToReturn != nil && len(f.DownloadsToReturn) > 0 {
+		return f.DownloadsToReturn[0], f.ErrorToReturn
+	}
+	return Download{}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetAppByID(id int64) (Application, error) {
 	return f.ApplicationToReturn, nil

@@ -891,6 +891,13 @@ def go_dependencies():
         version = "v0.7.1",
     )
     go_repository(
+        name = "com_github_rakyll_magicmime",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/rakyll/magicmime",
+        sum = "h1:aFIp1DqgzjcB3FI7rQk6uZl73i1VPpWswab1YKU4CL4=",
+        version = "v0.1.0",
+    )
+    go_repository(
         name = "com_github_rogpeppe_fastuuid",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/rogpeppe/fastuuid",

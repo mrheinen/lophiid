@@ -27,7 +27,6 @@ import (
 	"loophid/pkg/whois"
 
 	"github.com/vingarcia/ksql"
-	//"github.com/vingarcia/ksql"
 )
 
 // User agent to use for downloading.
@@ -274,21 +273,30 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	return ret, nil
 }
 
-func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo database.Download) {
+func HasParseableContent(fileUrl string, mime string) bool {
+
 	consumableContentTypes := map[string]bool{
 		"application/x-shellscript": true,
 		"application/x-sh":          true,
 		"text/x-sh":                 true,
+		"text/x-perl":               true,
 		"text/plain":                true,
 	}
 
-	contentParts := strings.Split(dInfo.ContentType, ";")
+	contentParts := strings.Split(mime, ";")
 	_, hasGoodContent := consumableContentTypes[contentParts[0]]
-	if !hasGoodContent &&
-		!strings.HasSuffix(dInfo.UsedUrl, ".sh") ||
-		!strings.HasSuffix(dInfo.UsedUrl, ".pl") ||
-		!strings.HasSuffix(dInfo.UsedUrl, ".bat") ||
-		!strings.HasSuffix(dInfo.UsedUrl, ".py") {
+	return hasGoodContent || strings.HasSuffix(fileUrl, ".sh") ||
+		!strings.HasSuffix(fileUrl, ".pl") ||
+		!strings.HasSuffix(fileUrl, ".bat") ||
+		!strings.HasSuffix(fileUrl, ".py")
+}
+
+func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo database.Download) {
+
+	// Check against the reported and detected content type to see if we want to
+	// parse this file for URLs.
+	if !HasParseableContent(dInfo.UsedUrl, dInfo.ContentType) &&
+		!HasParseableContent(dInfo.UsedUrl, dInfo.DetectedContentType) {
 		return
 	}
 
@@ -308,7 +316,12 @@ func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo d
 			host, _, _ = net.SplitHostPort(u.Host)
 		}
 
-		if host == dInfo.Host {
+		dHost := dInfo.Host
+		if strings.Contains(dHost, ":") {
+			dHost, _, _ = net.SplitHostPort(dHost)
+		}
+
+		if host == dHost {
 			slog.Info("Downloading link from payload", slog.String("url", k))
 
 			ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(k)
@@ -317,7 +330,6 @@ func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo d
 				continue
 			}
 
-			fmt.Printf("XXX Adding EXTRA EXTRA URL to the queue (original: %s, modified: %s)\n", k, ipBasedUrl)
 			s.downloadQueueMu.Lock()
 			s.downloadQueue[dInfo.HoneypotIP] = append(s.downloadQueue[dInfo.HoneypotIP], backend_service.CommandDownloadFile{
 				Url:         ipBasedUrl,
@@ -340,6 +352,17 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	// Store the download information in the database.
 	dInfo := database.Download{}
 	dInfo.SHA256sum = fmt.Sprintf("%x", sha256.Sum256(req.GetInfo().GetData()))
+	dInfo.UsedUrl = req.GetInfo().GetUrl()
+	dInfo.Host = req.GetInfo().GetHostHeader()
+	dInfo.ContentType = req.GetInfo().GetContentType()
+	dInfo.DetectedContentType = req.GetInfo().GetDetectedContentType()
+	dInfo.OriginalUrl = req.GetInfo().GetOriginalUrl()
+	dInfo.RequestID = req.RequestId
+	dInfo.IP = req.GetInfo().GetIp()
+	dInfo.HoneypotIP = req.GetInfo().GetHoneypotIp()
+	dInfo.LastRequestID = req.RequestId
+	dInfo.TimesSeen = 1
+	dInfo.LastSeenAt = time.Now()
 
 	s.metrics.downloadResponseTime.Observe(req.GetInfo().GetDurationSec())
 
@@ -360,6 +383,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 			s.vtMgr.QueueURL(dInfo.OriginalUrl)
 		}
 
+		s.MaybeExtractLinksFromPayload(req.GetInfo().GetData(), dInfo)
 		slog.Debug("Updated existing entry for URL upload", slog.String("url", req.GetInfo().GetOriginalUrl()))
 		s.metrics.fileUploadRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
 		return &backend_service.UploadFileResponse{}, nil
@@ -392,18 +416,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	bytesWritten, err := io.Copy(outFileHandle, bytes.NewReader(req.GetInfo().GetData()))
 
 	dInfo.Size = bytesWritten
-	dInfo.RequestID = req.RequestId
 	dInfo.FileLocation = targetFile
-	dInfo.ContentType = req.GetInfo().GetContentType()
-	dInfo.OriginalUrl = req.GetInfo().GetOriginalUrl()
-	dInfo.UsedUrl = req.GetInfo().GetUrl()
-	dInfo.Host = req.GetInfo().GetHostHeader()
-	dInfo.IP = req.GetInfo().GetIp()
-	dInfo.HoneypotIP = req.GetInfo().GetHoneypotIp()
-	dInfo.LastRequestID = req.RequestId
-	dInfo.TimesSeen = 1
-	dInfo.LastSeenAt = time.Now()
-
 	_, err = s.dbClient.Insert(&dInfo)
 	if err != nil {
 		slog.Warn("error on insert", slog.String("error", err.Error()))
@@ -580,11 +593,10 @@ func (s *BackendServer) ProcessRequest(req *database.Request) error {
 	for v := range linksMap {
 		ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(v)
 		if err != nil {
-			slog.Warn("error converting URL", slog.String("error", err.Error()))
+			slog.Warn("error converting URL", slog.String("url", v), slog.String("error", err.Error()))
 			continue
 		}
 
-		fmt.Printf("XXX Adding URL to the queue (original: %s, modified: %s)\n", v, ipBasedUrl)
 		s.downloadQueueMu.Lock()
 		s.downloadQueue[req.HoneypotIP] = append(s.downloadQueue[req.HoneypotIP], backend_service.CommandDownloadFile{
 			Url:         ipBasedUrl,
@@ -782,10 +794,6 @@ func (s *BackendServer) Start() error {
 	}()
 
 	return nil
-}
-
-func (s *BackendServer) StartRulesLoading() {
-
 }
 
 func (s *BackendServer) Stop() {

@@ -12,6 +12,8 @@ import (
 	"time"
 
 	http_server "loophid/pkg/http/server"
+
+	"github.com/rakyll/magicmime"
 )
 
 type Agent struct {
@@ -79,6 +81,7 @@ func (a *Agent) DownloadToBuffer(request *backend_service.CommandDownloadFile) (
 	downloadInfo.OriginalUrl = request.OriginalUrl
 	downloadInfo.Ip = request.Ip
 	downloadInfo.HoneypotIp = a.reportIP
+	downloadInfo.HostHeader = request.HostHeader
 
 	startTime := time.Now()
 	req, err := http.NewRequest("GET", request.Url, nil)
@@ -120,6 +123,15 @@ func (a *Agent) DownloadToBuffer(request *backend_service.CommandDownloadFile) (
 		return &downloadInfo, fmt.Errorf("reading response: %s", err)
 	}
 
+	magicmime.Open(magicmime.MAGIC_MIME_TYPE)
+	detectedMimeType, err := magicmime.TypeByBuffer(respBytes)
+	magicmime.Close()
+	if err != nil {
+		slog.Warn("unable to determine mime", slog.String("error", err.Error()))
+		detectedMimeType = "application/octet-stream"
+	}
+
+	downloadInfo.DetectedContentType = detectedMimeType
 	downloadInfo.DurationSec = time.Since(startTime).Seconds()
 	downloadInfo.Data = respBytes
 	return &downloadInfo, nil
@@ -174,4 +186,3 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 
 	return nil
 }
-

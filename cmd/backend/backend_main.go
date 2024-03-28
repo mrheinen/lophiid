@@ -51,6 +51,7 @@ type Config struct {
 		} `fig:"listener" validate:"required"`
 		Downloader struct {
 			MalwareDownloadDir string `fig:"malware_download_dir" validate:"required"`
+			MaxDownloadSizeMB  int    `fig:"max_download_size_mb" default:"200"`
 		} `fig:"downloader"`
 	} `fig:"backend"`
 	Alerting struct {
@@ -184,8 +185,13 @@ func main() {
 		slog.Error("Error: %s", err)
 	}
 
+	generalGrpcOptions := []grpc.ServerOption{
+		grpc.MaxSendMsgSize(1024 * 1024 * 50),
+		grpc.MaxRecvMsgSize(1024 * 1024 * cfg.Backend.Downloader.MaxDownloadSizeMB),
+	}
+
 	if cfg.Backend.Listener.SSLCert == "" {
-		rpcServer := grpc.NewServer()
+		rpcServer := grpc.NewServer(generalGrpcOptions...)
 		// Register reflection service on gRPC server.
 		reflection.Register(rpcServer)
 		backend_service.RegisterBackendServiceServer(rpcServer, bs)
@@ -218,7 +224,8 @@ func main() {
 		ClientCAs:    ca,
 	}
 
-	s := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)))
+	generalGrpcOptions = append(generalGrpcOptions, grpc.Creds(credentials.NewTLS(tlsConfig)))
+	s := grpc.NewServer(generalGrpcOptions...)
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	backend_service.RegisterBackendServiceServer(s, bs)

@@ -1,0 +1,8 @@
+node_modules
+bazel-bin
+bazel-lophiid
+bazel-out
+bazel-testlogs
+ui/dist/*
+MODULE.bazel.lock
+package-lock.json

@@ -92,7 +92,6 @@ func (q *QueryRunnerImpl) Run() error {
 						RequestID:     req.ID,
 						TagID:         t.TagID,
 					}
-					fmt.Printf("XXX adding tag to request: %+v\n", tagToAdd)
 					_, err := q.dbc.Insert(&tagToAdd)
 
 					if err != nil {

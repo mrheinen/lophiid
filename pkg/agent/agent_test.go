@@ -8,6 +8,7 @@ import (
 	http_server "loophid/pkg/http/server"
 	"net/http"
 	"testing"
+	"time"
 )
 
 // RoundTripFunc .
@@ -55,7 +56,7 @@ func TestDownloadToBuffer(t *testing.T) {
 		}
 	})
 
-	agent := NewAgent(nil, []*http_server.HttpServer{}, client, "1.1.1.1")
+	agent := NewAgent(nil, []*http_server.HttpServer{}, client, time.Minute, "1.1.1.1")
 
 	resp, err := agent.DownloadToBuffer(&backendRequest)
 	if err != nil {
@@ -69,4 +70,48 @@ func TestDownloadToBuffer(t *testing.T) {
 	if !bytes.Equal(testBody, resp.Data) {
 		fmt.Printf("expected %s, got %s", testBody, resp.Data)
 	}
+}
+
+func TestDownloadToBufferContentType(t *testing.T) {
+	backendRequest := backend_service.CommandDownloadFile{
+		Url:        "http://127.0.0.1",
+		HostHeader: "localhost",
+		UserAgent:  "wget",
+	}
+
+	testBody := []byte("#!/bin/bash\nssss")
+	testContentType := "text/fake"
+
+	client := NewTestClient(func(req *http.Request) *http.Response {
+		hdrs := make(http.Header)
+		hdrs.Add("Content-Type", testContentType)
+
+		if req.Host != backendRequest.HostHeader {
+			t.Errorf("expected host %s, but got %s", backendRequest.HostHeader, req.Host)
+		}
+
+		if req.Header.Get("User-Agent") != backendRequest.UserAgent {
+			t.Errorf("expected %s, got %s", backendRequest.UserAgent, req.Header.Get("User-Agent"))
+		}
+
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(string(testBody))),
+			// Must be set to non-nil value or it panics
+			Header: hdrs,
+		}
+	})
+
+	agent := NewAgent(nil, []*http_server.HttpServer{}, client, time.Minute, "1.1.1.1")
+
+	resp, err := agent.DownloadToBuffer(&backendRequest)
+	if err != nil {
+		t.Errorf("expected no error, got %+v", err)
+	}
+
+	expectedMime := "text/x-shellscript"
+	if resp.DetectedContentType != expectedMime {
+		t.Errorf("expected mime %s, got %s", expectedMime, resp.DetectedContentType)
+	}
+
 }

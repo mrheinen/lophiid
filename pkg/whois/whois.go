@@ -87,7 +87,6 @@ func (c *CachedWhoisManager) DoWhoisWork() {
 		}
 
 		if _, err := c.dbClient.Insert(&database.Whois{IP: ip, Data: result}); err != nil {
-			fmt.Printf("XXXX: %s\n", result)
 			slog.Warn("Failed to store whois in database", slog.String("error", err.Error()))
 			c.mu.Lock()
 			c.lookupMap[ip] += 1

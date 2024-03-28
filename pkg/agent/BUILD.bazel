@@ -9,6 +9,7 @@ go_library(
         "//backend_service",
         "//pkg/client",
         "//pkg/http/server",
+        "@com_github_rakyll_magicmime//:magicmime",
     ],
 )
 

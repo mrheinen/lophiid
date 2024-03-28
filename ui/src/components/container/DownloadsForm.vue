@@ -192,7 +192,15 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
+.p-fieldset-legend {
+  width: 100% !important;
+}
+
+legend > a {
+  float: left;
+  padding: 0.75rem;
+}
 
 pre.whois {
   max-height: 400px;

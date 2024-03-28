@@ -22,7 +22,7 @@ message KeyValue {
 
 message DownloadInfo {
   string url = 1; // Origin of the file.
-  string original_url = 2; 
+  string original_url = 2;
   string host_header = 3;
   string user_agent = 4;
   string content_type = 5;
@@ -31,6 +31,7 @@ message DownloadInfo {
   string raw_http_response = 8;
   string ip = 9;
   string honeypot_ip = 10;
+  string detected_content_type = 11;
 }
 
 message UploadFileRequest {

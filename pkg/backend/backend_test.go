@@ -303,7 +303,7 @@ func TestHandleProbe(t *testing.T) {
 	}
 	reg := prometheus.NewRegistry()
 	bMetrics := CreateBackendMetrics(reg)
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "')
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
 	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -519,5 +519,50 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	resUrl := resp.GetCommand()[0].GetDownloadCmd().Url
 	if resUrl != testUrl {
 		t.Errorf("expected %s, got %s", testUrl, resUrl)
+	}
+}
+
+func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{
+		DownloadsToReturn: []database.Download{
+			{
+				ID:        41,
+				TimesSeen: 1,
+			},
+		},
+	}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeWhoisManager{}
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
+
+	uploadRequest := backend_service.UploadFileRequest{
+		RequestId: 42,
+		Info: &backend_service.DownloadInfo{
+			HostHeader:  "example.org",
+			ContentType: "text/html",
+			HoneypotIp:  "1.1.1.1",
+			OriginalUrl: "http://example.org/foo.sh",
+			Url:         "http://127.0.0.1/foo.sh",
+			Data:        []byte("extract this http://example.org/boo and ignore this http://www.google.com/foobar.sh"),
+		},
+	}
+
+	_, err := b.HandleUploadFile(context.Background(), &uploadRequest)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+	if len(b.downloadQueue) != 1 {
+		t.Errorf("expected len %d, got %d", 1, len(b.downloadQueue))
+	}
+
+	downloadEntry := fdbc.LastDataModelSeen.(*database.Download)
+	if downloadEntry.TimesSeen != 2 {
+		t.Errorf("expected times seen to be %d, got %d", 2, downloadEntry.TimesSeen)
 	}
 }

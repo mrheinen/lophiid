@@ -41,6 +41,13 @@ type VTBackgroundManager struct {
 	metrics  *VTMetrics
 }
 
+// NewVTBackgroundManager creates a new VTBackgroundManager instance.
+//
+// Parameters:
+// - dbClient: database client
+// - metrics: pointer to VTMetrics
+// - vtClient: VTClientInterface
+// Returns a pointer to VTBackgroundManager.
 func NewVTBackgroundManager(dbClient database.DatabaseClient, metrics *VTMetrics, vtClient VTClientInterface) *VTBackgroundManager {
 	return &VTBackgroundManager{
 		vtClient: vtClient,
@@ -54,6 +61,7 @@ func NewVTBackgroundManager(dbClient database.DatabaseClient, metrics *VTMetrics
 func (v *VTBackgroundManager) QueueURL(url string) {
 	v.urlQmu.Lock()
 	defer v.urlQmu.Unlock()
+	fmt.Printf("VT: adding URL to queue: %s\n", url)
 	v.urlQueue[url] = true
 }
 
@@ -185,12 +193,14 @@ func (v *VTBackgroundManager) ProcessURLQueue() error {
 	v.urlQmu.Lock()
 	defer v.urlQmu.Unlock()
 
+	fmt.Printf("VT ProcessURLQueue. Queue len: %d\n", len(v.urlQueue))
 	if len(v.urlQueue) == 0 {
 		return nil
 	}
 
 	for k := range v.urlQueue {
 		startTime := time.Now()
+		fmt.Printf("VT - Submiting URL: %s\n", k)
 		cRes, err := v.vtClient.SubmitURL(k)
 		v.metrics.urlSubmitResponseTime.Observe(time.Since(startTime).Seconds())
 		v.metrics.apiCallsCount.WithLabelValues("submit_url").Add(1)

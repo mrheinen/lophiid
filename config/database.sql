@@ -28,6 +28,7 @@ CREATE TABLE content (
 
 
 CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'SCRIPT_RESPONSE_BODY', 'DECODED_STRING_BASE64');
+CREATE TYPE DOWNLOAD_STATUS AS ENUM ('UNKNOWN', 'SCHEDULED', 'DONE');
 
 CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
@@ -51,6 +52,7 @@ CREATE TABLE request (
   honeypot_ip     VARCHAR(15),
   starred         BOOL default FALSE,
   content_dynamic BOOL default FALSE,
+  base_hash       VARCHAR(64) DEFAULT '',
   content_id      INT,
   rule_id         INT
 );
@@ -130,6 +132,7 @@ CREATE TABLE downloads (
   honeypot_ip     VARCHAR(52) default '',
   host            VARCHAR(1024),
   content_type    VARCHAR(256),
+  content_type_detected VARCHAR(256),
   sha256sum       VARCHAR(64),
   file_location   VARCHAR(512),
   size            INT,
@@ -149,6 +152,7 @@ CREATE TABLE downloads (
   vt_analysis_suspicious INT DEFAULT 0,
   vt_analysis_undetected INT DEFAULT 0,
   vt_analysis_timeout    INT DEFAULT 0,
+  status         DOWNLOAD_STATUS default 'UNKNOWN';
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
 );
 
