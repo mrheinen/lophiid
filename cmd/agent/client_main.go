@@ -9,6 +9,7 @@ import (
 	"loophid/pkg/client"
 	http_server "loophid/pkg/http/server"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/kkyr/fig"
@@ -42,6 +43,14 @@ type Config struct {
 		GRPCSSLKey     string        `fig:"grpc_ssl_key"`
 		GRPCCACert     string        `fig:"grpc_ca_cert"`
 	} `fig:"backend_client" validate:"required"`
+}
+
+func GetServerListenString(ip string, port int) string {
+	if strings.Contains(ip, ":") {
+		return fmt.Sprintf("[%s]:%d", ip, port)
+	}
+
+	return fmt.Sprintf("%s:%d", ip, port)
 }
 
 func main() {
@@ -86,11 +95,11 @@ func main() {
 
 	var httpServers []*http_server.HttpServer
 	for _, port := range cfg.HTTPListener.Port {
-		httpServers = append(httpServers, http_server.NewHttpServer(c, fmt.Sprintf("%s:%d", cfg.HTTPListener.IP, port), cfg.HTTPListener.IP))
+		httpServers = append(httpServers, http_server.NewHttpServer(c, GetServerListenString(cfg.HTTPListener.IP, port), cfg.HTTPListener.IP))
 	}
 
 	for _, port := range cfg.HTTPSListener.Port {
-		httpServers = append(httpServers, http_server.NewSSLHttpServer(c, fmt.Sprintf("%s:%d", cfg.HTTPListener.IP, port), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPListener.IP))
+		httpServers = append(httpServers, http_server.NewSSLHttpServer(c, GetServerListenString(cfg.HTTPListener.IP, port), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPListener.IP))
 	}
 
 	// Create the http client. It will allow long timeouts to download from slow

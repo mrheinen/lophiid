@@ -9,11 +9,12 @@ import (
 	"loophid/pkg/client"
 	"net/http"
 	"net/http/httputil"
+	"sync"
 	"time"
 
 	http_server "loophid/pkg/http/server"
 
-	"github.com/rakyll/magicmime"
+	"github.com/mrheinen/magicmime"
 )
 
 type Agent struct {
@@ -23,9 +24,14 @@ type Agent struct {
 	httpClient     *http.Client
 	statusChan     chan bool
 	statusInterval time.Duration
+	mimeMu         sync.Mutex
+	mimeInstance   *magicmime.Decoder
 }
 
 func NewAgent(backendClient client.BackendClient, httpServers []*http_server.HttpServer, httpClient *http.Client, statusInterval time.Duration, reportIP string) *Agent {
+
+	mi, _ := magicmime.NewDecoder(magicmime.MAGIC_MIME_TYPE)
+
 	return &Agent{
 		backendClient:  backendClient,
 		httpServers:    httpServers,
@@ -33,6 +39,7 @@ func NewAgent(backendClient client.BackendClient, httpServers []*http_server.Htt
 		httpClient:     httpClient,
 		statusChan:     make(chan bool),
 		statusInterval: statusInterval,
+		mimeInstance:   mi,
 	}
 }
 
@@ -123,9 +130,9 @@ func (a *Agent) DownloadToBuffer(request *backend_service.CommandDownloadFile) (
 		return &downloadInfo, fmt.Errorf("reading response: %s", err)
 	}
 
-	magicmime.Open(magicmime.MAGIC_MIME_TYPE)
-	detectedMimeType, err := magicmime.TypeByBuffer(respBytes)
-	magicmime.Close()
+	a.mimeMu.Lock()
+	detectedMimeType, err := a.mimeInstance.TypeByBuffer(respBytes)
+	a.mimeMu.Unlock()
 	if err != nil {
 		slog.Warn("unable to determine mime", slog.String("error", err.Error()))
 		detectedMimeType = "application/octet-stream"

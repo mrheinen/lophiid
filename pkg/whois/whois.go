@@ -1,7 +1,6 @@
 package whois
 
 import (
-	"fmt"
 	"log/slog"
 	"loophid/pkg/database"
 	"loophid/pkg/util"

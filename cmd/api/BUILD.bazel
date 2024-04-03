@@ -11,6 +11,7 @@ go_library(
         "//pkg/javascript",
         "@com_github_google_uuid//:uuid",
         "@com_github_gorilla_mux//:mux",
+        "@com_github_prometheus_client_golang//prometheus",
         "@com_github_rs_cors//:cors",
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",

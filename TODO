@@ -70,7 +70,15 @@ Update whois handler and make a work group, remove lock.
 Do the pings and nc lokups
 
 
-panic: sync: WaitGroup is reused before previous Wait has returned
+Stats queries:
+  SELECT
+    to_char(time_received, 'YYYY-MM-DD') AS day,
+    COUNT(*) AS entry_count
+  FROM request
+  GROUP BY day
+  ORDER BY day DESC LIMIT 30;
 
+
+UPDATE database size to support IPv4
 
 

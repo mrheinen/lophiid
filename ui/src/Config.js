@@ -23,8 +23,8 @@ export default {
   backendResultNotOk: 'ERR',
 
   // There next 3 need to be in sync with the database enums.
-  backendMatchingMethods: ['exact', 'prefix', 'suffix', 'regex', 'contains'],
-  contentRuleHTTPMethods: ['ANY' , 'GET', 'POST'],
+  backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
+  contentRuleHTTPMethods: ['ANY' , 'GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'],
   statusCodeValues: [
     { label: '200 - OK', value: '200' },
     { label: '301 - Permanent redirect', value: '301' },

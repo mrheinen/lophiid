@@ -264,6 +264,158 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	}
 }
 
+func TestMaybeExtractLinksFromPayload(t *testing.T) {
+
+	for _, test := range []struct {
+		description      string
+		content          []byte
+		dInfo            database.Download
+		expectedReturn   bool
+		expectedSchedule bool
+	}{
+		{
+			description: "does not schedule",
+			content:     []byte("http://example.org"),
+			dInfo: database.Download{
+				ContentType:         "text/html",
+				DetectedContentType: "text/html",
+			},
+			expectedReturn:   false,
+			expectedSchedule: false,
+		},
+		{
+			description: "does schedule",
+			content:     []byte("http://example.org"),
+			dInfo: database.Download{
+				ContentType:         "text/x-sh",
+				DetectedContentType: "text/html",
+				Host:                "example.org:8000",
+			},
+			expectedReturn:   true,
+			expectedSchedule: true,
+		},
+		{
+			description: "does not schedule, exceeds limit",
+			content:     []byte("http://example.org/1 http://example.org/2 http://example.org/3 http://example.org/4 http://example.org/5 http://example.org/6 http://example.org/7 http://example.org/8 http://example.org/9 http://example.org/10 http://example.org/11 http://example.org/12 http://example.org/13 http://example.org/14 http://example.org/15 http://example.org/16"),
+			dInfo: database.Download{
+				ContentType:         "text/x-sh",
+				DetectedContentType: "text/html",
+				Host:                "example.org:8000",
+			},
+			expectedReturn:   false,
+			expectedSchedule: false,
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fdbc := &database.FakeDatabaseClient{}
+			fakeJrunner := javascript.FakeJavascriptRunner{}
+			alertManager := alerting.NewAlertManager(42)
+			whoisManager := whois.FakeWhoisManager{}
+			queryRunner := FakeQueryRunner{
+				ErrorToReturn: nil,
+			}
+			reg := prometheus.NewRegistry()
+			bMetrics := CreateBackendMetrics(reg)
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
+
+			if b.MaybeExtractLinksFromPayload(test.content, test.dInfo) != test.expectedReturn {
+				t.Errorf("expected return %t but got %t", test.expectedReturn, !test.expectedReturn)
+			}
+
+			gotScheduled := len(b.downloadQueue) > 0
+			if gotScheduled != test.expectedSchedule {
+				t.Errorf("expected schedule %t but got %t", test.expectedSchedule, gotScheduled)
+			}
+
+		})
+
+	}
+
+}
+
+// Test ScheduleDownloadOfPayload
+func TestScheduleDownloadOfPayload(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeWhoisManager{}
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
+
+	ret := b.ScheduleDownloadOfPayload("1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
+	if ret != true {
+		t.Errorf("expected true but got %t", ret)
+	}
+	ret = b.ScheduleDownloadOfPayload("1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
+	if ret != false {
+		t.Errorf("expected false but got %t", ret)
+	}
+}
+
+func TestHasParseableContent(t *testing.T) {
+	for _, test := range []struct {
+		description string
+		url         string
+		mime        string
+		isParseable bool
+	}{
+		{
+			description: "shell script",
+			url:         "http://1.1.1.1/test.sh",
+			mime:        "text/x-sh",
+			isParseable: true,
+		},
+		{
+			description: "shell script with different mime",
+			url:         "http://1.1.1.1/test.sh",
+			mime:        "text/html",
+			isParseable: true,
+		},
+		{
+			description: "shell script with no extension, right mime",
+			url:         "http://1.1.1.1/test",
+			mime:        "text/x-sh",
+			isParseable: true,
+		},
+		{
+			description: "shell script with no extension, right mime with encoding",
+			url:         "http://1.1.1.1/test",
+			mime:        "text/x-sh; charset=utf-8",
+			isParseable: true,
+		},
+		{
+			description: "shell script with parameter, wrong mime",
+			url:         "http://1.1.1.1/test.sh?2332",
+			mime:        "text/html",
+			isParseable: true,
+		},
+		{
+			description: "html page is ignored",
+			url:         "http://1.1.1.1/test.html",
+			mime:        "text/html",
+			isParseable: false,
+		},
+		{
+			description: "unparseable url",
+			url:         "%%%%%%%%",
+			mime:        "text/x-sh",
+			isParseable: false,
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			if HasParseableContent(test.url, test.mime) != test.isParseable {
+				t.Errorf("expected %t but got %t", test.isParseable, !test.isParseable)
+			}
+		})
+	}
+}
+
 func TestHandleProbe(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
 		RequestsToReturn: []database.Request{},

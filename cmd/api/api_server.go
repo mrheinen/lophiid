@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/cors"
 	"github.com/vingarcia/ksql"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
@@ -54,7 +55,8 @@ func main() {
 
 	fmt.Printf("Starting with API key: %s\n", id.String())
 
-	jRunner := javascript.NewGojaJavascriptRunner()
+	reg := prometheus.NewRegistry()
+	jRunner := javascript.NewGojaJavascriptRunner(javascript.CreateGoJaMetrics(reg))
 	dbc := database.NewKSQLClient(&db)
 	as := api.NewApiServer(dbc, jRunner, id.String())
 	defer dbc.Close()

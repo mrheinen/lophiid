@@ -3,54 +3,87 @@
     <input type="hidden" name="id" v-model="localRule.id" />
     <div class="card">
       <FieldSet legend="Settings" :toggleable="true">
-        <div>
-          <label class="label">URI</label>
-          <InputText
-            id="title"
-            type="text"
-            placeholder=""
-            v-model="localRule.uri"
-          />
+        <div class="columns">
+          <div class="column">
+            <div>
+              <label class="label">URI match string</label>
+              <InputText
+                id="title"
+                type="text"
+                placeholder=""
+                v-model="localRule.uri"
+              />
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+            <label class="label">URI matching method</label>
+            <DropDown v-model="localRule.uri_matching"
+            :options="config.backendMatchingMethods" placeholder="Select a
+            method"
+            checkmark :highlightOnSelect="true" />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label class="label">Content ID</label>
-          <InputNumber
-            v-model="localRule.content_id"
-            inputId="minmax"
-            :useGrouping="false"
-            :min="0"
-            :max="65535"
-          />
-          &nbsp;
-          <i @click="onContentFormOpen()" class="pi pi-plus-circle pointer"></i>
+        <div class="columns">
+          <div class="column">
+             <div>
+                <label class="label">Request body match string</label>
+                <InputText
+                  id="title"
+                  type="text"
+                  placeholder=""
+                  v-model="localRule.body"
+                />
+              </div>
+          </div>
+          <div class="column">
+
+            <div class="field">
+            <label class="label">Body matching method</label>
+            <DropDown v-model="localRule.body_matching"
+            :options="config.backendMatchingMethods" placeholder="Select a
+            method"
+            checkmark :highlightOnSelect="true" />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label class="label">App ID</label>
-          <DropDown
-            v-model="localRule.app_id"
-            :options="appValues"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select app"
-            class="w-full md:w-14rem"
-          />
 
-          &nbsp;
-          <i @click="onAppFormOpen()" class="pi pi-plus-circle pointer"></i>
-        </div>
-        <div>
-          <label class="label">Body</label>
-          <InputText
-            id="title"
-            type="text"
-            placeholder=""
-            v-model="localRule.body"
-          />
-        </div>
+        <div class="columns">
+          <div class="column">
+            <div>
+              <label class="label">Content ID</label>
+              <InputNumber
+                v-model="localRule.content_id"
+                inputId="minmax"
+                :useGrouping="false"
+                :min="0"
+                :max="65535"
+              />
+              &nbsp;
+              <i @click="onContentFormOpen()" class="pi pi-plus-circle pointer"></i>
+            </div>
+          </div>
+          <div class="column">
+            <div>
+              <label class="label">App ID</label>
+              <DropDown
+                v-model="localRule.app_id"
+                :options="appValues"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select app"
+                class="w-full md:w-14rem"
+              />
 
-        <div>
+              &nbsp;
+              <i @click="onAppFormOpen()" class="pi pi-plus-circle pointer"></i>
+            </div>
+          </div>
+        </div>
+         <div>
           <label class="label">Port</label>
           <InputNumber
             v-model="localRule.port"
@@ -61,38 +94,14 @@
           />
         </div>
 
-        <div class="columns">
-          <div class="column">
+         <div>
             <div class="field">
-              <label class="label">HTTP Method</label>
-              <ListBox
-                v-model="localRule.method"
-                :options="config.contentRuleHTTPMethods"
-                class="w-full md:w-14rem"
-              />
+            <label class="label">HTTP method</label>
+            <DropDown v-model="localRule.method"
+            :options="config.contentRuleHTTPMethods" placeholder="Select HTTP method"
+            checkmark :highlightOnSelect="true" />
             </div>
-          </div>
-          <div class="column">
-            <div class="field">
-              <label class="label">URI matching</label>
-              <ListBox
-                v-model="localRule.uri_matching"
-                :options="config.backendMatchingMethods"
-                class="w-full md:w-14rem"
-              />
-            </div>
-          </div>
-          <div class="column">
-            <div class="field">
-              <label class="label">Body matching</label>
-              <ListBox
-                v-model="localRule.body_matching"
-                :options="config.backendMatchingMethods"
-                class="w-full md:w-14rem"
-              />
-            </div>
-          </div>
-        </div>
+         </div>
       <br />
       <PrimeButton
         :label="localRule.id > 0 ? 'Submit' : 'Add'"
@@ -177,8 +186,8 @@ export default {
     },
     resetForm() {
       this.localRule = {
-        uri_matching: "exact",
-        body_matching: "exact",
+        uri_matching: "none",
+        body_matching: "none",
         method: "ANY",
       };
     },

@@ -7,10 +7,10 @@ import (
 	"log/slog"
 	"loophid/backend_service"
 	"loophid/pkg/client"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -27,11 +27,15 @@ type HttpServer struct {
 
 // NewHttpServer creates a new initialized HttpServer struct.
 func NewHttpServer(c client.BackendClient, listenAddr string, publicIP string) *HttpServer {
-	// TODO: IPv6 this.
-	parts := strings.Split(listenAddr, ":")
-	port, err := strconv.Atoi(parts[1])
+	_, portString, err := net.SplitHostPort(listenAddr)
 	if err != nil {
-		slog.Warn("could not parse listen address", slog.String("error", err.Error()))
+		slog.Warn("could not parse listen address", slog.String("address", listenAddr), slog.String("error", err.Error()))
+		return nil
+	}
+
+	port, err := strconv.Atoi(portString)
+	if err != nil {
+		slog.Warn("could not parse port", slog.String("address", listenAddr), slog.String("port", portString), slog.String("error", err.Error()))
 		return nil
 	}
 
@@ -45,11 +49,15 @@ func NewHttpServer(c client.BackendClient, listenAddr string, publicIP string) *
 }
 
 func NewSSLHttpServer(c client.BackendClient, listenAddr string, sslCert string, sslKey string, publicIP string) *HttpServer {
-	parts := strings.Split(listenAddr, ":")
-	port, err := strconv.Atoi(parts[1])
-
+	_, portString, err := net.SplitHostPort(listenAddr)
 	if err != nil {
-		slog.Warn("could not parse listen address", slog.String("error", err.Error()))
+		slog.Warn("could not parse listen address", slog.String("address", listenAddr), slog.String("error", err.Error()))
+		return nil
+	}
+
+	port, err := strconv.Atoi(portString)
+	if err != nil {
+		slog.Warn("could not parse port", slog.String("address", listenAddr), slog.String("port", portString), slog.String("error", err.Error()))
 		return nil
 	}
 

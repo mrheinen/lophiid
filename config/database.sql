@@ -6,7 +6,7 @@ CREATE DATABASE lophiid;
 
 CREATE USER lo WITH PASSWORD 'test';
 
-CREATE TYPE MATCHING_TYPE AS ENUM ('exact', 'prefix', 'suffix', 'contains', 'regex');
+CREATE TYPE MATCHING_TYPE AS ENUM ('none', 'exact', 'prefix', 'suffix', 'contains', 'regex');
 CREATE TYPE METHOD_TYPE AS ENUM ('GET', 'POST', 'HEAD', 'TRACE', 'OPTIONS', 'DELETE', 'PUT', 'ANY');
 CREATE TYPE STATUS_CODE AS ENUM ('200','301', '302', '400', '401', '403', '404', '500');
 
@@ -49,7 +49,7 @@ CREATE TABLE request (
   time_received   TIMESTAMP NOT NULL DEFAULT NOW(),
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  honeypot_ip     VARCHAR(15),
+  honeypot_ip     VARCHAR(40),
   starred         BOOL default FALSE,
   content_dynamic BOOL default FALSE,
   base_hash       VARCHAR(64) DEFAULT '',
@@ -132,7 +132,7 @@ CREATE TABLE downloads (
   honeypot_ip     VARCHAR(52) default '',
   host            VARCHAR(1024),
   content_type    VARCHAR(256),
-  content_type_detected VARCHAR(256),
+  detected_content_type VARCHAR(256),
   sha256sum       VARCHAR(64),
   file_location   VARCHAR(512),
   size            INT,
