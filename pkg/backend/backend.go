@@ -20,6 +20,7 @@ import (
 
 	"loophid/backend_service"
 	"loophid/pkg/alerting"
+	"loophid/pkg/backend/extractors"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
 	"loophid/pkg/util"
@@ -337,7 +338,7 @@ func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo d
 	}
 
 	linksMap := make(map[string]struct{})
-	lx := NewURLExtractor(linksMap)
+	lx := extractors.NewURLExtractor(linksMap)
 	lx.ParseString(string(fileContent))
 
 	if len(linksMap) > maxUrlsToExtractForDownload {
@@ -599,32 +600,24 @@ func (s *BackendServer) ProcessRequest(req *database.Request) error {
 
 	// Extract base64 strings
 	b64Map := make(map[string][]byte)
-	ex := NewBase64Extractor(b64Map, true)
-	ex.ParseRequest(req)
+	bx := extractors.NewBase64Extractor(b64Map, true)
 
 	linksMap := make(map[string]struct{})
-	lx := NewURLExtractor(linksMap)
-	lx.ParseRequest(req)
+	lx := extractors.NewURLExtractor(linksMap)
 
-	if len(b64Map) == 0 && len(linksMap) == 0 {
-		return nil
-	}
+	tcpAddressesMap := make(map[string]int)
+	tx := extractors.NewTCPExtractor(tcpAddressesMap)
 
-	// Iterate over the base64 strings and store them. Importantly, while doing
-	// so try to extract links from the decoded content.
-	var metadatas []database.RequestMetadata
-	for _, v := range b64Map {
-		lx.ParseString(string(v))
-		metadatas = append(metadatas, database.RequestMetadata{
-			Type:      ex.MetaType(),
-			Data:      string(v),
-			RequestID: dm.ModelID(),
-		})
+	bx.AddSubExtractor(lx)
+	bx.AddSubExtractor(tx)
+
+	extracts := []extractors.Extractor{bx, lx, tx}
+	for _, extractor := range extracts {
+		extractor.ParseRequest(req)
 	}
 
 	// Iterate over the links and try to download them.
 	for v := range linksMap {
-
 		if len(linksMap) <= maxUrlsToExtractForDownload {
 			ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(v)
 			if err != nil {
@@ -635,19 +628,15 @@ func (s *BackendServer) ProcessRequest(req *database.Request) error {
 		} else {
 			slog.Warn("skipping download due to excessive links")
 		}
-
-		metadatas = append(metadatas, database.RequestMetadata{
-			Type:      lx.MetaType(),
-			Data:      string(v),
-			RequestID: dm.ModelID(),
-		})
 	}
 
 	// Store the metadata.
-	for _, m := range metadatas {
-		_, err := s.dbClient.Insert(&m)
-		if err != nil {
-			slog.Warn("Could not save metadata for request", slog.String("error", err.Error()))
+	for _, x := range extracts {
+		for _, m := range x.GetMetadatas(req.ID) {
+			_, err := s.dbClient.Insert(&m)
+			if err != nil {
+				slog.Warn("Could not save metadata for request", slog.String("error", err.Error()))
+			}
 		}
 	}
 
