@@ -6,7 +6,7 @@ import (
 )
 
 func TestStringMapCache(t *testing.T) {
-	c := NewStringMapCache[string](time.Second * 0)
+	c := NewStringMapCache[string]("test", time.Second * 0)
 	testIp := "127.0.0.1"
 
 	// Store the test rule and a few extra
@@ -35,8 +35,17 @@ func TestStringMapCache(t *testing.T) {
 	}
 }
 
+func TestStringMapCacheCacheMiss(t *testing.T) {
+	c := NewStringMapCache[string]("test", time.Second * 0)
+
+	_, err := c.Get("1.2.3.4")
+	if err == nil {
+		t.Errorf("expected error, got none.")
+	}
+}
+
 func TestStringMapCacheDoesNotExpire(t *testing.T) {
-	c := NewStringMapCache[string](time.Hour * 3)
+	c := NewStringMapCache[string]("test", time.Hour * 3)
 	testIp := "127.0.0.1"
 	c.Store(testIp, "22")
 

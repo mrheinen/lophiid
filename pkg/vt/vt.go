@@ -40,8 +40,8 @@ type VTClient struct {
 }
 
 func NewVTClient(apikey string, cacheTimeout time.Duration, httpClient *http.Client) *VTClient {
-	ic := util.NewStringMapCache[CheckIPResponse](cacheTimeout)
-	uc := util.NewStringMapCache[SubmitURLResponse](cacheTimeout)
+	ic := util.NewStringMapCache[CheckIPResponse]("vt_ip_cache", cacheTimeout)
+	uc := util.NewStringMapCache[SubmitURLResponse]("vt_url_cache", cacheTimeout)
 	return &VTClient{
 		apiKey:     apikey,
 		ipCache:    ic,

@@ -28,7 +28,15 @@ func IsIPPrivate(ip net.IP) bool {
 	return false
 }
 
+func netLookupWrapper(target string) ([]net.IP, error) {
+	return net.LookupIP(target)
+}
+
 func ConvertURLToIPBased(targetUrl string) (string, string, string, error) {
+	return ConvertURLToIPBasedImpl(targetUrl, netLookupWrapper)
+}
+
+func ConvertURLToIPBasedImpl(targetUrl string, lookupFp func(string) ([]net.IP, error)) (string, string, string, error) {
 	var rIP net.IP
 	rHostPort := 0
 
@@ -51,7 +59,7 @@ func ConvertURLToIPBased(targetUrl string) (string, string, string, error) {
 		return "", "", "", err
 	}
 
-	rHostHeader := u.Host
+	hostHeader := u.Host
 	dnsIP := u.Host
 	// Parse the host field which is in the format <ip/domain>:[<port>]?
 	if strings.Contains(u.Host, ":") {
@@ -71,7 +79,7 @@ func ConvertURLToIPBased(targetUrl string) (string, string, string, error) {
 	// IP and if that doesn't work, we'll try to resolve it.
 	rIP = net.ParseIP(dnsIP)
 	if rIP == nil {
-		netIps, err := net.LookupIP(dnsIP)
+		netIps, err := lookupFp(dnsIP)
 		if err != nil {
 			return "", "", "", fmt.Errorf("error doing DNS lookup of %s: %w", dnsIP, err)
 		}
@@ -91,6 +99,6 @@ func ConvertURLToIPBased(targetUrl string) (string, string, string, error) {
 	}
 
 	// Now update the parsed URL
-	u.Host = net.JoinHostPort(rIP.String(), string(rHostPort))
-	return u.String(), rIP.String(), rHostHeader, err
+	u.Host = net.JoinHostPort(rIP.String(), fmt.Sprintf("%d", rHostPort))
+	return u.String(), rIP.String(), hostHeader, err
 }

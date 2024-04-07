@@ -37,7 +37,7 @@ func NewCachedWhoisManager(dbClient database.DatabaseClient, whoisMetrics *Whois
 		lookupMap:   make(map[string]int),
 		bgChan:      make(chan bool),
 		maxAttempts: maxAttempts,
-		ipCache:     *util.NewStringMapCache[bool](cacheDuration),
+		ipCache:     *util.NewStringMapCache[bool]("whois_ip_cache", cacheDuration),
 	}
 }
 

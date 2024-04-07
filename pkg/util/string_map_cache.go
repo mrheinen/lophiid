@@ -13,17 +13,19 @@ type CacheEntry[T comparable] struct {
 }
 
 type StringMapCache[T comparable] struct {
-	mu      sync.Mutex
-	rules   map[string]CacheEntry[T]
-	timeout time.Duration
-	bgChan  chan bool
+	mu        sync.Mutex
+	rules     map[string]CacheEntry[T]
+	timeout   time.Duration
+	bgChan    chan bool
+	cacheName string
 }
 
-func NewStringMapCache[T comparable](timeout time.Duration) *StringMapCache[T] {
+func NewStringMapCache[T comparable](name string, timeout time.Duration) *StringMapCache[T] {
 	return &StringMapCache[T]{
-		timeout: timeout,
-		rules:   make(map[string]CacheEntry[T]),
-		bgChan:  make(chan bool),
+		timeout:   timeout,
+		cacheName: name,
+		rules:     make(map[string]CacheEntry[T]),
+		bgChan:    make(chan bool),
 	}
 }
 
@@ -53,13 +55,13 @@ func (r *StringMapCache[T]) CleanExpired() (removedCount int64) {
 
 	for k, v := range r.rules {
 		if time.Since(v.Time) > r.timeout {
-			slog.Debug("removing entry from cache", slog.String("key", k))
+			slog.Debug("removing entry from cache", slog.String("name", r.cacheName), slog.String("key", k))
 			removedCount++
 			delete(r.rules, k)
 		}
 	}
 
-	slog.Debug("expiration stats after cleanup", slog.Int("count", len(r.rules)), slog.Int("removedCount", int(removedCount)))
+	slog.Debug("expiration stats after cleanup", slog.String("name", r.cacheName), slog.Int("count", len(r.rules)), slog.Int("removedCount", int(removedCount)))
 	return
 }
 
@@ -79,6 +81,6 @@ func (r *StringMapCache[T]) Start() {
 }
 
 func (r *StringMapCache[T]) Stop() {
-	slog.Info("stopping cache")
+	slog.Info("stopping cache", slog.String("name", r.cacheName))
 	r.bgChan <- true
 }

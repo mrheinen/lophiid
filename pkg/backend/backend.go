@@ -58,11 +58,11 @@ type BackendServer struct {
 
 // NewBackendServer creates a new instance of the backend server.
 func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner, malwareDownloadDir string) *BackendServer {
-	sCache := util.NewStringMapCache[database.ContentRule](time.Minute * 30)
+	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", time.Minute * 30)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
 	// we get a request with the same download (payload URL) within that time
 	// window then we will not download it again.
-	dCache := util.NewStringMapCache[time.Time](time.Minute * 5)
+	dCache := util.NewStringMapCache[time.Time]("download_cache", time.Minute * 5)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
 	return &BackendServer{
@@ -94,6 +94,7 @@ func (s *BackendServer) ScheduleDownloadOfPayload(honeypotIP string, originalUrl
 		return false
 	}
 
+	slog.Debug("adding URL to cache", slog.String("original_url", originalUrl))
 	s.downloadsCache.Store(originalUrl, time.Now())
 
 	s.downloadQueueMu.Lock()

@@ -83,7 +83,7 @@ func NewGojaJavascriptRunner(metrics *GojaMetrics) *GojaJavascriptRunner {
 	// The string cache timeout should be a low and targetted
 	// for the use case of holding something in cache between
 	// a couple requests for the same source.
-	cache := util.NewStringMapCache[string](time.Minute * 30)
+	cache := util.NewStringMapCache[string]("goja_cache", time.Minute * 30)
 	cache.Start()
 	return &GojaJavascriptRunner{
 		strCache: cache,
