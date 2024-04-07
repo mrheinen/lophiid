@@ -58,6 +58,18 @@
           <p>{{ meta.data }}</p>
         </div>
       </div>
+     <div v-if="localTCPMetadata.length">
+        <label class="label">Extracted TCP links</label>
+        <div v-for="meta in localTCPMetadata" :key="meta.id">
+          <p>{{ meta.data }}</p>
+        </div>
+      </div>
+     <div v-if="localNetcatMetadata.length">
+        <label class="label">Extracted netcat links</label>
+        <div v-for="meta in localNetcatMetadata" :key="meta.id">
+          <p>{{ meta.data }}</p>
+        </div>
+      </div>
     </FieldSet>
      <br />
   </div>
@@ -92,6 +104,8 @@ export default {
       localMetadata: [],
       localBase64Metadata: [],
       localLinkMetadata: [],
+      localTCPMetadata: [],
+      localNetcatMetadata: [],
     };
   },
   methods: {
@@ -111,11 +125,17 @@ export default {
     metadata() {
       this.localBase64Metadata = [];
       this.localLinkMetadata = [];
+      this.localTCPMetadata = [];
+      this.localNetcatMetadata = [];
       for (var i = 0; i < this.metadata.length; i++) {
         if (this.metadata[i].type == "DECODED_STRING_BASE64") {
           this.localBase64Metadata.push(this.metadata[i]);
         } else if (this.metadata[i].type == "PAYLOAD_LINK") {
           this.localLinkMetadata.push(this.metadata[i]);
+        } else if (this.metadata[i].type == "PAYLOAD_TCP_LINK") {
+          this.localTCPMetadata.push(this.metadata[i]);
+        } else if (this.metadata[i].type == "PAYLOAD_NETCAT") {
+          this.localNetcatMetadata.push(this.metadata[i]);
         }
       }
       this.localMetadata = this.metadata;

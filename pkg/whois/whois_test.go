@@ -5,6 +5,8 @@ import (
 	"loophid/pkg/database"
 	"testing"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type FakeWhoisClient struct {
@@ -22,7 +24,10 @@ func TestDoWhoisWorkCachesDatabaseMatch(t *testing.T) {
 	}
 	testIP := "1.1.1.1"
 	wc := FakeWhoisClient{}
-	mgr := NewCachedWhoisManager(&dbc, &wc, time.Second, 3)
+	reg := prometheus.NewRegistry()
+	metrics := CreateWhoisMetrics(reg)
+
+	mgr := NewCachedWhoisManager(&dbc, metrics, &wc, time.Second, 3)
 
 	// Check that the IP is not in the cache.
 	if _, err := mgr.ipCache.Get(testIP); err == nil {
@@ -51,7 +56,10 @@ func TestDoWhoisWorkRetries(t *testing.T) {
 		ErrorToReturn: errors.New("fail"),
 	}
 
-	mgr := NewCachedWhoisManager(&dbc, &wc, time.Second, 3)
+	reg := prometheus.NewRegistry()
+	metrics := CreateWhoisMetrics(reg)
+
+	mgr := NewCachedWhoisManager(&dbc, metrics, &wc, time.Second, 3)
 
 	// Do the lookup, The database will return an error which simulates the
 	// scenario where there is no record already in the database. As a result the

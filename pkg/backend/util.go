@@ -90,13 +90,7 @@ func ConvertURLToIPBased(targetUrl string) (string, string, string, error) {
 		}
 	}
 
-	ipString := rIP.String()
-	if rIP.To4() == nil {
-		// In this case it's IPv6
-		ipString = fmt.Sprintf("[%s]", rIP.String())
-	}
-
 	// Now update the parsed URL
-	u.Host = fmt.Sprintf("%s:%d", ipString, rHostPort)
+	u.Host = net.JoinHostPort(rIP.String(), string(rHostPort))
 	return u.String(), rIP.String(), rHostHeader, err
 }

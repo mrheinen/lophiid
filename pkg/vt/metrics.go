@@ -18,22 +18,22 @@ func CreateVTMetrics(reg prometheus.Registerer) *VTMetrics {
 	m := &VTMetrics{
 		fileSubmitResponseTime: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
-				Name:    "vt_submit_file_duration",
+				Name:    "lophiid_vt_submit_file_duration",
 				Help:    "Submit file API duration",
 				Buckets: metrics.MediumResponseTimebuckets}),
 		urlSubmitResponseTime: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
-				Name:    "vt_submit_url_duration",
+				Name:    "lophiid_vt_submit_url_duration",
 				Help:    "Submit URL duration",
 				Buckets: metrics.MediumResponseTimebuckets}),
 		analysisResponseTime: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
-				Name:    "vt_get_analysis_duration",
+				Name:    "lophiid_vt_get_analysis_duration",
 				Help:    "Duration of fetching analysis results",
 				Buckets: metrics.MediumResponseTimebuckets}),
 		apiCallsCount: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "vt_ip_calls_per_api_count",
+				Name: "lophiid_vt_ip_calls_per_api_count",
 				Help: "Amount of calls per API"}, []string{"api"}),
 	}
 

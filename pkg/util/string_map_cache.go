@@ -50,17 +50,17 @@ func (r *StringMapCache[T]) Get(key string) (*T, error) {
 func (r *StringMapCache[T]) CleanExpired() (removedCount int64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	now := time.Now()
-	removedCount = 0
+
 	for k, v := range r.rules {
-		d := now.Sub(v.Time)
-		if d > r.timeout {
-			fmt.Printf("Removing entry for: %s\n", k)
+		if time.Since(v.Time) > r.timeout {
+			slog.Debug("removing entry from cache", slog.String("key", k))
 			removedCount++
 			delete(r.rules, k)
 		}
 	}
-	return removedCount
+
+	slog.Debug("expiration stats after cleanup", slog.Int("count", len(r.rules)), slog.Int("removedCount", int(removedCount)))
+	return
 }
 
 func (r *StringMapCache[T]) Start() {

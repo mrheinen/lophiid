@@ -153,7 +153,9 @@ func main() {
 
 	whoisClient := lwhois.NewClient()
 	whoisClient.SetTimeout(cfg.WhoisManager.ClientTimeout)
-	whoisManager := whois.NewCachedWhoisManager(dbc, whoisClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts)
+
+	wMetrics := whois.CreateWhoisMetrics(metricsRegistry)
+	whoisManager := whois.NewCachedWhoisManager(dbc, wMetrics, whoisClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts)
 	whoisManager.Start()
 
 	secureHttpTransport := &http.Transport{

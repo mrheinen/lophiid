@@ -13,23 +13,25 @@ type WhoisManager interface {
 }
 
 type CachedWhoisManager struct {
-	dbClient    database.DatabaseClient
-	whoisClient WhoisClientInterface
-	ipCache     util.StringMapCache[bool]
-	lookupMap   map[string]int
-	bgChan      chan bool
-	maxAttempts int
-	mu          sync.Mutex
+	dbClient     database.DatabaseClient
+	whoisClient  WhoisClientInterface
+	ipCache      util.StringMapCache[bool]
+	lookupMap    map[string]int
+	bgChan       chan bool
+	maxAttempts  int
+	mu           sync.Mutex
+	whoisMetrics *WhoisMetrics
 }
 
 type WhoisClientInterface interface {
 	Whois(domain string, servers ...string) (result string, err error)
 }
 
-func NewCachedWhoisManager(dbClient database.DatabaseClient, whoisClient WhoisClientInterface, cacheDuration time.Duration, maxAttempts int) *CachedWhoisManager {
+func NewCachedWhoisManager(dbClient database.DatabaseClient, whoisMetrics *WhoisMetrics, whoisClient WhoisClientInterface, cacheDuration time.Duration, maxAttempts int) *CachedWhoisManager {
 	return &CachedWhoisManager{
-		dbClient:    dbClient,
-		whoisClient: whoisClient,
+		dbClient:     dbClient,
+		whoisClient:  whoisClient,
+		whoisMetrics: whoisMetrics,
 		// The int value in the map indicates how many times we have tried to lookup
 		// the whois for that given IP.
 		lookupMap:   make(map[string]int),
@@ -69,6 +71,10 @@ func (c *CachedWhoisManager) DoWhoisWork() {
 		if lookupCount >= c.maxAttempts {
 			slog.Warn("Removing IP from whois lookups. Exceeds # tries.", slog.String("ip", ip))
 			delete(c.lookupMap, ip)
+
+			// Pretend we actually have the results. This will prevent new lookups
+			// from happening.
+			c.ipCache.Store(ip, true)
 			continue
 		}
 		ips = append(ips, ip)
@@ -76,7 +82,10 @@ func (c *CachedWhoisManager) DoWhoisWork() {
 	c.mu.Unlock()
 
 	for _, ip := range ips {
+		startTime := time.Now()
 		result, err := c.whoisClient.Whois(ip)
+		c.whoisMetrics.whoisLookupResponseTime.Observe(time.Since(startTime).Seconds())
+
 		if err != nil {
 			slog.Warn("Failed to lookup whois for IP", slog.String("error", err.Error()))
 			c.mu.Lock()

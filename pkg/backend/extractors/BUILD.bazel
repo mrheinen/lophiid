@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "base64_extractor.go",
         "extractors.go",
+        "nc_extractor.go",
         "tcp_extractor.go",
         "url_extractor.go",
     ],
@@ -21,6 +22,7 @@ go_test(
     srcs = [
         "base64_extractor_test.go",
         "extractors_test.go",
+        "nc_extractor_test.go",
         "tcp_extractor_test.go",
         "url_extractor_test.go",
     ],
