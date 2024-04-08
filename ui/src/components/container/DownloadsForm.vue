@@ -230,7 +230,7 @@ pre.whois {
   cursor: pointer;
 }
 
-th {
-  padding-right: 10px;
+table th {
+  padding-right: 13px;
 }
 </style>

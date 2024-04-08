@@ -63,6 +63,7 @@ func StringsFromRequest(req *database.Request) []string {
 		return res
 	}
 
+	// TODO: Use req.Query here.
 	query := req.Uri[qIdx+1:]
 	path := req.Uri[:qIdx]
 

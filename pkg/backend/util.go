@@ -36,7 +36,16 @@ func ConvertURLToIPBased(targetUrl string) (string, string, string, error) {
 	return ConvertURLToIPBasedImpl(targetUrl, netLookupWrapper)
 }
 
-func ConvertURLToIPBasedImpl(targetUrl string, lookupFp func(string) ([]net.IP, error)) (string, string, string, error) {
+// ConvertURLToIPBasedImpl takes a URL and returns the parameters needed to make
+// a safe request.
+// We do not want to just reach out to any URL/IP address. Currently we resolve
+// the domain of the URL (if needed) and check if it points to a private IP
+// address. If it does, then an error is returned.  We then return an updated
+// version of the URL with the resolved and checked IP address so we can use it
+// directly in the request instead of the domain (we want to avoid a TOCTOU
+// issue).  Additionally the original domain is returned in host header format
+// so this can be used in the htt request.
+func ConvertURLToIPBasedImpl(targetUrl string, lookupFp func(string) ([]net.IP, error)) (ipbasedUrl string, ip string, hostHeader string, myerr error) {
 	var rIP net.IP
 	rHostPort := 0
 
@@ -59,7 +68,7 @@ func ConvertURLToIPBasedImpl(targetUrl string, lookupFp func(string) ([]net.IP, 
 		return "", "", "", err
 	}
 
-	hostHeader := u.Host
+	hostHeader = u.Host
 	dnsIP := u.Host
 	// Parse the host field which is in the format <ip/domain>:[<port>]?
 	if strings.Contains(u.Host, ":") {

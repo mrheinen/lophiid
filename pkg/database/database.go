@@ -66,31 +66,34 @@ type ContentRule struct {
 func (c *ContentRule) ModelID() int64 { return c.ID }
 
 type Request struct {
-	ID             int64               `ksql:"id,skipInserts" json:"id"`
-	Proto          string              `ksql:"proto" json:"proto"`
-	Host           string              `ksql:"host" json:"host"`
-	Port           int64               `ksql:"port" json:"port"`
-	Method         string              `ksql:"method" json:"method"`
-	Uri            string              `ksql:"uri" json:"uri"`
-	Path           string              `ksql:"path" json:"path"`
-	Referer        string              `ksql:"referer" json:"referer"`
-	ContentLength  int64               `ksql:"content_length" json:"content_length"`
-	UserAgent      string              `ksql:"user_agent" json:"user_agent"`
-	Body           []byte              `ksql:"body" json:"body"`
-	HoneypotIP     string              `ksql:"honeypot_ip" json:"honeypot_ip"`
-	SourceIP       string              `ksql:"source_ip" json:"source_ip"`
-	SourcePort     int64               `ksql:"source_port" json:"source_port"`
-	Raw            string              `ksql:"raw" json:"raw"`
-	RawResponse    string              `ksql:"raw_response" json:"raw_response"`
-	TimeReceived   time.Time           `ksql:"time_received,skipUpdates" json:"time_received"`
-	CreatedAt      time.Time           `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt      time.Time           `ksql:"updated_at,timeNowUTC" json:"updated_at"`
-	ContentID      int64               `ksql:"content_id" json:"content_id"`
-	ContentDynamic bool                `ksql:"content_dynamic" json:"content_dynamic"`
-	RuleID         int64               `ksql:"rule_id" json:"rule_id"`
-	Starred        bool                `ksql:"starred" json:"starred"`
-	BaseHash       string              `ksql:"base_hash" json:"base_hash"`
-	Tags           []TagPerRequestFull `json:"tags"`
+	ID             int64                    `ksql:"id,skipInserts" json:"id"`
+	Proto          string                   `ksql:"proto" json:"proto"`
+	Host           string                   `ksql:"host" json:"host"`
+	Port           int64                    `ksql:"port" json:"port"`
+	Method         string                   `ksql:"method" json:"method"`
+	Uri            string                   `ksql:"uri" json:"uri"`
+	Path           string                   `ksql:"path" json:"path"`
+	Query          string                   `ksql:"query" json:"query"`
+	Referer        string                   `ksql:"referer" json:"referer"`
+	ContentType    string                   `ksql:"content_type" json:"content_type"`
+	ContentLength  int64                    `ksql:"content_length" json:"content_length"`
+	UserAgent      string                   `ksql:"user_agent" json:"user_agent"`
+	Headers        pgtype.FlatArray[string] `ksql:"headers" json:"headers"`
+	Body           []byte                   `ksql:"body" json:"body"`
+	HoneypotIP     string                   `ksql:"honeypot_ip" json:"honeypot_ip"`
+	SourceIP       string                   `ksql:"source_ip" json:"source_ip"`
+	SourcePort     int64                    `ksql:"source_port" json:"source_port"`
+	Raw            string                   `ksql:"raw" json:"raw"`
+	RawResponse    string                   `ksql:"raw_response" json:"raw_response"`
+	TimeReceived   time.Time                `ksql:"time_received,skipUpdates" json:"time_received"`
+	CreatedAt      time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt      time.Time                `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	ContentID      int64                    `ksql:"content_id" json:"content_id"`
+	ContentDynamic bool                     `ksql:"content_dynamic" json:"content_dynamic"`
+	RuleID         int64                    `ksql:"rule_id" json:"rule_id"`
+	Starred        bool                     `ksql:"starred" json:"starred"`
+	BaseHash       string                   `ksql:"base_hash" json:"base_hash"`
+	Tags           []TagPerRequestFull      `json:"tags"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }

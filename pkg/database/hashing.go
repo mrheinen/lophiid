@@ -1,10 +1,8 @@
 package database
 
 import (
-	"bufio"
 	"crypto/sha256"
 	"fmt"
-	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -13,23 +11,18 @@ import (
 // GetHashFromStaticRequestFields calculates a hash based on HTTP request fields
 // that are considered static. Examples are header, parameter names but not
 // parameter values.
-func GetHashFromStaticRequestFields(rawRequest string) (string, error) {
+func GetHashFromStaticRequestFields(req Request) (string, error) {
 
 	hash := sha256.New()
 
-	sReader := strings.NewReader(rawRequest)
-	newReq, err := http.ReadRequest(bufio.NewReader(sReader))
-	if err != nil {
-		return "", err
-	}
-
-	hash.Write([]byte(newReq.Method))
-	hash.Write([]byte(newReq.URL.Path))
+	hash.Write([]byte(req.Method))
+	hash.Write([]byte(req.Path))
 
 	// Add the headers.
 	var headerFields []string
-	for headerName := range newReq.Header {
-		headerFields = append(headerFields, headerName)
+	for _, header := range req.Headers {
+		headerArray := strings.SplitN(header, ": ", 2)
+		headerFields = append(headerFields, headerArray[0])
 	}
 
 	sort.Strings(headerFields)
@@ -38,12 +31,17 @@ func GetHashFromStaticRequestFields(rawRequest string) (string, error) {
 	}
 
 	// Form fields.
-	if newReq.Header.Get("Content-Type") == "application/x-www-form-urlencoded" {
-		if err := newReq.ParseForm(); err == nil {
-			var formFields []string
-			for formKey := range newReq.PostForm {
-				formFields = append(formFields, formKey)
+	if req.ContentType == "application/x-www-form-urlencoded" {
+		var formFields []string
+
+		parsedQuery, err := url.ParseQuery(string(req.Body))
+		// We accept that an error can occur here because payloads are often really
+		// a mess and don't always parse well. If an error occurs; we don't return.
+		if err == nil {
+			for paramName := range parsedQuery {
+				formFields = append(formFields, paramName)
 			}
+
 			sort.Strings(formFields)
 			for _, field := range formFields {
 				hash.Write([]byte(field))
@@ -52,7 +50,7 @@ func GetHashFromStaticRequestFields(rawRequest string) (string, error) {
 	}
 
 	// Query fields.
-	parsedQuery, err := url.ParseQuery(newReq.URL.RawQuery)
+	parsedQuery, err := url.ParseQuery(req.Query)
 	if err != nil {
 		return "", err
 	}

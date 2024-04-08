@@ -58,11 +58,11 @@ type BackendServer struct {
 
 // NewBackendServer creates a new instance of the backend server.
 func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner, malwareDownloadDir string) *BackendServer {
-	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", time.Minute * 30)
+	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", time.Minute*30)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
 	// we get a request with the same download (payload URL) within that time
 	// window then we will not download it again.
-	dCache := util.NewStringMapCache[time.Time]("download_cache", time.Minute * 5)
+	dCache := util.NewStringMapCache[time.Time]("download_cache", time.Minute*5)
 	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
 
 	return &BackendServer{
@@ -119,6 +119,7 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 		Method:        req.GetRequest().GetMethod(),
 		Uri:           req.GetRequestUri(),
 		Path:          req.GetRequest().GetParsedUrl().GetPath(),
+		Query:         req.GetRequest().GetParsedUrl().GetRawQuery(),
 		Port:          req.GetRequest().GetParsedUrl().GetPort(),
 		ContentLength: req.GetRequest().GetContentLength(),
 		Raw:           req.GetRequest().GetRaw(),
@@ -143,14 +144,17 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 	}
 	sReq.SourcePort = int64(port)
 
-	// TODO: Add more headers here, in the struct, proto and database.
 	for _, h := range req.GetRequest().GetHeader() {
 		switch strings.ToLower(h.Key) {
 		case "referer":
 			sReq.Referer = h.Value
 		case "user-agent":
 			sReq.UserAgent = h.Value
+		case "content-type":
+			sReq.ContentType = h.Value
 		}
+
+		sReq.Headers = append(sReq.Headers, fmt.Sprintf("%s: %s", h.Key, h.Value))
 	}
 
 	return &sReq, nil
