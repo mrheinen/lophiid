@@ -157,6 +157,11 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 		sReq.Headers = append(sReq.Headers, fmt.Sprintf("%s: %s", h.Key, h.Value))
 	}
 
+	hash, err := database.GetHashFromStaticRequestFields(&sReq)
+	if err == nil {
+		sReq.BaseHash = hash
+	}
+
 	return &sReq, nil
 }
 func MatchesString(method string, dataToSearch string, searchValue string) bool {
@@ -554,6 +559,19 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		Key:   "Server",
 		Value: content.Server,
 	})
+
+	for _, header := range content.Headers {
+		headerParts := strings.SplitN(header, ": ", 2)
+		if len(headerParts) != 2 {
+			slog.Warn("Invalid header for content ID", slog.String("header", header), slog.Int64("content_id", content.ID))
+			continue
+		}
+
+		res.Header = append(res.Header, &backend_service.KeyValue{
+			Key:   headerParts[0],
+			Value: headerParts[1],
+		})
+	}
 
 	s.metrics.rpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
 

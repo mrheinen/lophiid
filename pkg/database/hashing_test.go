@@ -72,7 +72,7 @@ func TestHashRequestOk(t *testing.T) {
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
-			sum, err := GetHashFromStaticRequestFields(test.testRequest)
+			sum, err := GetHashFromStaticRequestFields(&test.testRequest)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}

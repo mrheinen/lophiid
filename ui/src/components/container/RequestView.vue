@@ -27,6 +27,25 @@
               </a>
             </td>
           </tr>
+          <tr>
+            <th>Honeypot IP</th>
+            <td>
+              <a :href="'/requests?q=honeypot_ip:' + localRequest.honeypot_ip">
+                {{ localRequest.honeypot_ip }}
+              </a>
+            </td>
+          </tr>
+
+
+          <tr>
+            <th>Base Hash</th>
+            <td>
+                {{ localRequest.base_hash }}
+                <a :href="'/requests?q=base_hash:' + localRequest.base_hash">
+                  <i class="pi pi-search" title="find similar requests"></i>
+                </a>
+            </td>
+          </tr>
           <tr v-if="localRequest.tags">
             <th>Tags</th>
             <td>

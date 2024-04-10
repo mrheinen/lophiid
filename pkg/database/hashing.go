@@ -11,7 +11,7 @@ import (
 // GetHashFromStaticRequestFields calculates a hash based on HTTP request fields
 // that are considered static. Examples are header, parameter names but not
 // parameter values.
-func GetHashFromStaticRequestFields(req Request) (string, error) {
+func GetHashFromStaticRequestFields(req *Request) (string, error) {
 
 	hash := sha256.New()
 

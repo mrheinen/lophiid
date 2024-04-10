@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func TestUpsertSingleContent(t *testing.T) {
@@ -30,6 +32,7 @@ func TestUpsertSingleContent(t *testing.T) {
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
+				Headers:     pgtype.FlatArray[string]{"Foo: bar"},
 				Data:        []byte("<b>Ai</b>"),
 			},
 			status:            ResultSuccess,
@@ -37,6 +40,35 @@ func TestUpsertSingleContent(t *testing.T) {
 			dbErr:             nil,
 			scriptErr:         nil,
 		},
+		{
+			description: "Insert fails on header",
+			content: database.Content{
+				Name:        "Foo",
+				ContentType: "text/html",
+				Server:      "Apache",
+				Headers:     pgtype.FlatArray[string]{"Notavalidheader"},
+				Data:        []byte("<b>Ai</b>"),
+			},
+			status:            ResultError,
+			statusMsgContains: "Notavalidheader",
+			dbErr:             nil,
+			scriptErr:         nil,
+		},
+		{
+			description: "Insert fails on header name",
+			content: database.Content{
+				Name:        "Foo",
+				ContentType: "text/html",
+				Server:      "Apache",
+				Headers:     pgtype.FlatArray[string]{"y766***&: bar"},
+				Data:        []byte("<b>Ai</b>"),
+			},
+			status:            ResultError,
+			statusMsgContains: "Invalid header name",
+			dbErr:             nil,
+			scriptErr:         nil,
+		},
+
 		{
 			description: "Insert OK script",
 			content: database.Content{

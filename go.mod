@@ -10,13 +10,14 @@ require (
 	github.com/jackc/pgx/v5 v5.5.4
 	github.com/kkyr/fig v0.4.0
 	github.com/likexian/whois v1.15.1
+	github.com/mrheinen/magicmime v0.0.0-20240329164816-cbc792827fe4
 	github.com/prometheus/client_golang v1.19.0
 	github.com/rs/cors v1.10.1
 	github.com/vingarcia/ksql v1.10.0
 	github.com/vingarcia/ksql/adapters/kpgx5 v1.10.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.33.0
-	mvdan.cc/xurls/v2 v2.5.0
+	mvdan.cc/xurls v1.1.0
 )
 
 require (
@@ -31,12 +32,13 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/mrheinen/magicmime v0.0.0-20240329164816-cbc792827fe4 // indirect
+	github.com/mvdan/xurls v1.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.0 // indirect
 	github.com/prometheus/common v0.50.0 // indirect
 	github.com/prometheus/procfs v0.13.0 // indirect
+	github.com/rakyll/magicmime v0.1.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.22.0 // indirect

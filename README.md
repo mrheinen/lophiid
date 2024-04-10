@@ -18,6 +18,7 @@ Key features:
 - Automatically collects malware
 - Direct integration with VirusTotal
 - Exporting of rules
+- Highly customizable
 
 Running lophiid is already very interesting and you'll collect a lot of threat
 information. The project is still in an early phase of development though and

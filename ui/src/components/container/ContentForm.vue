@@ -73,6 +73,16 @@
         </div>
       </div>
 
+      <div>
+        <label class="label">Custom headers</label>
+        <TextArea
+          v-model="customHeaders"
+          autoResize
+          rows="4"
+          cols="40"
+        />
+      </div>
+
       <div v-if="!scriptMode">
         <label class="label">Data</label>
         <TextArea v-model="localContent.data" autoResize rows="20" cols="70" />
@@ -83,7 +93,8 @@
     <div class="button-group">
     <PrimeButton
       :label="localContent.id > 0 ? 'Submit' : 'Add'"
-      @click="submitForm()"
+      @click.prevent="submitForm()
+      "
     >
     </PrimeButton>
     &nbsp;
@@ -172,9 +183,11 @@ export default {
       localContent: {
         server: "Apache",
         status_code: "200",
+        headers: [],
       },
       contentTypeItems: [],
       serverItems: [],
+      customHeaders: "",
       selectedFile: null,
       showContentData: false,
       scriptMode: false,
@@ -259,6 +272,7 @@ export default {
 
     resetForm() {
       this.localContent = {};
+      this.customHeaders = "";
     },
     submitForm() {
       if (
@@ -269,6 +283,26 @@ export default {
       ) {
         this.$toast.error("Either specify a script or content data. Not both");
         return;
+      }
+
+      this.localContent.headers = []
+      if (this.customHeaders != "") {
+        var headers = this.customHeaders.split("\n");
+        if (!headers || headers.length == 0) {
+          headers.push(this.customHeaders);
+        }
+        var returnNow = false;
+        headers.forEach((header) => {
+          var checkParts = header.split(": ");
+          if (checkParts.length < 2) {
+            this.$toast.error("This header seems wrong: '" + header + "'");
+            returnNow = true;
+          }
+          this.localContent.headers.push(header);
+        });
+        if (returnNow == true) {
+          return;
+        }
       }
       const contentToSubmit = Object.assign({}, this.localContent);
       // Remove the added fields.

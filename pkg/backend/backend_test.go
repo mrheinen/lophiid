@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -434,8 +435,9 @@ func TestHandleProbe(t *testing.T) {
 				Script: "1+1",
 			},
 			66: {
-				ID:   66,
-				Data: []byte("default"),
+				ID:      66,
+				Data:    []byte("default"),
+				Headers: pgtype.FlatArray[string]{"X-IP: 1.1.1.1"},
 			},
 		},
 		ContentRulesToReturn: []database.ContentRule{
@@ -509,6 +511,10 @@ func TestHandleProbe(t *testing.T) {
 	}
 	if !bytes.Equal(res.Response.Body, []byte("default")) {
 		t.Errorf("got %s, expected %s", res.Response.Body, "default")
+	}
+
+	if len(res.Response.Header) != 3 {
+		t.Errorf("got %d, expected 3", len(res.Response.Header))
 	}
 
 	// Now we simulate a database error. Should never occur ;p

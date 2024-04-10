@@ -32,17 +32,18 @@ type DataModel interface {
 }
 
 type Content struct {
-	ID          int64     `ksql:"id,skipInserts" json:"id"`
-	Data        []byte    `ksql:"data"           json:"data"`
-	Name        string    `ksql:"name"           json:"name"`
-	Description string    `ksql:"description"    json:"description"`
-	ContentType string    `ksql:"content_type"   json:"content_type"`
-	Server      string    `ksql:"server"         json:"server"`
-	IsDefault   bool      `ksql:"is_default"     json:"is_default"`
-	StatusCode  string    `ksql:"status_code"    json:"status_code"`
-	Script      string    `ksql:"script"         json:"script"`
-	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC"              json:"updated_at"`
+	ID          int64                    `ksql:"id,skipInserts" json:"id"`
+	Data        []byte                   `ksql:"data"           json:"data"`
+	Name        string                   `ksql:"name"           json:"name"`
+	Description string                   `ksql:"description"    json:"description"`
+	ContentType string                   `ksql:"content_type"   json:"content_type"`
+	Server      string                   `ksql:"server"         json:"server"`
+	IsDefault   bool                     `ksql:"is_default"     json:"is_default"`
+	StatusCode  string                   `ksql:"status_code"    json:"status_code"`
+	Script      string                   `ksql:"script"         json:"script"`
+	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"`
+	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at"`
 }
 
 func (c *Content) ModelID() int64 { return c.ID }

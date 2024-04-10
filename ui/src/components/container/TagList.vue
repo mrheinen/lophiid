@@ -266,6 +266,9 @@ export default {
 </script>
 
 <style scoped>
+.table tr.is-selected {
+  background-color: #4e726d;
+}
 #date {
   width: 170px;
 }

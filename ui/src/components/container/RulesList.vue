@@ -16,8 +16,6 @@
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
       <form
-        @focusin="keyboardDisabled = true"
-        @focusout="keyboardDisabled = false"
         @submit.prevent="performNewSearch()"
       >
         <span class="p-input-icon-left" style="width: 100%">
@@ -26,7 +24,8 @@
         </span>
       </form>
       <div>
-        <table class="table is-hoverable" v-if="rules.length > 0">
+        <table
+          class="table is-hoverable" v-if="rules.length > 0">
           <thead>
             <th>App</th>
             <th>App version</th>
@@ -102,8 +101,6 @@
     </div>
     <div
       class="column mright"
-      @focusin="keyboardDisabled = true"
-      @focusout="keyboardDisabled = false"
     >
       <rule-form
         @update-rule="onUpdatedRule"
@@ -148,7 +145,6 @@ export default {
       offset: 0,
       rules: [],
       ruleAlertClass: "pi pi-bell pointer",
-      keyboardDisabled: true,
       rulesLoading: false,
       apps: {},
       query: null,
@@ -169,12 +165,6 @@ export default {
     };
   },
   methods: {
-    onFocusTable() {
-      this.keyboardDisabled = true;
-    },
-    onFocusOutTable() {
-      this.keyboardDisabled = false;
-    },
     toggleAlert(rule) {
       var alertRule = null;
       for (var i = 0; i < this.rules.length; i++) {
@@ -510,7 +500,7 @@ export default {
         }
 
         if (that.$route.query.content_id) {
-          newRule.content_id = that.$route.query.content_id;
+          newRule.content_id = parseInt(that.$route.query.content_id);
         }
 
         that.selectedRule = newRule;
@@ -519,21 +509,6 @@ export default {
     });
   },
   mounted() {
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrevRules();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNextRules();
-        }
-      }
-    });
   },
 };
 </script>
@@ -541,6 +516,9 @@ export default {
 <style scoped>
 .p-inputtext {
   width: 100%;
+}
+.table tr.is-selected {
+  background-color: #4e726d;
 }
 i.pi-style {
   font-size: 2rem;

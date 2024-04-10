@@ -276,7 +276,9 @@ export default {
 #date {
   width: 170px;
 }
-
+.table tr.is-selected {
+  background-color: #4e726d;
+}
 table {
   width: 100%;
 }

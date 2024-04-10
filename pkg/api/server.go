@@ -9,7 +9,9 @@ import (
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/vingarcia/ksql"
@@ -235,6 +237,22 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 		if err != nil && !errors.Is(err, javascript.ErrScriptComplained) {
 			a.sendStatus(w, fmt.Sprintf("Script did not validate: %s", err), ResultError, nil)
 			return
+		}
+	}
+
+	headerNameRegex := regexp.MustCompile("^[a-zA-Z0-9-_]+$")
+	if len(rb.Headers) > 0 {
+		for _, header := range rb.Headers {
+			headerParts := strings.SplitN(header, ": ", 2)
+			if len(headerParts) != 2 {
+				a.sendStatus(w, fmt.Sprintf("Invalid header: %s", header), ResultError, nil)
+				return
+			}
+
+			if !headerNameRegex.MatchString(headerParts[0]) {
+				a.sendStatus(w, fmt.Sprintf("Invalid header name: %s", headerParts[0]), ResultError, nil)
+				return
+			}
 		}
 	}
 

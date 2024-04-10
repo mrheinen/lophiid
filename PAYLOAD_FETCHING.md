@@ -12,11 +12,10 @@ the result on disk.
 
 ## Process
 
-URLs are extracted from the requests and scheduled for fetching. Currently the
-fetching is done by the backend directly. In the future we might want to change
-this and do the fetching directly from the honeypot. 
+URLs are extracted from the requests and scheduled for fetching. The fetching is
+done via the honeypots. 
 
-If the fetched content looks like a script, then we will try to extrac URLs from
+If the fetched content looks like a script, then we will try to extract URLs from
 that script and also download these. This however is limited to URLs that are on
 the same host as the script itself (in order to reduce noice).
 

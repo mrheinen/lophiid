@@ -294,6 +294,9 @@ export default {
 .restrict-width {
   width: 700px;
 }
+.table tr.is-selected {
+  background-color: #4e726d;
+}
 
 #date {
   width: 170px;

@@ -19,6 +19,7 @@ CREATE TABLE content (
   script          TEXT,
   content_type    VARCHAR(256) NOT NULL,
   server          VARCHAR(256) NOT NULL,
+  headers         VARCHAR(4096) ARRAY,
   status_code     STATUS_CODE NOT NULL DEFAULT '200',
   is_default      BOOLEAN DEFAULT FALSE,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -44,7 +45,7 @@ CREATE TABLE request (
   content_length  INT,
   user_agent      VARCHAR(2048),
   body            BYTEA NOT NULL DEFAULT ''::bytea,
-  headers         VARCHAR(4096) ARRAY;
+  headers         VARCHAR(4096) ARRAY,
   source_ip       VARCHAR(512),
   source_port     INT,
   raw             TEXT,
@@ -145,7 +146,7 @@ CREATE TABLE downloads (
   last_request_id INT,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   last_seen_at    TIMESTAMP NOT NULL DEFAULT NOW(),
-  vt_file_analysis_result VARCHAR(1024) ARRAY;
+  vt_file_analysis_result VARCHAR(1024) ARRAY,
   vt_url_analysis_id  VARCHAR(1024) DEFAULT '',
   vt_file_analysis_id  VARCHAR(1024) DEFAULT '',
   vt_file_analysis_submitted  BOOL default false,
@@ -275,6 +276,12 @@ CREATE INDEX requests_uri_idx ON request (
   uri
 );
 
+CREATE INDEX requests_base_hash_idx ON request (
+  time_received desc,
+  base_hash
+);
+
+
 CREATE INDEX requests_content_length_idx ON request (
   time_received desc,
   content_length
@@ -284,6 +291,7 @@ CREATE INDEX requests_created_at_idx ON request (
   time_received desc,
   created_at DESC
 );
+
 
 CREATE INDEX query_id_tag_per_query_idx ON tag_per_query (
   query_id DESC

@@ -43,7 +43,7 @@
                 <div style="float: left">
                   <div>
                     <div v-for="t in req.tags" :key="t.tag.id" :title="t.tag.description" class="mytag">
-                      {{ t.tag.name }}
+                      <a :href="'/requests?q=label:' + t.tag.name">{{ t.tag.name }}</a>
                     </div>
                   </div>
                 </div>
@@ -402,6 +402,10 @@ export default {
 </script>
 
 <style scoped>
+
+.table tr.is-selected {
+  background-color: #4e726d;
+}
 
 table th {
   color: #616060 !important;

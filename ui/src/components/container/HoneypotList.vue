@@ -282,7 +282,9 @@ export default {
 table {
   width: 100%;
 }
-
+.table tr.is-selected {
+  background-color: #4e726d;
+}
 td {
   font-size: 13px;
 }
