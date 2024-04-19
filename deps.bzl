@@ -758,11 +758,25 @@ def go_dependencies():
         version = "v0.0.0-20240329164816-cbc792827fe4",
     )
     go_repository(
+        name = "com_github_mrheinen_p0fclient",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/mrheinen/p0fclient",
+        sum = "h1:UsCD/XNDmk+WVYj9by9dFJ6UtwqDGFfumDI3wIag8Oc=",
+        version = "v0.0.0-20240415163501-4961d493ae47",
+    )
+    go_repository(
         name = "com_github_mrunalp_fileutils",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/mrunalp/fileutils",
         sum = "h1:NKzVxiH7eSk+OQ4M+ZYW1K6h27RUV3MI6NUTsHhU6Z4=",
         version = "v0.5.0",
+    )
+    go_repository(
+        name = "com_github_mvdan_xurls",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/mvdan/xurls",
+        sum = "h1:OpuDelGQ1R1ueQ6sSryzi6P+1RtBpfQHM8fJwlE45ww=",
+        version = "v1.1.0",
     )
     go_repository(
         name = "com_github_mwitkow_go_conntrack",
@@ -896,6 +910,13 @@ def go_dependencies():
         importpath = "github.com/prometheus/tsdb",
         sum = "h1:YZcsG11NqnK4czYLrWd9mpEuAJIHVQLwdrleYfszMAA=",
         version = "v0.7.1",
+    )
+    go_repository(
+        name = "com_github_rakyll_magicmime",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/rakyll/magicmime",
+        sum = "h1:aFIp1DqgzjcB3FI7rQk6uZl73i1VPpWswab1YKU4CL4=",
+        version = "v0.1.0",
     )
     go_repository(
         name = "com_github_rogpeppe_fastuuid",

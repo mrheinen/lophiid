@@ -137,7 +137,7 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 			return
 		}
 
-		a.sendStatus(w, "Updated rule", ResultSuccess, nil)
+		a.sendStatus(w, "Updated rule", ResultSuccess, []database.DataModel{&rb})
 		return
 	}
 }
@@ -274,7 +274,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 			return
 		}
 
-		a.sendStatus(w, "Updated content", ResultSuccess, nil)
+		a.sendStatus(w, "Updated content", ResultSuccess, []database.DataModel{&rb})
 		return
 	}
 }
@@ -383,7 +383,7 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 			return
 		}
 
-		a.sendStatus(w, "Updated app", ResultSuccess, nil)
+		a.sendStatus(w, "Updated app", ResultSuccess, []database.DataModel{&rb})
 		return
 	}
 }

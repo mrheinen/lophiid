@@ -314,6 +314,64 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	return ret, nil
 }
 
+func (s *BackendServer) SendSourceContext(ctx context.Context, req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error) {
+	ret := &backend_service.SendSourceContextResponse{}
+
+	switch c := req.Context.(type) {
+	case *backend_service.SendSourceContextRequest_P0FResult:
+		if _, err := s.HandleP0fResult(req.GetSourceIp(), c.P0FResult); err != nil {
+			return ret, fmt.Errorf("handling p0f result: %w", err)
+		}
+
+	default:
+		return ret, fmt.Errorf("unknown context type")
+	}
+	return ret, nil
+}
+
+func (s *BackendServer) HandleP0fResult(ip string, res *backend_service.P0FResult) (bool, error) {
+	pr := database.P0fResult{
+		IP:               ip,
+		FirstSeen:        time.Unix(int64(res.GetFirstSeen()), 0),
+		LastSeen:         time.Unix(int64(res.GetLastSeen()), 0),
+		LastNatDetection: time.Unix(int64(res.GetLastNatDetection()), 0),
+		LastOsChange:     time.Unix(int64(res.GetLastOsChange()), 0),
+		TotalCount:       int64(res.GetTotalCount()),
+		UptimeMinutes:    int64(res.GetUptimeMinutes()),
+		UptimeDays:       int64(res.GetUptimeDays()),
+		Distance:         int64(res.GetDistance()),
+		OsMatchQuality:   int64(res.GetOsMatchQuality()),
+		OsName:           res.GetOsName(),
+		OsVersion:        res.GetOsVersion(),
+		HttpName:         res.GetHttpName(),
+		HttpFlavor:       res.GetHttpFlavor(),
+		LinkType:         res.GetLinkType(),
+		Language:         res.GetLanguage(),
+	}
+
+	existingPr, err := s.dbClient.GetP0fResultByIP(ip)
+	if err != nil {
+		if !errors.Is(err, ksql.ErrRecordNotFound) {
+			return false, fmt.Errorf("while fetching p0f result: %w", err)
+		}
+
+		if _, err = s.dbClient.Insert(&pr); err != nil {
+			return false, fmt.Errorf("while inserting p0f result: %w (result: %+v)", err, pr)
+		}
+
+		return true, nil
+	}
+
+	// If the result is older than 24 hours, we will add the new entry.
+	if time.Since(existingPr.CreatedAt).Hours() > 24 {
+		if _, err = s.dbClient.Insert(&pr); err != nil {
+			return false, fmt.Errorf("while inserting p0f result: %w (result: %+v)", err, pr)
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
 func HasParseableContent(fileUrl string, mime string) bool {
 	consumableContentTypes := map[string]bool{
 		"application/x-shellscript": true,

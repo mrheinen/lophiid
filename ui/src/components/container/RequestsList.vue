@@ -382,21 +382,6 @@ export default {
     this.loadRequests(true);
   },
   mounted() {
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.searchIsFocused) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrevRequests();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNextRequests();
-        }
-      }
-    });
   },
 };
 </script>

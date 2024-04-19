@@ -1,6 +1,8 @@
 module loophid
 
-go 1.21
+go 1.22
+
+toolchain go1.22.2
 
 require (
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d
@@ -11,13 +13,14 @@ require (
 	github.com/kkyr/fig v0.4.0
 	github.com/likexian/whois v1.15.1
 	github.com/mrheinen/magicmime v0.0.0-20240329164816-cbc792827fe4
+	github.com/mrheinen/p0fclient v0.0.0-20240415163501-4961d493ae47
 	github.com/prometheus/client_golang v1.19.0
 	github.com/rs/cors v1.10.1
 	github.com/vingarcia/ksql v1.10.0
 	github.com/vingarcia/ksql/adapters/kpgx5 v1.10.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.33.0
-	mvdan.cc/xurls v1.1.0
+	mvdan.cc/xurls/v2 v2.5.0
 )
 
 require (

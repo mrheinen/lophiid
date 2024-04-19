@@ -7,7 +7,6 @@ import (
 	"log"
 	"loophid/pkg/agent"
 	"loophid/pkg/client"
-	http_server "loophid/pkg/http/server"
 	"net/http"
 	"strings"
 	"time"
@@ -93,13 +92,13 @@ func main() {
 
 	finish := make(chan bool)
 
-	var httpServers []*http_server.HttpServer
+	var httpServers []*agent.HttpServer
 	for _, port := range cfg.HTTPListener.Port {
-		httpServers = append(httpServers, http_server.NewHttpServer(c, GetServerListenString(cfg.HTTPListener.IP, port), cfg.HTTPListener.IP))
+		httpServers = append(httpServers, agent.NewHttpServer(c, GetServerListenString(cfg.HTTPListener.IP, port), cfg.HTTPListener.IP))
 	}
 
 	for _, port := range cfg.HTTPSListener.Port {
-		httpServers = append(httpServers, http_server.NewSSLHttpServer(c, GetServerListenString(cfg.HTTPListener.IP, port), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPListener.IP))
+		httpServers = append(httpServers, agent.NewSSLHttpServer(c, GetServerListenString(cfg.HTTPListener.IP, port), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPListener.IP))
 	}
 
 	// Create the http client. It will allow long timeouts to download from slow

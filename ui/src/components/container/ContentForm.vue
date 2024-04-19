@@ -378,6 +378,14 @@ export default {
       if (this.localContent.script && this.localContent.script.length > 0) {
         this.scriptMode = true;
       }
+
+      var customHeaderTmp = "";
+      this.localContent.headers.forEach((header) => {
+        customHeaderTmp += header + "\n";
+      });
+      this.customHeaders = customHeaderTmp;
+      console.log(this.customHeaders);
+
     },
   },
   created() {

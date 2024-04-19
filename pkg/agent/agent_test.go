@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"loophid/backend_service"
-	http_server "loophid/pkg/http/server"
 	"net/http"
 	"testing"
 	"time"
@@ -56,7 +55,7 @@ func TestDownloadToBuffer(t *testing.T) {
 		}
 	})
 
-	agent := NewAgent(nil, []*http_server.HttpServer{}, client, time.Minute, "1.1.1.1")
+	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0fClient */, time.Minute, time.Minute, "1.1.1.1")
 
 	resp, err := agent.DownloadToBuffer(&backendRequest)
 	if err != nil {
@@ -102,7 +101,7 @@ func TestDownloadToBufferContentType(t *testing.T) {
 		}
 	})
 
-	agent := NewAgent(nil, []*http_server.HttpServer{}, client, time.Minute, "1.1.1.1")
+	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0frunner */, time.Minute, time.Minute, "1.1.1.1")
 
 	resp, err := agent.DownloadToBuffer(&backendRequest)
 	if err != nil {

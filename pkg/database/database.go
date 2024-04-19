@@ -26,6 +26,7 @@ var StoredQueryTable = ksql.NewTable("stored_query")
 var TagTable = ksql.NewTable("tag")
 var TagPerRequestTable = ksql.NewTable("tag_per_request")
 var TagPerQueryTable = ksql.NewTable("tag_per_query")
+var P0fResultTable = ksql.NewTable("p0f_result")
 
 type DataModel interface {
 	ModelID() int64
@@ -187,6 +188,30 @@ type Whois struct {
 
 func (c *Whois) ModelID() int64 { return c.ID }
 
+type P0fResult struct {
+	ID               int64     `ksql:"id,skipInserts" json:"id"`
+	IP               string    `ksql:"ip" json:"ip"`
+	FirstSeen        time.Time `ksql:"first_seen_time" json:"first_seen_time"`
+	LastSeen         time.Time `ksql:"last_seen_time" json:"last_seen_time"`
+	TotalCount       int64     `ksql:"total_count" json:"total_count"`
+	UptimeMinutes    int64     `ksql:"uptime_minutes" json:"uptime_minutes"`
+	UptimeDays       int64     `ksql:"uptime_days" json:"uptime_days"`
+	Distance         int64     `ksql:"distance" json:"distance"`
+	LastNatDetection time.Time `ksql:"last_nat_detection_time" json:"last_nat_detection_time"`
+	LastOsChange     time.Time `ksql:"last_os_change_time" json:"last_os_change_time"`
+	OsMatchQuality   int64     `ksql:"os_match_quality" json:"os_match_quality"`
+	OsName           string    `ksql:"os_name" json:"os_name"`
+	OsVersion        string    `ksql:"os_version" json:"os_version"`
+	HttpName         string    `ksql:"http_name" json:"http_name"`
+	HttpFlavor       string    `ksql:"http_flavor" json:"http_flavor"`
+	Language         string    `ksql:"language" json:"language"`
+	LinkType         string    `ksql:"link_type" json:"link_type"`
+	CreatedAt        time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt        time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+}
+
+func (c *P0fResult) ModelID() int64 { return c.ID }
+
 type StoredQuery struct {
 	ID          int64         `ksql:"id,skipInserts" json:"id"`
 	Query       string        `ksql:"query" json:"query"`
@@ -249,6 +274,7 @@ type DatabaseClient interface {
 	GetDownloadBySum(sha256sum string) (Download, error)
 	GetHoneypotByIP(ip string) (Honeypot, error)
 	GetWhoisByIP(ip string) (Whois, error)
+	GetP0fResultByIP(ip string) (P0fResult, error)
 	GetHoneypots() ([]Honeypot, error)
 	GetRequests() ([]Request, error)
 	GetRequestsForSourceIP(ip string) ([]Request, error)
@@ -333,6 +359,8 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &TagPerQueryTable
 	case "TagPerRequest":
 		return &TagPerRequestTable
+	case "P0fResult":
+		return &P0fResultTable
 	default:
 		fmt.Printf("Don't know %s datamodel\n", name)
 		return nil
@@ -424,6 +452,12 @@ func (d *KSQLClient) GetHoneypots() ([]Honeypot, error) {
 func (d *KSQLClient) GetWhoisByIP(ip string) (Whois, error) {
 	hp := Whois{}
 	err := d.db.QueryOne(d.ctx, &hp, "FROM whois WHERE ip = $1", ip)
+	return hp, err
+}
+
+func (d *KSQLClient) GetP0fResultByIP(ip string) (P0fResult, error) {
+	hp := P0fResult{}
+	err := d.db.QueryOne(d.ctx, &hp, "FROM p0f_result WHERE ip = $1", ip)
 	return hp, err
 }
 
@@ -775,6 +809,7 @@ type FakeDatabaseClient struct {
 	WhoisToReturn          Whois
 	WhoisErrorToReturn     error
 	LastDataModelSeen      interface{}
+	P0fResultToReturn      P0fResult
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -888,4 +923,7 @@ func (f *FakeDatabaseClient) GetTagsPerRequestForRequestID(id int64) ([]TagPerRe
 }
 func (f *FakeDatabaseClient) GetTagPerRequestFullForRequest(id int64) ([]TagPerRequestFull, error) {
 	return []TagPerRequestFull{}, nil
+}
+func (f *FakeDatabaseClient) GetP0fResultByIP(ip string) (P0fResult, error) {
+	return f.P0fResultToReturn, f.ErrorToReturn
 }

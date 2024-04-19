@@ -1,6 +1,9 @@
 package util
 
-import "reflect"
+import (
+	"io/ioutil"
+	"reflect"
+)
 
 func GetStructName(m interface{}) string {
 	if t := reflect.TypeOf(m); t.Kind() == reflect.Ptr {
@@ -10,3 +13,10 @@ func GetStructName(m interface{}) string {
 	}
 }
 
+func ReadFileToString(filePath string) (string, error) {
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}

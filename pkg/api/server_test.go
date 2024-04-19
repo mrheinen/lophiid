@@ -170,6 +170,10 @@ func TestUpsertSingleContent(t *testing.T) {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
 			}
 
+			if pdata.Status == ResultSuccess && test.content.ID > 0 && test.content.ID != pdata.Data[0].ID {
+				t.Errorf("expected id %d, got %d", test.content.ID, pdata.Data[0].ID)
+			}
+
 			if pdata.Status != test.status {
 				t.Errorf("status %s expected, got %s", test.status, pdata.Status)
 			}

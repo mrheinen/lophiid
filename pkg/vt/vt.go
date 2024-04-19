@@ -135,7 +135,7 @@ func (v *VTClient) CheckIP(ip string) (CheckIPResponse, error) {
 	}
 
 	url := fmt.Sprintf("https://www.virustotal.com/api/v3/ip_addresses/%s", ip)
-	req, _ := http.NewRequest("GET", url, nil)
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("x-apikey", v.apiKey)
 
@@ -174,7 +174,7 @@ func (v *VTClient) SubmitURL(url string) (SubmitURLResponse, error) {
 
 	payload := strings.NewReader(fmt.Sprintf("url=%s", url))
 
-	req, _ := http.NewRequest("POST", vtUrl, payload)
+	req, _ := http.NewRequest(http.MethodPost, vtUrl, payload)
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("x-apikey", v.apiKey)
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
@@ -206,7 +206,7 @@ func (v *VTClient) GetURLAnalysis(id string) (AnalysisResponse, error) {
 	var ret AnalysisResponse
 	vtUrl := fmt.Sprintf("https://www.virustotal.com/api/v3/urls/%s", id)
 
-	req, _ := http.NewRequest("GET", vtUrl, nil)
+	req, _ := http.NewRequest(http.MethodGet, vtUrl, nil)
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("x-apikey", v.apiKey)
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
@@ -238,7 +238,7 @@ func (v *VTClient) GetFileAnalysis(id string) (FileAnalysisResponse, error) {
 	var ret FileAnalysisResponse
 	vtUrl := fmt.Sprintf("https://www.virustotal.com/api/v3/analyses/%s", id)
 
-	req, _ := http.NewRequest("GET", vtUrl, nil)
+	req, _ := http.NewRequest(http.MethodGet, vtUrl, nil)
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("x-apikey", v.apiKey)
 	req.Header.Add("content-type", "application/x-www-form-urlencoded")
@@ -291,7 +291,7 @@ func (v *VTClient) SubmitFile(pathWithFilename string) (AnalysisResponse, error)
 	// Close the multipart writer to finalize the request
 	w.Close()
 
-	req, _ := http.NewRequest("POST", vtUrl, &buf)
+	req, _ := http.NewRequest(http.MethodPost, vtUrl, &buf)
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("x-apikey", v.apiKey)
 	req.Header.Add("content-type", w.FormDataContentType())

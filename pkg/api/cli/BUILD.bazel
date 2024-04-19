@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "cli",
+    srcs = ["cli.go"],
+    importpath = "loophid/pkg/api/cli",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api",
+        "//pkg/database",
+        "//pkg/util",
+    ],
+)
+
+go_test(
+    name = "cli_test",
+    srcs = ["cli_test.go"],
+    embed = [":cli"],
+)

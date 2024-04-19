@@ -161,6 +161,28 @@ CREATE TABLE downloads (
 );
 
 
+CREATE TABLE p0f_result (
+  id                        SERIAL PRIMARY KEY,
+  ip                        VARCHAR(52),
+  first_seen_time           TIMESTAMP,
+  last_seen_time            TIMESTAMP,
+  total_count               INT DEFAULT 0,
+  uptime_minutes            INT DEFAULT 0,
+  uptime_days               INT DEFAULT 0,
+  distance                  INT DEFAULT 0,
+  last_nat_detection_time   TIMESTAMP,
+  last_os_change_time       TIMESTAMP,
+  os_match_quality          INT DEFAULT 0,
+  os_name                   VARCHAR(32),
+  os_version                VARCHAR(32),
+  http_name                 VARCHAR(32),
+  http_flavor               VARCHAR(32),
+  language                  VARCHAR(32),
+  link_type                 VARCHAR(32),
+  created_at                TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at                TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE stored_query (
   id                   SERIAL PRIMARY KEY,
   query                VARCHAR(8192),
@@ -171,6 +193,7 @@ CREATE TABLE stored_query (
   times_run            INT DEFAULT 0,
   last_ran_at          TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
 
 
 CREATE TABLE tag (

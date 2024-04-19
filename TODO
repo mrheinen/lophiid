@@ -30,8 +30,6 @@ which can be edited via the UI.
 
 XL - Create reports. Daily report per email.
 
-Allow content to be uploaded in a zip.
-
 Add yara Support
 
 Support http://192.168.1.78:8081/requests/0/24?q=source_ip:161.142.198.183 with
@@ -57,18 +55,10 @@ Add labels from rules.
 
 Add sorting
 
-Check that the stored queries do not overrun the ticker interval.
-
 Add ACTION to rule and allow IGNORE to be added.  Skipping certain requests
 entirely.
 
-Add option to ad header to content. E.g. last-modified such as used in the palo
-alto exploits <M-Right>https://devco.re/blog/2019/07/17/attacking-ssl-vpn-part-1-PreAuth-RCE-on-Palo-Alto-GlobalProtect-with-Uber-as-case-study/
-
-Update whois handler and make a work group, remove lock.
-
-Do the pings and nc lokups
-
+Do the pings and nc lookups
 
 Stats queries:
   SELECT
@@ -79,6 +69,14 @@ Stats queries:
   ORDER BY day DESC LIMIT 30;
 
 
-UPDATE database size to support IPv4
+Make honeypots report a version.
 
+Allow telnetd to spawn. Allow javascript to spawn commands.
 
+Add support for p0f
+
+Use gomega in tests
+
+Send metrics from client to the backend.
+
+Make base64 strings searchable.

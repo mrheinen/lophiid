@@ -2,23 +2,31 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "agent",
-    srcs = ["agent.go"],
+    srcs = [
+        "agent.go",
+        "http_server.go",
+        "p0f_runner.go",
+    ],
     importpath = "loophid/pkg/agent",
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",
         "//pkg/client",
-        "//pkg/http/server",
+        "//pkg/util",
         "@com_github_mrheinen_magicmime//:magicmime",
+        "@com_github_mrheinen_p0fclient//:p0fclient",
     ],
 )
 
 go_test(
     name = "agent_test",
-    srcs = ["agent_test.go"],
+    srcs = [
+        "agent_test.go",
+        "http_server_test.go",
+    ],
     embed = [":agent"],
     deps = [
         "//backend_service",
-        "//pkg/http/server",
+        "//pkg/client",
     ],
 )

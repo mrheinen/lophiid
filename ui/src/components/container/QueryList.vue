@@ -33,7 +33,7 @@
             <td>{{ query.parsed.last_ran_at }}</td>
             <td>{{ query.record_count }}</td>
             <td>
-              <a :href="'/requests?q=' + query.query">{{ query.query }}</a>
+              <a :href="'/requests?q=' + encodeURI(query.query)">{{ query.query }}</a>
             </td>
           </tr>
         </tbody>

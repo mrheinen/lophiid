@@ -13,6 +13,7 @@ import (
 	"loophid/pkg/whois"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
@@ -723,4 +724,46 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	if downloadEntry.TimesSeen != 2 {
 		t.Errorf("expected times seen to be %d, got %d", 2, downloadEntry.TimesSeen)
 	}
+}
+
+func TestHandleP0fResult(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{
+		P0fResultToReturn: database.P0fResult{},
+		ErrorToReturn:     nil,
+	}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeWhoisManager{}
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, "")
+
+	// Insert a generic one. Should succeed
+	hasInserted, err := b.HandleP0fResult("1.1.1.1", &backend_service.P0FResult{})
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if hasInserted != true {
+		t.Errorf("p0f result not inserted")
+	}
+
+	// Insert again but let the database return a fresh
+	// result. Therefore the p0f result is no inserted in the database.
+	fdbc.P0fResultToReturn = database.P0fResult{
+		CreatedAt: time.Now(),
+	}
+
+	hasInserted, err = b.HandleP0fResult("1.1.1.1", &backend_service.P0FResult{})
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if hasInserted != false {
+		t.Errorf("p0f result was inserted")
+	}
+
 }

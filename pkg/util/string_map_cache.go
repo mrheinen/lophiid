@@ -49,6 +49,22 @@ func (r *StringMapCache[T]) Get(key string) (*T, error) {
 	return &ce.Data, nil
 }
 
+// Returns the content of the cache as a map.
+// Note that this returns a copy of the data. There is no guarantee that this
+// copied data is still correct and in sync with the cache after calling
+// this method. Only use this when that doesn't matter.
+func (r *StringMapCache[T]) GetAsMap() map[string]T {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	ret := make(map[string]T)
+	for k, v := range r.rules {
+		ret[k] = v.Data
+	}
+
+	return ret
+}
+
 func (r *StringMapCache[T]) CleanExpired() (removedCount int64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

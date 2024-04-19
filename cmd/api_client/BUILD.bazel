@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "api_client_lib",
+    srcs = ["api_client.go"],
+    importpath = "loophid/cmd/api_client",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/api",
+        "//pkg/api/cli",
+        "//pkg/database",
+    ],
+)
+
+go_binary(
+    name = "api_client",
+    embed = [":api_client_lib"],
+    visibility = ["//visibility:public"],
+)

@@ -1,4 +1,4 @@
-package http_server
+package agent
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"loophid/backend_service"
 	"loophid/pkg/client"
+	"loophid/pkg/util"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -23,6 +24,7 @@ type HttpServer struct {
 	listenAddr string
 	port       int64
 	publicIP   string
+	ipCache    *util.StringMapCache[bool]
 }
 
 // NewHttpServer creates a new initialized HttpServer struct.
@@ -45,6 +47,7 @@ func NewHttpServer(c client.BackendClient, listenAddr string, publicIP string) *
 		listenAddr: listenAddr,
 		publicIP:   publicIP,
 		port:       int64(port),
+		ipCache:    nil,
 	}
 }
 
@@ -69,11 +72,17 @@ func NewSSLHttpServer(c client.BackendClient, listenAddr string, sslCert string,
 		listenAddr: listenAddr,
 		publicIP:   publicIP,
 		port:       int64(port),
+		ipCache:    nil,
 	}
 }
 
-// Start starts the HTTP server.
 func (h *HttpServer) Start() error {
+	return h.StartWithIPCache(nil)
+}
+
+// Start starts the HTTP server with an IP cache.
+// The IP cache will be used to collect all IPs that have been seen.
+func (h *HttpServer) StartWithIPCache(ipCache *util.StringMapCache[bool]) error {
 	h.mux = http.NewServeMux()
 	h.mux.HandleFunc("/", h.catchAll)
 
@@ -87,6 +96,17 @@ func (h *HttpServer) Start() error {
 // catchAll receives all HTTP requests.  It parses the requests and sends them
 // to the backend using grpc. The backend will the tell catchAll how to respond.
 func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
+
+	// Keep track of what IPs have connected.
+	if h.ipCache != nil {
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			slog.Error("error parsing remote address", slog.String("address", r.RemoteAddr), slog.String("error", err.Error()))
+		} else {
+			h.ipCache.Store(ip, false)
+		}
+	}
+
 	raw, err := httputil.DumpRequest(r, true)
 	if err != nil {
 		fmt.Printf("Problem decoding requests: %s", err)

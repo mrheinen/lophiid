@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"mvdan.cc/xurls"
+	"mvdan.cc/xurls/v2"
 )
 
 var (

@@ -5,6 +5,7 @@ option go_package = "/backend_service";
 service BackendService {
   rpc HandleProbe(HandleProbeRequest) returns (HandleProbeResponse) {}
   rpc SendStatus(StatusRequest) returns (StatusResponse) {}
+  rpc SendSourceContext(SendSourceContextRequest) returns (SendSourceContextResponse) {}
   rpc HandleUploadFile(UploadFileRequest) returns (UploadFileResponse) {}
 }
 
@@ -72,6 +73,26 @@ message Command {
   }
 }
 
+// message p0f result
+message P0fResult {
+  string ip = 1;
+  uint32 first_seen = 2;
+  uint32 last_seen = 3;
+  uint32 total_count = 4;
+  uint32 uptime_minutes = 5;
+  uint32 uptime_days = 6;
+  uint32 distance = 7;
+  uint32 last_nat_detection = 8;
+  uint32 last_os_change = 9;
+  uint32 os_match_quality = 10;
+  string os_name = 11;
+  string os_version = 12;
+  string http_name = 13;
+  string http_flavor = 14;
+  string link_type = 15;
+  string language = 16;
+}
+
 // Parsed URL values. Based on golang url.URL
 message ParsedURL {
   string scheme = 1;
@@ -108,6 +129,20 @@ message HttpResponse {
   repeated KeyValue header = 3;
   repeated KeyValue cookie = 4;
 }
+
+// Message to send context information about a scan/attack source. Currently
+// this only has p0f information but in the future we'll also use this to send
+// port scanning information.
+message SendSourceContextRequest {
+  string source_ip = 1; // The source / attacker IP
+  // 2-4 is reserved.
+
+  oneof context {
+    P0fResult p0f_result = 5;
+  }
+}
+
+message SendSourceContextResponse {}
 
 message HandleProbeRequest {
   string request_uri = 1;
