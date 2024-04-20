@@ -2,12 +2,17 @@ package agent
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"loophid/backend_service"
+	"loophid/pkg/client"
+	"loophid/pkg/util"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/mrheinen/p0fclient"
 )
 
 // RoundTripFunc .
@@ -111,6 +116,90 @@ func TestDownloadToBufferContentType(t *testing.T) {
 	expectedMime := "text/x-shellscript"
 	if resp.DetectedContentType != expectedMime {
 		t.Errorf("expected mime %s, got %s", expectedMime, resp.DetectedContentType)
+	}
+}
+
+func TestSendContext(t *testing.T) {
+
+	for _, test := range []struct {
+		description        string
+		p0fResponse        *p0fclient.Response
+		ipCacheValuesInit  map[string]bool
+		ipCacheValuesAfter map[string]bool
+		p0fError           error
+		backendError       error
+	}{
+		{
+			description: "runs ok",
+			p0fResponse: &p0fclient.Response{},
+			ipCacheValuesInit: map[string]bool{
+				"1.1.1.1": false,
+			},
+			ipCacheValuesAfter: map[string]bool{
+				"1.1.1.1": true,
+			},
+			p0fError:     nil,
+			backendError: nil,
+		},
+		{
+			description: "gets RPC error, does not modify cache",
+			p0fResponse: &p0fclient.Response{},
+			ipCacheValuesInit: map[string]bool{
+				"1.1.1.1": false,
+			},
+			ipCacheValuesAfter: map[string]bool{
+				"1.1.1.1": false,
+			},
+			p0fError:     nil,
+			backendError: errors.New("boo"),
+		},
+		{
+			description: "gets p0f error, does not modify cache",
+			p0fResponse: &p0fclient.Response{},
+			ipCacheValuesInit: map[string]bool{
+				"1.1.1.1": false,
+			},
+			ipCacheValuesAfter: map[string]bool{
+				"1.1.1.1": false,
+			},
+			p0fError:     errors.New("noo"),
+			backendError: nil,
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fakeP0fRunner := FakeP0fRunnerImpl{
+				ResponseToReturn: test.p0fResponse,
+				ErrorToReturn:    test.p0fError,
+			}
+
+			fakeBackendClient := client.FakeBackendClient{
+				SendSourceContextResponse: &backend_service.SendSourceContextResponse{},
+				SendSourceContextError:    test.backendError,
+			}
+
+			ipCache := util.NewStringMapCache[bool]("test", time.Minute)
+			for ip, wasSubmitted := range test.ipCacheValuesInit {
+				ipCache.Store(ip, wasSubmitted)
+			}
+
+			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, &fakeP0fRunner, time.Minute, time.Minute, "1.1.1.1")
+			agent.ipCache = ipCache
+
+			agent.SendContext()
+
+			for ip, wasSubmitted := range test.ipCacheValuesAfter {
+				cacheEntry, err := ipCache.Get(ip)
+				if err != nil {
+					t.Errorf("expected no error, got %+v", err)
+				}
+
+				if *cacheEntry != wasSubmitted {
+					t.Errorf("expected %v, got %v", wasSubmitted, cacheEntry)
+				}
+			}
+		})
+
 	}
 
 }

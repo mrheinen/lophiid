@@ -90,6 +90,11 @@ func (a *Agent) Start() error {
 		}
 	}()
 
+	// The final part is only for when the p0frunner is initialized.
+	if a.p0fRunner == nil {
+		return nil
+	}
+
 	// Start the context submissions
 	conTicker := time.NewTicker(a.contextInterval)
 	go func() {
@@ -172,6 +177,8 @@ func (a *Agent) SendContext() error {
 
 		if _, err = a.backendClient.SendSourceContext(&req); err != nil {
 			slog.Warn("error sending context RPC", slog.String("error", err.Error()))
+			// Continue and try to submit the others. Because in this case the cahce
+			// is not updated; we will try again next time.
 			continue
 		}
 
