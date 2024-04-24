@@ -85,6 +85,7 @@ func (h *HttpServer) Start() error {
 func (h *HttpServer) StartWithIPCache(ipCache *util.StringMapCache[bool]) error {
 	h.mux = http.NewServeMux()
 	h.mux.HandleFunc("/", h.catchAll)
+	h.ipCache = ipCache
 
 	if h.ssl {
 		return http.ListenAndServeTLS(h.listenAddr, h.sslCert, h.sslKey, h.mux)

@@ -11,7 +11,12 @@ import (
 	"loophid/pkg/util"
 	"net/http"
 	"net/http/httputil"
+	"os"
+	"os/user"
+	"strconv"
+	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/mrheinen/magicmime"
@@ -51,6 +56,48 @@ func NewAgent(backendClient client.BackendClient, httpServers []*HttpServer, htt
 		ipCache:         ipCache,
 		p0fRunner:       p0fRunner,
 	}
+}
+
+// DropPrivilegesAndChroot changes the user and group ID of the current process.
+// This needs to be called after the HTTP servers are up and running.
+func (a *Agent) DropPrivilegesAndChroot(username, chrootDir string) error {
+	_, err := os.Stat(chrootDir)
+	if err != nil {
+		return fmt.Errorf("could not stat chroot directory: %w", err)
+	}
+
+	u, err := user.Lookup(username)
+	if err != nil {
+		return fmt.Errorf("could not lookup user: %w", err)
+	}
+
+	intUid, err := strconv.Atoi(u.Uid)
+	if err != nil {
+		return fmt.Errorf("invalid uid: %s", u.Uid)
+	}
+
+	intGid, err := strconv.Atoi(u.Gid)
+	if err != nil {
+		return fmt.Errorf("invalid uid: %s", u.Gid)
+	}
+
+	if err := syscall.Chroot(chrootDir); err != nil {
+		return fmt.Errorf("could not chroot: %w", err)
+	}
+
+	if err := syscall.Chdir("/"); err != nil {
+		return fmt.Errorf("could not chdir: %w", err)
+	}
+
+	if err := syscall.Setgid(intGid); err != nil {
+		return fmt.Errorf("could not change group ID: %w", err)
+	}
+	if err := syscall.Setuid(intUid); err != nil {
+		return fmt.Errorf("could not change user ID: %w", err)
+	}
+
+	slog.Info("Dropped privileges and chrooted", slog.String("chroot", chrootDir))
+	return nil
 }
 
 func (a *Agent) Start() error {
@@ -122,6 +169,16 @@ func (a *Agent) Stop() {
 	a.contextChan <- true
 }
 
+func bytesToString(bytes [32]uint8) string {
+	var sb strings.Builder
+	for i := 0; i < len(bytes) && bytes[i] != 0x00; i++ {
+		sb.WriteByte(bytes[i])
+	}
+
+	return sb.String()
+
+}
+
 // SendContext sends context information for source IPs to the backend.
 // Currently it just sends p0f query results. In the future this will be
 // extended with things such as port scan data.
@@ -142,6 +199,7 @@ func (a *Agent) SendContext() error {
 		pr, err := a.p0fRunner.QueryIP(ipAddr)
 		if err != nil {
 			if errors.Is(err, ErrP0fQueryNoResult) {
+				slog.Debug("p0f found no match for IP", slog.String("ip", ipAddr))
 				a.ipCache.Store(ipAddr, true)
 				continue
 			}
@@ -165,15 +223,17 @@ func (a *Agent) SendContext() error {
 					LastNatDetection: pr.LastNat,
 					LastOsChange:     pr.LastChg,
 					OsMatchQuality:   uint32(pr.OsMatchQ),
-					OsName:           string(pr.OsName[:]),
-					OsVersion:        string(pr.OsFlavor[:]),
-					HttpName:         string(pr.HttpName[:]),
-					HttpFlavor:       string(pr.HttpFlavor[:]),
-					LinkType:         string(pr.LinkType[:]),
-					Language:         string(pr.Language[:]),
+					OsName:           bytesToString(pr.OsName),
+					OsVersion:        bytesToString(pr.OsFlavor),
+					HttpName:         bytesToString(pr.HttpName),
+					HttpFlavor:       bytesToString(pr.HttpFlavor),
+					LinkType:         bytesToString(pr.LinkType),
+					Language:         bytesToString(pr.Language),
 				},
 			},
 		}
+
+		fmt.Printf("Sending context: %+v\n", &req)
 
 		if _, err = a.backendClient.SendSourceContext(&req); err != nil {
 			slog.Warn("error sending context RPC", slog.String("error", err.Error()))

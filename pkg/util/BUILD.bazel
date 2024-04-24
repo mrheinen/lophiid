@@ -4,6 +4,7 @@ go_library(
     name = "util",
     srcs = [
         "general.go",
+        "logging.go",
         "string_map_cache.go",
     ],
     importpath = "loophid/pkg/util",

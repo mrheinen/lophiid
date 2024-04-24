@@ -1,4 +1,3 @@
-
 export default {
   contentLink: '/content',
   contentSegmentLink: '/content/:offset/:limit',

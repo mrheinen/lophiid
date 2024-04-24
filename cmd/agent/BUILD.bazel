@@ -27,6 +27,8 @@ go_library(
     deps = [
         "//pkg/agent",
         "//pkg/client",
+        "//pkg/util",
         "@com_github_kkyr_fig//:fig",
+        "@com_github_mrheinen_p0fclient//:p0fclient",
     ],
 )

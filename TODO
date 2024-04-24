@@ -32,24 +32,15 @@ XL - Create reports. Daily report per email.
 
 Add yara Support
 
-Support http://192.168.1.78:8081/requests/0/24?q=source_ip:161.142.198.183 with
-javascript
-
 Add sqlite support. Update tests to use sqlite database.
 
-Add download link to the downloads page.
 
 Add support for abuseipdb and urlhaus.
-
-Add support for netcat, ftp and tcp bash payloads.
 
 Allow content to be set default for all new honeypots.
 
 Store that a request was alerted so you can search on requests that triggered an
 alert.
-
-Show warning and ask for confirmation when saving a query from which a label was
-removed. This because the label will also be removed from all the requests.
 
 Add labels from rules.
 
@@ -71,12 +62,32 @@ Stats queries:
 
 Make honeypots report a version.
 
-Allow telnetd to spawn. Allow javascript to spawn commands.
-
-Add support for p0f
-
-Use gomega in tests
-
 Send metrics from client to the backend.
 
 Make base64 strings searchable.
+
+
+----- Before release
+
+Allow javascript to spawn commands.
+
+Allow Javascript to fetch Content by ID
+
+Add dropping privileges to the client and backend
+
+Show warning and ask for confirmation when saving a query from which a label was
+removed. This because the label will also be removed from all the requests.
+
+Add support for p0f
+  - Deploy script that runs p0f on the target
+  - Create a github fork and add the new signatures there.
+  - Update the UI: show the p0f result
+
+Add download link to the downloads page.
+
+When you add a rule, refresh the page with the rule selected.
+When you add an Application, refresh the page with the rule selected.
+
+Add a ? to the search bars and a popup with all query parameters.
+
+Create docker images for the backend and database.

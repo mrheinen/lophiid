@@ -1,4 +1,3 @@
-
 DROP DATABASE IF EXISTS lophiid;
 CREATE DATABASE lophiid;
 
@@ -274,6 +273,9 @@ GRANT ALL PRIVILEGES ON tag_per_query TO lo;
 GRANT ALL PRIVILEGES ON tag_per_query_id_seq TO lo;
 GRANT ALL PRIVILEGES ON tag_per_request TO lo;
 GRANT ALL PRIVILEGES ON tag_per_request_id_seq TO lo;
+GRANT ALL PRIVILEGES ON p0f_result TO lo;
+GRANT ALL PRIVILEGES ON p0f_result_id_seq TO lo;
+
 
 
 
@@ -327,12 +329,3 @@ CREATE INDEX request_id_tag_per_request_idx ON tag_per_request (
 CREATE INDEX ip_per_whois_idx ON whois (
   ip
 );
-
-
-
-
-
-
-
-
-

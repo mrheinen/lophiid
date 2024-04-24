@@ -2,23 +2,33 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"log/slog"
 	"loophid/pkg/agent"
 	"loophid/pkg/client"
+	"loophid/pkg/util"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/kkyr/fig"
+	"github.com/mrheinen/p0fclient"
 )
 
 var configFile = flag.String("c", "", "Config file")
 
 type Config struct {
 	General struct {
-		PublicIP string `fig:"public_ip" validate:"required"`
+		PublicIP  string `fig:"public_ip" validate:"required"`
+		LogLevel  string `fig:"log_level" default:"debug"`
+		RunAsUser string `fig:"user"`
+		ChrootDir string `fig:"chroot_dir"`
+		LogFile   string `fig:"log_file" validate:"required"`
 	} `fig:"general"`
 	HTTPListener struct {
 		IP   string `fig:"ip"`
@@ -34,6 +44,10 @@ type Config struct {
 	Downloader struct {
 		HttpClientTimeout time.Duration `fig:"http_client_timeout" default:"10m"`
 	} `fig:"downloader"`
+	P0f struct {
+		SocketLocation string        `fig:"socket_location"`
+		SendInterval   time.Duration `fig:"send_interval" default:"1m"`
+	} `fig:"p0f"`
 	BackendClient struct {
 		StatusInterval time.Duration `fig:"status_interval" default:"10s"`
 		BackendAddress string        `fig:"ip" validate:"required"`
@@ -62,15 +76,41 @@ func main() {
 		return
 	}
 
+	lf, err := os.OpenFile(cfg.General.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Printf("Could not open logfile: %s\n", err)
+		return
+	}
+
+	teeWriter := util.NewTeeLogWriter([]io.Writer{os.Stdout, lf})
+
+	var programLevel = new(slog.LevelVar) // Info by default
+	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
+	slog.SetDefault(slog.New(h))
+
+	switch cfg.General.LogLevel {
+	case "info":
+		programLevel.Set(slog.LevelInfo)
+	case "warn":
+		programLevel.Set(slog.LevelWarn)
+	case "debug":
+		programLevel.Set(slog.LevelDebug)
+	case "error":
+		programLevel.Set(slog.LevelError)
+	default:
+		fmt.Printf("Unknown log level given. Using info")
+		programLevel.Set(slog.LevelInfo)
+	}
+
 	if cfg.HTTPSListener.IP == "" && cfg.HTTPListener.IP == "" {
-		fmt.Printf("No listener IPs specified\n")
+		slog.Warn("No listener IPs specified\n")
 		return
 	}
 
 	// Create the backend client.
 	var c client.BackendClient
 	if cfg.BackendClient.GRPCCACert != "" && cfg.BackendClient.GRPCSSLCert != "" && cfg.BackendClient.GRPCSSLKey != "" {
-		log.Printf("Creating secure backend client. Server: %s", cfg.BackendClient.BackendAddress)
+		slog.Info("Creating secure backend client.", slog.String("server", cfg.BackendClient.BackendAddress))
 		c = &client.SecureBackendClient{
 			CACert:     cfg.BackendClient.GRPCCACert,
 			ClientCert: cfg.BackendClient.GRPCSSLCert,
@@ -81,7 +121,7 @@ func main() {
 			log.Fatalf("%s", err)
 		}
 	} else {
-		log.Printf("Creating insecure backend client. Server: %s", cfg.BackendClient.BackendAddress)
+		slog.Info("Creating insecure backend client.", slog.String("server", cfg.BackendClient.BackendAddress))
 		c = &client.InsecureBackendClient{}
 		if err := c.Connect(fmt.Sprintf("%s:%d", cfg.BackendClient.BackendAddress, cfg.BackendClient.BackendPort)); err != nil {
 			log.Fatalf("%s", err)
@@ -108,8 +148,35 @@ func main() {
 	}
 
 	downloadHttpClient := &http.Client{Transport: insecureHttpTransport, Timeout: cfg.Downloader.HttpClientTimeout}
-	agent := agent.NewAgent(c, httpServers, downloadHttpClient, cfg.BackendClient.StatusInterval, cfg.General.PublicIP)
+
+	var p0fRunner *agent.P0fRunnerImpl
+	p0fRunner = nil
+	if cfg.P0f.SocketLocation != "" {
+		if _, err := os.Stat(cfg.P0f.SocketLocation); errors.Is(err, os.ErrNotExist) {
+			log.Fatal("p0f socket location does not exist")
+		}
+
+		slog.Info("Opening p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation))
+		p0fclient := p0fclient.NewP0fClient(cfg.P0f.SocketLocation)
+
+		if err := p0fclient.Connect(); err != nil {
+			slog.Warn("Failed to connect to p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation), slog.String("error", err.Error()))
+		}
+		p0fRunner = agent.NewP0fRunnerImpl(p0fclient)
+	}
+
+	agent := agent.NewAgent(c, httpServers, downloadHttpClient, p0fRunner, cfg.BackendClient.StatusInterval, cfg.P0f.SendInterval, cfg.General.PublicIP)
 	agent.Start()
+
+	// Sleep some time to let the HTTP servers initialize.
+	time.Sleep(2 * time.Second)
+
+	if cfg.General.RunAsUser != "" && cfg.General.ChrootDir != "" {
+		err := agent.DropPrivilegesAndChroot(cfg.General.RunAsUser, cfg.General.ChrootDir)
+		if err != nil {
+			slog.Warn("Failed to drop privileges and chroot", slog.String("error", err.Error()))
+		}
+	}
 
 	<-finish
 }
