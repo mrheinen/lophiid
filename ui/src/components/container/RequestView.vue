@@ -35,8 +35,6 @@
               </a>
             </td>
           </tr>
-
-
           <tr>
             <th>Base Hash</th>
             <td>
@@ -58,6 +56,9 @@
       </table>
     </FieldSet>
   </div>
+   <br />
+  <P0fResultCard v-if="localRequest.p0f_result" v-id="localRequest.p0f" label="p0f result"
+    :p0f="localRequest.p0f_result"></P0fResultCard>
   <br />
   <RawHttpCard v-id="localRequest.raw" label="HTTP request"
     :data="localRequest.raw"></RawHttpCard>
@@ -110,8 +111,9 @@
 
 <script>
 import RawHttpCard from '../cards/RawHttpCard.vue';
+import P0fResultCard from '../cards/P0fResultCard.vue';
 export default {
-  components: { RawHttpCard },
+  components: { RawHttpCard, P0fResultCard },
   props: ["request", "metadata", "whois"],
   inject: ["config"],
   data() {

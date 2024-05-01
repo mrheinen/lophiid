@@ -96,6 +96,7 @@ type Request struct {
 	Starred        bool                     `ksql:"starred" json:"starred"`
 	BaseHash       string                   `ksql:"base_hash" json:"base_hash"`
 	Tags           []TagPerRequestFull      `json:"tags"`
+	P0fResult      P0fResult                `json:"p0f_result"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }
@@ -123,6 +124,7 @@ type RequestSourceContent struct {
 type Honeypot struct {
 	ID                   int64     `ksql:"id,skipInserts" json:"id"`
 	IP                   string    `ksql:"ip" json:"ip"`
+	AuthToken            string    `ksql:"auth_token" json:"auth_token"`
 	CreatedAt            time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt            time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
 	LastCheckin          time.Time `ksql:"last_checkin,skipInserts,skipUpdates" json:"last_checkin"`
@@ -513,6 +515,8 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 	}
 
 	var ret []Request
+	uniqueIPs := make(map[string]P0fResult)
+	// TODO: make this concurrent
 	for _, req := range rs {
 		tags, err := d.GetTagPerRequestFullForRequest(req.ID)
 		if err != nil {
@@ -521,8 +525,24 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 		} else {
 			req.Tags = append(req.Tags, tags...)
 		}
+
+		// Get the p0f result from the database. If there is none, then create a new
+		// one (empty)
+		pr, ok := uniqueIPs[req.SourceIP]
+		if !ok {
+			pr, err = d.GetP0fResultByIP(req.SourceIP)
+			if err == nil {
+				req.P0fResult = pr
+			} else {
+				req.P0fResult = P0fResult{}
+			}
+		} else {
+			req.P0fResult = pr
+		}
+
 		ret = append(ret, req)
 	}
+
 	elapsed := time.Since(start)
 	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
 	return ret, err

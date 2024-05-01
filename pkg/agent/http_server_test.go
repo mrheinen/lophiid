@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"loophid/backend_service"
-	"loophid/pkg/client"
+	"loophid/pkg/backend"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,7 +31,7 @@ func TestCatchAllOk(t *testing.T) {
 		},
 	}
 
-	bc := client.FakeBackendClient{
+	bc := backend.FakeBackendClient{
 		HandleProbeReturnResponse: pr,
 	}
 

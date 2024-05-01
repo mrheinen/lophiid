@@ -7,23 +7,19 @@ import (
 	"log"
 	"log/slog"
 	"loophid/backend_service"
-	"loophid/pkg/client"
+	"loophid/pkg/backend"
 	"loophid/pkg/util"
 	"net/http"
 	"net/http/httputil"
-	"os"
-	"os/user"
-	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/mrheinen/magicmime"
 )
 
 type Agent struct {
-	backendClient   client.BackendClient
+	backendClient   backend.BackendClient
 	httpServers     []*HttpServer
 	reportIP        string
 	httpClient      *http.Client
@@ -37,7 +33,7 @@ type Agent struct {
 	p0fRunner       P0fRunner
 }
 
-func NewAgent(backendClient client.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, statusInterval time.Duration, contextInterval time.Duration, reportIP string) *Agent {
+func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, statusInterval time.Duration, contextInterval time.Duration, reportIP string) *Agent {
 
 	mi, _ := magicmime.NewDecoder(magicmime.MAGIC_MIME_TYPE)
 	ipCache := util.NewStringMapCache[bool]("IP cache", time.Hour*2)
@@ -56,48 +52,6 @@ func NewAgent(backendClient client.BackendClient, httpServers []*HttpServer, htt
 		ipCache:         ipCache,
 		p0fRunner:       p0fRunner,
 	}
-}
-
-// DropPrivilegesAndChroot changes the user and group ID of the current process.
-// This needs to be called after the HTTP servers are up and running.
-func (a *Agent) DropPrivilegesAndChroot(username, chrootDir string) error {
-	_, err := os.Stat(chrootDir)
-	if err != nil {
-		return fmt.Errorf("could not stat chroot directory: %w", err)
-	}
-
-	u, err := user.Lookup(username)
-	if err != nil {
-		return fmt.Errorf("could not lookup user: %w", err)
-	}
-
-	intUid, err := strconv.Atoi(u.Uid)
-	if err != nil {
-		return fmt.Errorf("invalid uid: %s", u.Uid)
-	}
-
-	intGid, err := strconv.Atoi(u.Gid)
-	if err != nil {
-		return fmt.Errorf("invalid uid: %s", u.Gid)
-	}
-
-	if err := syscall.Chroot(chrootDir); err != nil {
-		return fmt.Errorf("could not chroot: %w", err)
-	}
-
-	if err := syscall.Chdir("/"); err != nil {
-		return fmt.Errorf("could not chdir: %w", err)
-	}
-
-	if err := syscall.Setgid(intGid); err != nil {
-		return fmt.Errorf("could not change group ID: %w", err)
-	}
-	if err := syscall.Setuid(intUid); err != nil {
-		return fmt.Errorf("could not change user ID: %w", err)
-	}
-
-	slog.Info("Dropped privileges and chrooted", slog.String("chroot", chrootDir))
-	return nil
 }
 
 func (a *Agent) Start() error {

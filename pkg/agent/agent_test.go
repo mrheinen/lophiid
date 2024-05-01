@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"loophid/backend_service"
-	"loophid/pkg/client"
+	"loophid/pkg/backend"
 	"loophid/pkg/util"
 	"net/http"
 	"testing"
@@ -173,7 +173,7 @@ func TestSendContext(t *testing.T) {
 				ErrorToReturn:    test.p0fError,
 			}
 
-			fakeBackendClient := client.FakeBackendClient{
+			fakeBackendClient := backend.FakeBackendClient{
 				SendSourceContextResponse: &backend_service.SendSourceContextResponse{},
 				SendSourceContextError:    test.backendError,
 			}

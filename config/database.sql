@@ -111,6 +111,7 @@ CREATE TABLE honeypot (
   created_at         TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at         TIMESTAMP NOT NULL DEFAULT NOW(),
   ip                 VARCHAR(52),
+  auth_token         VARCHAR(64) NOT NULL DEFAULT '',
   last_checkin       TIMESTAMP NOT NULL DEFAULT NOW(),
   default_content_id INT NOT NULL DEFAULT 0
 );
@@ -192,8 +193,6 @@ CREATE TABLE stored_query (
   times_run            INT DEFAULT 0,
   last_ran_at          TIMESTAMP NOT NULL DEFAULT NOW()
 );
-
-
 
 CREATE TABLE tag (
   id                   SERIAL,

@@ -9,7 +9,7 @@ import (
 	"log"
 	"log/slog"
 	"loophid/pkg/agent"
-	"loophid/pkg/client"
+	"loophid/pkg/backend"
 	"loophid/pkg/util"
 	"net/http"
 	"os"
@@ -82,6 +82,8 @@ func main() {
 		return
 	}
 
+	defer lf.Close()
+
 	teeWriter := util.NewTeeLogWriter([]io.Writer{os.Stdout, lf})
 
 	var programLevel = new(slog.LevelVar) // Info by default
@@ -108,10 +110,10 @@ func main() {
 	}
 
 	// Create the backend client.
-	var c client.BackendClient
+	var c backend.BackendClient
 	if cfg.BackendClient.GRPCCACert != "" && cfg.BackendClient.GRPCSSLCert != "" && cfg.BackendClient.GRPCSSLKey != "" {
 		slog.Info("Creating secure backend client.", slog.String("server", cfg.BackendClient.BackendAddress))
-		c = &client.SecureBackendClient{
+		c = &backend.SecureBackendClient{
 			CACert:     cfg.BackendClient.GRPCCACert,
 			ClientCert: cfg.BackendClient.GRPCSSLCert,
 			ClientKey:  cfg.BackendClient.GRPCSSLKey,
@@ -122,7 +124,7 @@ func main() {
 		}
 	} else {
 		slog.Info("Creating insecure backend client.", slog.String("server", cfg.BackendClient.BackendAddress))
-		c = &client.InsecureBackendClient{}
+		c = &backend.InsecureBackendClient{}
 		if err := c.Connect(fmt.Sprintf("%s:%d", cfg.BackendClient.BackendAddress, cfg.BackendClient.BackendPort)); err != nil {
 			log.Fatalf("%s", err)
 		}
@@ -172,7 +174,7 @@ func main() {
 	time.Sleep(2 * time.Second)
 
 	if cfg.General.RunAsUser != "" && cfg.General.ChrootDir != "" {
-		err := agent.DropPrivilegesAndChroot(cfg.General.RunAsUser, cfg.General.ChrootDir)
+		err := util.DropPrivilegesAndChroot(cfg.General.RunAsUser, cfg.General.ChrootDir)
 		if err != nil {
 			slog.Warn("Failed to drop privileges and chroot", slog.String("error", err.Error()))
 		}

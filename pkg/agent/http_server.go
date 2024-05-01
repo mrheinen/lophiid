@@ -6,7 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"loophid/backend_service"
-	"loophid/pkg/client"
+	"loophid/pkg/backend"
 	"loophid/pkg/util"
 	"net"
 	"net/http"
@@ -17,7 +17,7 @@ import (
 
 type HttpServer struct {
 	mux        *http.ServeMux
-	client     client.BackendClient
+	client     backend.BackendClient
 	ssl        bool
 	sslCert    string
 	sslKey     string
@@ -28,7 +28,7 @@ type HttpServer struct {
 }
 
 // NewHttpServer creates a new initialized HttpServer struct.
-func NewHttpServer(c client.BackendClient, listenAddr string, publicIP string) *HttpServer {
+func NewHttpServer(c backend.BackendClient, listenAddr string, publicIP string) *HttpServer {
 	_, portString, err := net.SplitHostPort(listenAddr)
 	if err != nil {
 		slog.Warn("could not parse listen address", slog.String("address", listenAddr), slog.String("error", err.Error()))
@@ -51,7 +51,7 @@ func NewHttpServer(c client.BackendClient, listenAddr string, publicIP string) *
 	}
 }
 
-func NewSSLHttpServer(c client.BackendClient, listenAddr string, sslCert string, sslKey string, publicIP string) *HttpServer {
+func NewSSLHttpServer(c backend.BackendClient, listenAddr string, sslCert string, sslKey string, publicIP string) *HttpServer {
 	_, portString, err := net.SplitHostPort(listenAddr)
 	if err != nil {
 		slog.Warn("could not parse listen address", slog.String("address", listenAddr), slog.String("error", err.Error()))

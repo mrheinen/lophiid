@@ -11,7 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",
-        "//pkg/client",
+        "//pkg/backend",
         "//pkg/util",
         "@com_github_mrheinen_magicmime//:magicmime",
         "@com_github_mrheinen_p0fclient//:p0fclient",
@@ -27,7 +27,7 @@ go_test(
     embed = [":agent"],
     deps = [
         "//backend_service",
-        "//pkg/client",
+        "//pkg/backend",
         "//pkg/util",
         "@com_github_mrheinen_p0fclient//:p0fclient",
     ],

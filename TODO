@@ -73,7 +73,7 @@ Allow javascript to spawn commands.
 
 Allow Javascript to fetch Content by ID
 
-Add dropping privileges to the client and backend
+Add dropping privileges to the backend
 
 Show warning and ask for confirmation when saving a query from which a label was
 removed. This because the label will also be removed from all the requests.

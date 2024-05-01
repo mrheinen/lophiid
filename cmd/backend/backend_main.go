@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"loophid/backend_service"
@@ -13,6 +14,7 @@ import (
 	"loophid/pkg/backend"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
+	"loophid/pkg/util"
 	"loophid/pkg/vt"
 	"loophid/pkg/whois"
 	"net"
@@ -36,7 +38,10 @@ var configFile = flag.String("c", "", "Config file")
 
 type Config struct {
 	Backend struct {
-		LogLevel string `fig:"log_level" default:"debug"`
+		LogLevel  string `fig:"log_level" default:"debug"`
+		LogFile   string `fig:"log_file" validate:"required"`
+		RunAsUser string `fig:"user"`
+		ChrootDir string `fig:"chroot_dir"`
 
 		Database struct {
 			Url                string `fig:"url" validate:"required"`
@@ -85,8 +90,18 @@ func main() {
 		return
 	}
 
+	lf, err := os.OpenFile(cfg.Backend.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Printf("Could not open logfile: %s\n", err)
+		return
+	}
+
+	defer lf.Close()
+
+	teeWriter := util.NewTeeLogWriter([]io.Writer{os.Stdout, lf})
+
 	var programLevel = new(slog.LevelVar) // Info by default
-	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
+	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
 
 	switch cfg.Backend.LogLevel {
@@ -224,6 +239,13 @@ func main() {
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		Certificates: []tls.Certificate{cert},
 		ClientCAs:    ca,
+	}
+
+	if cfg.Backend.RunAsUser != "" && cfg.Backend.ChrootDir != "" {
+		err := util.DropPrivilegesAndChroot(cfg.Backend.RunAsUser, cfg.Backend.ChrootDir)
+		if err != nil {
+			slog.Warn("Failed to drop privileges and chroot", slog.String("error", err.Error()))
+		}
 	}
 
 	generalGrpcOptions = append(generalGrpcOptions, grpc.Creds(credentials.NewTLS(tlsConfig)))

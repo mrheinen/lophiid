@@ -1,4 +1,4 @@
-package client
+package backend
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 )
 
 type BackendClient interface {
-	Connect(connectString string) error
+	Connect(connectString string, authToken string) error
 	HandleProbeRequest(probeRequest *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error)
 	HandleUploadFile(request *backend_service.UploadFileRequest) (*backend_service.UploadFileResponse, error)
 	SendSourceContext(req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error)
@@ -39,7 +39,7 @@ type FakeBackendClient struct {
 	SendSourceContextError    error
 }
 
-func (f *FakeBackendClient) Connect(connectString string) error {
+func (f *FakeBackendClient) Connect(connectString string, authToken string) error {
 	return f.ConnectReturnError
 }
 
@@ -72,7 +72,22 @@ type SecureBackendClient struct {
 	ServerFQDN    string
 }
 
-func (c *SecureBackendClient) Connect(connectString string) error {
+// tokenAuth is a basic token authenticator.
+type tokenAuth struct {
+	token string
+}
+
+func (t tokenAuth) GetRequestMetadata(ctx context.Context, in ...string) (map[string]string, error) {
+	return map[string]string{
+		"authorization": "Bearer " + t.token,
+	}, nil
+}
+
+func (tokenAuth) RequireTransportSecurity() bool {
+	return true
+}
+
+func (c *SecureBackendClient) Connect(connectString string, authToken string) error {
 	var err error = nil
 
 	cert, err := tls.LoadX509KeyPair(c.ClientCert, c.ClientKey)
@@ -95,7 +110,13 @@ func (c *SecureBackendClient) Connect(connectString string) error {
 		RootCAs:      ca,
 	}
 
-	c.clientConnect, err = grpc.Dial(connectString, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
+	c.clientConnect, err = grpc.Dial(connectString,
+		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		grpc.WithPerRPCCredentials(tokenAuth{
+			token: authToken,
+		}),
+	)
+
 	if err != nil {
 		return err
 	}
@@ -130,10 +151,12 @@ type InsecureBackendClient struct {
 	backendClient backend_service.BackendServiceClient
 }
 
-func (c *InsecureBackendClient) Connect(connectString string) error {
+func (c *InsecureBackendClient) Connect(connectString string, authToken string) error {
 	var err error = nil
-	opts := grpc.WithTransportCredentials(insecure.NewCredentials())
-	c.clientConnect, err = grpc.Dial(connectString, opts)
+	c.clientConnect, err = grpc.Dial(connectString, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithPerRPCCredentials(tokenAuth{
+			token: authToken,
+		}))
 	if err != nil {
 		return err
 	}

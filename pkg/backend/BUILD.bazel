@@ -4,6 +4,7 @@ go_library(
     name = "backend",
     srcs = [
         "backend.go",
+        "client.go",
         "metrics.go",
         "queries.go",
         "request_queue.go",
@@ -25,6 +26,9 @@ go_library(
         "//pkg/whois",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_vingarcia_ksql//:ksql",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//credentials/insecure",
     ],
 )
 

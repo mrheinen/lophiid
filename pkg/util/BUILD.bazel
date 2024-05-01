@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "general.go",
         "logging.go",
+        "security.go",
         "string_map_cache.go",
     ],
     importpath = "loophid/pkg/util",
