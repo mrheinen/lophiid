@@ -28,8 +28,10 @@ go_library(
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_vingarcia_ksql//:ksql",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes",
         "@org_golang_google_grpc//credentials",
         "@org_golang_google_grpc//credentials/insecure",
+        "@org_golang_google_grpc//status",
     ],
 )
 
