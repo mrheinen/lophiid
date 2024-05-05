@@ -11,6 +11,7 @@ import (
 	"loophid/pkg/agent"
 	"loophid/pkg/backend"
 	"loophid/pkg/util"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -50,6 +51,7 @@ type Config struct {
 	} `fig:"p0f"`
 	BackendClient struct {
 		StatusInterval time.Duration `fig:"status_interval" default:"10s"`
+		AuthToken      string        `fig:"auth_token" valiate:"required"`
 		BackendAddress string        `fig:"ip" validate:"required"`
 		BackendPort    int           `fig:"port" default:"41110"`
 		GRPCSSLCert    string        `fig:"grpc_ssl_cert"`
@@ -119,13 +121,14 @@ func main() {
 			ClientKey:  cfg.BackendClient.GRPCSSLKey,
 			ServerFQDN: cfg.BackendClient.BackendAddress,
 		}
-		if err := c.Connect(fmt.Sprintf("%s:%d", cfg.BackendClient.BackendAddress, cfg.BackendClient.BackendPort)); err != nil {
+
+		if err := c.Connect(net.JoinHostPort(cfg.BackendClient.BackendAddress, fmt.Sprintf("%d", cfg.BackendClient.BackendPort)), cfg.BackendClient.AuthToken); err != nil {
 			log.Fatalf("%s", err)
 		}
 	} else {
 		slog.Info("Creating insecure backend client.", slog.String("server", cfg.BackendClient.BackendAddress))
 		c = &backend.InsecureBackendClient{}
-		if err := c.Connect(fmt.Sprintf("%s:%d", cfg.BackendClient.BackendAddress, cfg.BackendClient.BackendPort)); err != nil {
+		if err := c.Connect(net.JoinHostPort(cfg.BackendClient.BackendAddress, fmt.Sprintf("%d", cfg.BackendClient.BackendPort)), cfg.BackendClient.AuthToken); err != nil {
 			log.Fatalf("%s", err)
 		}
 	}

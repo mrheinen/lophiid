@@ -1,4 +1,6 @@
 backend:
+  # The log level can be one of debug, info, warn and error.
+  # https://pkg.go.dev/log/slog#Level
   log_level: debug
   downloader:
     # Location where downloaded malware will be stored.

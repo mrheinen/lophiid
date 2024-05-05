@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"context"
 	"loophid/pkg/database"
 	"strings"
 	"testing"
+
+	"google.golang.org/grpc/metadata"
 )
 
 func TestHasValidAuthToken(t *testing.T) {
@@ -34,7 +37,6 @@ func TestHasValidAuthToken(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 
 			fakeDbClient := database.FakeDatabaseClient{}
-
 			auth := NewAuthenticator(&fakeDbClient)
 
 			md, err := auth.hasValidAuthToken(test.authValue)
@@ -55,5 +57,38 @@ func TestHasValidAuthToken(t *testing.T) {
 			}
 		})
 
+	}
+}
+
+func TestAuthenticateWorksOk(t *testing.T) {
+
+	testHoneypotID := 42
+	fakeDbClient := database.FakeDatabaseClient{
+		HoneypotToReturn: database.Honeypot{
+			ID: int64(testHoneypotID),
+			IP: "127.0.0.1",
+		},
+		ErrorToReturn: nil,
+	}
+
+	auth := NewAuthenticator(&fakeDbClient)
+
+	testContext := context.Background()
+	md := metadata.New(map[string]string{"authorization": "Bearer 03aa3f5e2779b625a455651b54866447f995a2970d164581b4073044435359ed"})
+	testContext = metadata.NewIncomingContext(testContext, md)
+
+	authCtx, err := auth.Authenticate(testContext)
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+		return
+	}
+
+	honeypotMetadata, ok := GetHoneypotMetadata(authCtx)
+	if !ok {
+		t.Errorf("expected metadata, got none")
+		return
+	}
+	if honeypotMetadata.ID != int64(testHoneypotID) {
+		t.Errorf("expected %d, got %d", testHoneypotID, honeypotMetadata.ID)
 	}
 }

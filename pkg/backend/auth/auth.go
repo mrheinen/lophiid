@@ -115,8 +115,8 @@ func GetHoneypotMetadata(ctx context.Context) (*HoneypotMetadata, bool) {
 	honeypotMD := ctx.Value(honeypotMDKey{})
 
 	switch md := honeypotMD.(type) {
-	case *HoneypotMetadata:
-		return md, true
+	case HoneypotMetadata:
+		return &md, true
 	default:
 		return nil, false
 	}

@@ -1,19 +1,23 @@
 <template>
-  <PrimeDialog v-model:visible="apiTokenDialogVisible" modal header="Set API token" :style="{ width: '25rem' }">
+  <PrimeDialog
+    v-model:visible="apiTokenDialogVisible"
+    modal
+    header="Set API token"
+    :style="{ width: '25rem' }"
+  >
     <div class="flex justify-content-end gap-2">
       <div>
         <label class="label">Set the API key</label>
-        <InputText
-          id="title"
-          type="text"
-          v-model="apiKey"
-        />
+        <InputText id="apiKey" type="text" v-model="apiKey" />
       </div>
 
-        <PrimeButton type="button" label="Close" @click="apiTokenDialogVisible =
-        false"></PrimeButton>
+      <PrimeButton
+        type="button"
+        label="Close"
+        @click="apiTokenDialogVisible = false"
+      ></PrimeButton>
     </div>
-</PrimeDialog>
+  </PrimeDialog>
 
   <div class="columns">
     <div class="column is-full">
@@ -24,7 +28,10 @@
   <div class="columns">
     <div class="column is-full">
       <!-- use key below to let the page re-render when the API key changes -->
-      <router-view :key="apiKey + $route.fullPath" @require-auth="requireAuth"></router-view>
+      <router-view
+        :key="apiKey + $route.fullPath"
+        @require-auth="requireAuth"
+      ></router-view>
     </div>
   </div>
 </template>
@@ -57,19 +64,26 @@ export default {
   },
   watch: {
     apiKey() {
-      this.$store.commit('setApiToken', {
+      this.$store.commit("setApiToken", {
         token: this.apiKey,
       });
-    }
+    },
+    apiTokenDialogVisible(newValue) {
+      if (newValue) {
+        setTimeout(() => {
+          const input = document.getElementById("apiKey");
+          input.focus();
+        }, 1000);
+      }
+    },
   },
 };
 </script>
 
-
 <style>
 .mright {
- margin-right: 10px;
-};
+  margin-right: 10px;
+}
 
 .card {
   padding-bottom: 10px;
@@ -82,10 +96,9 @@ th {
 label {
   color: #616060 !important;
   margin-top: 0.5em;
-};
+}
 
 .linkpointer {
   cursor: pointer !important;
 }
-
 </style>

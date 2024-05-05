@@ -556,7 +556,7 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM content_rule", fmt.Sprintf("ORDER BY app_id,created_at DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM content_rule", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -596,7 +596,7 @@ func (d *KSQLClient) SearchApps(offset int64, limit int64, query string) ([]Appl
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM app", fmt.Sprintf("OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM app", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -921,7 +921,7 @@ func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query st
 	return f.DownloadsToReturn, nil
 }
 func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error) {
-	return []Honeypot{}, nil
+	return []Honeypot{f.HoneypotToReturn}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetWhoisByIP(ip string) (Whois, error) {
 	return Whois{}, f.WhoisErrorToReturn

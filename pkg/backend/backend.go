@@ -20,6 +20,7 @@ import (
 
 	"loophid/backend_service"
 	"loophid/pkg/alerting"
+	"loophid/pkg/backend/auth"
 	"loophid/pkg/backend/extractors"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
@@ -28,6 +29,8 @@ import (
 	"loophid/pkg/whois"
 
 	"github.com/vingarcia/ksql"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // User agent to use for downloading.
@@ -273,6 +276,8 @@ func (s *BackendServer) UpdateCaches(ip string, rule database.ContentRule) {
 	s.ruleVsCache.Store(ip, rule.ID, rule.ContentID)
 }
 
+// SendStatus receives status information from honeypots and sends commands back
+// in response. This is not authenticated!
 func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
 	dm, err := s.dbClient.GetHoneypotByIP(req.GetIp())
 	if err != nil {
@@ -282,15 +287,15 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		})
 
 		if err != nil {
-			return &backend_service.StatusResponse{}, fmt.Errorf("error inserting honeypot: %w", err)
+			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error inserting honeypot: %s", err)
 		}
 		slog.Info("status: adding honeypot ", slog.String("ip", req.GetIp()))
 	} else {
 		dm.LastCheckin = time.Now()
 		if err := s.dbClient.Update(&dm); err != nil {
-			return &backend_service.StatusResponse{}, fmt.Errorf("error updating honeypot: %w", err)
+			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error updating honeypot: %s", err)
 		}
-		slog.Info("status: updating honeypot ", slog.String("ip", req.GetIp()))
+		slog.Debug("status: updating honeypot ", slog.String("ip", req.GetIp()))
 	}
 
 	// Check if there are any downloads scheduled for this honeypot.
@@ -302,7 +307,7 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	}
 
 	ret := &backend_service.StatusResponse{}
-	for idx, _ := range cmds {
+	for idx := range cmds {
 		ret.Command = append(ret.Command, &backend_service.Command{
 			Command: &backend_service.Command_DownloadCmd{
 				DownloadCmd: &cmds[idx],
@@ -315,16 +320,22 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 }
 
 func (s *BackendServer) SendSourceContext(ctx context.Context, req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error) {
+
+	_, ok := auth.GetHoneypotMetadata(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no authentication found")
+	}
+
 	ret := &backend_service.SendSourceContextResponse{}
 
 	switch c := req.Context.(type) {
 	case *backend_service.SendSourceContextRequest_P0FResult:
 		if _, err := s.HandleP0fResult(req.GetSourceIp(), c.P0FResult); err != nil {
-			return ret, fmt.Errorf("handling p0f result: %w", err)
+			return ret, status.Errorf(codes.Internal, "handling p0f result: %s", err)
 		}
 
 	default:
-		return ret, fmt.Errorf("unknown context type")
+		return ret, status.Error(codes.FailedPrecondition, "unknown context type")
 	}
 	return ret, nil
 }
@@ -447,6 +458,11 @@ func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo d
 }
 
 func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_service.UploadFileRequest) (*backend_service.UploadFileResponse, error) {
+	_, ok := auth.GetHoneypotMetadata(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no authentication found")
+	}
+
 	rpcStartTime := time.Now()
 	retResponse := &backend_service.UploadFileResponse{}
 
@@ -493,36 +509,39 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 
 	if !errors.Is(err, ksql.ErrRecordNotFound) {
 		slog.Warn("unexpected database error", slog.String("error", err.Error()))
-		return &backend_service.UploadFileResponse{}, fmt.Errorf("unexpected database error: %w", err)
+		return &backend_service.UploadFileResponse{}, status.Errorf(codes.Internal, "unexpected database error: %s", err)
 	}
 
 	s.whoisMgr.LookupIP(req.GetInfo().GetIp())
 
 	targetDir := fmt.Sprintf("%s/%d", s.malwareDownloadDir, req.RequestId)
-	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+	if _, err = os.Stat(targetDir); os.IsNotExist(err) {
 		// Due to concurrency, it is possible that between the check for whether the
 		// directory exists and creating one, the directory is already created.
 		// Therefore we double check here that any error during creation is no
 		// ErrExist which we'll allow.
-		if err := os.Mkdir(targetDir, 0755); err != nil && !os.IsExist(err) {
-			return retResponse, err
+		if err = os.Mkdir(targetDir, 0755); err != nil && !os.IsExist(err) {
+			return retResponse, status.Errorf(codes.Internal, "creating dir: %s", err)
 		}
 	}
 
 	targetFile := fmt.Sprintf("%s/%d", targetDir, rand.Intn(100000))
 	outFileHandle, err := os.Create(targetFile)
 	if err != nil {
-		return retResponse, fmt.Errorf("creating file: %s", err)
+		return retResponse, status.Errorf(codes.Internal, "creating file: %s", err)
 	}
 
 	bytesWritten, err := io.Copy(outFileHandle, bytes.NewReader(req.GetInfo().GetData()))
+	if err != nil {
+		return retResponse, status.Errorf(codes.Internal, "writing file: %s", err)
+	}
 
 	dInfo.Size = bytesWritten
 	dInfo.FileLocation = targetFile
 	_, err = s.dbClient.Insert(&dInfo)
 	if err != nil {
 		slog.Warn("error on insert", slog.String("error", err.Error()))
-		return &backend_service.UploadFileResponse{}, fmt.Errorf("unexpected database error on insert: %w", err)
+		return &backend_service.UploadFileResponse{}, status.Errorf(codes.Internal, "unexpected database error on insert: %s", err)
 	}
 
 	slog.Debug("Added entry for URL upload", slog.String("url", req.GetInfo().GetOriginalUrl()))
@@ -540,12 +559,17 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 // HandleProbe receives requests from te honeypots and tells them how to
 // respond.
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
+	_, ok := auth.GetHoneypotMetadata(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no authentication found")
+	}
+
 	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()))
 
 	rpcStartTime := time.Now()
 	sReq, err := s.ProbeRequestToDatabaseRequest(req)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "cannot convert request: %s", err)
 	}
 
 	s.metrics.requestsPerPort.WithLabelValues(fmt.Sprintf("%d", sReq.Port)).Add(1)
@@ -581,7 +605,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	slog.Debug("Fetching content", slog.Int64("content_id", matchedRule.ContentID))
 	content, err := s.dbClient.GetContentByID(matchedRule.ContentID)
 	if err != nil {
-		return nil, fmt.Errorf("fetching content ID %d: %w", matchedRule.ContentID, err)
+		return nil, status.Errorf(codes.Unavailable, "fetching content ID %d: %s", matchedRule.ContentID, err)
 	}
 
 	res := &backend_service.HttpResponse{}

@@ -73,8 +73,6 @@ Allow javascript to spawn commands.
 
 Allow Javascript to fetch Content by ID
 
-Add dropping privileges to the backend
-
 Show warning and ask for confirmation when saving a query from which a label was
 removed. This because the label will also be removed from all the requests.
 
@@ -85,9 +83,8 @@ Add support for p0f
 
 Add download link to the downloads page.
 
-When you add a rule, refresh the page with the rule selected.
-When you add an Application, refresh the page with the rule selected.
-
 Add a ? to the search bars and a popup with all query parameters.
 
 Create docker images for the backend and database.
+
+Send proper RPC error codes.

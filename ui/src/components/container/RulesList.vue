@@ -47,7 +47,7 @@
                 v-if="rule.rowspan >= 0"
                 :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
               >
-                {{ rule.app_name }}
+              <a :href="'/rules?q=app_id:' + rule.app_id">  {{ rule.app_name }}</a>
               </td>
               <td
                 v-if="rule.rowspan >= 0"

@@ -9,13 +9,12 @@
           id="title"
           type="text"
           placeholder=""
-          disabled="true"
           v-model="localHoneypot.ip"
         />
       </div>
 
       <div>
-        <label class="label">Content ID</label>
+        <label class="label">Default Content ID</label>
         <InputNumber
           v-model="localHoneypot.default_content_id"
           inputId="minmax"
@@ -25,6 +24,17 @@
         />
      &nbsp;
       </div>
+
+      <div class="field">
+        <label class="label">Authentication token</label>
+        <InputText
+          id="auth-token"
+          type="text"
+          placeholder=""
+          v-model="localHoneypot.auth_token"
+        />
+      </div>
+
       <br/>
     <PrimeButton
       :label="localHoneypot.id > 0 ? 'Submit' : 'Add'"
@@ -168,5 +178,8 @@ export default {
 
 <style scoped>
 
+#auth-token {
+  width: 100%;
+}
 
 </style>

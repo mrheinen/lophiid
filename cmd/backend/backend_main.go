@@ -12,6 +12,7 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/alerting"
 	"loophid/pkg/backend"
+	"loophid/pkg/backend/auth"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
 	"loophid/pkg/util"
@@ -22,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kkyr/fig"
 	lwhois "github.com/likexian/whois"
@@ -202,9 +204,13 @@ func main() {
 		slog.Error("Error: %s", err)
 	}
 
+	auther := auth.NewAuthenticator(dbc)
+
 	generalGrpcOptions := []grpc.ServerOption{
 		grpc.MaxSendMsgSize(1024 * 1024 * 50),
 		grpc.MaxRecvMsgSize(1024 * 1024 * cfg.Backend.Downloader.MaxDownloadSizeMB),
+		grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(auther.Authenticate)),
+		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(auther.Authenticate)),
 	}
 
 	if cfg.Backend.Listener.SSLCert == "" {

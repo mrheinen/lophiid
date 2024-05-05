@@ -14,7 +14,7 @@ there are some others you want to see exposed as well)
 Each script needs to have at least the __validate method and the
 createResponse method.
 
-### The __validate() method
+### The __validate() method - REQUIRED
 
 This is a test method that is called whenever you make changes to the script.
 Whenever the method returns something different than an empty string, the caller
@@ -24,17 +24,26 @@ In most cases you want use the script something like this:
 
  * First populate the "request" object with test data
  * Now call createResponse and check it's return value to see if there were any
-   errors. 
+   errors.
  * Now analyse the "response" object and check what values the createResponse
    method has modified/set.
  * Return "" on success or a string indicating the error whever an error
    happens.
 
-### the createResponse() method
+### the createResponse() method - REQUIRED
 
 This method should contain the logic to analyze the "request" object and then to
-set the values of th "response" object. You can for example set header values or
+set the values of the "response" object. You can for example set header values or
 set the response body.
+
+Upon success this method needs to return an empty string. Upon error it should
+return a string that describes the error.
+
+If this method is successful; the resulting response body will be stored in the
+database and visible when viewing requests that matched a rule with this script.
+This helps to check if the scripts are working and especially with highly
+dynamic responses reated by scripts it is useful to be able to verify real world
+invocations.
 
 ### Example script
 
@@ -74,7 +83,6 @@ function createResponse() {
 ```
 
 
-
 # Exposed objects & methods
 
 In general, whenever a struct from golang is exposed via Javascript you need to
@@ -88,14 +96,79 @@ request.sourceip.
 ## Request object
 
 Look at the Request object in database/database.go to see what attributes and
-methods are exposed.
+methods are exposed. Examples are:
+
+ * request.id - the ID of the request
+ * request.uri - the uri of the request
+ * request.raw - the raw request
 
 ## Response object
 
+Similar to request, it's easier to look at the Response struct in
+pkg/database/database.go to see what kind of attributes are available.
 
+In addition the following methods are added in the Javascript layer (and so not
+visible in the Response struct):
 
-## methods
+ * SetBody(string) - This will set the respose body to the given value.
+ * GetBody() - This will return the body as a string.
 
-### util.encoding.base64.encode
-### util.encoding.base64.decode
+These two are necessary because the body is stored in []bytes which is hard to
+handle in Javascript.
 
+## General methods
+
+### util.encoding.base64.encode(string)
+
+Base64 encodes the given string and returns the encoded string.
+
+### util.encoding.base64.decode(string)
+
+Returns the base64 decoded value of the given string. On error an empty string
+is returned.
+
+### util.crypto.md5sum(string)
+
+Returns an md5 hash of the given string.
+
+### util.crypto.sha256sum(string)
+
+Returns a sha256 hash of the given string.
+
+### util.crypto.sha1sum(string)
+
+Returns a sha1 hash of the given string.
+
+### util.time.sleep(int)
+
+Sleep the given amount of milliseconds.
+
+## Cache
+
+The cache deserves a little bit extra documentation. The purpose of the cache is
+to allow information to be shared between scripts that anwer multiple requests
+for the same session.
+
+For example:
+
+ * Request 1 sends a POST and wants to put a random string in a file. The script
+   responding will use the cache to store this random script.
+ * With request 2 the attacker tries to fetch the file with the random string.
+   The script for this request will be able to get the random string from the
+   cache and sends this to the attacker.
+
+At the moment the cache timeout is 30 minutes and the timeout is refresh
+whenever a value is written to the same key.  Read access to a cache entry does
+not modify the timeout.
+
+A cache is only shared between scripts run for the same honeypot/source IP
+pairs.
+
+### util.cache.set(key string, value string)
+
+Update the cache with the given key string value.
+
+### util.cache.get(key string)
+
+Get the value for "key" from the cache. Returns an empty string if there is no
+value.

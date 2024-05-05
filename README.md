@@ -13,7 +13,7 @@ Key features:
 - Rule based interactions with attacks
 - Support both static and scripted (Javascript) responses
 - Alerting possible (Telegram)
-- Comprehensive search 
+- Comprehensive search
 - Automatic tagging of requests and attacks to help triage
 - Automatically collects malware
 - Direct integration with VirusTotal
@@ -24,3 +24,6 @@ Running lophiid is already very interesting and you'll collect a lot of threat
 information. The project is still in an early phase of development though and
 large changes are still to be expected in the near future.
 
+# Documentation
+
+[Scripted responses](./SCRIPTING.md)
