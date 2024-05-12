@@ -136,11 +136,11 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
-            this.tags = response.data;
-
-            this.tags.forEach((tag) => {
-              this.tagPerIdMap.set(tag.id, tag);
-            })
+            if (response.data) {
+              response.data.forEach((tag) => {
+                this.tagPerIdMap.set(tag.id, tag);
+              })
+            }
           }
         });
     },

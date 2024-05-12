@@ -12,7 +12,6 @@ CREATE TYPE STATUS_CODE AS ENUM ('200','301', '302', '400', '401', '403', '404',
 CREATE TABLE content (
   id              SERIAL PRIMARY KEY,
   name            VARCHAR(256) NOT NULL,
-  content         TEXT NOT NULL, -- TODO: remove
   data            BYTEA DEFAULT ''::bytea,
   description     TEXT NOT NULL,
   script          TEXT,
@@ -146,6 +145,7 @@ CREATE TABLE downloads (
   last_request_id INT,
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   last_seen_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+  raw_http_response  TEXT,
   vt_file_analysis_result VARCHAR(1024) ARRAY,
   vt_url_analysis_id  VARCHAR(1024) DEFAULT '',
   vt_file_analysis_id  VARCHAR(1024) DEFAULT '',

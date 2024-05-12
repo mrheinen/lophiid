@@ -4,16 +4,21 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"loophid/pkg/api"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
+	"loophid/pkg/util"
+	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/kkyr/fig"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/cors"
 	"github.com/vingarcia/ksql"
@@ -22,12 +27,50 @@ import (
 
 var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 
+var configFile = flag.String("c", "", "Config file")
+
+type Config struct {
+	General struct {
+		LogFile    string `fig:"log_file" validate:"required"`
+		LogLevel   string `fig:"log_level" default:"debug"`
+		ListenIP   string `fig:"listen_ip" validate:"required"`
+		ListenPort string `fig:"listen_port" validate:"required"`
+	} `fig:"general"`
+	Cors struct {
+		// Comma separated list of allowed origins.
+		AllowedOrigins string `fig:"allowed_origins" default:"*"`
+	} `fig:"cors"`
+	Database struct {
+		Url                string `fig:"url" validate:"required"`
+		MaxOpenConnections int    `fig:"max_open_connections" default:"10"`
+	} `fig:"database" validate:"required"`
+}
+
 func main() {
+
+	flag.Parse()
+
+	var cfg Config
+	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
+		fmt.Printf("Could not parse config: %s\n", err)
+		return
+	}
+
+	lf, err := os.OpenFile(cfg.General.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Printf("Could not open logfile: %s\n", err)
+		return
+	}
+
+	defer lf.Close()
+
+	teeWriter := util.NewTeeLogWriter([]io.Writer{os.Stdout, lf})
+
 	var programLevel = new(slog.LevelVar) // Info by default
-	h := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
+	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
 
-	switch *logLevel {
+	switch cfg.General.LogLevel {
 	case "info":
 		programLevel.Set(slog.LevelInfo)
 	case "warn":
@@ -41,10 +84,9 @@ func main() {
 		programLevel.Set(slog.LevelInfo)
 	}
 
-	connectString := "postgres://lo:test@localhost/lophiid"
-	db, err := kpgx.New(context.Background(), connectString,
+	db, err := kpgx.New(context.Background(), cfg.Database.Url,
 		ksql.Config{
-			MaxOpenConns: 3,
+			MaxOpenConns: cfg.Database.MaxOpenConnections,
 		})
 	if err != nil {
 		fmt.Printf("Error opening database: %s", err)
@@ -112,8 +154,13 @@ func main() {
 
 	r.Use(as.AuthMW)
 
+	origins := make([]string, 0)
+	for _, o := range strings.Split(cfg.Cors.AllowedOrigins, ",") {
+		origins = append(origins, strings.TrimSpace(o))
+	}
+
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
+		AllowedOrigins: origins,
 		AllowedHeaders: []string{"API-Key", "Content-Type"},
 		AllowedMethods: []string{"GET", "POST"},
 		Debug:          false,
@@ -122,7 +169,7 @@ func main() {
 	handler := c.Handler(r)
 
 	srv := &http.Server{
-		Addr:    ":8088",
+		Addr:    net.JoinHostPort(cfg.General.ListenIP, cfg.General.ListenPort),
 		Handler: handler,
 	}
 	srv.ListenAndServe()

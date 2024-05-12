@@ -87,4 +87,4 @@ Add a ? to the search bars and a popup with all query parameters.
 
 Create docker images for the backend and database.
 
-Send proper RPC error codes.
+Add config to API server

@@ -171,6 +171,9 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 	res, err := h.client.HandleProbeRequest(pr)
 	if err != nil {
 		log.Printf("unable to process request: %s", err)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("<html></html>"))
+		return
 	}
 
 	fmt.Printf("got request for: %s\n", pr.RequestUri)
@@ -178,6 +181,7 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 	if res == nil || res.Response == nil {
 		fmt.Printf("Got nil ? Res: %+v, ProbeRequest: %+v\n", res, pr)
 		fmt.Printf("HTTP request: %+v\n", r)
+		return
 	}
 
 	// At least one header is always set.

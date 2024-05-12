@@ -1,0 +1,21 @@
+# Example configuration file for API server.
+general:
+  #The log level can be one of debug, info, warn and error.
+  # https://pkg.go.dev/log/slog#Level
+  log_level: debug
+  # Location of the log file.
+  log_file: /tmp/api.log
+  # The port and IP to listen on.
+  listen_port: 8088
+  listen_ip: 0.0.0.0
+
+database:
+  url: 'postgres://user:password@localhost:5432/lophiid'
+  max_open_connections: 10
+
+cors:
+  # Set to true to enable CORS debugging. Note that the output will be
+  # very verbose.
+  debug_auth: false
+  # A comma separated list of allowed origins.
+  allowed_origins: "*"

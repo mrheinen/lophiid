@@ -23,7 +23,6 @@ import (
 	"os"
 	"time"
 
-	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kkyr/fig"
 	lwhois "github.com/likexian/whois"
@@ -204,13 +203,20 @@ func main() {
 		slog.Error("Error: %s", err)
 	}
 
-	auther := auth.NewAuthenticator(dbc)
+	authCache := util.NewStringMapCache[database.Honeypot]("auth token cache", time.Minute*10)
+	authCache.Start()
+	auther := auth.NewAuthenticator(dbc, authCache)
+
+	// The following methods do not require authentication. Specifically
+	// SendStatus is allowed because it causes new honeypots to be registered by
+	// the backend.
+	allowListedMethods := []string{"/BackendService/SendStatus"}
 
 	generalGrpcOptions := []grpc.ServerOption{
 		grpc.MaxSendMsgSize(1024 * 1024 * 50),
 		grpc.MaxRecvMsgSize(1024 * 1024 * cfg.Backend.Downloader.MaxDownloadSizeMB),
-		grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(auther.Authenticate)),
-		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(auther.Authenticate)),
+		grpc.StreamInterceptor(auth.CustomStreamServerInterceptor(auther.Authenticate, allowListedMethods)),
+		grpc.UnaryInterceptor(auth.CustomUnaryServerInterceptor(auther.Authenticate, allowListedMethods)),
 	}
 
 	if cfg.Backend.Listener.SSLCert == "" {
