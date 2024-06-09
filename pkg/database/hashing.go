@@ -3,7 +3,7 @@ package database
 import (
 	"crypto/sha256"
 	"fmt"
-	"net/url"
+	"loophid/pkg/util"
 	"sort"
 	"strings"
 )
@@ -34,7 +34,7 @@ func GetHashFromStaticRequestFields(req *Request) (string, error) {
 	if req.ContentType == "application/x-www-form-urlencoded" {
 		var formFields []string
 
-		parsedQuery, err := url.ParseQuery(string(req.Body))
+		parsedQuery, err := util.CustomParseQuery(string(req.Body))
 		// We accept that an error can occur here because payloads are often really
 		// a mess and don't always parse well. If an error occurs; we don't return.
 		if err == nil {
@@ -50,9 +50,9 @@ func GetHashFromStaticRequestFields(req *Request) (string, error) {
 	}
 
 	// Query fields.
-	parsedQuery, err := url.ParseQuery(req.Query)
+	parsedQuery, err := util.CustomParseQuery(req.Query)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse query: %w", err) //nolint:err
 	}
 
 	var queryFields []string

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "general.go",
         "logging.go",
+        "net.go",
         "security.go",
         "string_map_cache.go",
     ],
@@ -14,6 +15,9 @@ go_library(
 
 go_test(
     name = "util_test",
-    srcs = ["string_map_cache_test.go"],
+    srcs = [
+        "net_test.go",
+        "string_map_cache_test.go",
+    ],
     embed = [":util"],
 )

