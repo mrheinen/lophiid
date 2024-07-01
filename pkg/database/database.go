@@ -556,7 +556,7 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM content_rule", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, fmt.Sprintf("FROM (SELECT * FROM content_rule ORDER BY updated_at DESC OFFSET %d LIMIT %d) AS subq ", offset, limit), "ORDER BY app_id")
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
