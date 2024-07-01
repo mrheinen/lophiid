@@ -56,6 +56,10 @@ Take a note of the ID (101 in this case) as you will need it to add Content to
 the app. If you want you can now also open the UI and go to the Apps tab and
 check that this app was created.
 
+In the UI, under the Content you will now be able to see the added entry:
+
+![Added entry](https://github.com/mrheinen/lophiid/blob/main/screenshots/content-show-cli-result.png?raw=true)
+
 
 ### Adding Content and a Rule to an app using a single URL
 
