@@ -18,10 +18,11 @@ func TestRateLimitOk(t *testing.T) {
 	req := database.Request{
 		HoneypotIP: "1.1.1.1",
 		SourceIP:   "2.2.2.2",
+		Uri:        "/aa",
 	}
 	reg := prometheus.NewRegistry()
 	rMetrics := CreateRatelimiterMetrics(reg)
-	r := NewRateLimiter(testRateWindow, testBucketDuration, testMaxRequestsPerWindow, testMaxRequestPerBucket, rMetrics)
+	r := NewWindowRateLimiter(testRateWindow, testBucketDuration, testMaxRequestsPerWindow, testMaxRequestPerBucket, rMetrics)
 
 	if testutil.ToFloat64(rMetrics.rateBucketsGauge) != 0 {
 		t.Errorf("rateBucketsGauge should be 0 at the start")

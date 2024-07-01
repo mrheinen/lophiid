@@ -18,7 +18,7 @@ import (
 
 var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 var apiKey = flag.String("api-key", "", "The API key to use")
-var apiLocation = flag.String("host", "", "The API location")
+var apiLocation = flag.String("api-server", "", "The API location")
 
 // Application specific flags.
 var appName = flag.String("app-name", "", "The application name")
@@ -51,6 +51,16 @@ func main() {
 	default:
 		fmt.Printf("Unknown log level given. Using info")
 		programLevel.Set(slog.LevelInfo)
+	}
+
+	if *apiLocation == "" {
+		slog.Error("Please specify the API server with -api-server")
+		return
+	}
+
+	if *apiKey == "" {
+		slog.Error("Please specify the API key with -api-key")
+		return
 	}
 
 	insecureHttpTransport := &http.Transport{

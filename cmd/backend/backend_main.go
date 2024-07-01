@@ -13,6 +13,7 @@ import (
 	"loophid/pkg/alerting"
 	"loophid/pkg/backend"
 	"loophid/pkg/backend/auth"
+	"loophid/pkg/backend/ratelimit"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
 	"loophid/pkg/util"
@@ -59,6 +60,12 @@ type Config struct {
 			MalwareDownloadDir string `fig:"malware_download_dir" validate:"required"`
 			MaxDownloadSizeMB  int    `fig:"max_download_size_mb" default:"200"`
 		} `fig:"downloader"`
+		RateLimiter struct {
+			RateWindow           time.Duration `fig:"rate_window" default:"1h"`
+			BucketDuration       time.Duration `fig:"bucket_duration" default:"1m"`
+			MaxRequestsPerWindow int           `fig:"max_requests_per_window" default:"1000"`
+			MaxRequestsPerBucket int           `fig:"max_requests_per_bucket" default:"50"`
+		} `fig:"ratelimiter"`
 	} `fig:"backend"`
 	Alerting struct {
 		Interval time.Duration `fig:"interval" default:"2m"`
@@ -195,10 +202,12 @@ func main() {
 
 	jRunner := javascript.NewGojaJavascriptRunner(javascript.CreateGoJaMetrics(metricsRegistry))
 	queryRunner := backend.NewQueryRunnerImpl(dbc)
-
 	bMetrics := backend.CreateBackendMetrics(metricsRegistry)
+	rMetrics := ratelimit.CreateRatelimiterMetrics(metricsRegistry)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, cfg.Backend.Downloader.MalwareDownloadDir)
+	rateLimiter := ratelimit.NewWindowRateLimiter(cfg.Backend.RateLimiter.RateWindow, cfg.Backend.RateLimiter.BucketDuration, cfg.Backend.RateLimiter.MaxRequestsPerWindow, cfg.Backend.RateLimiter.MaxRequestsPerBucket, rMetrics)
+
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, cfg.Backend.Downloader.MalwareDownloadDir)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

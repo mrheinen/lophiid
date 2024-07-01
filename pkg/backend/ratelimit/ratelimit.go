@@ -14,17 +14,22 @@ var (
 	ErrWindowLimitExceeded = errors.New("window limit exceeded")
 )
 
-// RateLimiter can be used to limit requests per HoneypotIP, SourceIP and Uri
+type RateLimiter interface {
+	AllowRequest(req *database.Request) (bool, error)
+}
+
+// WindowRateLimiter can be used to limit requests per HoneypotIP, SourceIP and Uri
 // combination.  If BucketDuration is set to 1 minute and RateWindow is set to
 // one hour than:
-//   The ratelimiter will only allow MaxRequestPerBucket requests per minute
-//   The ratelimiter will only allow MaxRequestsPerWindow per the entire hour
+//
+//	The ratelimiter will only allow MaxRequestPerBucket requests per minute
+//	The ratelimiter will only allow MaxRequestsPerWindow per the entire hour
+//
 // When any of these limits are met than the AllowRequest() method will return
 // false.
 //
 // Requires Start() to be called before usage.
-
-type RateLimiter struct {
+type WindowRateLimiter struct {
 	MaxRequestsPerWindow int
 	MaxRequestPerBucket  int
 	RateWindow           time.Duration
@@ -36,9 +41,9 @@ type RateLimiter struct {
 	bgChan               chan bool
 }
 
-func NewRateLimiter(rateWindow time.Duration, bucketDuration time.Duration, maxRequestsPerWindow int, maxRequestPerBucket int, metrics *RatelimiterMetrics) *RateLimiter {
+func NewWindowRateLimiter(rateWindow time.Duration, bucketDuration time.Duration, maxRequestsPerWindow int, maxRequestPerBucket int, metrics *RatelimiterMetrics) *WindowRateLimiter {
 	slog.Info("Creating ratelimiter", slog.String("window_size", rateWindow.String()), slog.String("bucket_size", bucketDuration.String()))
-	return &RateLimiter{
+	return &WindowRateLimiter{
 		BucketDuration:       bucketDuration,
 		MaxRequestPerBucket:  maxRequestPerBucket,
 		MaxRequestsPerWindow: maxRequestsPerWindow,
@@ -49,7 +54,7 @@ func NewRateLimiter(rateWindow time.Duration, bucketDuration time.Duration, maxR
 	}
 }
 
-func (r *RateLimiter) Start() {
+func (r *WindowRateLimiter) Start() {
 	ticker := time.NewTicker(r.BucketDuration)
 	go func() {
 		for {
@@ -65,7 +70,7 @@ func (r *RateLimiter) Start() {
 	}()
 }
 
-func (r *RateLimiter) Stop() {
+func (r *WindowRateLimiter) Stop() {
 	slog.Info("Stopping ratelimiter")
 	r.bgChan <- true
 }
@@ -81,7 +86,7 @@ func GetSumOfWindow(window []int) int {
 // Tick is called every BucketDuration and will update the window with a new
 // bucket while removing windows where all buckets are 0 (basically no traffic
 // seen).
-func (r *RateLimiter) Tick() {
+func (r *WindowRateLimiter) Tick() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -100,7 +105,7 @@ func (r *RateLimiter) Tick() {
 // requests in a window or bucket is not exceeded. If a request is not allowed
 // then an error is returned with the reason why.
 // Requires that Start() has been called before usage.
-func (r *RateLimiter) AllowRequest(req *database.Request) (bool, error) {
+func (r *WindowRateLimiter) AllowRequest(req *database.Request) (bool, error) {
 	rKey := fmt.Sprintf("%s-%s-%s", req.HoneypotIP, req.SourceIP, req.Uri)
 
 	r.mu.Lock()
@@ -128,4 +133,13 @@ func (r *RateLimiter) AllowRequest(req *database.Request) (bool, error) {
 	r.RateBuckets[rKey][r.NumberBuckets-1] += 1
 
 	return true, nil
+}
+
+type FakeRateLimiter struct {
+	BoolToReturn  bool
+	ErrorToReturn error
+}
+
+func (f *FakeRateLimiter) AllowRequest(*database.Request) (bool, error) {
+	return f.BoolToReturn, f.ErrorToReturn
 }

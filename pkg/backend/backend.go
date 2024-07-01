@@ -22,6 +22,7 @@ import (
 	"loophid/pkg/alerting"
 	"loophid/pkg/backend/auth"
 	"loophid/pkg/backend/extractors"
+	"loophid/pkg/backend/ratelimit"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
 	"loophid/pkg/util"
@@ -49,18 +50,19 @@ type BackendServer struct {
 	safeRules          *SafeRules
 	maintenanceChan    chan bool
 	reqsProcessChan    chan bool
-	malwareDownloadDir string
 	reqsQueue          chan *database.Request
+	malwareDownloadDir string
 	sessionCache       *util.StringMapCache[database.ContentRule]
 	ruleVsCache        *RuleVsContentCache
 	downloadQueue      map[string][]backend_service.CommandDownloadFile
 	downloadQueueMu    sync.Mutex
 	downloadsCache     *util.StringMapCache[time.Time]
 	metrics            *BackendMetrics
+	rateLimiter        ratelimit.RateLimiter
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner, malwareDownloadDir string) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, malwareDownloadDir string) *BackendServer {
 	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", time.Minute*30)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
 	// we get a request with the same download (payload URL) within that time
@@ -86,6 +88,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		ruleVsCache:        rCache,
 		metrics:            metrics,
 		malwareDownloadDir: malwareDownloadDir,
+		rateLimiter:        rateLimiter,
 	}
 }
 
@@ -570,6 +573,22 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	sReq, err := s.ProbeRequestToDatabaseRequest(req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot convert request: %s", err)
+	}
+
+	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
+	if !allowRequest {
+
+		switch err {
+		case ratelimit.ErrBucketLimitExceeded:
+			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonBucket).Add(1)
+		case ratelimit.ErrWindowLimitExceeded:
+			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonWindow).Add(1)
+		default:
+			slog.Error("error happened in ratelimiter", slog.String("error", err.Error()))
+		}
+
+		slog.Debug("ratelimiter blocked request", slog.String("error", err.Error()))
+		return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
 	}
 
 	s.metrics.requestsPerPort.WithLabelValues(fmt.Sprintf("%d", sReq.Port)).Add(1)

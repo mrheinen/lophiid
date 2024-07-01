@@ -10,6 +10,7 @@ go_library(
         "//pkg/alerting",
         "//pkg/backend",
         "//pkg/backend/auth",
+        "//pkg/backend/ratelimit",
         "//pkg/database",
         "//pkg/javascript",
         "//pkg/util",

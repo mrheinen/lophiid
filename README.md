@@ -17,6 +17,7 @@ Key features:
 - Automatic tagging of requests and attacks to help triage
 - Automatically collects malware
 - Direct integration with VirusTotal
+- Ratelimiting
 - Exporting of rules
 - Highly customizable
 

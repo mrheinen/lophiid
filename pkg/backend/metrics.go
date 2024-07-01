@@ -6,6 +6,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var (
+	RatelimiterRejectReasonWindow = "window"
+	RatelimiterRejectReasonBucket = "bucket"
+)
+
 type BackendMetrics struct {
 	reqsQueueGauge            prometheus.Gauge
 	rpcResponseTime           prometheus.Histogram
@@ -16,6 +21,7 @@ type BackendMetrics struct {
 	honeypotRequests          *prometheus.CounterVec
 	methodPerRequest          *prometheus.CounterVec
 	requestsPerPort           *prometheus.CounterVec
+	rateLimiterRejects        *prometheus.CounterVec
 }
 
 // Register Metrics
@@ -74,6 +80,11 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 				Name: "lophiid_backend_request_per_port_total",
 				Help: "Amount of requests per HTTP port"},
 			[]string{"port"}),
+		rateLimiterRejects: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_rate_limiter_rejects_total",
+				Help: "Amount of rejects per type (window or bucket)"},
+			[]string{"type"}),
 	}
 
 	reg.MustRegister(m.reqsQueueGauge)
@@ -85,5 +96,6 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 	reg.MustRegister(m.methodPerRequest)
 	reg.MustRegister(m.requestsPerPort)
 	reg.MustRegister(m.fileUploadRpcResponseTime)
+	reg.MustRegister(m.rateLimiterRejects)
 	return m
 }

@@ -30,6 +30,8 @@ func NewApiCLI(httpClient *http.Client, contentAPI *api.GenericApiClient[databas
 	}
 }
 
+// FetchUrlAndCreateContentAndRuleFromFile will read URLs from a file and will
+// then fetch each URL and create Content and ContentRules for them.
 func (a *ApiCLI) FetchUrlAndCreateContentAndRuleFromFile(appID int64, ports []int64, targetUrlFile string) error {
 	content, err := util.ReadFileToString(targetUrlFile)
 	if err != nil {
@@ -100,11 +102,14 @@ func (a *ApiCLI) FetchUrlAndCreateContentAndRule(appID int64, ports []int64, tar
 			return fmt.Errorf("error storing content rule: %w", err)
 		}
 
-		slog.Info("added content rule", slog.Int64("rule_id", addedContentRule.ID), slog.Int64("port", addedContentRule.Port))
+		slog.Info("added content and rule", slog.Int64("content_id", addedContent.ID), slog.Int64("rule_id", addedContentRule.ID), slog.Int64("port", addedContentRule.Port))
 	}
 	return nil
 }
 
+// FetchUrlToContent will fetch a URL and will save the data as a Content in
+// lophiid. It will preserve important headers so that, when the content is
+// served by a honeypot, it will look like the real deal.
 func (a *ApiCLI) FetchUrlToContent(namePrefix string, targetUrl string) (database.Content, error) {
 
 	// These headers contain values that are likely expired when serving them in

@@ -29,7 +29,8 @@ type HoneypotMetadata struct {
 	IP string
 }
 
-type honeypotMDKey struct{}
+// HoneypotMDKey is the key for storing honeypot specific metadata in context.
+type HoneypotMDKey struct{}
 
 // ExactAuthTokenLength is the expected length of an authentication token.
 var ExactAuthTokenLength = 64
@@ -114,7 +115,7 @@ func (a *Authenticator) Authenticate(ctx context.Context) (newCtx context.Contex
 	// Remove token from headers from here on
 	newCtx = purgeHeader(ctx, TokenHeaderName)
 	// Store the metadata
-	newCtx = context.WithValue(newCtx, honeypotMDKey{}, honeypotMD)
+	newCtx = context.WithValue(newCtx, HoneypotMDKey{}, honeypotMD)
 	return
 }
 
@@ -184,7 +185,11 @@ func purgeHeader(ctx context.Context, header string) context.Context {
 
 // GetUserMetadata can be used to extract metadata stored in a context.
 func GetHoneypotMetadata(ctx context.Context) (*HoneypotMetadata, bool) {
-	honeypotMD := ctx.Value(honeypotMDKey{})
+	honeypotMD := ctx.Value(HoneypotMDKey{})
+
+	if honeypotMD == nil {
+		return nil, false
+	}
 
 	switch md := honeypotMD.(type) {
 	case HoneypotMetadata:
