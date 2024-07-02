@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"io"
+	"loophid/pkg/api"
+	"loophid/pkg/database"
 	"net/http"
 	"testing"
 )
@@ -68,4 +70,37 @@ func TestFetchUrlToContent(t *testing.T) {
 		t.Errorf("expected 1 header, got %d", len(content.Headers))
 	}
 
+}
+
+func TestFetchUrlAndCreateContentAndRule(t *testing.T) {
+	fakeContentAPI := api.FakeApiClient[database.Content]{
+		ErrorToReturn:     nil,
+		DataModelToReturn: database.Content{ID: 42},
+	}
+	fakeContentRuleAPI := api.FakeApiClient[database.ContentRule]{
+		ErrorToReturn:     nil,
+		DataModelToReturn: database.ContentRule{},
+	}
+
+	apiCli := ApiCLI{
+		contentAPI:     &fakeContentAPI,
+		contentRuleAPI: &fakeContentRuleAPI,
+	}
+
+	err := apiCli.CreateContentAndRule(&database.Application{ID: 1}, []int64{80}, &database.Content{}, "http://example.org/?aa=bb")
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if fakeContentRuleAPI.LastModelStored.Uri != "/?aa=bb" {
+		t.Errorf("expected uri /?aa=bb, got %s", fakeContentRuleAPI.LastModelStored.Uri)
+	}
+
+	if fakeContentRuleAPI.LastModelStored.ContentID != 42 {
+		t.Errorf("expected content id 42, got %d", fakeContentRuleAPI.LastModelStored.ContentID)
+	}
+
+	if fakeContentRuleAPI.LastModelStored.AppID != 1 {
+		t.Errorf("expected content id 1, got %d", fakeContentRuleAPI.LastModelStored.AppID)
+	}
 }

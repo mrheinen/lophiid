@@ -16,9 +16,9 @@ var UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like
 
 type ApiCLI struct {
 	httpClient     *http.Client
-	contentAPI     *api.GenericApiClient[database.Content]
-	appAPI         *api.GenericApiClient[database.Application]
-	contentRuleAPI *api.GenericApiClient[database.ContentRule]
+	contentAPI     api.ApiClient[database.Content]
+	appAPI         api.ApiClient[database.Application]
+	contentRuleAPI api.ApiClient[database.ContentRule]
 }
 
 func NewApiCLI(httpClient *http.Client, contentAPI *api.GenericApiClient[database.Content], appAPI *api.GenericApiClient[database.Application], contentRuleAPI *api.GenericApiClient[database.ContentRule]) *ApiCLI {
@@ -53,7 +53,6 @@ func (a *ApiCLI) FetchUrlAndCreateContentAndRuleFromFile(appID int64, ports []in
 }
 
 func (a *ApiCLI) FetchUrlAndCreateContentAndRule(appID int64, ports []int64, targetUrl string) error {
-
 	// Check if the app actually exists.
 	apps, err := a.appAPI.GetDatamodelSegment(fmt.Sprintf("id:%d", appID), 0, 10)
 	if err != nil {
@@ -64,25 +63,32 @@ func (a *ApiCLI) FetchUrlAndCreateContentAndRule(appID int64, ports []int64, tar
 		return fmt.Errorf("could not find app with ID: %d", appID)
 	}
 
-	appName := apps[0].Name
-
 	// Download the URL and create the content.
-	content, err := a.FetchUrlToContent(appName, targetUrl)
+	content, err := a.FetchUrlToContent(apps[0].Name, targetUrl)
 	if err != nil {
 		return fmt.Errorf("error fetching url to content: %w", err)
 	}
 
-	// Store the content.
-	addedContent, err := a.contentAPI.UpsertDataModel(content)
+	return a.CreateContentAndRule(&apps[0], ports, &content, targetUrl)
+}
+
+// CreateContentAndRule will store the Content and a newly created ContentRule
+// in the database.
+func (a *ApiCLI) CreateContentAndRule(app *database.Application, ports []int64, content *database.Content, targetUrl string) error {
+	addedContent, err := a.contentAPI.UpsertDataModel(*content)
 	if err != nil {
 		return fmt.Errorf("error storing content: %w", err)
 	}
 
 	pUrl, _ := url.Parse(targetUrl)
 
-	path := pUrl.Path
-	if path == "" {
-		path = "/"
+	pathQuery := pUrl.Path
+	if pathQuery == "" {
+		pathQuery = "/"
+	}
+
+	if pUrl.RawQuery != "" {
+		pathQuery = fmt.Sprintf("%s?%s", pathQuery, pUrl.RawQuery)
 	}
 
 	for _, port := range ports {
@@ -90,10 +96,10 @@ func (a *ApiCLI) FetchUrlAndCreateContentAndRule(appID int64, ports []int64, tar
 		newContentRule := database.ContentRule{
 			ContentID:    addedContent.ID,
 			Method:       http.MethodGet,
-			Uri:          pUrl.Path,
+			Uri:          pathQuery,
 			UriMatching:  "exact",
 			BodyMatching: "none",
-			AppID:        appID,
+			AppID:        app.ID,
 			Port:         port,
 		}
 
@@ -167,5 +173,8 @@ func (a *ApiCLI) FetchUrlToContent(namePrefix string, targetUrl string) (databas
 		retContent.Server = "Apache"
 	}
 
+	if retContent.ContentType == "" {
+		retContent.ContentType = "text/plain"
+	}
 	return retContent, nil
 }

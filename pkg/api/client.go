@@ -23,6 +23,32 @@ type GenericApiClient[T any] struct {
 	apiKey      string
 }
 
+type ApiClient[T any] interface {
+	GetDatamodelSegment(query string, offset, limit int) ([]T, error)
+	UpsertDataModel(dm T) (T, error)
+	DeleteDataModel(modelId int64) error
+}
+
+type FakeApiClient[T any] struct {
+	DataModelToReturn T
+	ErrorToReturn     error
+	LastModelStored   T
+}
+
+func (f *FakeApiClient[T]) GetDatamodelSegment(query string, offset, limit int) ([]T, error) {
+	return []T{f.DataModelToReturn}, f.ErrorToReturn
+}
+
+func (f *FakeApiClient[T]) UpsertDataModel(dm T) (T, error) {
+	f.LastModelStored = dm
+	return f.DataModelToReturn, f.ErrorToReturn
+}
+
+func (f *FakeApiClient[T]) DeleteDataModel(modelId int64) error {
+	return f.ErrorToReturn
+}
+
+// NewApplicationApiClient creates an application api client
 func NewApplicationApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.Application] {
 	return &GenericApiClient[database.Application]{
 		httpClient:  httpClient,
@@ -31,6 +57,7 @@ func NewApplicationApiClient(httpClient *http.Client, apiLocation string, apiKey
 	}
 }
 
+// NewContentApiClient creates a content api client
 func NewContentApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.Content] {
 	return &GenericApiClient[database.Content]{
 		httpClient:  httpClient,
@@ -39,6 +66,7 @@ func NewContentApiClient(httpClient *http.Client, apiLocation string, apiKey str
 	}
 }
 
+// NewContentRuleApiClient creates a content rule api client
 func NewContentRuleApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.ContentRule] {
 	return &GenericApiClient[database.ContentRule]{
 		httpClient:  httpClient,
@@ -52,7 +80,7 @@ func NewContentRuleApiClient(httpClient *http.Client, apiLocation string, apiKey
 // and limit).
 func (a *GenericApiClient[T]) GetDatamodelSegment(query string, offset, limit int) ([]T, error) {
 	retApp := []T{}
-	apiUrl := fmt.Sprintf("%s/segment?q=%s&offset=%d&limit=%d", a.apiLocation,url.QueryEscape(query),offset, limit)
+	apiUrl := fmt.Sprintf("%s/segment?q=%s&offset=%d&limit=%d", a.apiLocation, url.QueryEscape(query), offset, limit)
 	slog.Debug("Fetching URL", slog.String("url", apiUrl))
 	req, _ := http.NewRequest(http.MethodGet, apiUrl, nil)
 	req.Header.Add("accept", "application/json")
