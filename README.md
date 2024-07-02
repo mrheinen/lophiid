@@ -28,3 +28,4 @@ large changes are still to be expected in the near future.
 # Documentation
 
 [Scripted responses](./SCRIPTING.md)
+[API cli client usage](./API_CLIENT.md)
