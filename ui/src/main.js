@@ -107,5 +107,3 @@ app.use(CodeMirror, {
 })
 
 app.mount('#app');
-
-

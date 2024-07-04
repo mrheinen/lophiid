@@ -17,8 +17,9 @@ Key features:
 - Automatic tagging of requests and attacks to help triage
 - Automatically collects malware
 - Direct integration with VirusTotal
-- Ratelimiting
-- Exporting of rules
+- Ratelimiting / DoS protection
+- Exporting of rules for sharing with the community
+- Extensive metrics for prometheus/grafana
 - Highly customizable
 
 Running lophiid is already very interesting and you'll collect a lot of threat

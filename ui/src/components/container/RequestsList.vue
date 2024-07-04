@@ -10,6 +10,7 @@
             v-model="query"
             placeholder="Search"
           />
+          <i title="Click to see search options" class="pi pi-info-circle pointer search-info-icon" />
         </span>
       </form>
 
@@ -436,6 +437,15 @@ table {
 
 td {
   font-size: 13px;
+}
+
+i.search-info-icon {
+  right: 10px;
+}
+
+i.search-info-icon:hover {
+  right: 10px;
+  font-weight: bold;
 }
 
 i.pi-style {
