@@ -1,18 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <form @submit.prevent="performNewSearch()">
-        <span class="p-input-icon-left" style="width: 100%">
-          <i class="pi pi-search" />
-          <InputText
-            @focusin="searchIsFocused = true"
-            @focusout="searchIsFocused = false"
-            v-model="query"
-            placeholder="Search"
-          />
-          <i title="Click to see search options" class="pi pi-info-circle pointer search-info-icon" />
-        </span>
-      </form>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="requests.length > 0">
         <thead>
@@ -20,7 +9,7 @@
           <th>Honeypot</th>
           <th>Method</th>
           <th>Uri</th>
-          <th>Src Host</th>
+          <th>Src IP</th>
           <th>Actions</th>
         </thead>
         <tbody>
@@ -43,8 +32,15 @@
                 </div>
                 <div style="float: left">
                   <div>
-                    <div v-for="t in req.tags" :key="t.tag.id" :title="t.tag.description" class="mytag">
-                      <a :href="'/requests?q=label:' + t.tag.name">{{ t.tag.name }}</a>
+                    <div
+                      v-for="t in req.tags"
+                      :key="t.tag.id"
+                      :title="t.tag.description"
+                      class="mytag"
+                    >
+                      <a :href="'/requests?q=label:' + t.tag.name">{{
+                        t.tag.name
+                      }}</a>
                     </div>
                   </div>
                 </div>
@@ -110,9 +106,11 @@ function dateToString(inDate) {
   return nd.toLocaleString();
 }
 import RequestView from "./RequestView.vue";
+import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
     RequestView,
+    DataSearchBar,
   },
   emits: ["require-auth"],
   inject: ["config"],
@@ -128,9 +126,37 @@ export default {
       isSelectedId: 0,
       limit: 24,
       offset: 0,
+      searchOptions: new Map([
+        ["id", "Request ID"],
+        ["uri", "Request URI"],
+        ["query", "The parameters of the URL"],
+        ["path", "The path of the URL"],
+        ["uri", "Request URI"],
+        ["method", "The HTTP method (e.g. GET, POST,..)"],
+        ["referer", "The HTTP referer header"],
+        ["content_length", "The HTTP content length"],
+        ["content_type", "The HTTP content type"],
+        ["referer", "The HTTP referer header"],
+        ["body", "The HTTP request body"],
+        ["honeypot_ip", "The IP of the honeypot (without port) "],
+        ["source_ip", "The source IP"],
+        ["source_port", "The source port of the attacker"],
+        ["port", "The HTTP server port"],
+        ["rule_id", "Requests that matched this rule ID"],
+        ["content_id", "Requests that were served content with this ID"],
+        ["label", "Requests that have this tag name (e.g. wget)"],
+        ["starred", "Whether the request is starred or not (1 or 0)"],
+        ["base_hash", "The base hash of the request (find similar requests)"],
+        ["time_received", "Time when the request was received by the honeypot"],
+        ["created_at", "Time the request was stored in the database"],
+        ["updated_at", "Last time the request was updated in the database"],
+        ]),
     };
   },
   methods: {
+    showPopover(event) {
+      this.$refs.spop.show(event);
+    },
     toggleStarred(id) {
       var starRequest = null;
       for (var i = 0; i < this.requests.length; i++) {
@@ -174,7 +200,8 @@ export default {
           }
         });
     },
-    performNewSearch() {
+    performNewSearch(query) {
+      this.query = query;
       this.offset = 0;
       this.loadRequests(true);
     },
@@ -376,19 +403,18 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-    }
-
-    this.loadRequests(true);
   },
   mounted() {
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadRequests(true);
+    }
   },
 };
 </script>
 
 <style scoped>
-
 .table tr.is-selected {
   background-color: #4e726d;
 }
@@ -438,14 +464,13 @@ table {
 td {
   font-size: 13px;
 }
-
-i.search-info-icon {
-  right: 10px;
+span.search-info-icon {
+  color: black;
 }
 
-i.search-info-icon:hover {
-  right: 10px;
-  font-weight: bold;
+span.search-info-icon:hover {
+  color: black;
+  font-weight: bold !important;
 }
 
 i.pi-style {

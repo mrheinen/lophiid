@@ -15,17 +15,11 @@
 
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <form
-        @submit.prevent="performNewSearch()"
-      >
-        <span class="p-input-icon-left" style="width: 100%">
-          <i class="pi pi-search" />
-          <InputText v-model="query" placeholder="Search" />
-        </span>
-      </form>
+
+      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
+
       <div>
-        <table
-          class="table is-hoverable" v-if="rules.length > 0">
+        <table class="table is-hoverable" v-if="rules.length > 0">
           <thead>
             <th>App</th>
             <th>App version</th>
@@ -47,7 +41,9 @@
                 v-if="rule.rowspan >= 0"
                 :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
               >
-              <a :href="'/rules?q=app_id:' + rule.app_id">  {{ rule.app_name }}</a>
+                <a :href="'/rules?q=app_id:' + rule.app_id">
+                  {{ rule.app_name }}</a
+                >
               </td>
               <td
                 v-if="rule.rowspan >= 0"
@@ -99,9 +95,7 @@
         ></i>
       </div>
     </div>
-    <div
-      class="column mright"
-    >
+    <div class="column mright">
       <rule-form
         @update-rule="onUpdatedRule"
         @delete-rule="reloadRules()"
@@ -131,11 +125,13 @@ function truncateString(str, maxlen) {
 import RuleForm from "./RuleForm.vue";
 import ContentForm from "./ContentForm.vue";
 import AppForm from "./AppForm.vue";
+import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
     RuleForm,
     ContentForm,
     AppForm,
+    DataSearchBar,
   },
   inject: ["config"],
   emits: ["require-auth"],
@@ -156,6 +152,19 @@ export default {
       selectedAppId: 0,
       contentFormVisible: false,
       appFormVisible: false,
+      searchOptions: new Map([
+        ["id", "The rule ID"],
+        ["uri", "The URI matching value of the rule"],
+        ["uri_matching", "The URI matching method (e.g. 'exact')"],
+        ["body", "The body matching value of the rule"],
+        ["method", "The HTTP method of the request (e.g. 'GET')"],
+        ["port", "The HTTP port"],
+        ["app_id", "The ID of the application for which the rule it"],
+        ["content_id", "The ID of the content served by this rule"],
+        ["alert", "A bool (0 or 1) whether alerting is on"],
+        ["created_at", "Date and time when the rule was created"],
+        ["updated_at", "Date and time when the rule was updated"],
+      ]),
       baseRule: {
         host: "",
         uri_matching: "exact",
@@ -210,7 +219,8 @@ export default {
           }
         });
     },
-    performNewSearch() {
+    performNewSearch(query) {
+      this.query = query;
       this.offset = 0;
       this.loadRules(true, function () {});
     },
@@ -476,39 +486,39 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-    }
-
-    // If a uri and method parameter is given, reset the form and use the given
-    // values.
-    var that = this;
-    this.loadRules(true, function () {
-      if (
-        that.$route.query.uri ||
-        that.$route.query.method ||
-        that.$route.query.content_id
-      ) {
-        var newRule = Object.assign({}, that.baseRule);
-
-        if (that.$route.query.uri) {
-          newRule.uri = that.$route.query.uri;
-        }
-
-        if (that.$route.query.method) {
-          newRule.method = that.$route.query.method;
-        }
-
-        if (that.$route.query.content_id) {
-          newRule.content_id = parseInt(that.$route.query.content_id);
-        }
-
-        that.selectedRule = newRule;
-        that.isSelectedId = -1;
-      }
-    });
   },
   mounted() {
+   if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      // If a uri and method parameter is given, reset the form and use the given
+      // values.
+      var that = this;
+      this.loadRules(true, function () {
+        if (
+          that.$route.query.uri ||
+          that.$route.query.method ||
+          that.$route.query.content_id
+        ) {
+          var newRule = Object.assign({}, that.baseRule);
+
+          if (that.$route.query.uri) {
+            newRule.uri = that.$route.query.uri;
+          }
+
+          if (that.$route.query.method) {
+            newRule.method = that.$route.query.method;
+          }
+
+          if (that.$route.query.content_id) {
+            newRule.content_id = parseInt(that.$route.query.content_id);
+          }
+
+          that.selectedRule = newRule;
+          that.isSelectedId = -1;
+        }
+      });
+    }
   },
 };
 </script>

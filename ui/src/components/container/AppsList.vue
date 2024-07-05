@@ -1,17 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <form @submit.prevent="performNewSearch()">
-        <span class="p-input-icon-left" style="width: 100%">
-          <i class="pi pi-search" />
-          <InputText
-            @focusin="keyboardDisabled = true"
-            @focusout="keyboardDisabled = false"
-            v-model="query"
-            placeholder="Search"
-          />
-        </span>
-      </form>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="apps.length > 0">
         <thead>
@@ -69,9 +59,11 @@ function dateToString(inDate) {
   return nd.toLocaleString();
 }
 import AppForm from "./AppForm.vue";
+import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
     AppForm,
+    DataSearchBar,
   },
   inject: ["config"],
   emits: ["require-auth"],
@@ -84,6 +76,15 @@ export default {
       limit: 24,
       offset: 0,
       keyboardDisabled: false,
+      searchOptions: new Map([
+        ["id", "The app ID"],
+        ["name", "The name of the app"],
+        ["version", "The version of the app"],
+        ["vendor", "The vendor of the app"],
+        ["link", "A reference link"],
+        ["created_at", "When the app was created in the database"],
+        ["updated_at", "When the app was updated in the database"],
+      ]),
       baseApp: {
         id: 0,
         name: "",
@@ -106,7 +107,8 @@ export default {
         that.setSelectedApp(id);
       });
     },
-    performNewSearch() {
+    performNewSearch(query) {
+      this.query = query;
       this.offset = 0;
       this.loadApps(true, function () {});
     },
@@ -239,13 +241,14 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-    }
-
-    this.loadApps(true, function () {});
   },
   mounted() {
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadApps(true, function () {});
+    }
+
     const that = this;
     window.addEventListener("keyup", function (event) {
       if (that.keyboardDisabled) {

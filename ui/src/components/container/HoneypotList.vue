@@ -1,17 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <form @submit.prevent="performNewSearch()">
-        <span class="p-input-icon-left" style="width: 100%">
-          <i class="pi pi-search" />
-          <InputText
-            @focusin="keyboardDisabled = true"
-            @focusout="keyboardDisabled = false"
-            v-model="query"
-            placeholder="Search"
-          />
-        </span>
-      </form>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="honeypots.length > 0">
         <thead>
@@ -75,9 +65,11 @@ function dateToString(inDate) {
   return nd.toLocaleString();
 }
 import HoneyForm from "./HoneypotForm.vue";
+import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
     HoneyForm,
+    DataSearchBar,
   },
   emits: ["require-auth"],
   inject: ["config"],
@@ -89,6 +81,7 @@ export default {
       query: null,
       limit: 24,
       offset: 0,
+      selectedHoneypot: null,
       keyboardDisabled: false,
       base: {
         id: 0,
@@ -97,6 +90,15 @@ export default {
           last_checkin: "",
         },
       },
+      searchOptions: new Map([
+        ["id", "The ID of the honeypot"],
+        ["ip", "The IP of the honeypot"],
+        ["created_at", "Date when the honeypot was created (first seen)"],
+        ["updated_at", "Date when the honeypot was updated"],
+        ["last_checkin", "Date when the honeypot was last seen"],
+        ["auth_token", "The authentication token"],
+        ["default_content_id", "The default content ID"],
+      ]),
     };
   },
   methods: {
@@ -110,7 +112,8 @@ export default {
     onDeleteHoneypot() {
       this.loadHoneypots(true, function () {});
     },
-    performNewSearch() {
+    performNewSearch(query) {
+      this.query = query;
       this.offset = 0;
       this.loadHoneypots(true, function () {});
     },
@@ -247,29 +250,13 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
-
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-    }
-
-    this.loadHoneypots(true, function(){});
   },
   mounted() {
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrev();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNext();
-        }
-      }
-    });
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadHoneypots(true, function(){});
+    }
   },
 };
 </script>

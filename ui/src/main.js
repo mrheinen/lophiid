@@ -66,6 +66,9 @@ import CheckBox from './../node_modules/primevue/checkbox';
 import MenuBar from './../node_modules/primevue/menubar';
 import MultiSelect from './../node_modules/primevue/multiselect';
 import ColorPicker from './../node_modules/primevue/colorpicker';
+import OverlayPanel from './../node_modules/primevue/overlaypanel';
+import IconField from './../node_modules/primevue/iconfield';
+import InputIcon from './../node_modules/primevue/inputicon';
 
 import ConfirmationService from './../node_modules/primevue/confirmationservice';
 
@@ -89,6 +92,9 @@ app.component('CheckBox', CheckBox);
 app.component('MultiSelect', MultiSelect);
 app.component('MenuBar', MenuBar);
 app.component('ColorPicker', ColorPicker);
+app.component('OverlayPanel', OverlayPanel);
+app.component('IconField', IconField);
+app.component('InputIcon', InputIcon);
 app.use(hljsVuePlugin);
 app.use(router);
 app.use(store);

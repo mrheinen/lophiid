@@ -1,22 +1,12 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <form @submit.prevent="performNewSearch()">
-        <span class="p-input-icon-left" style="width: 100%">
-          <i class="pi pi-search" />
-          <InputText
-            @focusin="keyboardDisabled = true"
-            @focusout="keyboardDisabled = false"
-            v-model="query"
-            placeholder="Search"
-          />
-        </span>
-      </form>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="queries.length > 0">
         <thead>
           <th>ID</th>
-          <th>First seen</th>
+          <th>Created at</th>
           <th>Last ran</th>
           <th>Count</th>
           <th>Query</th>
@@ -71,9 +61,11 @@ function dateToString(inDate) {
   return nd.toLocaleString();
 }
 import QueryForm from "./QueryForm.vue";
+import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
     QueryForm,
+    DataSearchBar,
   },
   emits: ["require-auth"],
   inject: ["config"],
@@ -94,6 +86,14 @@ export default {
           last_ran_at: "",
         },
       },
+      searchOptions: new Map([
+        ["id", "The ID of the query"],
+        ["description", "Description of the query"],
+        ["created_at", "Date and time when the query was created"],
+        ["updated_at", "Date and time when the query was updated"],
+        ["last_ran_at", "Date and time when the query last ran"],
+        ["record_count", "Number of matches on query"],
+      ]),
     };
   },
   methods: {
@@ -106,7 +106,8 @@ export default {
     onDeleteQuery() {
       this.loadQueries(true, function () {});
     },
-    performNewSearch() {
+    performNewSearch(query) {
+      this.query = query;
       this.offset = 0;
       this.loadQueries(true, function () {});
     },
@@ -245,14 +246,13 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
-
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-    }
-
-    this.loadQueries(true, function () {});
   },
   mounted() {
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadQueries(true, function () {});
+    }
     const that = this;
     window.addEventListener("keyup", function (event) {
       if (that.keyboardDisabled) {

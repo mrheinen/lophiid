@@ -1,17 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <form @submit.prevent="performNewSearch()">
-        <span class="p-input-icon-left" style="width: 100%">
-          <i class="pi pi-search" />
-          <InputText
-            @focusin="keyboardDisabled = true"
-            @focusout="keyboardDisabled = false"
-            v-model="query"
-            placeholder="Search"
-          />
-        </span>
-      </form>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="tags.length > 0">
         <thead>
@@ -67,9 +57,11 @@ function dateToString(inDate) {
   return nd.toLocaleString();
 }
 import TagForm from "./TagForm.vue";
+import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
     TagForm,
+    DataSearchBar,
   },
   emits: ["require-auth"],
   inject: ["config"],
@@ -82,6 +74,12 @@ export default {
       limit: 24,
       offset: 0,
       keyboardDisabled: false,
+      searchOptions: new Map([
+        ["id", "The tag ID"],
+        ["name", "The tag name"],
+        ["color_html", "The HTML color"],
+        ["description", "The tag description"],
+      ]),
       baseTag: {
         id: 0,
         query: "",
@@ -102,7 +100,8 @@ export default {
     onDeleteTag() {
       this.loadTags(true, function () {});
     },
-    performNewSearch() {
+    performNewSearch(query) {
+      this.query = query;
       this.offset = 0;
       this.loadTags(true, function () {});
     },
@@ -238,14 +237,15 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
-
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-    }
-
-    this.loadTags(true, function () {});
   },
   mounted() {
+
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadTags(true, function () {});
+    }
+
     const that = this;
     window.addEventListener("keyup", function (event) {
       if (that.keyboardDisabled) {

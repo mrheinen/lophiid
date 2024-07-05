@@ -1,17 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px;">
-      <form @submit.prevent="performNewSearch()">
-        <span class="p-input-icon-left" style="width: 100%">
-          <i class="pi pi-search" />
-          <InputText
-            @focusin="keyboardDisabled = true"
-            @focusout="keyboardDisabled = false"
-            v-model="query"
-            placeholder="Search"
-          />
-        </span>
-      </form>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="contents.length > 0">
         <thead>
@@ -85,9 +75,11 @@ function dateToString(inDate) {
   return nd.toLocaleString();
 }
 import ContentForm from "./ContentForm.vue";
+import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
     ContentForm,
+    DataSearchBar,
   },
   inject: ["config"],
   emits: ["require-auth"],
@@ -99,6 +91,17 @@ export default {
       limit: 24,
       offset: 0,
       query: null,
+      searchOptions: new Map([
+        ["id", "The ID of the content"],
+        ["description", "The content description"],
+        ["content_type", "The content type"],
+        ["server", "The HTTP server"],
+        ["status_code", "The HTTP status code"],
+        ["created_at", "The creation date"],
+        ["data", "The content data"],
+        ["script", "The content script (if any)"],
+
+      ]),
       keyboardDisabled: false,
       baseContent: {
         id: 0,
@@ -112,7 +115,8 @@ export default {
     };
   },
   methods: {
-    performNewSearch() {
+    performNewSearch(query) {
+      this.query = query;
       this.offset = 0;
       this.loadContents(true, function(){});
     },
@@ -264,13 +268,15 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
-
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-    }
-    this.loadContents(true, function(){})
   },
   mounted() {
+
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadContents(true, function(){})
+    }
+
     const that = this;
     window.addEventListener("keyup", function (event) {
       if (that.keyboardDisabled) {
