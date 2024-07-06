@@ -57,10 +57,10 @@
     </FieldSet>
   </div>
    <br />
-  <P0fResultCard v-if="localRequest.p0f_result" v-id="localRequest.p0f" label="p0f result"
+  <P0fResultCard v-if="localRequest.p0f_result" label="p0f result"
     :p0f="localRequest.p0f_result"></P0fResultCard>
   <br />
-  <RawHttpCard v-id="localRequest.raw" label="HTTP request"
+  <RawHttpCard v-if="localRequest.raw" label="HTTP request"
     :data="localRequest.raw"></RawHttpCard>
   <br />
 

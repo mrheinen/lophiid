@@ -253,21 +253,6 @@ export default {
     } else {
       this.loadQueries(true, function () {});
     }
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrev();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNext();
-        }
-      }
-    });
   },
 };
 </script>

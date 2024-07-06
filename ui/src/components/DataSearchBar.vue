@@ -34,7 +34,6 @@ export default {
   methods: {
     setQuery(query) {
       this.localQuery = query;
-      this.$emit('search', this.localQuery);
     },
     showPopover(event) {
       this.$refs.spop.show(event);

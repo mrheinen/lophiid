@@ -343,6 +343,9 @@ func (s *BackendServer) SendSourceContext(ctx context.Context, req *backend_serv
 	return ret, nil
 }
 
+// HandleP0fResult checks the database to see if a p0f result with a max age of
+// 24 hours is already present and inserts it if not. Returns a bool indicating
+// whether the record was added.
 func (s *BackendServer) HandleP0fResult(ip string, res *backend_service.P0FResult) (bool, error) {
 	pr := database.P0fResult{
 		IP:               ip,
@@ -363,27 +366,21 @@ func (s *BackendServer) HandleP0fResult(ip string, res *backend_service.P0FResul
 		Language:         res.GetLanguage(),
 	}
 
-	existingPr, err := s.dbClient.GetP0fResultByIP(ip)
-	if err != nil {
-		if !errors.Is(err, ksql.ErrRecordNotFound) {
-			return false, fmt.Errorf("while fetching p0f result: %w", err)
-		}
-
-		if _, err = s.dbClient.Insert(&pr); err != nil {
-			return false, fmt.Errorf("while inserting p0f result: %w (result: %+v)", err, pr)
-		}
-
-		return true, nil
+	// Only check the last 24 hours as all other results are considered stale. If
+	// there is no entry then we will add a new one.
+	_, err := s.dbClient.GetP0fResultByIP(ip, " AND created_at BETWEEN NOW() - INTERVAL '24 HOURS' AND NOW()")
+	if err == nil {
+		return false, nil
 	}
 
-	// If the result is older than 24 hours, we will add the new entry.
-	if time.Since(existingPr.CreatedAt).Hours() > 24 {
-		if _, err = s.dbClient.Insert(&pr); err != nil {
-			return false, fmt.Errorf("while inserting p0f result: %w (result: %+v)", err, pr)
-		}
-		return true, nil
+	if !errors.Is(err, ksql.ErrRecordNotFound) {
+		return false, fmt.Errorf("while fetching p0f result: %w", err)
 	}
-	return false, nil
+
+	if _, err = s.dbClient.Insert(&pr); err != nil {
+		return false, fmt.Errorf("while inserting p0f result: %w (result: %+v)", err, pr)
+	}
+	return true, nil
 }
 
 func HasParseableContent(fileUrl string, mime string) bool {

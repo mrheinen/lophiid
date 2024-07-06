@@ -328,3 +328,7 @@ CREATE INDEX request_id_tag_per_request_idx ON tag_per_request (
 CREATE INDEX ip_per_whois_idx ON whois (
   ip
 );
+
+CREATE INDEX request_id_per_request_metdata ON request_metadata (
+  request_id DESC
+);

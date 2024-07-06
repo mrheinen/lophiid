@@ -276,7 +276,7 @@ type DatabaseClient interface {
 	GetDownloadBySum(sha256sum string) (Download, error)
 	GetHoneypotByIP(ip string) (Honeypot, error)
 	GetWhoisByIP(ip string) (Whois, error)
-	GetP0fResultByIP(ip string) (P0fResult, error)
+	GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error)
 	GetHoneypots() ([]Honeypot, error)
 	GetRequests() ([]Request, error)
 	GetRequestsForSourceIP(ip string) ([]Request, error)
@@ -457,9 +457,9 @@ func (d *KSQLClient) GetWhoisByIP(ip string) (Whois, error) {
 	return hp, err
 }
 
-func (d *KSQLClient) GetP0fResultByIP(ip string) (P0fResult, error) {
+func (d *KSQLClient) GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error) {
 	hp := P0fResult{}
-	err := d.db.QueryOne(d.ctx, &hp, "FROM p0f_result WHERE ip = $1", ip)
+	err := d.db.QueryOne(d.ctx, &hp, fmt.Sprintf("FROM p0f_result WHERE ip = $1 %s", querySuffix), ip)
 	return hp, err
 }
 
@@ -530,7 +530,7 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 		// one (empty)
 		pr, ok := uniqueIPs[req.SourceIP]
 		if !ok {
-			pr, err = d.GetP0fResultByIP(req.SourceIP)
+			pr, err = d.GetP0fResultByIP(req.SourceIP, "LIMIT 1")
 			if err == nil {
 				req.P0fResult = pr
 			} else {
@@ -830,6 +830,7 @@ type FakeDatabaseClient struct {
 	WhoisErrorToReturn     error
 	LastDataModelSeen      interface{}
 	P0fResultToReturn      P0fResult
+	P0fErrorToReturn				error
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -944,6 +945,6 @@ func (f *FakeDatabaseClient) GetTagsPerRequestForRequestID(id int64) ([]TagPerRe
 func (f *FakeDatabaseClient) GetTagPerRequestFullForRequest(id int64) ([]TagPerRequestFull, error) {
 	return []TagPerRequestFull{}, nil
 }
-func (f *FakeDatabaseClient) GetP0fResultByIP(ip string) (P0fResult, error) {
-	return f.P0fResultToReturn, f.ErrorToReturn
+func (f *FakeDatabaseClient) GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error) {
+	return f.P0fResultToReturn, f.P0fErrorToReturn
 }

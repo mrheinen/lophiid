@@ -212,9 +212,10 @@ export default {
       let link =
         this.config.requestsLink + "/" + this.offset + "/" + this.limit;
       if (this.query) {
-        link += "?q=" + this.query;
+        link += "?q=" + encodeURIComponent(this.query);
       }
 
+      console.log(link);
       return link;
     },
     getFreshRequestLink() {
@@ -402,14 +403,13 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
-
   },
   mounted() {
     if (this.$route.query.q) {
+      this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
-    } else {
-      this.loadRequests(true);
     }
+    this.loadRequests(true);
   },
 };
 </script>

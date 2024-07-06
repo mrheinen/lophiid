@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/vingarcia/ksql"
 )
 
 func GetContextWithAuthMetadata() context.Context {
@@ -821,6 +822,7 @@ func TestHandleP0fResult(t *testing.T) {
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, "")
 
 	// Insert a generic one. Should succeed
+	fdbc.P0fErrorToReturn = ksql.ErrRecordNotFound
 	hasInserted, err := b.HandleP0fResult("1.1.1.1", &backend_service.P0FResult{})
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
@@ -835,6 +837,7 @@ func TestHandleP0fResult(t *testing.T) {
 	fdbc.P0fResultToReturn = database.P0fResult{
 		CreatedAt: time.Now(),
 	}
+	fdbc.P0fErrorToReturn = nil
 
 	hasInserted, err = b.HandleP0fResult("1.1.1.1", &backend_service.P0FResult{})
 	if err != nil {

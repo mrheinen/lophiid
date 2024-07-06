@@ -137,6 +137,7 @@ export default {
             this.$toast.error(response.message);
           } else {
             if (response.data) {
+              this.tags = response.data;
               response.data.forEach((tag) => {
                 this.tagPerIdMap.set(tag.id, tag);
               })
