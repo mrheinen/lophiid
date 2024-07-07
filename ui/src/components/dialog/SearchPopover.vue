@@ -12,12 +12,14 @@
         <tr class="tabletr">
           <th>Keyword</th>
           <th>Description</th>
+          <th>Type</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="[keyword, desc] in options" :key="keyword">
+        <tr v-for="[keyword, entry] in options" :key="keyword">
           <th>{{ keyword }}</th>
-          <td>{{ desc }}</td>
+          <td>{{ entry.field_doc }}</td>
+          <td>{{ entry.field_type }}</td>
         </tr>
       </tbody>
     </table>

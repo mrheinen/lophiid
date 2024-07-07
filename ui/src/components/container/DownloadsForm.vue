@@ -233,4 +233,9 @@ pre.whois {
 table th {
   padding-right: 13px;
 }
+table td {
+  padding-right: 13px;
+}
+
+
 </style>

@@ -313,10 +313,15 @@ func getDatamodelDatabaseFields(datamodel interface{}) []string {
 	return ret
 }
 
+type FieldDocEntry struct {
+	FieldType string `json:"field_type"`
+	FieldDoc  string `json:"field_doc"`
+}
+
 // GetDatamodelDocumentationMap returns a map with the field name as key and
 // field documentation as value.
-func GetDatamodelDocumentationMap(datamodel interface{}) map[string]string {
-	ret := make(map[string]string)
+func GetDatamodelDocumentationMap(datamodel interface{}) map[string]FieldDocEntry {
+	ret := make(map[string]FieldDocEntry)
 	t := reflect.TypeOf(datamodel)
 	for i := 0; i < t.NumField(); i++ {
 		docValue := t.Field(i).Tag.Get("doc")
@@ -327,10 +332,14 @@ func GetDatamodelDocumentationMap(datamodel interface{}) map[string]string {
 				fieldValue = fieldValue[:idx]
 			}
 
+			fieldType := ""
 			if t.Field(i).Type.Name() != "" {
-				ret[fieldValue] = fmt.Sprintf("%s (%s)", docValue, t.Field(i).Type.Name())
-			} else {
-				ret[fieldValue] = docValue
+				fieldType = t.Field(i).Type.Name()
+			}
+
+			ret[fieldValue] = FieldDocEntry{
+				FieldType: fieldType,
+				FieldDoc:  docValue,
 			}
 		}
 	}

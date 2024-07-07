@@ -1015,7 +1015,7 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 
 func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Request) {
 	modelName := strings.ToLower(req.URL.Query().Get("model"))
-	var retval map[string]string
+	var retval map[string]database.FieldDocEntry
 	switch modelName {
 	case "content":
 		retval = database.GetDatamodelDocumentationMap(database.Content{})
