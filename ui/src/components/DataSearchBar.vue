@@ -12,6 +12,7 @@
           <SearchPopover
             ref="spop"
             :options="options"
+            :modelname="modelname"
           >
           </SearchPopover>
       </form>
@@ -24,7 +25,7 @@ export default {
   components: {
     SearchPopover,
   },
-  props: ["options", "query"],
+  props: ["options", "query", "modelname"],
   emits: ["search"],
   data() {
     return {

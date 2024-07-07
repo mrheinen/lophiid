@@ -1,19 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <form @submit.prevent="performNewSearch()">
-        <span style="width: 100%">
-          <IconField iconPosition="left">
-            <InputIcon class="pi pi-search"> </InputIcon>
-            <InputText
-              @focusin="keyboardDisabled = true"
-              @focusout="keyboardDisabled = false"
-              v-model="query"
-              placeholder="Search"
-            />
-          </IconField>
-        </span>
-      </form>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="download"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="downloads.length > 0">
         <thead>
@@ -111,9 +99,11 @@ function dateToString(inDate) {
   return nd.toLocaleString();
 }
 import DownloadsForm from "./DownloadsForm.vue";
+import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
     DownloadsForm,
+    DataSearchBar,
   },
   inject: ["config"],
   emits: ["require-auth"],
@@ -139,7 +129,8 @@ export default {
     };
   },
   methods: {
-    performNewSearch() {
+    performNewSearch(query) {
+      this.query = query;
       this.offset = 0;
       this.loadDownloads(true);
     },
@@ -341,28 +332,12 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-    }
-
-    this.loadDownloads(true);
   },
   mounted() {
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrev();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNext();
-        }
-      }
-    });
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    }
+    this.loadDownloads(true);
   },
 };
 </script>

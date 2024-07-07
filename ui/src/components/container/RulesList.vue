@@ -16,7 +16,7 @@
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
 
-      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="contentrule"></DataSearchBar>
 
       <div>
         <table class="table is-hoverable" v-if="rules.length > 0">
@@ -152,19 +152,6 @@ export default {
       selectedAppId: 0,
       contentFormVisible: false,
       appFormVisible: false,
-      searchOptions: new Map([
-        ["id", "The rule ID"],
-        ["uri", "The URI matching value of the rule"],
-        ["uri_matching", "The URI matching method (e.g. 'exact')"],
-        ["body", "The body matching value of the rule"],
-        ["method", "The HTTP method of the request (e.g. 'GET')"],
-        ["port", "The HTTP port"],
-        ["app_id", "The ID of the application for which the rule it"],
-        ["content_id", "The ID of the content served by this rule"],
-        ["alert", "A bool (0 or 1) whether alerting is on"],
-        ["created_at", "Date and time when the rule was created"],
-        ["updated_at", "Date and time when the rule was updated"],
-      ]),
       baseRule: {
         host: "",
         uri_matching: "exact",

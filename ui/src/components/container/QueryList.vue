@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="storedquery"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="queries.length > 0">
         <thead>
@@ -86,14 +86,6 @@ export default {
           last_ran_at: "",
         },
       },
-      searchOptions: new Map([
-        ["id", "The ID of the query"],
-        ["description", "Description of the query"],
-        ["created_at", "Date and time when the query was created"],
-        ["updated_at", "Date and time when the query was updated"],
-        ["last_ran_at", "Date and time when the query last ran"],
-        ["record_count", "Number of matches on query"],
-      ]),
     };
   },
   methods: {
@@ -250,9 +242,8 @@ export default {
   mounted() {
     if (this.$route.query.q) {
       this.$refs.searchBar.setQuery(this.$route.query.q);
-    } else {
-      this.loadQueries(true, function () {});
     }
+    this.loadQueries(true, function () {});
   },
 };
 </script>

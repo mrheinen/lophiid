@@ -33,68 +33,68 @@ type DataModel interface {
 }
 
 type Content struct {
-	ID          int64                    `ksql:"id,skipInserts" json:"id"`
-	Data        []byte                   `ksql:"data"           json:"data"`
-	Name        string                   `ksql:"name"           json:"name"`
-	Description string                   `ksql:"description"    json:"description"`
-	ContentType string                   `ksql:"content_type"   json:"content_type"`
-	Server      string                   `ksql:"server"         json:"server"`
+	ID          int64                    `ksql:"id,skipInserts" json:"id"           doc:"The ID of the content"`
+	Data        []byte                   `ksql:"data"           json:"data"         doc:"The content data itself"`
+	Name        string                   `ksql:"name"           json:"name"         doc:"The content name"`
+	Description string                   `ksql:"description"    json:"description"  doc:"The content description"`
+	ContentType string                   `ksql:"content_type"   json:"content_type" doc:"The HTTP content-type"`
+	Server      string                   `ksql:"server"         json:"server"       doc:"The HTTP server with which the content is served"`
 	IsDefault   bool                     `ksql:"is_default"     json:"is_default"`
-	StatusCode  string                   `ksql:"status_code"    json:"status_code"`
-	Script      string                   `ksql:"script"         json:"script"`
-	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"`
-	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at"`
+	StatusCode  string                   `ksql:"status_code"    json:"status_code"  doc:"The HTTP status code"`
+	Script      string                   `ksql:"script"         json:"script"       doc:"The content script"`
+	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"      doc:"The content HTTP headers"`
+	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"time.Time of creation"`
+	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at" doc:"time.Time of last update"`
 }
 
 func (c *Content) ModelID() int64 { return c.ID }
 
 type ContentRule struct {
-	ID           int64     `ksql:"id,skipInserts" json:"id"`
+	ID           int64     `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
 	Host         string    `ksql:"host" json:"host"`
-	Uri          string    `ksql:"uri" json:"uri"`
-	UriMatching  string    `ksql:"uri_matching" json:"uri_matching"`
-	Body         string    `ksql:"body" json:"body"`
-	BodyMatching string    `ksql:"body_matching" json:"body_matching"`
-	Method       string    `ksql:"method" json:"method"`
-	ContentID    int64     `ksql:"content_id" json:"content_id"`
-	Port         int64     `ksql:"port" json:"port"`
-	AppID        int64     `ksql:"app_id" json:"app_id"`
-	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
-	Alert        bool      `ksql:"alert" json:"alert"`
+	Uri          string    `ksql:"uri" json:"uri"           doc:"The URI matching string"`
+	Body         string    `ksql:"body" json:"body"         doc:"The body matching string"`
+	Method       string    `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
+	Port         int64     `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
+	UriMatching  string    `ksql:"uri_matching" json:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
+	BodyMatching string    `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
+	ContentID    int64     `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
+	AppID        int64     `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
+	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
+	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
+	Alert        bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
 }
 
 func (c *ContentRule) ModelID() int64 { return c.ID }
 
 type Request struct {
-	ID             int64                    `ksql:"id,skipInserts" json:"id"`
-	Proto          string                   `ksql:"proto" json:"proto"`
-	Host           string                   `ksql:"host" json:"host"`
-	Port           int64                    `ksql:"port" json:"port"`
-	Method         string                   `ksql:"method" json:"method"`
-	Uri            string                   `ksql:"uri" json:"uri"`
-	Path           string                   `ksql:"path" json:"path"`
-	Query          string                   `ksql:"query" json:"query"`
-	Referer        string                   `ksql:"referer" json:"referer"`
-	ContentType    string                   `ksql:"content_type" json:"content_type"`
-	ContentLength  int64                    `ksql:"content_length" json:"content_length"`
-	UserAgent      string                   `ksql:"user_agent" json:"user_agent"`
-	Headers        pgtype.FlatArray[string] `ksql:"headers" json:"headers"`
-	Body           []byte                   `ksql:"body" json:"body"`
-	HoneypotIP     string                   `ksql:"honeypot_ip" json:"honeypot_ip"`
-	SourceIP       string                   `ksql:"source_ip" json:"source_ip"`
-	SourcePort     int64                    `ksql:"source_port" json:"source_port"`
-	Raw            string                   `ksql:"raw" json:"raw"`
-	RawResponse    string                   `ksql:"raw_response" json:"raw_response"`
-	TimeReceived   time.Time                `ksql:"time_received,skipUpdates" json:"time_received"`
-	CreatedAt      time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt      time.Time                `ksql:"updated_at,timeNowUTC" json:"updated_at"`
-	ContentID      int64                    `ksql:"content_id" json:"content_id"`
-	ContentDynamic bool                     `ksql:"content_dynamic" json:"content_dynamic"`
-	RuleID         int64                    `ksql:"rule_id" json:"rule_id"`
-	Starred        bool                     `ksql:"starred" json:"starred"`
-	BaseHash       string                   `ksql:"base_hash" json:"base_hash"`
+	ID             int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the request"`
+	Proto          string                   `ksql:"proto" json:"proto" doc:"The HTTP protocol (e.g. HTTP/1.0)"`
+	Host           string                   `ksql:"host" json:"host" doc:"The HTTP Host header value"`
+	Port           int64                    `ksql:"port" json:"port" doc:"The HTTP server port"`
+	Method         string                   `ksql:"method" json:"method" doc:"The HTTP method (e.g. GET, POST, PUT, DELETE, ...)"`
+	Uri            string                   `ksql:"uri" json:"uri" doc:"The request URI"`
+	Path           string                   `ksql:"path" json:"path" doc:"The URL path"`
+	Query          string                   `ksql:"query" json:"query" doc:"The query section of the URL"`
+	Referer        string                   `ksql:"referer" json:"referer" doc:"The referer header value"`
+	ContentType    string                   `ksql:"content_type" json:"content_type" doc:"The Content-Type header value"`
+	ContentLength  int64                    `ksql:"content_length" json:"content_length" doc:"The Content-Length header value"`
+	UserAgent      string                   `ksql:"user_agent" json:"user_agent" doc:"The User-Agent value"`
+	Headers        pgtype.FlatArray[string] `ksql:"headers" json:"headers" doc:"The client HTTP headers"`
+	Body           []byte                   `ksql:"body" json:"body" doc:"The request body"`
+	HoneypotIP     string                   `ksql:"honeypot_ip" json:"honeypot_ip" doc:"The honeypot IP that received the request"`
+	SourceIP       string                   `ksql:"source_ip" json:"source_ip" doc:"The HTTP client source IP"`
+	SourcePort     int64                    `ksql:"source_port" json:"source_port" doc:"The HTTP client source port"`
+	Raw            string                   `ksql:"raw" json:"raw" doc:"The raw HTTP request"`
+	RawResponse    string                   `ksql:"raw_response" json:"raw_response" doc:"The raw HTTP response (only used for scripted Content)"`
+	TimeReceived   time.Time                `ksql:"time_received,skipUpdates" json:"time_received" doc:"The date and time the honeypot received the request"`
+	CreatedAt      time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"The date and time of creation"`
+	UpdatedAt      time.Time                `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"The date and time of the last update"`
+	ContentID      int64                    `ksql:"content_id" json:"content_id" doc:"The Content ID that was served"`
+	ContentDynamic bool                     `ksql:"content_dynamic" json:"content_dynamic" doc:"A bool indicating if the Content is dynamic (script based)"`
+	RuleID         int64                    `ksql:"rule_id" json:"rule_id" doc:"The ID of the rule that matched this request"`
+	Starred        bool                     `ksql:"starred" json:"starred" doc:"A bool if the request is starred"`
+	BaseHash       string                   `ksql:"base_hash" json:"base_hash" doc:"A base hash to find similar requests"`
 	Tags           []TagPerRequestFull      `json:"tags"`
 	P0fResult      P0fResult                `json:"p0f_result"`
 }
@@ -122,59 +122,59 @@ type RequestSourceContent struct {
 }
 
 type Honeypot struct {
-	ID                   int64     `ksql:"id,skipInserts" json:"id"`
-	IP                   string    `ksql:"ip" json:"ip"`
-	AuthToken            string    `ksql:"auth_token" json:"auth_token"`
-	CreatedAt            time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt            time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
-	LastCheckin          time.Time `ksql:"last_checkin,skipInserts,skipUpdates" json:"last_checkin"`
-	DefaultContentID     int64     `ksql:"default_content_id" json:"default_content_id"`
+	ID                   int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the honeypot"`
+	IP                   string    `ksql:"ip" json:"ip" doc:"The IP of the honeypot (v4 or v6)"`
+	AuthToken            string    `ksql:"auth_token" json:"auth_token" doc:"The authentication token"`
+	CreatedAt            time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
+	UpdatedAt            time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
+	LastCheckin          time.Time `ksql:"last_checkin,skipInserts,skipUpdates" json:"last_checkin" doc:"Date and time of last seen"`
+	DefaultContentID     int64     `ksql:"default_content_id" json:"default_content_id" doc:"The Content ID that is served by default"`
 	RequestsCountLastDay int64     `json:"request_count_last_day"`
 }
 
 func (c *Honeypot) ModelID() int64 { return c.ID }
 
 type Application struct {
-	ID        int64     `ksql:"id,skipInserts" json:"id"`
-	Name      string    `ksql:"name" json:"name"`
-	Version   string    `ksql:"version" json:"version"`
-	Vendor    string    `ksql:"vendor" json:"vendor"`
-	OS        string    `ksql:"os" json:"os"`
-	Link      string    `ksql:"link" json:"link"`
-	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	ID        int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the application"`
+	Name      string    `ksql:"name" json:"name" doc:"The application name"`
+	Version   string    `ksql:"version" json:"version" doc:"The application version"`
+	Vendor    string    `ksql:"vendor" json:"vendor" doc:"The application vendor"`
+	OS        string    `ksql:"os" json:"os" doc:"The OS on which the application runs"`
+	Link      string    `ksql:"link" json:"link" doc:"A reference link"`
+	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
+	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
 }
 
 func (c *Application) ModelID() int64 { return c.ID }
 
 type Download struct {
-	ID                      int64                    `ksql:"id,skipInserts" json:"id"`
-	RequestID               int64                    `ksql:"request_id" json:"request_id"`
-	Size                    int64                    `ksql:"size" json:"size"`
-	Port                    int64                    `ksql:"port" json:"port"`
-	CreatedAt               time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	LastSeenAt              time.Time                `ksql:"last_seen_at" json:"last_seen_at"`
-	ContentType             string                   `ksql:"content_type" json:"content_type"`
-	DetectedContentType     string                   `ksql:"detected_content_type" json:"detected_content_type"`
-	OriginalUrl             string                   `ksql:"original_url" json:"original_url"`
-	UsedUrl                 string                   `ksql:"used_url" json:"used_url"`
-	IP                      string                   `ksql:"ip" json:"ip"`
-	HoneypotIP              string                   `ksql:"honeypot_ip" json:"honeypot_ip"`
-	SHA256sum               string                   `ksql:"sha256sum" json:"sha256sum"`
-	Host                    string                   `ksql:"host" json:"host"`
-	FileLocation            string                   `ksql:"file_location" json:"file_location"`
-	TimesSeen               int64                    `ksql:"times_seen" json:"times_seen"`
-	LastRequestID           int64                    `ksql:"last_request_id" json:"last_request_id"`
-	RawHttpResponse         string                   `ksql:"raw_http_response" json:"raw_http_response"`
-	VTURLAnalysisID         string                   `ksql:"vt_url_analysis_id" json:"vt_url_analysis_id"`
-	VTFileAnalysisID        string                   `ksql:"vt_file_analysis_id" json:"vt_file_analysis_id"`
+	ID                      int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the download"`
+	RequestID               int64                    `ksql:"request_id" json:"request_id" doc:"ID of the request where the download originated from"`
+	Size                    int64                    `ksql:"size" json:"size" doc:"Size in bytes of the download"`
+	Port                    int64                    `ksql:"port" json:"port" doc:"Server port"`
+	CreatedAt               time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
+	LastSeenAt              time.Time                `ksql:"last_seen_at" json:"last_seen_at" doc:"Date and time of last update"`
+	ContentType             string                   `ksql:"content_type" json:"content_type" doc:"The content type (mime) of the download (reported by server)"`
+	DetectedContentType     string                   `ksql:"detected_content_type" json:"detected_content_type" doc:"The content type (mime) as detected"`
+	OriginalUrl             string                   `ksql:"original_url" json:"original_url" doc:"Original download URL"`
+	UsedUrl                 string                   `ksql:"used_url" json:"used_url" doc:"Actually used download URL"`
+	IP                      string                   `ksql:"ip" json:"ip" doc:"Download server IP"`
+	HoneypotIP              string                   `ksql:"honeypot_ip" json:"honeypot_ip" doc:"Honeypot IP used for download"`
+	SHA256sum               string                   `ksql:"sha256sum" json:"sha256sum" doc:"SHA256 sum of the download"`
+	Host                    string                   `ksql:"host" json:"host" doc:"The Host header value used in downloading"`
+	FileLocation            string                   `ksql:"file_location" json:"file_location" doc:"The file location of the download"`
+	TimesSeen               int64                    `ksql:"times_seen" json:"times_seen" doc:"How often this was seen"`
+	LastRequestID           int64                    `ksql:"last_request_id" json:"last_request_id" doc:"The request ID of the last request with this download"`
+	RawHttpResponse         string                   `ksql:"raw_http_response" json:"raw_http_response" doc:"The HTTP response of the download server"`
+	VTURLAnalysisID         string                   `ksql:"vt_url_analysis_id" json:"vt_url_analysis_id" doc:"The virus total URL analysis ID"`
+	VTFileAnalysisID        string                   `ksql:"vt_file_analysis_id" json:"vt_file_analysis_id" doc:"The virus total file analysis ID"`
 	VTFileAnalysisSubmitted bool                     `ksql:"vt_file_analysis_submitted" json:"vt_file_analysis_submitted"`
 	VTFileAnalysisDone      bool                     `ksql:"vt_file_analysis_done" json:"vt_file_analysis_done"`
 	VTFileAnalysisResult    pgtype.FlatArray[string] `ksql:"vt_file_analysis_result" json:"vt_file_analysis_result"`
-	VTAnalysisHarmless      int64                    `ksql:"vt_analysis_harmless" json:"vt_analysis_harmless"`
-	VTAnalysisMalicious     int64                    `ksql:"vt_analysis_malicious" json:"vt_analysis_malicious"`
-	VTAnalysisSuspicious    int64                    `ksql:"vt_analysis_suspicious" json:"vt_analysis_suspicious"`
-	VTAnalysisUndetected    int64                    `ksql:"vt_analysis_undetected" json:"vt_analysis_undetected"`
+	VTAnalysisHarmless      int64                    `ksql:"vt_analysis_harmless" json:"vt_analysis_harmless" doc:"Virus total results marked harmless"`
+	VTAnalysisMalicious     int64                    `ksql:"vt_analysis_malicious" json:"vt_analysis_malicious" doc:"Virus total results marked malicious"`
+	VTAnalysisSuspicious    int64                    `ksql:"vt_analysis_suspicious" json:"vt_analysis_suspicious" doc:"Virus total results marked suspicious"`
+	VTAnalysisUndetected    int64                    `ksql:"vt_analysis_undetected" json:"vt_analysis_undetected" doc:"Virus total results marked undetected"`
 	VTAnalysisTimeout       int64                    `ksql:"vt_analysis_timeout" json:"vt_analysis_timeout"`
 }
 
@@ -215,12 +215,12 @@ type P0fResult struct {
 func (c *P0fResult) ModelID() int64 { return c.ID }
 
 type StoredQuery struct {
-	ID          int64         `ksql:"id,skipInserts" json:"id"`
-	Query       string        `ksql:"query" json:"query"`
-	Description string        `ksql:"description" json:"description"`
-	CreatedAt   time.Time     `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt   time.Time     `ksql:"updated_at,timeNowUTC" json:"updated_at"`
-	LastRanAt   time.Time     `ksql:"last_ran_at" json:"last_ran_at"`
+	ID          int64         `ksql:"id,skipInserts" json:"id" doc:"The ID of the query"`
+	Query       string        `ksql:"query" json:"query" doc:"The query itself"`
+	Description string        `ksql:"description" json:"description" doc:"A description of the query"`
+	CreatedAt   time.Time     `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
+	UpdatedAt   time.Time     `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
+	LastRanAt   time.Time     `ksql:"last_ran_at" json:"last_ran_at" doc:"Date and time the last time the query ran"`
 	RecordCount int64         `ksql:"record_count" json:"record_count"`
 	TagsToApply []TagPerQuery `json:"tags_to_apply"`
 }
@@ -228,12 +228,12 @@ type StoredQuery struct {
 func (c *StoredQuery) ModelID() int64 { return c.ID }
 
 type Tag struct {
-	ID          int64     `ksql:"id,skipInserts" json:"id"`
-	Name        string    `ksql:"name" json:"name"`
-	ColorHtml   string    `ksql:"color_html" json:"color_html"`
-	Description string    `ksql:"description" json:"description"`
-	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	ID          int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the tag"`
+	Name        string    `ksql:"name" json:"name" doc:"The name of the tag"`
+	ColorHtml   string    `ksql:"color_html" json:"color_html" doc:"HTML color code"`
+	Description string    `ksql:"description" json:"description" doc:"A description of the tag"`
+	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
+	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
 }
 
 func (c *Tag) ModelID() int64 { return c.ID }
@@ -308,6 +308,30 @@ func getDatamodelDatabaseFields(datamodel interface{}) []string {
 				tvalue = tvalue[:idx]
 			}
 			ret = append(ret, tvalue)
+		}
+	}
+	return ret
+}
+
+// GetDatamodelDocumentationMap returns a map with the field name as key and
+// field documentation as value.
+func GetDatamodelDocumentationMap(datamodel interface{}) map[string]string {
+	ret := make(map[string]string)
+	t := reflect.TypeOf(datamodel)
+	for i := 0; i < t.NumField(); i++ {
+		docValue := t.Field(i).Tag.Get("doc")
+		fieldValue := t.Field(i).Tag.Get("ksql")
+		if docValue != "" && fieldValue != "" {
+			idx := strings.Index(fieldValue, ",")
+			if idx != -1 {
+				fieldValue = fieldValue[:idx]
+			}
+
+			if t.Field(i).Type.Name() != "" {
+				ret[fieldValue] = fmt.Sprintf("%s (%s)", docValue, t.Field(i).Type.Name())
+			} else {
+				ret[fieldValue] = docValue
+			}
 		}
 	}
 	return ret
@@ -830,7 +854,7 @@ type FakeDatabaseClient struct {
 	WhoisErrorToReturn     error
 	LastDataModelSeen      interface{}
 	P0fResultToReturn      P0fResult
-	P0fErrorToReturn				error
+	P0fErrorToReturn       error
 }
 
 func (f *FakeDatabaseClient) Close() {}

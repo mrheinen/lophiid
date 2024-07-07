@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="tag"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="tags.length > 0">
         <thead>
@@ -74,12 +74,6 @@ export default {
       limit: 24,
       offset: 0,
       keyboardDisabled: false,
-      searchOptions: new Map([
-        ["id", "The tag ID"],
-        ["name", "The tag name"],
-        ["color_html", "The HTML color"],
-        ["description", "The tag description"],
-      ]),
       baseTag: {
         id: 0,
         query: "",

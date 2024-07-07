@@ -1012,3 +1012,30 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 
 	a.sendStatus(w, "", ResultSuccess, nil)
 }
+
+func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Request) {
+	modelName := strings.ToLower(req.URL.Query().Get("model"))
+	var retval map[string]string
+	switch modelName {
+	case "content":
+		retval = database.GetDatamodelDocumentationMap(database.Content{})
+	case "request":
+		retval = database.GetDatamodelDocumentationMap(database.Request{})
+	case "contentrule":
+		retval = database.GetDatamodelDocumentationMap(database.ContentRule{})
+	case "application":
+		retval = database.GetDatamodelDocumentationMap(database.Application{})
+	case "honeypot":
+		retval = database.GetDatamodelDocumentationMap(database.Honeypot{})
+	case "download":
+		retval = database.GetDatamodelDocumentationMap(database.Download{})
+	case "tag":
+		retval = database.GetDatamodelDocumentationMap(database.Tag{})
+	case "storedquery":
+		retval = database.GetDatamodelDocumentationMap(database.StoredQuery{})
+	default:
+		a.sendStatus(w, "Unknown model", ResultError, nil)
+	}
+
+	a.sendStatus(w, "", ResultSuccess, retval)
+}

@@ -1,7 +1,8 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch"
+      modelname="application"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="apps.length > 0">
         <thead>
@@ -76,15 +77,6 @@ export default {
       limit: 24,
       offset: 0,
       keyboardDisabled: false,
-      searchOptions: new Map([
-        ["id", "The app ID"],
-        ["name", "The name of the app"],
-        ["version", "The version of the app"],
-        ["vendor", "The vendor of the app"],
-        ["link", "A reference link"],
-        ["created_at", "When the app was created in the database"],
-        ["updated_at", "When the app was updated in the database"],
-      ]),
       baseApp: {
         id: 0,
         name: "",

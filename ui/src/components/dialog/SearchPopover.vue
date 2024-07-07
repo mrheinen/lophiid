@@ -1,0 +1,77 @@
+<template>
+  <OverlayPanel ref="op">
+
+  For detailed information on building queries, see the <a
+    href="https://github.com/mrheinen/lophiid/blob/main/SEARCH.md"
+    target="_blank">documentation</a>.
+  <br><br>
+  Below are the keywords specific for this page:
+  <br><br>
+    <table>
+      <thead>
+        <tr class="tabletr">
+          <th>Keyword</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="[keyword, desc] in options" :key="keyword">
+          <th>{{ keyword }}</th>
+          <td>{{ desc }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </OverlayPanel>
+</template>
+
+<script>
+export default {
+  inject: ["config"],
+  props: ["modelname"],
+  data() {
+    return {
+      options: null,
+    }
+  },
+  methods: {
+    show(event) {
+      this.fetchModelDocs(this.modelname);
+      this.$refs.op.show(event);
+    },
+    fetchModelDocs(modelName) {
+      var url = this.config.backendAddress + this.config.datamodelDocLink + '?'
+        + "model=" + modelName;
+      fetch(url, {
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+        },
+      }).then((response) => {
+        return response.json();
+      }).then((response) => {
+        if (!response) {
+          this.$toast.error(response.message);
+        } else {
+          if (response.data != null || response.data.length > 0) {
+            this.options = new Map();
+
+            for (const key in response.data) {
+              this.options.set(key, response.data[key]);
+            }
+
+            console.log(this.options);
+          } else {
+            console.log("got wrong response", response);
+          }
+        }
+      });
+    },
+  }
+}
+</script>
+
+<style scoped>
+
+.tabletr {
+  background-color: lightgray;
+};
+</style>

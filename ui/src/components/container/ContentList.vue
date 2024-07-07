@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px;">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="content"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="contents.length > 0">
         <thead>
@@ -40,7 +40,6 @@
                     class="pi pi-search"
                   ></i>
                 </a>
-
             </td>
           </tr>
         </tbody>
@@ -91,17 +90,6 @@ export default {
       limit: 24,
       offset: 0,
       query: null,
-      searchOptions: new Map([
-        ["id", "The ID of the content"],
-        ["description", "The content description"],
-        ["content_type", "The content type"],
-        ["server", "The HTTP server"],
-        ["status_code", "The HTTP status code"],
-        ["created_at", "The creation date"],
-        ["data", "The content data"],
-        ["script", "The content script (if any)"],
-
-      ]),
       keyboardDisabled: false,
       baseContent: {
         id: 0,

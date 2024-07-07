@@ -152,6 +152,8 @@ func main() {
 	r.HandleFunc("/storedquery/upsert", as.HandleUpsertStoredQuery).Methods("POST")
 	r.HandleFunc("/storedquery/delete", as.HandleDeleteStoredQuery).Methods("POST")
 
+	r.HandleFunc("/datamodel/doc", as.HandleReturnDocField).Methods("GET")
+
 	r.Use(as.AuthMW)
 
 	origins := make([]string, 0)

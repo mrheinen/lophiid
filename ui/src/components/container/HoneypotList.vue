@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="honeypot"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="honeypots.length > 0">
         <thead>
@@ -90,15 +90,6 @@ export default {
           last_checkin: "",
         },
       },
-      searchOptions: new Map([
-        ["id", "The ID of the honeypot"],
-        ["ip", "The IP of the honeypot"],
-        ["created_at", "Date when the honeypot was created (first seen)"],
-        ["updated_at", "Date when the honeypot was updated"],
-        ["last_checkin", "Date when the honeypot was last seen"],
-        ["auth_token", "The authentication token"],
-        ["default_content_id", "The default content ID"],
-      ]),
     };
   },
   methods: {

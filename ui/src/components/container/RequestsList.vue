@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" :options="searchOptions"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="request"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="requests.length > 0">
         <thead>
@@ -124,33 +124,8 @@ export default {
       query: null,
       isSelectedElement: null,
       isSelectedId: 0,
-      limit: 24,
+      limit: 25,
       offset: 0,
-      searchOptions: new Map([
-        ["id", "Request ID"],
-        ["uri", "Request URI"],
-        ["query", "The parameters of the URL"],
-        ["path", "The path of the URL"],
-        ["uri", "Request URI"],
-        ["method", "The HTTP method (e.g. GET, POST,..)"],
-        ["referer", "The HTTP referer header"],
-        ["content_length", "The HTTP content length"],
-        ["content_type", "The HTTP content type"],
-        ["referer", "The HTTP referer header"],
-        ["body", "The HTTP request body"],
-        ["honeypot_ip", "The IP of the honeypot (without port) "],
-        ["source_ip", "The source IP"],
-        ["source_port", "The source port of the attacker"],
-        ["port", "The HTTP server port"],
-        ["rule_id", "Requests that matched this rule ID"],
-        ["content_id", "Requests that were served content with this ID"],
-        ["label", "Requests that have this tag name (e.g. wget)"],
-        ["starred", "Whether the request is starred or not (1 or 0)"],
-        ["base_hash", "The base hash of the request (find similar requests)"],
-        ["time_received", "Time when the request was received by the honeypot"],
-        ["created_at", "Time the request was stored in the database"],
-        ["updated_at", "Last time the request was updated in the database"],
-        ]),
     };
   },
   methods: {
