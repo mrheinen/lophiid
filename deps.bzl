@@ -950,8 +950,8 @@ def go_dependencies():
         name = "com_github_rs_cors",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/rs/cors",
-        sum = "h1:L0uuZVXIKlI1SShY2nhFfo44TYvDPQ1w4oFkUJNfhyo=",
-        version = "v1.10.1",
+        sum = "h1:0B9GE/r9Bc2UxRMMtymBkHTenPkHDv0CW4Y98GBY+po=",
+        version = "v1.11.0",
     )
     go_repository(
         name = "com_github_russross_blackfriday_v2",

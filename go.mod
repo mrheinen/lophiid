@@ -1,6 +1,6 @@
 module loophid
 
-go 1.22
+go 1.22.2
 
 toolchain go1.22.2
 
@@ -15,7 +15,7 @@ require (
 	github.com/mrheinen/magicmime v0.0.0-20240329164816-cbc792827fe4
 	github.com/mrheinen/p0fclient v0.0.0-20240415163501-4961d493ae47
 	github.com/prometheus/client_golang v1.19.0
-	github.com/rs/cors v1.10.1
+	github.com/rs/cors v1.11.0
 	github.com/vingarcia/ksql v1.10.0
 	github.com/vingarcia/ksql/adapters/kpgx5 v1.10.0
 	google.golang.org/grpc v1.63.2
