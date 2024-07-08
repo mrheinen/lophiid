@@ -22,12 +22,9 @@ The options for operators are:
 |Operator|Supported types|Description|
 |---|---|---|
 |:|All types|This is used for an exact match. E.g. port:80 or method:"GET"|
-|~|String|Used to perform a SQL LIKE match. E.g. to get URIs that contain wget
-use uri~%wget%. Use the % as a wildcard. |
-|>|int64, Time| Returns results where the value is greater than the one given.
-E.g. port>80|
-|<|int64, Time| Returns results where the value is smaller than the one given.
-E.g. port<1024 |
+|~|String|Used to perform a SQL LIKE match. E.g. to get URIs that contain wget use uri~%wget%. Use the % as a wildcard. |
+|>|int64, Time| Returns results where the value is greater than the one given. E.g. port>80|
+|<|int64, Time| Returns results where the value is smaller than the one given. E.g. port<1024 |
 
 Note that it is totally fine to use a keyword repeatedly either with or without
 negative matching.  This can be useful for a port range such as using this to
