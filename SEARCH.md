@@ -30,7 +30,6 @@ Note that it is totally fine to use a keyword repeatedly either with or without
 negative matching.  This can be useful for a port range such as using this to
 get everything with a port 1000-2000: "port>1000 port<2000"
 
-String fields can be searched
 ## Negative matching
 
 You can perform a negative match by adding a - character in front of the search
@@ -88,9 +87,3 @@ Select requests with possible bash tcp connections:
 ```
 body~%tcp% body~%dev% OR uri~%tcp% uri~%dev%
 ```
-
-
-
-
-
-##

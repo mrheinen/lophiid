@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "gendoc_lib",
+    srcs = ["main.go"],
+    importpath = "loophid/cmd/gendoc",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/database",
+        "//pkg/util",
+    ],
+)
+
+go_binary(
+    name = "gendoc",
+    embed = [":gendoc_lib"],
+    visibility = ["//visibility:public"],
+)

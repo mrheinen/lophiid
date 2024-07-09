@@ -2,8 +2,6 @@ module loophid
 
 go 1.22.2
 
-toolchain go1.22.2
-
 require (
 	github.com/dop251/goja v0.0.0-20231027120936-b396bb4c349d
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
