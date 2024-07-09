@@ -47,10 +47,10 @@ func WriteModelToFile(fo *os.File, model interface{}, pageName string) {
 	modelName := util.GetStructName(model)
 	fo.WriteString("## Keywords for the " + pageName + " (model: " + modelName + ")\n\n")
 
-	fo.WriteString("|Keyword|Type|Description|\n")
-	fo.WriteString("|___|___|___|\n")
+	fo.WriteString("| Keyword | Type | Description |\n")
+	fo.WriteString("| --- | --- | --- |\n")
 	for key, fde := range keyMap {
-		fo.WriteString("|" + key + "|" + fde.FieldType + "|" + fde.FieldDoc + "|\n")
+		fo.WriteString("| " + key + " | " + fde.FieldType + " | " + fde.FieldDoc + " |\n")
 	}
 	fo.WriteString("\n\n")
 
