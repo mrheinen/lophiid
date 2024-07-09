@@ -30,6 +30,9 @@ Note that it is totally fine to use a keyword repeatedly either with or without
 negative matching.  This can be useful for a port range such as using this to
 get everything with a port 1000-2000: "port>1000 port<2000"
 
+All possible keywords are documented per model/page here:
+https://github.com/mrheinen/lophiid/blob/main/SEARCH_KEYWORDS.md
+
 ## Negative matching
 
 You can perform a negative match by adding a - character in front of the search
