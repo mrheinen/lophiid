@@ -2,6 +2,7 @@ backend:
   # The log level can be one of debug, info, warn and error.
   # https://pkg.go.dev/log/slog#Level
   log_level: debug
+  log_file: backend.log
   downloader:
     # Location where downloaded malware will be stored.
     malware_download_dir: /home/niels/malware/
@@ -11,6 +12,12 @@ backend:
   listener:
     # IP and port where the backend needs to listen on.
     listen_address: localhost:41110
+    # The following SSL options are optional; use them for SSL server and client
+    # authentication.
+    ssl_cert: path/to/server-cert.pem
+    ssl_key: path/to/server-key.pem
+    ssl_ca_cert: path/to/ca-cert.pem
+
   database:
     # URL to the postgresql database
     url: postgres://username:password@localhost/lophiid
