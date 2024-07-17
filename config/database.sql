@@ -156,7 +156,7 @@ CREATE TABLE downloads (
   vt_analysis_suspicious INT DEFAULT 0,
   vt_analysis_undetected INT DEFAULT 0,
   vt_analysis_timeout    INT DEFAULT 0,
-  status         DOWNLOAD_STATUS default 'UNKNOWN';
+  status         DOWNLOAD_STATUS default 'UNKNOWN',
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
 );
 
