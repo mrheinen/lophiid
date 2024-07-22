@@ -74,12 +74,9 @@ openssl req \
     -keyout ca/ca-key.pem \
     -out ca/ca-cert.pem \
     -subj "/C=${COUNTRY}/ST=${STATE}/L=${LOCATION}/O=${ORG}/CN=ca.lophiid.org"
-
 ```
 
 Make sure the creates CA key is properly protected and make sure it is backed up properly.
-
-
 
 ## Create the backend certificate
 
@@ -97,12 +94,9 @@ openssl req -newkey rsa:4096 -nodes \
   -out server/server-cert.pem \
   -subj "/C=${COUNTRY}/ST=${STATE}/L=${LOCATION}/O=${ORG}/CN=lophiid.org" \
   -addext "subjectAltName = IP:${IP}"
-
 ```
 
 Note that the location of the created certificate and key, which are in the "server/" directory, need to be added to the backend configuration.
-
-
 
 ## Create a agent certificates
 
@@ -122,22 +116,45 @@ openssl x509 -req -days 365000 -set_serial 01 \
    -out clients/${IP}-client-cert.pem \
    -CA ca/ca-cert.pem \
    -CAkey ca/ca-key.pem
-
 ```
 
 The agent certificates need to be deployed with the agent on the honeypot machines.
 
-
-
 # Setting up the backend
 
-## Create the configuration
+### Setup the database
+
+#### Install postgresql
+
+Install [postgresql](https://www.postgresql.org/):
+
+```shell
+sudo apt install postgresql postgresql-contrib
+```
+
+#### Import the database schema
+
+> [!IMPORTANT]
+> You need to edit config/database.sql to uncomment and edit the create user command at the top. Set a secure password!
+
+
+
+Now import the database definition that is in [config/database.sql](https://github.com/mrheinen/lophiid/blob/main/config/database.sql) using the following commands:
+
+```shell
+# Become the postgres user
+sudo su postgres
+# Import the database schema
+psql -f config/database.sql 
+```
+
+### Create the backend configuration
 
 The configuration file is documented in the [example config](./config/backend-config.yaml)
 
-Note that it is important that the backend is reachable to all the honeypot agents so keep that in mind while configuring the port and listen address in the config.  If you setup SSL certificate authentication then it is fine to expose the backend to the Internet.
+Note that it is important that the backend is reachable to all the honeypot agents so keep that in mind while configuring the port and listen address in the config. If you setup SSL certificate authentication then it is fine to expose the backend to the Internet.
 
-### Getting VirusTotal access
+#### Getting VirusTotal access
 
 Create an account on [www.virustotal.com](http://www.virustotal.com) and click on your profile picture in the top right corner of the screen. Now click on `API Key` and it will bring you to a page where you can copy the API key (and paste it in the config).
 
@@ -145,7 +162,7 @@ The default free account on VirusTotal has plenty of quota. You probably can run
 
 The VirusTotal client in lophiid is also written in a way where requests are queued and retried in case of quota issues.  This queue, which is only populated when you run out of quota, is not persistent during lophiid restarts though.
 
-### Configuring telegram alerting
+#### Configuring telegram alerting
 
 Create a telegram bot:
 
@@ -157,10 +174,6 @@ Create a telegram bot:
 Getting the channel/group  ID:
 
 One way to obtain it is by going to [https://web.telegram.org](https://web.telegram.org/) and going to the channel/group. The ID is now in the URL.
-
-
-
-
 
 ## Build the agent
 
@@ -191,10 +204,6 @@ using the example above, you want to run p0f with something like this:
 ```shell
 p0f -s /var/empty/lophiid/p0f.socket
 ```
-
-
-
-
 
 # Build the UI
 
