@@ -238,10 +238,14 @@ CREATE TABLE tag_per_request (
     ON DELETE CASCADE
 );
 
+-- The whois.data column was used for old whois data. The rdap columm replaces
+-- it.
 CREATE TABLE whois (
   id                   SERIAL PRIMARY KEY,
   data                 TEXT,
+  rdap                 BYTEA NOT NULL DEFAULT ''::bytea,
   ip                   VARCHAR(52),
+  country              VARCHAR(128),
   created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at           TIMESTAMP NOT NULL DEFAULT NOW()
 );
