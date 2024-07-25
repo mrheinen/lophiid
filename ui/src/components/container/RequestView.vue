@@ -36,6 +36,14 @@
             </td>
           </tr>
           <tr>
+            <th>Honeypot port</th>
+            <td>
+              <a :href="'/requests?q=port:' + localRequest.port">
+                {{ localRequest.port }}
+              </a>
+            </td>
+          </tr>
+          <tr>
             <th>Base Hash</th>
             <td>
                 {{ localRequest.base_hash }}

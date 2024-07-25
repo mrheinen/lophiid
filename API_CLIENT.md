@@ -94,12 +94,12 @@ Always check the Content's that were created to see if there aren't any links/re
 #### Validating the results
 
 In the UI, under the Content you will now be able to see the added entry:
-![The added Content entry](https://github.com/mrheinen/lophiid/blob/main/screenshots/content-show-cli-result.png?raw=true)
+![The added Content entry](https://github.com/mrheinen/lophiid/blob/main/images/content-show-cli-result.png?raw=true)
 
 Click in the UI "Extra options" to also see what headers will be set with the content. These values were fetched from the source.
 
 Next look under the Rules tab look at the added rule:
-![The added rule](https://github.com/mrheinen/lophiid/blob/main/screenshots/rule-added-via-cli.png?raw=true)
+![The added rule](https://github.com/mrheinen/lophiid/blob/main/images/rule-added-via-cli.png?raw=true)
 
 ### Adding multiple URLs from a file
 
