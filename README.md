@@ -109,6 +109,21 @@ search with `label:curl` and find such requests.
 This way of tagging might be subject to change in the future where tagging might
 be moved to the Rule logic of lophiid for performance reasons.
 
+### UI and CLI
+
+Lophiid comes with a UI for managing the backend and analyzing all honeypot
+interactions. A core part of the UI is a search ability on all different data
+types lophiid handles (documented [here](./SEARCH.md).
+
+Below is an example page of the UI:
+
+![Requests overview](./images/screenshot-requests-wget.png)
+
+The CLI is currently very limited but can be used to easily copy content (and
+create rules for) of public web sites. More information about how to use the CLI
+can be found [here](./API_CLIENT.md).
+
+
 # Documentation
 
 * [Screenshots](./SCREENSHOTS.md)
