@@ -38,7 +38,7 @@
     &nbsp;
     <PrimeButton
       severity="secondary"
-      label="Reset"
+      label="New"
       @click="resetForm()"
     ></PrimeButton>
     &nbsp;
