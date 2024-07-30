@@ -1,5 +1,7 @@
 # lophiid
 
+![Lophiid logo](./images/logo-small.png)
+
 ## Introduction
 
 Lophiid is a distributed honeypot for detecting and interacting with mass web
@@ -49,15 +51,16 @@ internet using gRPC (SSL client certs). The backend interacts with the postgres
 database and also write payloads it got from attacks to disk.
 
 The API server interacts with the database and allows the CLI and UI to view and
-interact with the data collected from the honeypots. The CLI and UI use HTTPS
-with an API key to interact with the API server.
+interact with the data collected from the honeypots. When the API server makes
+some changes to the database (e.g. it adds a rule) then it might take a few minutes
+before the backend server acts on the change due to caching (for performance).
+The CLI and UI use HTTPS with an API key to interact with the API server.
 
 The honeypots are super simple agents and rely on the backend for almost
 anything. One special case is that the backend can tell a honeypot for download
 malware from an HTTP endpoint that was previously extracted from a request that
 hit that same honeypot. The honeypot in this case will download the malware and
 send it to the backend using gRPC.
-
 
 ### Rule based content serving
 
