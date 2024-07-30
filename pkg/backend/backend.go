@@ -40,55 +40,56 @@ var maxUrlsToExtractForDownload = 15
 
 type BackendServer struct {
 	backend_service.BackendServiceServer
-	dbClient           database.DatabaseClient
-	jRunner            javascript.JavascriptRunner
-	qRunner            QueryRunner
-	qRunnerChan        chan bool
-	vtMgr              vt.VTManager
-	whoisMgr           whois.WhoisManager
-	alertMgr           *alerting.AlertManager
-	safeRules          *SafeRules
-	maintenanceChan    chan bool
-	reqsProcessChan    chan bool
-	reqsQueue          chan *database.Request
-	malwareDownloadDir string
-	sessionCache       *util.StringMapCache[database.ContentRule]
-	ruleVsCache        *RuleVsContentCache
-	downloadQueue      map[string][]backend_service.CommandDownloadFile
-	downloadQueueMu    sync.Mutex
-	downloadsCache     *util.StringMapCache[time.Time]
-	metrics            *BackendMetrics
-	rateLimiter        ratelimit.RateLimiter
+	dbClient        database.DatabaseClient
+	jRunner         javascript.JavascriptRunner
+	qRunner         QueryRunner
+	qRunnerChan     chan bool
+	vtMgr           vt.VTManager
+	whoisMgr        whois.WhoisManager
+	alertMgr        *alerting.AlertManager
+	safeRules       *SafeRules
+	maintenanceChan chan bool
+	reqsProcessChan chan bool
+	reqsQueue       chan *database.Request
+	sessionCache    *util.StringMapCache[database.ContentRule]
+	ruleVsCache     *RuleVsContentCache
+	downloadQueue   map[string][]backend_service.CommandDownloadFile
+	downloadQueueMu sync.Mutex
+	downloadsCache  *util.StringMapCache[time.Time]
+	metrics         *BackendMetrics
+	rateLimiter     ratelimit.RateLimiter
+	config          Config
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, malwareDownloadDir string) *BackendServer {
-	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", time.Minute*30)
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, config Config) *BackendServer {
+
+	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
 	// we get a request with the same download (payload URL) within that time
 	// window then we will not download it again.
-	dCache := util.NewStringMapCache[time.Time]("download_cache", time.Minute*5)
-	rCache := NewRuleVsContentCache(time.Hour * 24 * 30)
+	dCache := util.NewStringMapCache[time.Time]("download_cache", config.Backend.Advanced.DownloadCacheDuration)
+	rCache := NewRuleVsContentCache(config.Backend.Advanced.AttackTrackingDuration)
 
 	return &BackendServer{
-		dbClient:           c,
-		jRunner:            jRunner,
-		qRunner:            qRunner,
-		qRunnerChan:        make(chan bool),
-		alertMgr:           alertMgr,
-		vtMgr:              vtManager,
-		whoisMgr:           wManager,
-		safeRules:          &SafeRules{},
-		maintenanceChan:    make(chan bool),
-		reqsProcessChan:    make(chan bool),
-		reqsQueue:          make(chan *database.Request, 500),
-		downloadQueue:      make(map[string][]backend_service.CommandDownloadFile),
-		downloadsCache:     dCache,
-		sessionCache:       sCache,
-		ruleVsCache:        rCache,
-		metrics:            metrics,
-		malwareDownloadDir: malwareDownloadDir,
-		rateLimiter:        rateLimiter,
+		dbClient:        c,
+		jRunner:         jRunner,
+		qRunner:         qRunner,
+		qRunnerChan:     make(chan bool),
+		alertMgr:        alertMgr,
+		vtMgr:           vtManager,
+		whoisMgr:        wManager,
+		safeRules:       &SafeRules{},
+		maintenanceChan: make(chan bool),
+		reqsProcessChan: make(chan bool),
+		reqsQueue:       make(chan *database.Request, config.Backend.Advanced.RequestsQueueSize),
+		downloadQueue:   make(map[string][]backend_service.CommandDownloadFile),
+		downloadsCache:  dCache,
+		sessionCache:    sCache,
+		ruleVsCache:     rCache,
+		metrics:         metrics,
+		config:          config,
+		rateLimiter:     rateLimiter,
 	}
 }
 
@@ -514,7 +515,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 
 	s.whoisMgr.LookupIP(req.GetInfo().GetIp())
 
-	targetDir := fmt.Sprintf("%s/%d", s.malwareDownloadDir, req.RequestId)
+	targetDir := fmt.Sprintf("%s/%d", s.config.Backend.Downloader.MalwareDownloadDir, req.RequestId)
 	if _, err = os.Stat(targetDir); os.IsNotExist(err) {
 		// Due to concurrency, it is possible that between the check for whether the
 		// directory exists and creating one, the directory is already created.
@@ -791,7 +792,7 @@ func (s *BackendServer) Start() error {
 	go s.ProcessReqsQueue()
 
 	// Setup the rules reloading.
-	maintenanceTicker := time.NewTicker(time.Second * 60)
+	maintenanceTicker := time.NewTicker(s.config.Backend.Advanced.MaintenanceRoutineInterval)
 	go func() {
 		for {
 			select {
@@ -817,7 +818,7 @@ func (s *BackendServer) Start() error {
 		}
 	}()
 
-	qRunnerTicker := time.NewTicker(time.Minute * 10)
+	qRunnerTicker := time.NewTicker(s.config.Backend.Advanced.QueriesRunnerInterval)
 	go func() {
 		for {
 			select {
@@ -826,7 +827,7 @@ func (s *BackendServer) Start() error {
 				return
 			case <-qRunnerTicker.C:
 				start := time.Now()
-				if err := s.qRunner.Run(); err != nil {
+				if err := s.qRunner.Run(time.Duration(-2) * s.config.Backend.Advanced.QueriesRunnerInterval); err != nil {
 					slog.Warn("error running queries", slog.String("error", err.Error()))
 				}
 				s.metrics.qRunnerResponseTime.Observe(time.Since(start).Seconds())

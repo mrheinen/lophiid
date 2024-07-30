@@ -8,14 +8,14 @@ import (
 )
 
 type QueryRunner interface {
-	Run() error
+	Run(UpdateWindow time.Duration) error
 }
 
 type FakeQueryRunner struct {
 	ErrorToReturn error
 }
 
-func (f *FakeQueryRunner) Run() error {
+func (f *FakeQueryRunner) Run(UpdateWindow time.Duration) error {
 	return f.ErrorToReturn
 }
 
@@ -24,7 +24,8 @@ type QueryRunnerImpl struct {
 }
 
 var (
-	UPDATE_WINDOW = (time.Duration(-168) * time.Hour) // Week
+	QueryUpdateWindowWeek = (time.Duration(-168) * time.Hour) // Week
+	QueryUpdateWindowHour = (time.Duration(-1) * time.Hour)
 )
 
 func NewQueryRunnerImpl(dbc database.DatabaseClient) *QueryRunnerImpl {
@@ -33,7 +34,7 @@ func NewQueryRunnerImpl(dbc database.DatabaseClient) *QueryRunnerImpl {
 	}
 }
 
-func (q *QueryRunnerImpl) Run() error {
+func (q *QueryRunnerImpl) Run(UpdateWindow time.Duration) error {
 
 	slog.Debug("Running stored queries")
 	// Get all queries. Use 1000 as limit for the request;  it's not likely
@@ -48,7 +49,7 @@ func (q *QueryRunnerImpl) Run() error {
 	}
 
 	timeNow := time.Now()
-	timeThen := timeNow.Add(UPDATE_WINDOW)
+	timeThen := timeNow.Add(UpdateWindow)
 
 	for _, query := range queries {
 		tags, err := q.dbc.SearchTagPerQuery(0, 1000, fmt.Sprintf("query_id:%d", query.ID))

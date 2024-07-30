@@ -4,6 +4,7 @@ import (
 	"loophid/pkg/database"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRunQueries(t *testing.T) {
@@ -53,7 +54,7 @@ func TestRunQueries(t *testing.T) {
 
 			queryRunner := NewQueryRunnerImpl(&fakeDbClient)
 
-			err := queryRunner.Run()
+			err := queryRunner.Run(-10 * time.Second)
 
 			if err != nil {
 				if test.returnedErrorContains == "" {

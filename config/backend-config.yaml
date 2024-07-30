@@ -26,6 +26,18 @@ backend:
     # How many connections to keep open all the time.
     min_open_connections: 10
 
+  advanced:
+    # How long to cache Content's that were fetched from the database.
+    content_cache_duration: 30m
+    # How long to cache download URLs which prevents them from being fetched
+    # again if seen multiple times in a row during this time. Don't set this
+    # too long because attacker payloads change over time and it's interesting
+    # to track this by refetching the same payload URLs.
+    download_cache_duration: 5m
+    # How long to keep track of requests coming from the same attacker.
+    attack_tracking_duration: 168h # week
+
+
 alerting:
   # The alerting interval.  Alerts are aggregated and send every <interval>.
   interval: 2m

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "backend.go",
         "client.go",
+        "config.go",
         "metrics.go",
         "queries.go",
         "request_queue.go",
