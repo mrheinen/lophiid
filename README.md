@@ -82,8 +82,32 @@ echo it back to the requester.
 When a request matches no rule at all then the honeypot will send a
 default response which is configurable per honeypot.
 
-### Payload downloading
+### Request processing
 
+The backend analyses requests for possible payload URLs and downloads these via
+the honeypots. The downloaded content is uploaded and scanned with VirusTotal
+(optional) using the free API quota anyone can get.
+
+More information about payload fetching can be found here: [Payload fetching](./PAYLOAD_FETCHING.md)
+
+Additionally the backend will perform whois lookups of the source IPs and also,
+if configured, collects OS fingerprinting information from p0f instances running
+on the honeypot systems. All this information is available in the UI.
+
+### Queries and labels
+
+In the UI you can store queries for two purposes. First it can just be handy to
+have a long query stored for future use. Second, it is possible to attach labels
+to queries in which case the backend will regularly run this query and apply
+those labels to any request that matched the query.  You can also search for such
+labels in the Requests tab of the web UI.
+
+For example, you could make a query that tries to find all `curl` commands and
+then apply the label `curl` to those requests. Once done you can go to the UI and
+search with `label:curl` and find such requests.
+
+This way of tagging might be subject to change in the future where tagging might
+be moved to the Rule logic of lophiid for performance reasons.
 
 # Documentation
 
