@@ -2,6 +2,8 @@
 
 ![Lophiid logo](./images/logo-small.png)
 
+![Lophiid build workflow](https://github.com/mrheinen/lophiid/actions/workflows/go.yml/badge.svg)
+
 ## Introduction
 
 Lophiid is a distributed honeypot for detecting and interacting with mass web
