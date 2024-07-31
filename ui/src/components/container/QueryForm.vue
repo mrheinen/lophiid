@@ -23,10 +23,10 @@
         />
       </div>
       <div>
-        <label class="label">Tags</label>
+        <label class="label">Labels</label>
         <MultiSelect
           v-model="localQuery.parsed.tags_to_apply"
-          placeholder="Select tags"
+          placeholder="Select labels"
           optionLabel="name"
           :options="tags"
         ></MultiSelect>

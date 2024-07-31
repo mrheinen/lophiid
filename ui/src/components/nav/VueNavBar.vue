@@ -100,7 +100,7 @@ export default {
               }
             },
             {
-              label: "Manage tags",
+              label: "Manage labels",
               icon: "pi pi-tag",
               command: () => {
                 this.$router.push(this.config.tagsLink);

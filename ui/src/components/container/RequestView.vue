@@ -53,10 +53,17 @@
             </td>
           </tr>
           <tr v-if="localRequest.tags">
-            <th>Tags</th>
+            <th>Labels</th>
             <td>
-              <div v-for="tag in localRequest.tags" :key="tag.tag.id">
-                {{ tag.tag.name }}&nbsp;
+              <div v-for="tag in localRequest.tags"
+                :key="tag.tag.id"
+                :title="tag.tag.description"
+                class="mytag"
+                :style="'background-color: #' + tag.tag.color_html"
+                >
+                <a :href="'/requests?q=label:' + tag.tag.name">
+                  {{ tag.tag.name }}&nbsp;
+                </a>
               </div>
             </td>
           </tr>
@@ -179,6 +186,15 @@ code.hljs {
   height: 400px;
   width: 700px;
   overflow: auto;
+}
+
+.mytag {
+  font-size: 0.8rem;
+  display: inline-block;
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 5px;
+  margin-left: 10px;
 }
 
 table {
