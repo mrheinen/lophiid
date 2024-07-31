@@ -1,6 +1,8 @@
 # lophiid
 
-![Lophiid logo](./images/logo-small.png)
+<p align="center">
+  <img src="./images/logo-small.png" />
+</p>
 
 ![Lophiid build workflow](https://github.com/mrheinen/lophiid/actions/workflows/go.yml/badge.svg)
 
