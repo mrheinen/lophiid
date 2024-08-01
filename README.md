@@ -81,7 +81,8 @@ script than then that script gets executed and gets access to the matching
 request. The script can then parse the request and define the response the
 honeypot needs to send back.  For example, some payloads want the target to echo
 a random string and so the script could parse the string from the request and
-echo it back to the requester.
+echo it back to the requester.  More information about scripted responses found
+[here](./SCRIPTING.md).
 
 When a request matches no rule at all then the honeypot will send a
 default response which is configurable per honeypot.
@@ -130,6 +131,7 @@ can be found [here](./API_CLIENT.md).
 
 # Documentation
 
+* [Setup guide](./SETUP.md)
 * [Screenshots](./SCREENSHOTS.md)
 * [Scripted responses](./SCRIPTING.md)
 * [API cli client usage](./API_CLIENT.md)

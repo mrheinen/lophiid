@@ -1,4 +1,4 @@
-# 
+#
 
 # Setting up the backend and agents
 
@@ -36,7 +36,7 @@ To build the backend, run the following command:
 bazel build //cmd/backend:backend
 ```
 
-This will take care of downloading all the remaining dependencies and build the backend. 
+This will take care of downloading all the remaining dependencies and build the backend.
 
 If you are unfamilair with bazel, you can find the binary at ./bazel-bin/cmd/backend/backend_/backend
 
@@ -52,7 +52,7 @@ bazel build //cmd/agent:client
 
 SSL is used for encryption and authentication (client certs). Using this is totally optional, you can leave the ssl_cert configuration options out of the config but that is not recommended.
 
-Below are example commands for creating certificates. 
+Below are example commands for creating certificates.
 
 ## Create a local CA
 
@@ -138,14 +138,13 @@ sudo apt install postgresql postgresql-contrib
 > You need to edit config/database.sql to uncomment and edit the create user command at the top. Set a secure password!
 
 
-
 Now import the database definition that is in [config/database.sql](https://github.com/mrheinen/lophiid/blob/main/config/database.sql) using the following commands:
 
 ```shell
 # Become the postgres user
 sudo su postgres
 # Import the database schema
-psql -f config/database.sql 
+psql -f config/database.sql
 ```
 
 ### Create the backend configuration
@@ -154,15 +153,15 @@ The configuration file is documented in the [example config](./config/backend-co
 
 Note that it is important that the backend is reachable to all the honeypot agents so keep that in mind while configuring the port and listen address in the config. If you setup SSL certificate authentication then it is fine to expose the backend to the Internet.
 
-#### Getting VirusTotal access
+#### Getting VirusTotal access (optional)
 
 Create an account on [www.virustotal.com](http://www.virustotal.com) and click on your profile picture in the top right corner of the screen. Now click on `API Key` and it will bring you to a page where you can copy the API key (and paste it in the config).
 
-The default free account on VirusTotal has plenty of quota. You probably can run 100-200 honeypots on dedicates IPs before running into quota issues. 
+The default free account on VirusTotal has plenty of quota. You probably can run 100-200 honeypots on dedicated IPs before running into quota issues.
 
 The VirusTotal client in lophiid is also written in a way where requests are queued and retried in case of quota issues.  This queue, which is only populated when you run out of quota, is not persistent during lophiid restarts though.
 
-#### Configuring telegram alerting
+#### Configuring telegram alerting (optional)
 
 Create a telegram bot:
 
@@ -175,7 +174,8 @@ Getting the channel/group  ID:
 
 One way to obtain it is by going to [https://web.telegram.org](https://web.telegram.org/) and going to the channel/group. The ID is now in the URL.
 
-## Build the agent
+Once you have this setup, you can enable alerting for specific rules by clicking
+on the bell icon behind those rules in the Rules tab of the UI.
 
 # Setting up the agent
 
@@ -194,8 +194,10 @@ and 'user' to the user created with the command above.
 ## Create the configuration
 
 The configuration options are documented in the [config file](./config/agent-config.yaml).
+Note that you need to run one agent per IP so you might have to run multiple
+agents on a single machine and each is configured individually.
 
-## Optional: setup p0f
+## Setting up p0f (optional)
 
 When p0f is running, you will need to setup the agent to use it.  First you need
 to make sure that the p0f unix socket is accessible from the chroot directory so
@@ -205,16 +207,44 @@ using the example above, you want to run p0f with something like this:
 p0f -s /var/empty/lophiid/p0f.socket
 ```
 
-# Build the UI
+While you might run multiple agents on a machine; you typically only have to run
+one p0f instance per machine.
 
+# Setting up the UI
+
+## Build and run the API server
+
+Building the server is done with this command:
+
+```shell
+bazel build //cmd/api:api
+```
+
+Now copy the example configuration from
+[./config/api-config.yaml](./config/api-config.yaml] and make the necessary
+changes, such as the database location and listen port and listen IP. Also
+change allowed_origins so that you only allow requests from the UI which you
+will build in the next step.
+
+Running the API server is a matter of:
+```shell
+./bazel-bin/cmd/api/api_/api -c api-config.yaml
+```
+
+Take note of the API key. You will need to give this to the web UI when you
+connect with a browser.
+
+## Build and run UI
 First install the vue dependency:
 
 ```shell
 npm i @vue/cli-service
 ```
 
-Now you can build and run the UI. This will start a development server and it is not recommended to expose it to the internet but fine to use internal (it does use auth)
+Now you can build and run the UI. This will start a development server and it is not recommended to expose it to the internet but fine to use internal (it does require auth)
 
 ```shell
 npm run serve
 ```
+
+You will now see the IP and port on which you can connect to the UI.
