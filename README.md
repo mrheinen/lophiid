@@ -74,7 +74,7 @@ before the content is served.
 
 If the request matches multiple rules then each time the same request is seen
 (and this can be across multiple honeypots, as longs as the source IP is the
-same) a previously not served content is served.
+same) a previously not served content is served. If one of the not served content has the same application ID as a rule that was served prior to the attacker then this rule will get priority.
 
 Now "content" can be static but it can also be a script (JavaScript). If it's a
 script than then that script gets executed and gets access to the matching
