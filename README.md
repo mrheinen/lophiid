@@ -48,7 +48,9 @@ large changes are still to be expected in the near future.
 
 Lophiid is build out of the following components:
 
-![Lophiid overview](./images/Lophiid-overview.png)
+<p align="center">
+  <img src="./images/Lophiid-overview.png" />
+</p>
 
 The backend contains all the business logic and honeypots connect via the
 internet using gRPC (SSL client certs). The backend interacts with the postgres
@@ -89,7 +91,9 @@ default response which is configurable per honeypot.
 
 A general overview of rule matching is presented in the image below:
 
-![Lophiid rule flow](./images/Lophiid-rule-flow.png)
+<p align="center">
+  <img src="./images/Lophiid-rule-flow.png" />
+</p>
 
 ### Request processing
 
