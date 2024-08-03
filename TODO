@@ -1,8 +1,3 @@
-Secure grpc calls with this article
-https://dev.to/techschoolguru/how-to-secure-grpc-connection-with-ssl-tls-in-go-4ph
-
-Check regex for contentrule when creating or updating the entry
-
 Add autocomplete for web IU things like the content type field.
 
 Support macros in response (e.g. {{%%IP%%}})
@@ -14,13 +9,7 @@ cleaning of expired items from cache a timed event.
 
 Add source IP to rule so we can mess with specific targets.
 
-Add statistics.
-
-Test with a fresh database.
-
 Allow response duration to be set.
-
-Add authentication of honeypot
 
 Add settings menu.  Including default page to serve and virus total API
 Add virus total api
@@ -60,31 +49,20 @@ Stats queries:
   ORDER BY day DESC LIMIT 30;
 
 
-Make honeypots report a version.
 
 Send metrics from client to the backend.
 
 Make base64 strings searchable.
 
+Allow javascript to spawn commands.
 
 ----- Before release
+Make honeypots report a version.
 
-Allow javascript to spawn commands.
 
 Allow Javascript to fetch Content by ID
 
 Show warning and ask for confirmation when saving a query from which a label was
 removed. This because the label will also be removed from all the requests.
 
-Add support for p0f
-  - Deploy script that runs p0f on the target
-  - Create a github fork and add the new signatures there.
-  - Update the UI: show the p0f result
-
 Add download link to the downloads page.
-
-Add a ? to the search bars and a popup with all query parameters.
-
-Create docker images for the backend and database.
-
-Add config to API server
