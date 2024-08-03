@@ -87,6 +87,10 @@ echo it back to the requester.  More information about scripted responses found
 When a request matches no rule at all then the honeypot will send a
 default response which is configurable per honeypot.
 
+A general overview of rule matching is presented in the image below:
+
+![Lophiid rule flow](./images/Lophiid-rule-flow.png)
+
 ### Request processing
 
 The backend analyses requests for possible payload URLs and downloads these via
