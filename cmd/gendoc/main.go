@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package main
 
 import (
@@ -22,6 +21,7 @@ import (
 	"loophid/pkg/database"
 	"loophid/pkg/util"
 	"os"
+	"sort"
 )
 
 var docHeader = `
@@ -59,16 +59,27 @@ func main() {
 }
 
 func WriteModelToFile(fo *os.File, model interface{}, pageName string) {
-
 	keyMap := database.GetDatamodelDocumentationMap(model)
 	modelName := util.GetStructName(model)
 	fo.WriteString("## Keywords for the " + pageName + " (model: " + modelName + ")\n\n")
 
 	fo.WriteString("| Keyword | Type | Description |\n")
 	fo.WriteString("| --- | --- | --- |\n")
-	for key, fde := range keyMap {
+
+	// Create a slice to hold the keys
+	keys := make([]string, 0, len(keyMap))
+	for key := range keyMap {
+		keys = append(keys, key)
+	}
+
+	// Sort the keys
+	sort.Strings(keys)
+
+	// Iterate over the sorted keys
+	for _, key := range keys {
+		fde := keyMap[key]
 		fo.WriteString("| " + key + " | " + fde.FieldType + " | " + fde.FieldDoc + " |\n")
 	}
-	fo.WriteString("\n\n")
 
+	fo.WriteString("\n\n")
 }
