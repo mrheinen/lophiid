@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package backend
 
 import (
@@ -304,19 +303,21 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	if err != nil {
 		_, err := s.dbClient.Insert(&database.Honeypot{
 			IP:          req.GetIp(),
+			Version:     req.GetVersion(),
 			LastCheckin: time.Now(),
 		})
 
 		if err != nil {
 			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error inserting honeypot: %s", err)
 		}
-		slog.Info("status: adding honeypot ", slog.String("ip", req.GetIp()))
+		slog.Info("status: added honeypot ", slog.String("ip", req.GetIp()))
 	} else {
 		dm.LastCheckin = time.Now()
+		dm.Version = req.GetVersion()
 		if err := s.dbClient.Update(&dm); err != nil {
 			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error updating honeypot: %s", err)
 		}
-		slog.Debug("status: updating honeypot ", slog.String("ip", req.GetIp()))
+		slog.Debug("status: updated honeypot ", slog.String("ip", req.GetIp()))
 	}
 
 	// Check if there are any downloads scheduled for this honeypot.
