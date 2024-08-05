@@ -111,6 +111,7 @@ CREATE TABLE honeypot (
   created_at         TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at         TIMESTAMP NOT NULL DEFAULT NOW(),
   ip                 VARCHAR(52),
+  version            VARCHAR(64) NOT NULL DEFAULT '',
   auth_token         VARCHAR(64) NOT NULL DEFAULT '',
   last_checkin       TIMESTAMP NOT NULL DEFAULT NOW(),
   default_content_id INT NOT NULL DEFAULT 0

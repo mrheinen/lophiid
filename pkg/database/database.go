@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package database
 
 import (
@@ -141,6 +140,7 @@ type RequestSourceContent struct {
 type Honeypot struct {
 	ID                   int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the honeypot"`
 	IP                   string    `ksql:"ip" json:"ip" doc:"The IP of the honeypot (v4 or v6)"`
+	Version              string    `ksql:"version" json:"version" doc:"The honeypot version"`
 	AuthToken            string    `ksql:"auth_token" json:"auth_token" doc:"The authentication token"`
 	CreatedAt            time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
 	UpdatedAt            time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`

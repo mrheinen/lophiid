@@ -7,6 +7,7 @@
         <thead>
           <th>ID</th>
           <th>IP</th>
+          <th>Version</th>
           <th>First seen</th>
           <th>Last checkin</th>
           <th>Default content</th>
@@ -25,6 +26,7 @@
                 honeypot.ip
               }}</a>
             </td>
+            <td>{{ honeypot.version }}</td>
             <td>{{ honeypot.parsed.created_at }}</td>
             <td>{{ honeypot.parsed.last_checkin }}</td>
             <td>{{ honeypot.default_content_id }}</td>
