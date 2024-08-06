@@ -167,7 +167,7 @@ func main() {
 		vtMgr.Start()
 	}
 
-	jRunner := javascript.NewGojaJavascriptRunner(javascript.CreateGoJaMetrics(metricsRegistry))
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, javascript.CreateGoJaMetrics(metricsRegistry))
 	queryRunner := backend.NewQueryRunnerImpl(dbc)
 	bMetrics := backend.CreateBackendMetrics(metricsRegistry)
 	rMetrics := ratelimit.CreateRatelimiterMetrics(metricsRegistry)
