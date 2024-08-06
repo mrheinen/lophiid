@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package javascript
 
 import (
@@ -97,10 +96,11 @@ func (t Time) Sleep(msec int) {
 //
 // util.crypto.md5sum("string") returns an md5 checksum of the given string.
 type Util struct {
-	Crypto   Crypto       `json:"crypto"`
-	Time     Time         `json:"time"`
-	Cache    CacheWrapper `json:"cache"`
-	Encoding Encoding     `json:"encoding"`
+	Crypto   Crypto                `json:"crypto"`
+	Time     Time                  `json:"time"`
+	Cache    CacheWrapper          `json:"cache"`
+	Encoding Encoding              `json:"encoding"`
+	Database DatabaseClientWrapper `json:"database"`
 }
 
 type JavascriptRunner interface {
@@ -109,10 +109,11 @@ type JavascriptRunner interface {
 
 type GojaJavascriptRunner struct {
 	strCache *util.StringMapCache[string]
+	dbClient database.DatabaseClient
 	metrics  *GojaMetrics
 }
 
-func NewGojaJavascriptRunner(metrics *GojaMetrics) *GojaJavascriptRunner {
+func NewGojaJavascriptRunner(dbClient database.DatabaseClient, metrics *GojaMetrics) *GojaJavascriptRunner {
 	// The string cache timeout should be a low and targetted
 	// for the use case of holding something in cache between
 	// a couple requests for the same source.
@@ -121,6 +122,7 @@ func NewGojaJavascriptRunner(metrics *GojaMetrics) *GojaJavascriptRunner {
 	return &GojaJavascriptRunner{
 		strCache: cache,
 		metrics:  metrics,
+		dbClient: dbClient,
 	}
 }
 
@@ -168,6 +170,38 @@ func (r *ResponseWrapper) BodyString() string {
 	return string(r.response.Body)
 }
 
+// ContentWrapper wraps the database.Content
+type ContentWrapper struct {
+	Content database.Content
+}
+
+func (c *ContentWrapper) GetData() string {
+	return string(c.Content.Data)
+}
+
+func (c *ContentWrapper) GetID() int64 {
+	return c.Content.ID
+}
+
+func (c *ContentWrapper) GetContentType() string {
+	return c.Content.ContentType
+}
+
+// The DatabaseClientWrapper exposes database functions to ze Javascripts
+// Only update this to expose read functions.
+type DatabaseClientWrapper struct {
+	dbClient database.DatabaseClient
+}
+
+func (d *DatabaseClientWrapper) GetContentById(id int64) *ContentWrapper {
+	cn, err := d.dbClient.GetContentByID(id)
+	if err != nil {
+		return nil
+	}
+
+	return &ContentWrapper{Content: cn}
+}
+
 // The JavascriptRunner will run the given script and makes the given request
 // available as 'request' inside the javascript context.
 func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, res *backend_service.HttpResponse, validate bool) error {
@@ -185,6 +219,9 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 		Cache: CacheWrapper{
 			keyPrefix: fmt.Sprintf("%s%s", req.SourceIP, req.HoneypotIP),
 			strCache:  j.strCache,
+		},
+		Database: DatabaseClientWrapper{
+			dbClient: j.dbClient,
 		},
 		Encoding: Encoding{},
 	})

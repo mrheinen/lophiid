@@ -172,3 +172,12 @@ Update the cache with the given key string value.
 
 Get the value for "key" from the cache. Returns an empty string if there is no
 value.
+
+## Database
+
+### util.database.getContentById(id int64)
+
+Tries to fetch database.Content with ID `id` from the database. Returns null
+upon error so please check for that. The returned object is a ContentWrapper
+type and get methods like getID(), getData() and getContentType() to get these
+fields from the embedded database.Content.

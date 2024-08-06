@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package javascript
 
 import (
@@ -106,9 +105,11 @@ func TestRunScriptWithoutValidateOk(t *testing.T) {
 				Body: []byte("the body"),
 			}
 
+			fdb := database.FakeDatabaseClient{}
+
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
-			jr := NewGojaJavascriptRunner(metrics)
+			jr := NewGojaJavascriptRunner(&fdb, metrics)
 
 			res := backend_service.HttpResponse{}
 
@@ -191,9 +192,11 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 
 			res := backend_service.HttpResponse{}
 
+			fdb := database.FakeDatabaseClient{}
+
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
-			jr := NewGojaJavascriptRunner(metrics)
+			jr := NewGojaJavascriptRunner(&fdb, metrics)
 			err := jr.RunScript(test.script, req, &res, true)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
@@ -288,7 +291,10 @@ func TestRunScriptUsesCache(t *testing.T) {
 			res := backend_service.HttpResponse{}
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
-			jr := NewGojaJavascriptRunner(metrics)
+
+			fdb := database.FakeDatabaseClient{}
+
+			jr := NewGojaJavascriptRunner(&fdb, metrics)
 
 			jr.RunScript(test.script1, test.request1, &res, false)
 			err := jr.RunScript(test.script2, test.request2, &res, false)
@@ -301,6 +307,99 @@ func TestRunScriptUsesCache(t *testing.T) {
 				metric := testutil.ToFloat64(metrics.javascriptSuccessCount.WithLabelValues(RunSuccess))
 				if metric != 2 {
 					t.Errorf("expected success metrics to be 2, got %f", metric)
+				}
+			}
+		})
+
+	}
+}
+
+func TestRunScriptUsesDatabase(t *testing.T) {
+
+	for _, test := range []struct {
+		description string
+		script      string
+		request     database.Request
+		content     database.Content
+		expectError bool
+	}{
+		{
+			description: "runs ok",
+			script: `
+			function createResponse() {
+				var c = util.database.getContentById(42);
+				if (c.getID() != 42) {
+					return "error";
+				}
+
+				return '';
+			}
+			`,
+			request: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+			},
+			content: database.Content{
+				ID:   42,
+				Data: []byte("test"),
+			},
+			expectError: false,
+		},
+		{
+			description: "handle wrong ID ok",
+			script: `
+			function createResponse() {
+				var c = util.database.getContentById(55);
+				if (c == null || c.getID() != 55) {
+					return "error";
+				}
+
+				return '';
+			}
+			`,
+			request: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+			},
+			content: database.Content{
+				ID:   42,
+				Data: []byte("test"),
+			},
+			expectError: true,
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+
+			fmt.Printf("Running test: %s\n", test.description)
+			res := backend_service.HttpResponse{}
+			reg := prometheus.NewRegistry()
+			metrics := CreateGoJaMetrics(reg)
+
+			fdb := database.FakeDatabaseClient{
+				ContentsToReturn: map[int64]database.Content{
+					42: test.content,
+				},
+			}
+
+			jr := NewGojaJavascriptRunner(&fdb, metrics)
+
+			err := jr.RunScript(test.script, test.request, &res, false)
+			if (err != nil) != test.expectError {
+				t.Errorf("got error: %s", err)
+				return
+			}
+
+			if !test.expectError {
+				metric := testutil.ToFloat64(metrics.javascriptSuccessCount.WithLabelValues(RunSuccess))
+				if metric != 1 {
+					t.Errorf("expected success metrics to be 1, got %f", metric)
 				}
 			}
 		})
