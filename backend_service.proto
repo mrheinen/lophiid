@@ -43,9 +43,12 @@ message UploadFileRequest {
 message UploadFileResponse {}
 
 message StatusRequest {
+  // The main IP of the agent. Can be IPv4 or IPv6.
   string ip = 1;
   repeated int64 listen_port = 2;
   repeated int64 listen_port_ssl = 3;
+  // The version of the agent.
+  string version = 4;
 }
 
 message StatusResponse {
