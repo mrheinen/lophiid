@@ -34,7 +34,7 @@ import (
 	"github.com/mrheinen/magicmime"
 )
 
-// AgentVersion is the version of the agent (use sementic versioning).
+// AgentVersion is the version of the agent. We use semantic versioning.
 const AgentVersion = "0.5.0"
 
 type Agent struct {
