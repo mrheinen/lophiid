@@ -17,9 +17,9 @@ jobs:
         uses: Codium-ai/pr-agent@main
         env:
           #OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
-          anthropic.key = ${{ secrets.ANT_KEY }}
-          config.model = "claude-3-5-sonnet"
-          config.model_turbo = "claude-3-5-sonnet"
+          anthropic.key: ${{ secrets.ANT_KEY }}
+          config.model: "claude-3-5-sonnet"
+          config.model_turbo: "claude-3-5-sonnet"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           github_action_config.auto_review: "true" # enable\disable auto review
           github_action_config.auto_describe: "true" # enable\disable auto describe
