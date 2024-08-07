@@ -34,7 +34,8 @@ import (
 	"github.com/mrheinen/magicmime"
 )
 
-const AgentVersion = "0.5"
+// AgentVersion is the version of the agent. We use semantic versioning.
+const AgentVersion = "0.5.0"
 
 type Agent struct {
 	backendClient   backend.BackendClient
