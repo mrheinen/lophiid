@@ -21,8 +21,8 @@ CREATE TABLE content (
   headers         VARCHAR(4096) ARRAY,
   status_code     STATUS_CODE NOT NULL DEFAULT '200',
   is_default      BOOLEAN DEFAULT FALSE,
-  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
 
@@ -49,9 +49,9 @@ CREATE TABLE request (
   source_port     INT,
   raw             TEXT,
   raw_response    TEXT,
-  time_received   TIMESTAMP NOT NULL DEFAULT NOW(),
-  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  time_received   TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   honeypot_ip     VARCHAR(40),
   starred         BOOL default FALSE,
   content_dynamic BOOL default FALSE,
@@ -63,8 +63,8 @@ CREATE TABLE request (
 
 CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,
-  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   host            VARCHAR(512) NOT NULL,
   uri             VARCHAR(2048) NOT NULL,
   uri_matching    MATCHING_TYPE,
@@ -91,12 +91,12 @@ CREATE TABLE vt_ipresult (
   result_suspicious  INT DEFAULT 0,
   result_undetected  INT DEFAULT 0,
   result_timeout     INT DEFAULT 0,
-  created_at         TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
 CREATE TABLE request_metadata (
   id              SERIAL PRIMARY KEY,
-  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   request_id      INT,
   type            METADATA_TYPE NOT NULL,
   data            TEXT,
@@ -108,12 +108,12 @@ CREATE TABLE request_metadata (
 -- TODO: store ports here as well. They are already in the proto message.
 CREATE TABLE honeypot (
   id                 SERIAL PRIMARY KEY,
-  created_at         TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at         TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   ip                 VARCHAR(52),
   version            VARCHAR(64) NOT NULL DEFAULT '',
   auth_token         VARCHAR(64) NOT NULL DEFAULT '',
-  last_checkin       TIMESTAMP NOT NULL DEFAULT NOW(),
+  last_checkin       TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   default_content_id INT NOT NULL DEFAULT 0
 );
 
@@ -124,8 +124,8 @@ CREATE TABLE app (
   version         VARCHAR(512),
   os              VARCHAR(512),
   link            VARCHAR(2048),
-  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
 
@@ -145,8 +145,8 @@ CREATE TABLE downloads (
   port            INT,
   request_id      INT,
   last_request_id INT,
-  created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
-  last_seen_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  last_seen_at    TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   raw_http_response  TEXT,
   vt_file_analysis_result VARCHAR(1024) ARRAY,
   vt_url_analysis_id  VARCHAR(1024) DEFAULT '',
@@ -181,19 +181,19 @@ CREATE TABLE p0f_result (
   http_flavor               VARCHAR(32),
   language                  VARCHAR(32),
   link_type                 VARCHAR(32),
-  created_at                TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at                TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at                TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at                TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
 CREATE TABLE stored_query (
   id                   SERIAL PRIMARY KEY,
   query                VARCHAR(8192),
   description          TEXT,
-  created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   record_count         INT DEFAULT 0,
   times_run            INT DEFAULT 0,
-  last_ran_at          TIMESTAMP NOT NULL DEFAULT NOW()
+  last_ran_at          TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
 CREATE TABLE tag (
@@ -201,8 +201,8 @@ CREATE TABLE tag (
   name                 VARCHAR(64) NOT NULL,
   color_html           VARCHAR(8),
   description          TEXT,
-  created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at           TIMESTAMP NOT NULL DEFAULT NOW(),
+  created_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   PRIMARY KEY(id)
 );
 
@@ -247,8 +247,8 @@ CREATE TABLE whois (
   rdap                 BYTEA NOT NULL DEFAULT ''::bytea,
   ip                   VARCHAR(52),
   country              VARCHAR(128),
-  created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at           TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
 GRANT ALL PRIVILEGES ON content TO lo;
