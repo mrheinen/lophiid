@@ -241,7 +241,14 @@ First install the vue dependency:
 npm i @vue/cli-service
 ```
 
-Now you can build and run the UI. This will start a development server and it is not recommended to expose it to the internet but fine to use internal (it does require auth)
+Modify the backendAddress and make sure it points to the API server. This needs
+to be edited in the ./ui/src/Config.js and you should do this before doing the
+next step. In fact, keep in mind that whenever you change the config, restart
+the UI server.
+
+Now you can build and run the UI. This will start a development server
+and it is not recommended to expose it to the internet but fine to use
+internal (it does require auth)
 
 ```shell
 npm run serve
