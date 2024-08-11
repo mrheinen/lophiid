@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package whois
 
 import (
@@ -23,28 +22,34 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openrdap/rdap"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
-type FakeWhoisClient struct {
+type FakeRdapClient struct {
 	ErrorToReturn error
 }
 
-func (f *FakeWhoisClient) Whois(domain string, servers ...string) (result string, err error) {
-	return "", f.ErrorToReturn
+func (f *FakeRdapClient) QueryIP(ip string) (*rdap.IPNetwork, error) {
+
+	ret := rdap.IPNetwork{
+		Country: "NL",
+	}
+	return &ret, f.ErrorToReturn
 }
 
-func TestDoWhoisWorkCachesDatabaseMatch(t *testing.T) {
+func TestDoWhoisRdapWorkCachesDatabaseMatch(t *testing.T) {
 	dbc := database.FakeDatabaseClient{
 		WhoisToReturn:      database.Whois{},
 		WhoisErrorToReturn: nil,
 	}
 	testIP := "1.1.1.1"
-	wc := FakeWhoisClient{}
+	wc := FakeRdapClient{}
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedWhoisManager(&dbc, metrics, &wc, time.Second, 3)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3)
 
 	// Check that the IP is not in the cache.
 	if _, err := mgr.ipCache.Get(testIP); err == nil {
@@ -63,20 +68,60 @@ func TestDoWhoisWorkCachesDatabaseMatch(t *testing.T) {
 	}
 }
 
-func TestDoWhoisWorkRetries(t *testing.T) {
+func TestDoWhoisRdapWorksOk(t *testing.T) {
+	dbc := database.FakeDatabaseClient{
+		WhoisToReturn:      database.Whois{},
+		WhoisErrorToReturn: errors.New("fail"),
+	}
+	testIP := "1.1.1.1"
+	wc := FakeRdapClient{
+		ErrorToReturn: nil,
+	}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateWhoisMetrics(reg)
+
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3)
+
+	_, ok := mgr.lookupMap[testIP]
+	if ok {
+		t.Errorf("Unexpectedly found IP in lookup map")
+	}
+
+	// Do the lookup. Because the database returns nil, the lookup returns quickly
+	// and successfully.
+	if err := mgr.LookupIP(testIP); err != nil {
+		t.Errorf("got unexpected error: %s", err)
+	}
+
+	_, ok = mgr.lookupMap[testIP]
+	if !ok {
+		t.Errorf("expected IP in lookup map")
+	}
+
+	mgr.DoWhoisWork()
+
+	_, ok = mgr.lookupMap[testIP]
+	if ok {
+		t.Errorf("Unexpectedly found IP in lookup map")
+	}
+
+}
+
+func TestDoWhoisRdapWorkRetries(t *testing.T) {
 	dbc := database.FakeDatabaseClient{
 		WhoisToReturn:      database.Whois{},
 		WhoisErrorToReturn: errors.New("missing"),
 	}
 	testIP := "1.1.1.1"
-	wc := FakeWhoisClient{
+	wc := FakeRdapClient{
 		ErrorToReturn: errors.New("fail"),
 	}
 
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedWhoisManager(&dbc, metrics, &wc, time.Second, 3)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3)
 
 	// Do the lookup, The database will return an error which simulates the
 	// scenario where there is no record already in the database. As a result the
@@ -106,13 +151,29 @@ func TestDoWhoisWorkRetries(t *testing.T) {
 	for i := 1; i <= mgr.maxAttempts; i += 1 {
 		mgr.DoWhoisWork()
 		if mgr.lookupMap[testIP] != i {
+			metric := testutil.ToFloat64(metrics.whoisRetriesCount)
+			if int(metric) != i {
+				t.Errorf("expected 1, got %f", metric)
+			}
+
 			t.Errorf("Expected %d, got %d", i, mgr.lookupMap[testIP])
 		}
+	}
+
+	metric := testutil.ToFloat64(metrics.whoisRetriesExceededCount)
+	if int(metric) != 0 {
+		t.Errorf("expected 0, got %f", metric)
 	}
 
 	// We did the maxAttempts so if we call DoWhoisWork again then the entry will
 	// be removed from the lookupMap
 	mgr.DoWhoisWork()
+
+	metric = testutil.ToFloat64(metrics.whoisRetriesExceededCount)
+	if int(metric) != 1 {
+		t.Errorf("expected 1, got %f", metric)
+	}
+
 	_, ok = mgr.lookupMap[testIP]
 	if ok {
 		t.Errorf("Expected lookupMap entry to be removed. Instead it has value %d", mgr.lookupMap[testIP])

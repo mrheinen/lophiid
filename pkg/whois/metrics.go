@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package whois
 
 import (
@@ -24,7 +23,9 @@ import (
 )
 
 type WhoisMetrics struct {
-	whoisLookupResponseTime prometheus.Histogram
+	whoisLookupResponseTime   prometheus.Histogram
+	whoisRetriesCount         prometheus.Counter
+	whoisRetriesExceededCount prometheus.Counter
 }
 
 // Register Metrics
@@ -35,8 +36,20 @@ func CreateWhoisMetrics(reg prometheus.Registerer) *WhoisMetrics {
 				Name:    "lophiid_whois_lookup_duration",
 				Help:    "Whois lookup duration",
 				Buckets: metrics.MediumResponseTimebuckets}),
+		whoisRetriesCount: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "lophiid_whois_total_retries_counter",
+				Help: "Total whois retries counter",
+			}),
+		whoisRetriesExceededCount: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "lophiid_whois_total_retries_exceeded_counter",
+				Help: "Total whois retries exceeded counter",
+			}),
 	}
 
 	reg.MustRegister(m.whoisLookupResponseTime)
+	reg.MustRegister(m.whoisRetriesCount)
+	reg.MustRegister(m.whoisRetriesExceededCount)
 	return m
 }

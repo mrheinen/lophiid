@@ -202,6 +202,7 @@ type Whois struct {
 	IP        string    `ksql:"ip" json:"ip"`
 	Data      string    `ksql:"data" json:"data"`
 	Rdap      []byte    `ksql:"rdap" json:"rdap"`
+	Country   string    `ksql:"country" json:"country"`
 	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
 }

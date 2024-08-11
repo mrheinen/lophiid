@@ -61,7 +61,7 @@ type BackendServer struct {
 	qRunner         QueryRunner
 	qRunnerChan     chan bool
 	vtMgr           vt.VTManager
-	whoisMgr        whois.WhoisManager
+	whoisMgr        whois.RdapManager
 	alertMgr        *alerting.AlertManager
 	safeRules       *SafeRules
 	maintenanceChan chan bool
@@ -78,7 +78,7 @@ type BackendServer struct {
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.WhoisManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if

@@ -4,7 +4,7 @@ go_library(
     name = "whois",
     srcs = [
         "metrics.go",
-        "whois.go",
+        "rdap.go",
     ],
     importpath = "loophid/pkg/whois",
     visibility = ["//visibility:public"],
@@ -12,16 +12,19 @@ go_library(
         "//pkg/database",
         "//pkg/metrics",
         "//pkg/util",
+        "@com_github_openrdap_rdap//:rdap",
         "@com_github_prometheus_client_golang//prometheus",
     ],
 )
 
 go_test(
     name = "whois_test",
-    srcs = ["whois_test.go"],
+    srcs = ["rdap_test.go"],
     embed = [":whois"],
     deps = [
         "//pkg/database",
+        "@com_github_openrdap_rdap//:rdap",
         "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/testutil",
     ],
 )
