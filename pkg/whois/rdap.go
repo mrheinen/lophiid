@@ -14,24 +14,26 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package whois
 
 import (
+	"bytes"
 	"log/slog"
 	"loophid/pkg/database"
 	"loophid/pkg/util"
 	"sync"
 	"time"
+
+	"github.com/openrdap/rdap"
 )
 
-type WhoisManager interface {
+type RdapManager interface {
 	LookupIP(ip string) error
 }
 
-type CachedWhoisManager struct {
+type CachedRdapManager struct {
 	dbClient     database.DatabaseClient
-	whoisClient  WhoisClientInterface
+	whoisClient  RdapClientInterface
 	ipCache      util.StringMapCache[bool]
 	lookupMap    map[string]int
 	bgChan       chan bool
@@ -40,14 +42,14 @@ type CachedWhoisManager struct {
 	whoisMetrics *WhoisMetrics
 }
 
-type WhoisClientInterface interface {
-	Whois(domain string, servers ...string) (result string, err error)
+type RdapClientInterface interface {
+	QueryIP(ip string) (*rdap.IPNetwork, error)
 }
 
-func NewCachedWhoisManager(dbClient database.DatabaseClient, whoisMetrics *WhoisMetrics, whoisClient WhoisClientInterface, cacheDuration time.Duration, maxAttempts int) *CachedWhoisManager {
-	return &CachedWhoisManager{
+func NewCachedRdapManager(dbClient database.DatabaseClient, whoisMetrics *WhoisMetrics, rdapClient RdapClientInterface, cacheDuration time.Duration, maxAttempts int) *CachedRdapManager {
+	return &CachedRdapManager{
 		dbClient:     dbClient,
-		whoisClient:  whoisClient,
+		whoisClient:  rdapClient,
 		whoisMetrics: whoisMetrics,
 		// The int value in the map indicates how many times we have tried to lookup
 		// the whois for that given IP.
@@ -58,8 +60,8 @@ func NewCachedWhoisManager(dbClient database.DatabaseClient, whoisMetrics *Whois
 	}
 }
 
-func (c *CachedWhoisManager) Start() {
-	slog.Info("Starting Whois manager")
+func (c *CachedRdapManager) Start() {
+	slog.Info("Starting Whois Rdap manager")
 	ticker := time.NewTicker(time.Second * 10)
 	go func() {
 		for {
@@ -74,19 +76,20 @@ func (c *CachedWhoisManager) Start() {
 	}()
 }
 
-func (c *CachedWhoisManager) Stop() {
-	slog.Info("Stopping Whois manager")
+func (c *CachedRdapManager) Stop() {
+	slog.Info("Stopping Whois Rdap manager")
 	c.bgChan <- true
 }
 
 // DoWhoisWork will perform the whois query for the IPs in the lookupMap.
-func (c *CachedWhoisManager) DoWhoisWork() {
+func (c *CachedRdapManager) DoWhoisWork() {
 	var ips []string
 
 	c.mu.Lock()
 	for ip, lookupCount := range c.lookupMap {
 		if lookupCount >= c.maxAttempts {
 			slog.Warn("Removing IP from whois lookups. Exceeds # tries.", slog.String("ip", ip))
+			c.whoisMetrics.whoisRetriesExceededCount.Inc()
 			delete(c.lookupMap, ip)
 
 			// Pretend we actually have the results. This will prevent new lookups
@@ -100,19 +103,37 @@ func (c *CachedWhoisManager) DoWhoisWork() {
 
 	for _, ip := range ips {
 		startTime := time.Now()
-		result, err := c.whoisClient.Whois(ip)
+		resNetwork, err := c.whoisClient.QueryIP(ip)
 		c.whoisMetrics.whoisLookupResponseTime.Observe(time.Since(startTime).Seconds())
 
 		if err != nil {
-			slog.Warn("Failed to lookup whois for IP", slog.String("error", err.Error()))
+			slog.Warn("Failed to lookup whois for IP", slog.String("ip", ip), slog.String("error", err.Error()))
+			c.whoisMetrics.whoisRetriesCount.Inc()
 			c.mu.Lock()
 			c.lookupMap[ip] += 1
 			c.mu.Unlock()
 			continue
 		}
 
-		if _, err := c.dbClient.Insert(&database.Whois{IP: ip, Data: result, Rdap: []byte("")}); err != nil {
+		rdapPrinter := rdap.Printer{}
+		var printerOutput bytes.Buffer
+		rdapPrinter.Writer = &printerOutput
+
+		// Todo: condider these options below
+		// rdapPrinter.OmitNotices = true
+		// rdapPrinter.OmitRemarks = true
+
+		rdapPrinter.Print(resNetwork)
+
+		if _, err := c.dbClient.Insert(
+			&database.Whois{
+				IP:      ip,
+				Data:    "",
+				Rdap:    printerOutput.Bytes(),
+				Country: resNetwork.Country,
+			}); err != nil {
 			slog.Warn("Failed to store whois in database", slog.String("error", err.Error()))
+			c.whoisMetrics.whoisRetriesCount.Inc()
 			c.mu.Lock()
 			c.lookupMap[ip] += 1
 			c.mu.Unlock()
@@ -132,7 +153,7 @@ func (c *CachedWhoisManager) DoWhoisWork() {
 	c.ipCache.CleanExpired()
 }
 
-func (c *CachedWhoisManager) LookupIP(ip string) error {
+func (c *CachedRdapManager) LookupIP(ip string) error {
 	// If we have a cached entry for this IP then we can return
 	// immediately and prevent doing a database query.
 	_, err := c.ipCache.Get(ip)
@@ -158,9 +179,9 @@ func (c *CachedWhoisManager) LookupIP(ip string) error {
 	return nil
 }
 
-type FakeWhoisManager struct {
+type FakeRdapManager struct {
 }
 
-func (f *FakeWhoisManager) LookupIP(ip string) error {
+func (f *FakeRdapManager) LookupIP(ip string) error {
 	return nil
 }

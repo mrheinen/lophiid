@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package main
 
 import (
@@ -115,8 +114,8 @@ func main() {
 	fmt.Printf("Starting with API key: %s\n", id.String())
 
 	reg := prometheus.NewRegistry()
-	jRunner := javascript.NewGojaJavascriptRunner(javascript.CreateGoJaMetrics(reg))
 	dbc := database.NewKSQLClient(&db)
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, javascript.CreateGoJaMetrics(reg))
 	as := api.NewApiServer(dbc, jRunner, id.String())
 	defer dbc.Close()
 

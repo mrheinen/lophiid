@@ -43,7 +43,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kkyr/fig"
-	lwhois "github.com/likexian/whois"
+	"github.com/openrdap/rdap"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -141,11 +141,12 @@ func main() {
 		}
 	}
 
-	whoisClient := lwhois.NewClient()
-	whoisClient.SetTimeout(cfg.WhoisManager.ClientTimeout)
+	rdapClient := &rdap.Client{
+		HTTP: &http.Client{Timeout: cfg.WhoisManager.ClientTimeout},
+	}
 
 	wMetrics := whois.CreateWhoisMetrics(metricsRegistry)
-	whoisManager := whois.NewCachedWhoisManager(dbc, wMetrics, whoisClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts)
+	whoisManager := whois.NewCachedRdapManager(dbc, wMetrics, rdapClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts)
 	whoisManager.Start()
 
 	secureHttpTransport := &http.Transport{

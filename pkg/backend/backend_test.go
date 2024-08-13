@@ -181,7 +181,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			fakeJrunner := javascript.FakeJavascriptRunner{}
 
 			alertManager := alerting.NewAlertManager(42)
-			whoisManager := whois.FakeWhoisManager{}
+			whoisManager := whois.FakeRdapManager{}
 			queryRunner := FakeQueryRunner{
 				ErrorToReturn: nil,
 			}
@@ -217,7 +217,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeWhoisManager{}
+	whoisManager := whois.FakeRdapManager{}
 
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
@@ -267,7 +267,7 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeWhoisManager{}
+	whoisManager := whois.FakeRdapManager{}
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
@@ -357,7 +357,7 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 			fdbc := &database.FakeDatabaseClient{}
 			fakeJrunner := javascript.FakeJavascriptRunner{}
 			alertManager := alerting.NewAlertManager(42)
-			whoisManager := whois.FakeWhoisManager{}
+			whoisManager := whois.FakeRdapManager{}
 			queryRunner := FakeQueryRunner{
 				ErrorToReturn: nil,
 			}
@@ -390,7 +390,7 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeWhoisManager{}
+	whoisManager := whois.FakeRdapManager{}
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
@@ -507,7 +507,7 @@ func TestHandleProbe(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeWhoisManager{}
+	whoisManager := whois.FakeRdapManager{}
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
@@ -608,7 +608,7 @@ func TestProcessQueue(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeWhoisManager{}
+	whoisManager := whois.FakeRdapManager{}
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
@@ -699,7 +699,7 @@ func TestSendStatus(t *testing.T) {
 			fakeJrunner := javascript.FakeJavascriptRunner{}
 
 			alertManager := alerting.NewAlertManager(42)
-			whoisManager := whois.FakeWhoisManager{}
+			whoisManager := whois.FakeRdapManager{}
 			queryRunner := FakeQueryRunner{
 				ErrorToReturn: nil,
 			}
@@ -735,7 +735,7 @@ func TestSendStatusSendsCommands(t *testing.T) {
 
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeWhoisManager{}
+	whoisManager := whois.FakeRdapManager{}
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
@@ -788,7 +788,7 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeWhoisManager{}
+	whoisManager := whois.FakeRdapManager{}
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
@@ -835,7 +835,7 @@ func TestHandleP0fResult(t *testing.T) {
 	}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeWhoisManager{}
+	whoisManager := whois.FakeRdapManager{}
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
