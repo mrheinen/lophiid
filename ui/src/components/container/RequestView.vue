@@ -117,7 +117,21 @@
   <br />
   <div v-if="localWhois" class="card">
     <FieldSet legend="WHOIS record" :toggleable="true">
-      <pre class="whois">{{ localWhois.data }}</pre>
+
+      <table v-if="localWhois.country">
+        <tbody>
+          <tr>
+            <th>Country</th>
+            <td>
+              {{ localWhois.country }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br/>
+
+      <pre v-if="localWhois.data" class="whois">{{ localWhois.data }}</pre>
+      <pre v-if="localWhois.rdap_string" class="whois">{{ localWhois.rdap_string }}</pre>
     </FieldSet>
   </div>
 
