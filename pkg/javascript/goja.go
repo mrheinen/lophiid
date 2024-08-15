@@ -26,8 +26,8 @@ import (
 	"io"
 	"log/slog"
 	"loophid/backend_service"
-	"loophid/pkg/database"
-	"loophid/pkg/util"
+	"lophiid/pkg/database"
+	"lophiid/pkg/util"
 	"time"
 
 	"github.com/dop251/goja"

@@ -20,7 +20,7 @@ package database
 import (
 	"crypto/sha256"
 	"fmt"
-	"loophid/pkg/util"
+	"lophiid/pkg/util"
 	"sort"
 	"strings"
 )

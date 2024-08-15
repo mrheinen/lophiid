@@ -20,8 +20,8 @@ package auth
 import (
 	"context"
 	"errors"
-	"loophid/pkg/database"
-	"loophid/pkg/util"
+	"lophiid/pkg/database"
+	"lophiid/pkg/util"
 	"strings"
 	"testing"
 	"time"

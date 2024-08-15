@@ -19,7 +19,7 @@ package extractors
 
 import (
 	"fmt"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"testing"
 )
 

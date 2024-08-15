@@ -20,7 +20,7 @@ package backend
 import (
 	"sync"
 
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 )
 
 type SafeRules struct {

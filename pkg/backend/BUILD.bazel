@@ -13,7 +13,7 @@ go_library(
         "safe_rules.go",
         "util.go",
     ],
-    importpath = "loophid/pkg/backend",
+    importpath = "lophiid/pkg/backend",
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",

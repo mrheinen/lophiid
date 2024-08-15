@@ -20,7 +20,7 @@ package extractors
 import (
 	"fmt"
 	"log/slog"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"regexp"
 	"strconv"
 )

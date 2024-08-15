@@ -19,7 +19,7 @@ package javascript
 import (
 	"fmt"
 	"loophid/backend_service"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"

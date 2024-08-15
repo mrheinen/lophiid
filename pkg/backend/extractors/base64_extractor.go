@@ -19,7 +19,7 @@ package extractors
 
 import (
 	"encoding/base64"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"regexp"
 	"strings"
 	"unicode"

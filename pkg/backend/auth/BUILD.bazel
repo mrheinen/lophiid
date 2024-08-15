@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "auth",
     srcs = ["auth.go"],
-    importpath = "loophid/pkg/backend/auth",
+    importpath = "lophiid/pkg/backend/auth",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",

@@ -7,7 +7,7 @@ go_library(
         "metrics.go",
         "vt.go",
     ],
-    importpath = "loophid/pkg/vt",
+    importpath = "lophiid/pkg/vt",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",

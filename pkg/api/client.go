@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"net/http"
 	"net/url"
 	"strings"

@@ -6,7 +6,7 @@ go_library(
         "metrics.go",
         "rdap.go",
     ],
-    importpath = "loophid/pkg/whois",
+    importpath = "lophiid/pkg/whois",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",

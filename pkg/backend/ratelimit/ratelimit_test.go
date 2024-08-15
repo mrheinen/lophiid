@@ -18,7 +18,7 @@
 package ratelimit
 
 import (
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"testing"
 	"time"
 

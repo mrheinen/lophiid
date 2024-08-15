@@ -7,7 +7,7 @@ go_library(
         "log.go",
         "telegram.go",
     ],
-    importpath = "loophid/pkg/alerting",
+    importpath = "lophiid/pkg/alerting",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/util",

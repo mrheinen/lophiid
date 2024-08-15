@@ -18,7 +18,7 @@
 package vt
 
 import (
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"

@@ -18,7 +18,7 @@ package whois
 
 import (
 	"errors"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"testing"
 	"time"
 

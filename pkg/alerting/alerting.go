@@ -20,7 +20,7 @@ package alerting
 import (
 	"fmt"
 	"log/slog"
-	"loophid/pkg/util"
+	"lophiid/pkg/util"
 	"sync"
 	"time"
 )

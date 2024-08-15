@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"sync"
 	"time"
 )
