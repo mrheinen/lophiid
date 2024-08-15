@@ -136,6 +136,10 @@ The CLI is currently very limited but can be used to easily copy content (and
 create rules for) of public web sites. More information about how to use the CLI
 can be found [here](./API_CLIENT.md).
 
+# Contributing
+
+Contributions are super welcome! Just fork the repo and send us a PR. Please
+regularly check the [CONTRIBUTING.md](./CONTRIBUTING.md) for general guidelines
 
 # Documentation
 
