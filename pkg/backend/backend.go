@@ -42,6 +42,7 @@ import (
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
 	"loophid/pkg/util"
+	"loophid/pkg/util/constants"
 	"loophid/pkg/vt"
 	"loophid/pkg/whois"
 
@@ -301,6 +302,11 @@ func (s *BackendServer) UpdateCaches(ip string, rule database.ContentRule) {
 func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
 	dm, err := s.dbClient.GetHoneypotByIP(req.GetIp())
 	if err != nil {
+
+		// For now we just warn if an agent is not the same version of the backend.
+		if req.GetVersion() != constants.LophiidVersion {
+			slog.Warn("backend version differs from honeypot version", slog.String("backend_version", constants.LophiidVersion), slog.String("honeypot_version", req.GetVersion()))
+		}
 		_, err := s.dbClient.Insert(&database.Honeypot{
 			IP:          req.GetIp(),
 			Version:     req.GetVersion(),
