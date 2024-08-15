@@ -27,6 +27,7 @@ import (
 	"loophid/pkg/backend/ratelimit"
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
+	"loophid/pkg/util/constants"
 	"loophid/pkg/vt"
 	"loophid/pkg/whois"
 	"strings"
@@ -648,8 +649,8 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: errors.New("boo"),
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
-				Ip: "1.1.1.1",
-				Version: "1.1",
+				Ip:      "1.1.1.1",
+				Version: constants.LophiidVersion,
 			},
 			expectedErrorString: "",
 		},
@@ -659,8 +660,8 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: errors.New("boo"),
 			dbErrorToReturn:  errors.New("oh oh"),
 			request: &backend_service.StatusRequest{
-				Ip: "1.1.1.1",
-				Version: "1.1",
+				Ip:      "1.1.1.1",
+				Version: constants.LophiidVersion,
 			},
 			expectedErrorString: "error inserting honeypot",
 		},
@@ -670,8 +671,8 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: nil,
 			dbErrorToReturn:  errors.New("oh oh"),
 			request: &backend_service.StatusRequest{
-				Ip: "1.1.1.1",
-				Version: "1.1",
+				Ip:      "1.1.1.1",
+				Version: constants.LophiidVersion,
 			},
 			expectedErrorString: "error updating honeypot",
 		},
@@ -681,8 +682,8 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: nil,
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
-				Ip: "1.1.1.1",
-				Version: "1.1",
+				Ip:      "1.1.1.1",
+				Version: constants.LophiidVersion,
 			},
 			expectedErrorString: "",
 		},
@@ -754,6 +755,7 @@ func TestSendStatusSendsCommands(t *testing.T) {
 
 	statusRequest := backend_service.StatusRequest{
 		Ip: testHoneypotIP,
+		Version: constants.LophiidVersion,
 	}
 
 	b.downloadQueue[testHoneypotIP] = []backend_service.CommandDownloadFile{

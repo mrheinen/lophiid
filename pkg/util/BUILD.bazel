@@ -8,9 +8,11 @@ go_library(
         "net.go",
         "security.go",
         "string_map_cache.go",
+        "versioning.go",
     ],
     importpath = "loophid/pkg/util",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_blang_semver_v4//:go_default_library"],
 )
 
 go_test(
@@ -18,6 +20,7 @@ go_test(
     srcs = [
         "net_test.go",
         "string_map_cache_test.go",
+        "versioning_test.go",
     ],
     embed = [":util"],
 )
