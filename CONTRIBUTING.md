@@ -1,5 +1,12 @@
-Contributions are awesome!! Please fork the repo, make the changes and send a PR
-to merge those changes. There are a few rules:
+# Contributing to Our Project
+
+We welcome and appreciate contributions! Here's how you can contribute:
+
+1. Fork the repository
+2. Make your changes
+3. Submit a Pull Request (PR)
+
+## Contribution Guidelines:
 
 * For larger changes: ensure GitHub issue exists in which you propose your change and the approach for implementing it. We can discuss the approach in the bug to ensure the implementation will be compatible with the overall design and other ongoing changes.
 * Always add or update tests
