@@ -7,7 +7,7 @@ go_library(
         "http_server.go",
         "p0f_runner.go",
     ],
-    importpath = "loophid/pkg/agent",
+    importpath = "lophiid/pkg/agent",
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",

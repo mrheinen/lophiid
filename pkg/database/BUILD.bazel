@@ -7,7 +7,7 @@ go_library(
         "hashing.go",
         "query.go",
     ],
-    importpath = "loophid/pkg/database",
+    importpath = "lophiid/pkg/database",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/util",

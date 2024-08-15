@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"loophid/pkg/util"
+	"lophiid/pkg/util"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vingarcia/ksql"

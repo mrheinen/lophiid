@@ -3,6 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "constants",
     srcs = ["shared_constants.go"],
-    importpath = "loophid/pkg/util/constants",
+    importpath = "lophiid/pkg/util/constants",
     visibility = ["//visibility:public"],
 )

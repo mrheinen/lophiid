@@ -20,7 +20,7 @@ package vt
 import (
 	"fmt"
 	"log/slog"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"sync"
 	"time"
 )

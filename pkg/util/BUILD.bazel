@@ -10,7 +10,7 @@ go_library(
         "string_map_cache.go",
         "versioning.go",
     ],
-    importpath = "loophid/pkg/util",
+    importpath = "lophiid/pkg/util",
     visibility = ["//visibility:public"],
     deps = ["@com_github_blang_semver_v4//:go_default_library"],
 )

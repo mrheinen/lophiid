@@ -6,7 +6,7 @@ go_library(
         "goja.go",
         "metrics.go",
     ],
-    importpath = "loophid/pkg/javascript",
+    importpath = "lophiid/pkg/javascript",
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",

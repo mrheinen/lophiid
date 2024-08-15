@@ -17,7 +17,7 @@
 package whois
 
 import (
-	"loophid/pkg/metrics"
+	"lophiid/pkg/metrics"
 
 	"github.com/prometheus/client_golang/prometheus"
 )

@@ -18,8 +18,8 @@ package main
 
 import (
 	"log/slog"
-	"loophid/pkg/database"
-	"loophid/pkg/util"
+	"lophiid/pkg/database"
+	"lophiid/pkg/util"
 	"os"
 	"sort"
 )

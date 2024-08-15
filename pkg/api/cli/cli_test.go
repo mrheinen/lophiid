@@ -20,8 +20,8 @@ package cli
 import (
 	"bytes"
 	"io"
-	"loophid/pkg/api"
-	"loophid/pkg/database"
+	"lophiid/pkg/api"
+	"lophiid/pkg/database"
 	"net/http"
 	"testing"
 )

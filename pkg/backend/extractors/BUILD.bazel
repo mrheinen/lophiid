@@ -9,7 +9,7 @@ go_library(
         "tcp_extractor.go",
         "url_extractor.go",
     ],
-    importpath = "loophid/pkg/backend/extractors",
+    importpath = "lophiid/pkg/backend/extractors",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",

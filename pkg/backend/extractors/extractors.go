@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"html"
 	"log/slog"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"net/url"
 	"regexp"
 	"strings"

@@ -20,7 +20,7 @@ package backend
 import (
 	"fmt"
 	"log/slog"
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"time"
 )
 

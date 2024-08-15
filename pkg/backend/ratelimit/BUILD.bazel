@@ -6,7 +6,7 @@ go_library(
         "metrics.go",
         "ratelimit.go",
     ],
-    importpath = "loophid/pkg/backend/ratelimit",
+    importpath = "lophiid/pkg/backend/ratelimit",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",

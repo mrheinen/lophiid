@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"loophid/pkg/util"
+	"lophiid/pkg/util"
 	"mime/multipart"
 	"net/http"
 	"os"

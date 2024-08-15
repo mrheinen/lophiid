@@ -6,7 +6,7 @@ go_library(
         "client.go",
         "server.go",
     ],
-    importpath = "loophid/pkg/api",
+    importpath = "lophiid/pkg/api",
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",

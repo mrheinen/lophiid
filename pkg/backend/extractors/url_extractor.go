@@ -18,7 +18,7 @@
 package extractors
 
 import (
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"regexp"
 	"strings"
 

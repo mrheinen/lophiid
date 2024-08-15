@@ -18,7 +18,7 @@
 package backend
 
 import (
-	"loophid/pkg/database"
+	"lophiid/pkg/database"
 	"testing"
 )
 

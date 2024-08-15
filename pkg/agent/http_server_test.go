@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io"
 	"loophid/backend_service"
-	"loophid/pkg/backend"
+	"lophiid/pkg/backend"
 	"net/http"
 	"net/http/httptest"
 	"testing"
