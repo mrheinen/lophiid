@@ -25,6 +25,7 @@ import (
 	"loophid/backend_service"
 	"loophid/pkg/backend"
 	"loophid/pkg/util"
+	"loophid/pkg/util/constants"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -33,9 +34,6 @@ import (
 
 	"github.com/mrheinen/magicmime"
 )
-
-// AgentVersion is the version of the agent. We use semantic versioning.
-const AgentVersion = "0.5.0"
 
 type Agent struct {
 	backendClient   backend.BackendClient
@@ -99,7 +97,7 @@ func (a *Agent) Start() error {
 			case <-ticker.C:
 				resp, err := a.backendClient.SendStatus(&backend_service.StatusRequest{
 					Ip:      a.reportIP,
-					Version: AgentVersion,
+					Version: constants.LophiidVersion,
 				})
 
 				if err != nil {

@@ -42,6 +42,7 @@ import (
 	"loophid/pkg/database"
 	"loophid/pkg/javascript"
 	"loophid/pkg/util"
+	"loophid/pkg/util/constants"
 	"loophid/pkg/vt"
 	"loophid/pkg/whois"
 
@@ -299,8 +300,16 @@ func (s *BackendServer) UpdateCaches(ip string, rule database.ContentRule) {
 // SendStatus receives status information from honeypots and sends commands back
 // in response. This is not authenticated!
 func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
+
+	// Right now we just print an error because it's actually useful to still
+	// update the database with this honeypots information.
+	if err := util.IsLophiidVersionCompatible(req.GetVersion(), constants.LophiidVersion); err != nil {
+		slog.Error("backend and honeypot version are incompatible", slog.String("backend_version", constants.LophiidVersion), slog.String("honeypot_version", req.GetVersion()), slog.String("error", err.Error()))
+	}
+
 	dm, err := s.dbClient.GetHoneypotByIP(req.GetIp())
 	if err != nil {
+
 		_, err := s.dbClient.Insert(&database.Honeypot{
 			IP:          req.GetIp(),
 			Version:     req.GetVersion(),

@@ -13,6 +13,7 @@ go_library(
         "//backend_service",
         "//pkg/backend",
         "//pkg/util",
+        "//pkg/util/constants",
         "@com_github_mrheinen_magicmime//:magicmime",
         "@com_github_mrheinen_p0fclient//:p0fclient",
     ],
