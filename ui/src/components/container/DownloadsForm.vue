@@ -51,7 +51,7 @@
         </table>
       </FieldSet>
     </div>
-    <br/>
+    <br />
     <div v-if="localDownload.vt_file_analysis_submitted" class="card">
       <FieldSet legend="VirusTotal results" :toggleable="true">
         <div>
@@ -89,7 +89,10 @@
             <label class="label">Virus total result sample</label>
             <table class="slightlyright">
               <tbody>
-                <tr v-for="res in localDownload.parsed.vt_file_analysis_result" :key="res">
+                <tr
+                  v-for="res in localDownload.parsed.vt_file_analysis_result"
+                  :key="res"
+                >
                   <th>{{ res.engine }}</th>
                   <td>{{ res.result }}</td>
                 </tr>
@@ -97,29 +100,46 @@
             </table>
           </div>
         </div>
-       </FieldSet>
-      </div>
+      </FieldSet>
+    </div>
 
-  <br/>
-    <RawHttpCard v-if="localDownload.raw_http_response" label="HTTP response headers" :data="localDownload.raw_http_response"></RawHttpCard>
-    <br/>
-      <div v-if="localWhois" class="card">
-         <FieldSet legend="WHOIS record" :toggleable="true">
-            <pre class="whois">{{ localWhois.data }}</pre>
-          </FieldSet>
-       </div>
+    <br />
+    <RawHttpCard
+      v-if="localDownload.raw_http_response"
+      label="HTTP response headers"
+      :data="localDownload.raw_http_response"
+    ></RawHttpCard>
+    <br />
+    <div v-if="localWhois" class="card">
+      <FieldSet legend="WHOIS record" :toggleable="true">
+        <table v-if="localWhois.country">
+          <tbody>
+            <tr>
+              <th>Country</th>
+              <td>
+                {{ localWhois.country }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <br />
 
-
+        <pre v-if="localWhois.data" class="whois">{{ localWhois.data }}</pre>
+        <pre v-if="localWhois.rdap_string" class="whois">{{
+          localWhois.rdap_string
+        }}</pre>
+      </FieldSet>
+    </div>
   </div>
 </template>
 
 <script>
 import { copyToClipboardHelper } from "../../helpers.js";
-import RawHttpCard from '../cards/RawHttpCard.vue';
+import RawHttpCard from "../cards/RawHttpCard.vue";
 
 export default {
   components: {
-    RawHttpCard
+    RawHttpCard,
   },
   props: ["download", "whois"],
   emits: ["require-auth"],
@@ -236,6 +256,4 @@ table th {
 table td {
   padding-right: 13px;
 }
-
-
 </style>
