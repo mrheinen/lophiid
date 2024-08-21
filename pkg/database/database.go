@@ -43,6 +43,7 @@ var TagTable = ksql.NewTable("tag")
 var TagPerRequestTable = ksql.NewTable("tag_per_request")
 var TagPerQueryTable = ksql.NewTable("tag_per_query")
 var P0fResultTable = ksql.NewTable("p0f_result")
+var IpScoreTable = ksql.NewTable("ip_score")
 
 type DataModel interface {
 	ModelID() int64
@@ -212,6 +213,22 @@ type Whois struct {
 }
 
 func (c *Whois) ModelID() int64 { return c.ID }
+
+type IpScore struct {
+	ID                   int64     `ksql:"id,skipInserts" json:"id"`
+	IP                   string    `ksql:"ip" json:"ip"`
+	Domain               string    `ksql:"domain" json:"domain"`
+	RepScore             int64     `ksql:"rep_score" json:"rep_score"`
+	RepSentPayload       bool      `ksql:"rep_sent_payload" json:"rep_sent_payload"`
+	RepHostPayload       bool      `ksql:"rep_host_payload" json:"rep_host_payload"`
+	RepRuledAttack       bool      `ksql:"rep_ruled_attack" json:"rep_ruled_attack"`
+	RepPayloadMalicious  bool      `ksql:"rep_payload_malicious" json:"rep_payload_malicious"`
+	RepReportedMalicious bool      `ksql:"rep_reported_malicious" json:"rep_reported_malicious"`
+	CreatedAt            time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt            time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+}
+
+func (c *IpScore) ModelID() int64 { return c.ID }
 
 type P0fResult struct {
 	ID               int64     `ksql:"id,skipInserts" json:"id"`
@@ -419,6 +436,9 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &TagPerRequestTable
 	case "P0fResult":
 		return &P0fResultTable
+	case "IpScore":
+		return &IpScoreTable
+
 	default:
 		fmt.Printf("Don't know %s datamodel\n", name)
 		return nil
