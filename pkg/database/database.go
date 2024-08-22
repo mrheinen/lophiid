@@ -67,19 +67,28 @@ type Content struct {
 func (c *Content) ModelID() int64 { return c.ID }
 
 type ContentRule struct {
-	ID           int64     `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
-	Host         string    `ksql:"host" json:"host"`
-	Uri          string    `ksql:"uri" json:"uri"           doc:"The URI matching string"`
-	Body         string    `ksql:"body" json:"body"         doc:"The body matching string"`
-	Method       string    `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
-	Port         int64     `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
-	UriMatching  string    `ksql:"uri_matching" json:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
-	BodyMatching string    `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
-	ContentID    int64     `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
-	AppID        int64     `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
-	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
-	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
-	Alert        bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	ID             int64     `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
+	Host           string    `ksql:"host" json:"host"`
+	Uri            string    `ksql:"uri" json:"uri"           doc:"The URI matching string"`
+	Body           string    `ksql:"body" json:"body"         doc:"The body matching string"`
+	Method         string    `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
+	Port           int64     `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
+	UriMatching    string    `ksql:"uri_matching" json:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
+	BodyMatching   string    `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
+	ContentID      int64     `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
+	AppID          int64     `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
+	CreatedAt      time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
+	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
+	Alert          bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	// The request purpose should indicate what the request is intended to do. It
+	// is used, amongst other things, to determine whether a request is malicious
+	// or not.
+	// Valid values are:
+	//   - UNKNOWN : the purpose is unknown
+	//   - RECON : the purpose is reconnaissance
+	//   - CRAWL : the request is part of regular crawling
+	//   - ATTACK : the request is an attack (e.g. an RCE)
+	RequestPurpose string    `ksql:"request_purpose" json:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
 }
 
 func (c *ContentRule) ModelID() int64 { return c.ID }
