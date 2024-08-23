@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package util
 
 import (
@@ -83,17 +82,26 @@ func (r *StringMapCache[T]) GetAsMap() map[string]T {
 }
 
 func (r *StringMapCache[T]) CleanExpired() (removedCount int64) {
+	return r.CleanExpiredWithCallback(func(T) bool { return true })
+}
+
+// CleanExpiredWithCallback is similar to CleanExpired but also calls the
+// callback. If the callback returns true than the entry is removed.
+// This can be used to do something with the cached data right before it expires
+// in the cache.
+func (r *StringMapCache[T]) CleanExpiredWithCallback(callback func(T) bool) (removedCount int64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	for k, v := range r.rules {
 		if time.Since(v.Time) > r.timeout {
-			slog.Debug("removing entry from cache", slog.String("name", r.cacheName), slog.String("key", k))
-			removedCount++
-			delete(r.rules, k)
+			if callback(v.Data) {
+				slog.Debug("removing entry from cache", slog.String("name", r.cacheName), slog.String("key", k))
+				removedCount++
+				delete(r.rules, k)
+			}
 		}
 	}
-
 	slog.Debug("expiration stats after cleanup", slog.String("name", r.cacheName), slog.Int("count", len(r.rules)), slog.Int("removedCount", int(removedCount)))
 	return
 }
