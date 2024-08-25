@@ -30,7 +30,7 @@ type CacheEntry[T comparable] struct {
 
 type StringMapCache[T comparable] struct {
 	mu        sync.Mutex
-	rules     map[string]CacheEntry[T]
+	entries   map[string]CacheEntry[T]
 	timeout   time.Duration
 	bgChan    chan bool
 	cacheName string
@@ -40,24 +40,41 @@ func NewStringMapCache[T comparable](name string, timeout time.Duration) *String
 	return &StringMapCache[T]{
 		timeout:   timeout,
 		cacheName: name,
-		rules:     make(map[string]CacheEntry[T]),
+		entries:   make(map[string]CacheEntry[T]),
 		bgChan:    make(chan bool),
 	}
 }
 
 func (r *StringMapCache[T]) Store(key string, data T) {
 	r.mu.Lock()
-	r.rules[key] = CacheEntry[T]{
+	r.entries[key] = CacheEntry[T]{
 		Data: data,
 		Time: time.Now(),
 	}
 	r.mu.Unlock()
 }
 
+// Replace replaces the data of an entry while preserving the timestamp meaning
+// it has no influence on expiration.
+func (r *StringMapCache[T]) Replace(key string, data T) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	entry, ok := r.entries[key]
+	if !ok {
+		return fmt.Errorf("no entry for key %s", key)
+	}
+
+	entry.Data = data
+	r.entries[key] = entry
+
+	return nil
+}
+
 func (r *StringMapCache[T]) Get(key string) (*T, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	ce, ok := r.rules[key]
+	ce, ok := r.entries[key]
 
 	if !ok {
 		return nil, fmt.Errorf("cannot find: %s", key)
@@ -74,7 +91,7 @@ func (r *StringMapCache[T]) GetAsMap() map[string]T {
 	defer r.mu.Unlock()
 
 	ret := make(map[string]T)
-	for k, v := range r.rules {
+	for k, v := range r.entries {
 		ret[k] = v.Data
 	}
 
@@ -93,16 +110,16 @@ func (r *StringMapCache[T]) CleanExpiredWithCallback(callback func(T) bool) (rem
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for k, v := range r.rules {
+	for k, v := range r.entries {
 		if time.Since(v.Time) > r.timeout {
 			if callback(v.Data) {
 				slog.Debug("removing entry from cache", slog.String("name", r.cacheName), slog.String("key", k))
 				removedCount++
-				delete(r.rules, k)
+				delete(r.entries, k)
 			}
 		}
 	}
-	slog.Debug("expiration stats after cleanup", slog.String("name", r.cacheName), slog.Int("count", len(r.rules)), slog.Int("removedCount", int(removedCount)))
+	slog.Debug("expiration stats after cleanup", slog.String("name", r.cacheName), slog.Int("count", len(r.entries)), slog.Int("removedCount", int(removedCount)))
 	return
 }
 
