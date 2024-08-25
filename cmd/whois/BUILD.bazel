@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "whois_lib",
     srcs = ["main.go"],
-    importpath = "loophid/cmd/whois",
+    importpath = "lophiid/cmd/whois",
     visibility = ["//visibility:private"],
     deps = ["@com_github_likexian_whois//:whois"],
 )

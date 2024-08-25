@@ -26,7 +26,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"loophid/backend_service"
+	"lophiid/backend_service"
 	"lophiid/pkg/alerting"
 	"lophiid/pkg/backend"
 	"lophiid/pkg/backend/auth"

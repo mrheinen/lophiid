@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "backend_lib",
     srcs = ["backend_main.go"],
-    importpath = "loophid/cmd/backend",
+    importpath = "lophiid/cmd/backend",
     visibility = ["//visibility:private"],
     deps = [
         "//backend_service",

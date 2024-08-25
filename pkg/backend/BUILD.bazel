@@ -55,6 +55,7 @@ go_test(
         "//pkg/backend/ratelimit",
         "//pkg/database",
         "//pkg/javascript",
+        "//pkg/util/constants",
         "//pkg/vt",
         "//pkg/whois",
         "@com_github_jackc_pgx_v5//pgtype",

@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"loophid/backend_service"
+	"lophiid/backend_service"
 	"lophiid/pkg/alerting"
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/ratelimit"
@@ -754,7 +754,7 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, GetDefaultBackendConfig())
 
 	statusRequest := backend_service.StatusRequest{
-		Ip: testHoneypotIP,
+		Ip:      testHoneypotIP,
 		Version: constants.LophiidVersion,
 	}
 
