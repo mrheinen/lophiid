@@ -253,29 +253,20 @@ CREATE TABLE whois (
   updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
-CREATE TABLE ip_score (
+
+CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'ATTACKED', 'RECONNED', 'CRAWLED', 'SCANNED', 'BRUTEFORCED', 'HOSTED_MALWARE', 'HOST_C2');
+
+CREATE TABLE ip_event (
   id                     SERIAL PRIMARY KEY,
   ip                     VARCHAR(52),
   domain                 VARCHAR(256),
-  -- A reputation score that goes from 0 - 100 where the higher the number the
-  -- more confident we are the IP is malicious.
-  rep_score              INTEGER DEFAULT 0,
-  -- Whether the IP has sent a request with a payload
-  rep_sent_payload       BOOL DEFAULT FALSE,
-  -- Whether the IP has been found hosting malware
-  rep_host_payload       BOOL DEFAULT FALSE,
-  -- Whether the IP send a request that matched a rule that has "Mark as attack"
-  -- set to true.
-  rep_ruled_attack       BOOL DEFAULT FALSE,
-  -- Whether we know the payload was considered malicious. E.g. from virus total
-  -- scans.
-  rep_payload_malicious  BOOL DEFAULT FALSE,
-  -- Whether the IP is known to be malicious from other sources
-  rep_reported_malicious BOOL DEFAULT FALSE,
+  details                VARCHAR(4096),
+  note                   VARCHAR(4096),
+  count                  INTEGER default 0,
+  type                   IP_EVENT_TYPE DEFAULT 'UNKNOWN',
   created_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
-
 
 GRANT ALL PRIVILEGES ON content TO lo;
 GRANT ALL PRIVILEGES ON content_id_seq TO lo;
@@ -305,21 +296,8 @@ GRANT ALL PRIVILEGES ON tag_per_request TO lo;
 GRANT ALL PRIVILEGES ON tag_per_request_id_seq TO lo;
 GRANT ALL PRIVILEGES ON p0f_result TO lo;
 GRANT ALL PRIVILEGES ON p0f_result_id_seq TO lo;
-GRANT ALL PRIVILEGES ON ip_score TO lo;
-GRANT ALL PRIVILEGES ON ip_score_id_seq TO lo;
-
-
-
-CREATE INDEX ip_score_by_created_at_idx ON ip_score ( created_at desc );
-CREATE INDEX ip_score_by_score ON ip_score (
-  rep_score DESC
-);
-
-CREATE INDEX ip_score_by_ip_and_creation ON ip_score (
-  created_at DESC,
-  ip
-);
-
+GRANT ALL PRIVILEGES ON ip_event TO lo;
+GRANT ALL PRIVILEGES ON ip_event_id_seq TO lo;
 
 CREATE INDEX requests_idx ON request ( time_received desc );
 CREATE INDEX requests_port_idx ON request (

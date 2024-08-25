@@ -43,7 +43,7 @@ var TagTable = ksql.NewTable("tag")
 var TagPerRequestTable = ksql.NewTable("tag_per_request")
 var TagPerQueryTable = ksql.NewTable("tag_per_query")
 var P0fResultTable = ksql.NewTable("p0f_result")
-var IpScoreTable = ksql.NewTable("ip_score")
+var IpEventTable = ksql.NewTable("ip_event")
 
 type DataModel interface {
 	ModelID() int64
@@ -67,19 +67,19 @@ type Content struct {
 func (c *Content) ModelID() int64 { return c.ID }
 
 type ContentRule struct {
-	ID             int64     `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
-	Host           string    `ksql:"host" json:"host"`
-	Uri            string    `ksql:"uri" json:"uri"           doc:"The URI matching string"`
-	Body           string    `ksql:"body" json:"body"         doc:"The body matching string"`
-	Method         string    `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
-	Port           int64     `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
-	UriMatching    string    `ksql:"uri_matching" json:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
-	BodyMatching   string    `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
-	ContentID      int64     `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
-	AppID          int64     `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
-	CreatedAt      time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
-	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
-	Alert          bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	ID           int64     `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
+	Host         string    `ksql:"host" json:"host"`
+	Uri          string    `ksql:"uri" json:"uri"           doc:"The URI matching string"`
+	Body         string    `ksql:"body" json:"body"         doc:"The body matching string"`
+	Method       string    `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
+	Port         int64     `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
+	UriMatching  string    `ksql:"uri_matching" json:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
+	BodyMatching string    `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
+	ContentID    int64     `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
+	AppID        int64     `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
+	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
+	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
+	Alert        bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.
@@ -88,7 +88,7 @@ type ContentRule struct {
 	//   - RECON : the purpose is reconnaissance
 	//   - CRAWL : the request is part of regular crawling
 	//   - ATTACK : the request is an attack (e.g. an RCE)
-	RequestPurpose string    `ksql:"request_purpose" json:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
+	RequestPurpose string `ksql:"request_purpose" json:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
 }
 
 func (c *ContentRule) ModelID() int64 { return c.ID }
@@ -223,21 +223,19 @@ type Whois struct {
 
 func (c *Whois) ModelID() int64 { return c.ID }
 
-type IpScore struct {
-	ID                   int64     `ksql:"id,skipInserts" json:"id"`
-	IP                   string    `ksql:"ip" json:"ip"`
-	Domain               string    `ksql:"domain" json:"domain"`
-	RepScore             int64     `ksql:"rep_score" json:"rep_score"`
-	RepSentPayload       bool      `ksql:"rep_sent_payload" json:"rep_sent_payload"`
-	RepHostPayload       bool      `ksql:"rep_host_payload" json:"rep_host_payload"`
-	RepRuledAttack       bool      `ksql:"rep_ruled_attack" json:"rep_ruled_attack"`
-	RepPayloadMalicious  bool      `ksql:"rep_payload_malicious" json:"rep_payload_malicious"`
-	RepReportedMalicious bool      `ksql:"rep_reported_malicious" json:"rep_reported_malicious"`
-	CreatedAt            time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt            time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+type IpEvent struct {
+	ID        int64     `ksql:"id,skipInserts" json:"id"`
+	IP        string    `ksql:"ip" json:"ip"`
+	Domain    string    `ksql:"domain" json:"domain"`
+	Type      string    `ksql:"type" json:"type"`
+	Details   string    `ksql:"details" json:"details"`
+	Note      string    `ksql:"note" json:"note"`
+	Count     int64     `ksql:"count" json:"count"`
+	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
 }
 
-func (c *IpScore) ModelID() int64 { return c.ID }
+func (c *IpEvent) ModelID() int64 { return c.ID }
 
 type P0fResult struct {
 	ID               int64     `ksql:"id,skipInserts" json:"id"`
@@ -445,8 +443,8 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &TagPerRequestTable
 	case "P0fResult":
 		return &P0fResultTable
-	case "IpScore":
-		return &IpScoreTable
+	case "IpEvent":
+		return &IpEventTable
 
 	default:
 		fmt.Printf("Don't know %s datamodel\n", name)
