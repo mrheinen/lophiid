@@ -231,6 +231,7 @@ type IpEvent struct {
 	Details   string    `ksql:"details" json:"details"`
 	Note      string    `ksql:"note" json:"note"`
 	Count     int64     `ksql:"count" json:"count"`
+	RequestID int64     `ksql:"request_id" json:"request_id"`
 	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
 }
@@ -326,6 +327,7 @@ type DatabaseClient interface {
 	GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error)
 	GetHoneypots() ([]Honeypot, error)
 	GetRequests() ([]Request, error)
+	GetRequestByID(id int64) (Request, error)
 	GetRequestsForSourceIP(ip string) ([]Request, error)
 	GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error)
 	SearchRequests(offset int64, limit int64, query string) ([]Request, error)
@@ -555,6 +557,12 @@ func (d *KSQLClient) GetTagsPerRequestForRequestID(id int64) ([]TagPerRequest, e
 func (d *KSQLClient) GetRequests() ([]Request, error) {
 	var rs []Request
 	err := d.db.Query(d.ctx, &rs, "FROM request ORDER BY time_received")
+	return rs, err
+}
+
+func (d *KSQLClient) GetRequestByID(id int64) (Request, error) {
+	var rs Request
+	err := d.db.Query(d.ctx, &rs, "FROM request WHERE id = $1", id)
 	return rs, err
 }
 
@@ -901,6 +909,7 @@ type FakeDatabaseClient struct {
 	ContentRuleIDToReturn  int64
 	ContentRulesToReturn   []ContentRule
 	RequestsToReturn       []Request
+	RequestToReturn        Request
 	DownloadsToReturn      []Download
 	ApplicationToReturn    Application
 	HoneypotToReturn       Honeypot
@@ -1030,4 +1039,7 @@ func (f *FakeDatabaseClient) GetTagPerRequestFullForRequest(id int64) ([]TagPerR
 }
 func (f *FakeDatabaseClient) GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error) {
 	return f.P0fResultToReturn, f.P0fErrorToReturn
+}
+func (f *FakeDatabaseClient) GetRequestByID(id int64) (Request, error) {
+	return f.RequestToReturn, f.ErrorToReturn
 }

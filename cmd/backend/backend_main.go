@@ -28,6 +28,7 @@ import (
 	"log/slog"
 	"lophiid/backend_service"
 	"lophiid/pkg/alerting"
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/backend"
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/ratelimit"
@@ -155,6 +156,9 @@ func main() {
 
 	vtHttpClient := &http.Client{Transport: secureHttpTransport, Timeout: cfg.VirusTotal.HttpClientTimeout}
 
+	analysisMetrics := analysis.CreateAnalysisMetrics(metricsRegistry)
+	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, analysisMetrics)
+
 	var vtMgr vt.VTManager
 	if cfg.VirusTotal.ApiKey == "" {
 		vtMgr = nil
@@ -164,7 +168,8 @@ func main() {
 		vtc.Start()
 
 		metrics := vt.CreateVTMetrics(metricsRegistry)
-		vtMgr = vt.NewVTBackgroundManager(dbc, metrics, vtc)
+
+		vtMgr = vt.NewVTBackgroundManager(dbc, ipEventManager, metrics, vtc)
 		vtMgr.Start()
 	}
 

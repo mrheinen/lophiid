@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package vt
 
 import (
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
 	"sync"
 	"time"
@@ -50,12 +50,13 @@ func (f *FakeVTManager) Stop()              {}
 // ProbeRequestToDatabaseRequest transforms aHandleProbeRequest to a
 
 type VTBackgroundManager struct {
-	vtClient VTClientInterface
-	dbClient database.DatabaseClient
-	urlQmu   sync.Mutex
-	urlQueue map[string]bool
-	bgChan   chan bool
-	metrics  *VTMetrics
+	vtClient       VTClientInterface
+	dbClient       database.DatabaseClient
+	urlQmu         sync.Mutex
+	urlQueue       map[string]bool
+	bgChan         chan bool
+	metrics        *VTMetrics
+	ipEventManager analysis.IpEventManager
 }
 
 // NewVTBackgroundManager creates a new VTBackgroundManager instance.
@@ -65,13 +66,14 @@ type VTBackgroundManager struct {
 // - metrics: pointer to VTMetrics
 // - vtClient: VTClientInterface
 // Returns a pointer to VTBackgroundManager.
-func NewVTBackgroundManager(dbClient database.DatabaseClient, metrics *VTMetrics, vtClient VTClientInterface) *VTBackgroundManager {
+func NewVTBackgroundManager(dbClient database.DatabaseClient, ipEventManager analysis.IpEventManager, metrics *VTMetrics, vtClient VTClientInterface) *VTBackgroundManager {
 	return &VTBackgroundManager{
-		vtClient: vtClient,
-		dbClient: dbClient,
-		urlQueue: make(map[string]bool),
-		bgChan:   make(chan bool),
-		metrics:  metrics,
+		vtClient:       vtClient,
+		dbClient:       dbClient,
+		urlQueue:       make(map[string]bool),
+		bgChan:         make(chan bool),
+		metrics:        metrics,
+		ipEventManager: ipEventManager,
 	}
 }
 
@@ -188,6 +190,34 @@ func (v *VTBackgroundManager) GetFileAnalysis() error {
 		dl.VTAnalysisTimeout = cRes.Data.Attributes.Stats.Timeout
 		dl.VTAnalysisHarmless = cRes.Data.Attributes.Stats.Harmless
 		dl.VTFileAnalysisDone = true
+
+		if dl.VTAnalysisMalicious > 0 || dl.VTAnalysisSuspicious > 0 {
+			// Register the IP hosting the malware.
+			evt := database.IpEvent{
+				IP:        dl.IP,
+				Type:      analysis.IpEventHostedMalware,
+				RequestID: dl.RequestID,
+			}
+
+			if dl.Host != dl.IP {
+				// TODO: consider resolving the domain and also adding any additional
+				// IPs that yields.
+				evt.Domain = dl.Host
+			}
+
+			v.ipEventManager.AddEvent(&evt)
+
+			r, err := v.dbClient.GetRequestByID(dl.RequestID)
+			if err != nil {
+				slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.RequestID))
+			} else {
+				v.ipEventManager.AddEvent(&database.IpEvent{
+					IP:        r.SourceIP,
+					Type:      analysis.IpEventAttacked,
+					RequestID: dl.RequestID,
+				})
+			}
+		}
 
 		// Append only the results from our prefered engines.
 		for _, en := range PreferedFileResultEngines {

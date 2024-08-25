@@ -24,6 +24,17 @@ import (
 	"time"
 )
 
+// This needs to be kept in sync with IP_EVENT_TYPE in the database.
+const (
+	IpEventCrawl         = "CRAWLED"
+	IpEventHostedMalware = "HOSTED_MALWARE"
+	IpEventRecon         = "RECONNED"
+	IpEventScanned       = "SCANNED"
+	IpEventAttacked      = "ATTACKED"
+	IpEventBrute         = "BRUTEFORCED"
+	IpEventHostC2        = "HOST_C2"
+)
+
 // IpEventManager queues and caches IP related events and periodically stores
 // them in the database.
 type IpEventManager interface {
@@ -36,6 +47,15 @@ type IpEventManagerImpl struct {
 	controlChan chan bool
 	ipCache     *util.StringMapCache[database.IpEvent]
 	metrics     *AnalysisMetrics
+}
+
+// FakeIpEventManager is used in tests
+type FakeIpEventManager struct {
+	AddEventTimesCalled int64
+}
+
+func (f *FakeIpEventManager) AddEvent(evt *database.IpEvent) {
+	f.AddEventTimesCalled += 1
 }
 
 func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, metrics *AnalysisMetrics) *IpEventManagerImpl {

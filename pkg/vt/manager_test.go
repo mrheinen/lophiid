@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package vt
 
 import (
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
 	"testing"
 
@@ -77,7 +77,8 @@ func TestProcessURLQueue(t *testing.T) {
 			}
 
 			metrics := CreateVTMetrics(prometheus.NewRegistry())
-			mgr := NewVTBackgroundManager(&fakeDBClient, metrics, &fakeVTClient)
+			fIpMgr := analysis.FakeIpEventManager{}
+			mgr := NewVTBackgroundManager(&fakeDBClient, &fIpMgr, metrics, &fakeVTClient)
 			mgr.QueueURL("http://www")
 
 			err := mgr.ProcessURLQueue()
@@ -94,44 +95,112 @@ func TestProcessURLQueue(t *testing.T) {
 
 func TestManagerGetFileAnalysis(t *testing.T) {
 
-	fakeDBClient := database.FakeDatabaseClient{
-		DownloadsToReturn: []database.Download{
-			{
-				ID:                 42,
-				VTFileAnalysisDone: false,
-				VTFileAnalysisID:   "AAAA",
-			},
-		},
-	}
-
-	fakeVTClient := FakeVTClient{
-
-		FileAnalysisResponseToReturn: FileAnalysisResponse{
-			Data: FileAnalysisData{
-				Attributes: FileAnalysisAttributes{
-					Stats: AnalysisStats{
-						Malicious:  10,
-						Undetected: 10,
-						Suspicious: 10,
-						Harmless:   10,
-						Timeout:    10,
-					},
-					Status: "completed",
-					Results: map[string]EngineResult{
-						"Fortinet": {
-							Result: "something/Virus",
+	for _, test := range []struct {
+		description          string
+		expectedNumberEvents int64
+		analysisResponse     FileAnalysisResponse
+	}{
+		{
+			description:          "runs ok, detects malicious",
+			expectedNumberEvents: 2,
+			analysisResponse: FileAnalysisResponse{
+				Data: FileAnalysisData{
+					Attributes: FileAnalysisAttributes{
+						Stats: AnalysisStats{
+							Malicious:  10,
+							Undetected: 10,
+							Suspicious: 0,
+							Harmless:   10,
+							Timeout:    10,
+						},
+						Status: "completed",
+						Results: map[string]EngineResult{
+							"Fortinet": {
+								Result: "something/Virus",
+							},
 						},
 					},
 				},
 			},
 		},
-		ErrorToReturn: nil,
-	}
+		{
+			description:          "runs ok, detects suspicious",
+			expectedNumberEvents: 2,
+			analysisResponse: FileAnalysisResponse{
+				Data: FileAnalysisData{
+					Attributes: FileAnalysisAttributes{
+						Stats: AnalysisStats{
+							Malicious:  0,
+							Undetected: 10,
+							Suspicious: 10,
+							Harmless:   10,
+							Timeout:    10,
+						},
+						Status: "completed",
+						Results: map[string]EngineResult{
+							"Fortinet": {
+								Result: "something/Virus",
+							},
+						},
+					},
+				},
+			},
+		},
 
-	metrics := CreateVTMetrics(prometheus.NewRegistry())
-	mgr := NewVTBackgroundManager(&fakeDBClient, metrics, &fakeVTClient)
-	err := mgr.GetFileAnalysis()
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
+		{
+			description:          "runs ok, detects nothing",
+			expectedNumberEvents: 0,
+			analysisResponse: FileAnalysisResponse{
+				Data: FileAnalysisData{
+					Attributes: FileAnalysisAttributes{
+						Stats: AnalysisStats{
+							Malicious:  0,
+							Undetected: 0,
+							Suspicious: 0,
+							Harmless:   0,
+							Timeout:    0,
+						},
+						Status: "completed",
+						Results: map[string]EngineResult{
+							"Fortinet": {
+								Result: "something/Virus",
+							},
+						},
+					},
+				},
+			},
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fakeDBClient := database.FakeDatabaseClient{
+				DownloadsToReturn: []database.Download{
+					{
+						ID:                 42,
+						VTFileAnalysisDone: false,
+						VTFileAnalysisID:   "AAAA",
+					},
+				},
+			}
+			fakeVTClient := FakeVTClient{
+				FileAnalysisResponseToReturn: test.analysisResponse,
+				ErrorToReturn:                nil,
+			}
+
+			metrics := CreateVTMetrics(prometheus.NewRegistry())
+			fIpMgr := analysis.FakeIpEventManager{
+				AddEventTimesCalled: 0,
+			}
+			mgr := NewVTBackgroundManager(&fakeDBClient, &fIpMgr, metrics, &fakeVTClient)
+			err := mgr.GetFileAnalysis()
+			if err != nil {
+				t.Errorf("unexpected error: %s", err)
+			}
+
+			if fIpMgr.AddEventTimesCalled != test.expectedNumberEvents {
+				t.Errorf("expected %d IP events added, but %d were added", test.expectedNumberEvents, fIpMgr.AddEventTimesCalled)
+			}
+
+		})
 	}
 }

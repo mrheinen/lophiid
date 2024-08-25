@@ -264,6 +264,7 @@ CREATE TABLE ip_event (
   note                   VARCHAR(4096),
   count                  INTEGER default 0,
   type                   IP_EVENT_TYPE DEFAULT 'UNKNOWN',
+  request_id             INTEGER,   -- optional
   created_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );

@@ -10,6 +10,7 @@ go_library(
     importpath = "lophiid/pkg/vt",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/analysis",
         "//pkg/database",
         "//pkg/metrics",
         "//pkg/util",
@@ -25,6 +26,7 @@ go_test(
     ],
     embed = [":vt"],
     deps = [
+        "//pkg/analysis",
         "//pkg/database",
         "@com_github_prometheus_client_golang//prometheus",
     ],

@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//backend_service",
         "//pkg/alerting",
+        "//pkg/analysis",
         "//pkg/backend",
         "//pkg/backend/auth",
         "//pkg/backend/ratelimit",
