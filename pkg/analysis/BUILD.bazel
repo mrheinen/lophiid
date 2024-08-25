@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "analysis",
+    srcs = [
+        "ip.go",
+        "metrics.go",
+    ],
+    importpath = "lophiid/pkg/analysis",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/database",
+        "//pkg/util",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
+)
+
+go_test(
+    name = "analysis_test",
+    srcs = ["ip_test.go"],
+    embed = [":analysis"],
+    deps = [
+        "//pkg/database",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
+)
