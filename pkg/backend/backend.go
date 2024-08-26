@@ -532,6 +532,12 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 			slog.Warn("could not update", slog.String("error", err.Error()))
 		}
 
+		if dm.VTAnalysisMalicious > 0 || dm.VTAnalysisSuspicious > 0 {
+			for _, evt := range s.vtMgr.GetEventsForDownload(&dm) {
+				s.ipEventManager.AddEvent(&evt)
+			}
+		}
+
 		if s.vtMgr != nil && len(dm.VTURLAnalysisID) == 0 {
 			slog.Warn("URL analysis ID is not set!")
 			s.vtMgr.QueueURL(dInfo.OriginalUrl)

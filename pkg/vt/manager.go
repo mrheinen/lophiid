@@ -26,6 +26,7 @@ import (
 )
 
 type VTManager interface {
+	GetEventsForDownload(dl *database.Download) []database.IpEvent
 	ProcessURLQueue() error
 	QueueURL(ip string)
 	SubmitFiles() error
@@ -39,6 +40,18 @@ type FakeVTManager struct {
 
 func (f *FakeVTManager) ProcessURLQueue() error {
 	return f.ErrorToReturn
+}
+func (f *FakeVTManager) GetEventsForDownload(dl *database.Download) []database.IpEvent {
+	return []database.IpEvent{
+		{
+			Type: analysis.IpEventAttacked,
+			IP:   "1.1.1.1",
+		},
+		{
+			Type: analysis.IpEventAttacked,
+			IP:   "1.1.1.1",
+		},
+	}
 }
 func (f *FakeVTManager) SubmitFiles() error {
 	return f.ErrorToReturn
@@ -162,6 +175,38 @@ func (v *VTBackgroundManager) SubmitFiles() error {
 	return nil
 }
 
+func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []database.IpEvent {
+	ret := []database.IpEvent{}
+	// Register the IP hosting the malware.
+	evt := database.IpEvent{
+		IP:        dl.IP,
+		Type:      analysis.IpEventHostedMalware,
+		RequestID: dl.RequestID,
+		Details:   fmt.Sprintf("Hosted file that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+	}
+
+	if dl.Host != dl.IP {
+		// TODO: consider resolving the domain and also adding any additional
+		// IPs that yields.
+		evt.Domain = dl.Host
+	}
+
+	ret = append(ret, evt)
+
+	r, err := v.dbClient.GetRequestByID(dl.RequestID)
+	if err != nil {
+		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.RequestID))
+	} else {
+		ret = append(ret, database.IpEvent{
+			IP:        r.SourceIP,
+			Type:      analysis.IpEventAttacked,
+			RequestID: dl.RequestID,
+			Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		})
+	}
+	return ret
+}
+
 // Prefered engines for which we store the results for displaying in the UI
 var PreferedFileResultEngines = []string{"Fortinet", "Avast", "BitDefender", "Microsoft", "McAfee", "TrendMicro"}
 
@@ -192,32 +237,8 @@ func (v *VTBackgroundManager) GetFileAnalysis() error {
 		dl.VTFileAnalysisDone = true
 
 		if dl.VTAnalysisMalicious > 0 || dl.VTAnalysisSuspicious > 0 {
-			// Register the IP hosting the malware.
-			evt := database.IpEvent{
-				IP:        dl.IP,
-				Type:      analysis.IpEventHostedMalware,
-				RequestID: dl.RequestID,
-				Details:   fmt.Sprintf("Hosted file that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
-			}
-
-			if dl.Host != dl.IP {
-				// TODO: consider resolving the domain and also adding any additional
-				// IPs that yields.
-				evt.Domain = dl.Host
-			}
-
-			v.ipEventManager.AddEvent(&evt)
-
-			r, err := v.dbClient.GetRequestByID(dl.RequestID)
-			if err != nil {
-				slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.RequestID))
-			} else {
-				v.ipEventManager.AddEvent(&database.IpEvent{
-					IP:        r.SourceIP,
-					Type:      analysis.IpEventAttacked,
-					RequestID: dl.RequestID,
-					Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
-				})
+			for _, evt := range v.GetEventsForDownload(&dl) {
+				v.ipEventManager.AddEvent(&evt)
 			}
 		}
 

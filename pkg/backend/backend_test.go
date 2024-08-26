@@ -841,8 +841,10 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
 		DownloadsToReturn: []database.Download{
 			{
-				ID:        41,
-				TimesSeen: 1,
+				ID:                   41,
+				TimesSeen:            1,
+				VTAnalysisMalicious:  1,
+				VTAnalysisSuspicious: 0,
 			},
 		},
 	}
@@ -886,6 +888,10 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	downloadEntry := fdbc.LastDataModelSeen.(*database.Download)
 	if downloadEntry.TimesSeen != 2 {
 		t.Errorf("expected times seen to be %d, got %d", 2, downloadEntry.TimesSeen)
+	}
+
+	if len(fIpMgr.Events) != 2 {
+		t.Errorf("expected 2 events, got %d", len(fIpMgr.Events))
 	}
 }
 
