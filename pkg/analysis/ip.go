@@ -117,8 +117,10 @@ func (i *IpEventManagerImpl) ProcessNewEvent(evt *database.IpEvent) error {
 	entry, err := i.ipCache.Get(cacheKey)
 	if err == nil {
 		entry.Count += 1
-		i.ipCache.Replace(cacheKey, *entry)
-		return nil
+  if err := i.ipCache.Replace(cacheKey, *entry); err != nil {
+      return fmt.Errorf("failed to replace cache entry: %w", err)
+  }
+  return nil
 	}
 
 	evt.Count = 1
