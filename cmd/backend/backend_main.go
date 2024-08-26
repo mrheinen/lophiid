@@ -158,13 +158,14 @@ func main() {
 
 	analysisMetrics := analysis.CreateAnalysisMetrics(metricsRegistry)
 	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, analysisMetrics)
+	ipEventManager.Start()
 
 	var vtMgr vt.VTManager
 	if cfg.VirusTotal.ApiKey == "" {
 		vtMgr = nil
 	} else {
 		// Start the virustotal client/manager
-		vtc := vt.NewVTClient(cfg.VirusTotal.ApiKey, time.Hour*96, vtHttpClient)
+		vtc := vt.NewVTClient(cfg.VirusTotal.ApiKey, cfg.VirusTotal.CacheExpirationTime, vtHttpClient)
 		vtc.Start()
 
 		metrics := vt.CreateVTMetrics(metricsRegistry)

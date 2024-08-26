@@ -71,8 +71,9 @@ type Config struct {
 		} `fig:"telegram"`
 	}
 	VirusTotal struct {
-		ApiKey            string        `fig:"api_key"`
-		HttpClientTimeout time.Duration `fig:"http_timeout" default:"2m"`
+		ApiKey              string        `fig:"api_key"`
+		HttpClientTimeout   time.Duration `fig:"http_timeout" default:"2m"`
+		CacheExpirationTime time.Duration `fig:"cache_expiration_time" default:"96h"`
 	} `fig:"virustotal"`
 	Metrics struct {
 		ListenAddress string `fig:"listen_address" default:"localhost:8998"`
