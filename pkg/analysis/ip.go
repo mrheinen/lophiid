@@ -51,11 +51,11 @@ type IpEventManagerImpl struct {
 
 // FakeIpEventManager is used in tests
 type FakeIpEventManager struct {
-	AddEventTimesCalled int64
+	Events []database.IpEvent
 }
 
 func (f *FakeIpEventManager) AddEvent(evt *database.IpEvent) {
-	f.AddEventTimesCalled += 1
+	f.Events = append(f.Events, *evt)
 }
 
 func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, metrics *AnalysisMetrics) *IpEventManagerImpl {

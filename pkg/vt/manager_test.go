@@ -97,7 +97,7 @@ func TestManagerGetFileAnalysis(t *testing.T) {
 
 	for _, test := range []struct {
 		description          string
-		expectedNumberEvents int64
+		expectedNumberEvents int
 		analysisResponse     FileAnalysisResponse
 	}{
 		{
@@ -188,17 +188,15 @@ func TestManagerGetFileAnalysis(t *testing.T) {
 			}
 
 			metrics := CreateVTMetrics(prometheus.NewRegistry())
-			fIpMgr := analysis.FakeIpEventManager{
-				AddEventTimesCalled: 0,
-			}
+			fIpMgr := analysis.FakeIpEventManager{}
 			mgr := NewVTBackgroundManager(&fakeDBClient, &fIpMgr, metrics, &fakeVTClient)
 			err := mgr.GetFileAnalysis()
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}
 
-			if fIpMgr.AddEventTimesCalled != test.expectedNumberEvents {
-				t.Errorf("expected %d IP events added, but %d were added", test.expectedNumberEvents, fIpMgr.AddEventTimesCalled)
+			if len(fIpMgr.Events) != test.expectedNumberEvents {
+				t.Errorf("expected %d IP events added, but %d were added", test.expectedNumberEvents, len(fIpMgr.Events))
 			}
 
 		})

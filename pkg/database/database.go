@@ -64,6 +64,15 @@ type Content struct {
 	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at" doc:"time.Time of last update"`
 }
 
+// The request purpose for the ContentRule needs to be kept in sync with the
+// database REQUEST_PURPOSE type.
+const (
+	RuleRequestPurposeUnknown = "UNKNOWN"
+	RuleRequestPurposeAttack  = "ATTACK"
+	RuleRequestPurposeRecon   = "RECON"
+	RuleRequestPurposeCrawl   = "CRAWL"
+)
+
 func (c *Content) ModelID() int64 { return c.ID }
 
 type ContentRule struct {

@@ -197,6 +197,7 @@ func (v *VTBackgroundManager) GetFileAnalysis() error {
 				IP:        dl.IP,
 				Type:      analysis.IpEventHostedMalware,
 				RequestID: dl.RequestID,
+				Details:   fmt.Sprintf("Hosted file that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 			}
 
 			if dl.Host != dl.IP {
@@ -215,6 +216,7 @@ func (v *VTBackgroundManager) GetFileAnalysis() error {
 					IP:        r.SourceIP,
 					Type:      analysis.IpEventAttacked,
 					RequestID: dl.RequestID,
+					Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 				})
 			}
 		}

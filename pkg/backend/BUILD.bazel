@@ -18,6 +18,7 @@ go_library(
     deps = [
         "//backend_service",
         "//pkg/alerting",
+        "//pkg/analysis",
         "//pkg/backend/auth",
         "//pkg/backend/extractors",
         "//pkg/backend/ratelimit",
@@ -51,6 +52,7 @@ go_test(
     deps = [
         "//backend_service",
         "//pkg/alerting",
+        "//pkg/analysis",
         "//pkg/backend/auth",
         "//pkg/backend/ratelimit",
         "//pkg/database",
