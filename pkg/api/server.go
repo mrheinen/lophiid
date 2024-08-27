@@ -738,6 +738,31 @@ func (a *ApiServer) HandleSearchContent(w http.ResponseWriter, req *http.Request
 	a.sendStatus(w, "", ResultSuccess, rls)
 }
 
+func (a *ApiServer) HandleSearchEvents(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var rls []database.IpEvent
+	query := req.URL.Query().Get("q")
+	rls, err = a.dbc.SearchEvents(iOffset, iLimit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
 func (a *ApiServer) HandleSearchDownloads(w http.ResponseWriter, req *http.Request) {
 	offset := req.URL.Query().Get("offset")
 	iOffset, err := strconv.ParseInt(offset, 10, 64)

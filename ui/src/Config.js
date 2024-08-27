@@ -7,6 +7,8 @@ export default {
   appsSegmentLink: '/apps/:offset/:limit',
   downloadsLink: '/downloads',
   downloadsSegmentLink: '/downloads/:offset/:limit',
+  eventLink: '/events',
+  eventSegmentLink: '/events/:offset/:limit',
   requestsLink: '/requests',
   honeypotsLink: '/honeypot',
   honeypotsSegmentLink: '/honeypot/:offset/:limit',
