@@ -1075,6 +1075,8 @@ func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Reques
 		retval = database.GetDatamodelDocumentationMap(database.Tag{})
 	case "storedquery":
 		retval = database.GetDatamodelDocumentationMap(database.StoredQuery{})
+	case "ipevent":
+		retval = database.GetDatamodelDocumentationMap(database.IpEvent{})
 	default:
 		a.sendStatus(w, "Unknown model", ResultError, nil)
 	}
