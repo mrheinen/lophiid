@@ -14,3 +14,14 @@ const (
 	IpEventSourceAnalysis = "ANALYSIS"
 	IpEventSourceWhois    = "WHOIS"
 )
+
+// This needs to be kept in sync with IP_EVENT_TYPE in the database.
+const (
+	IpEventCrawl         = "CRAWLED"
+	IpEventHostedMalware = "HOSTED_MALWARE"
+	IpEventRecon         = "RECONNED"
+	IpEventScanned       = "SCANNED"
+	IpEventAttacked      = "ATTACKED"
+	IpEventBrute         = "BRUTEFORCED"
+	IpEventHostC2        = "HOST_C2"
+)

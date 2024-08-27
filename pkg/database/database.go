@@ -237,6 +237,7 @@ type IpEvent struct {
 	IP        string    `ksql:"ip" json:"ip" doc:"The source IP"`
 	Domain    string    `ksql:"domain" json:"domain" doc:"The domain for the IP"`
 	Type      string    `ksql:"type" json:"type" doc:"The type of event (e.g. ATTACKED, CRAWLED)"`
+	Subtype   string    `ksql:"subtype" json:"subtype" doc:"The subtype of the event (e.g. RCE, LFI)"`
 	Details   string    `ksql:"details" json:"details" doc:"Any additional details about the event"`
 	Note      string    `ksql:"note" json:"note"`
 	Count     int64     `ksql:"count" json:"count" doc:"How often this event was seen"`

@@ -265,6 +265,7 @@ CREATE TABLE ip_event (
   note                   VARCHAR(4096),
   count                  INTEGER default 0,
   type                   IP_EVENT_TYPE DEFAULT 'UNKNOWN',
+  subtype                VARCHAR(128),
   request_id             INTEGER,   -- optional
   source                 IP_EVENT_SOURCE default 'OTHER',
   source_ref             VARCHAR(512),

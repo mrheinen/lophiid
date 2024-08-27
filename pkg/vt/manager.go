@@ -46,11 +46,11 @@ func (f *FakeVTManager) ProcessURLQueue() error {
 func (f *FakeVTManager) GetEventsForDownload(dl *database.Download) []database.IpEvent {
 	return []database.IpEvent{
 		{
-			Type: analysis.IpEventAttacked,
+			Type: constants.IpEventAttacked,
 			IP:   "1.1.1.1",
 		},
 		{
-			Type: analysis.IpEventAttacked,
+			Type: constants.IpEventAttacked,
 			IP:   "1.1.1.1",
 		},
 	}
@@ -182,7 +182,7 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 	// Register the IP hosting the malware.
 	evt := database.IpEvent{
 		IP:        dl.IP,
-		Type:      analysis.IpEventHostedMalware,
+		Type:      constants.IpEventHostedMalware,
 		RequestID: dl.RequestID,
 		Details:   fmt.Sprintf("Hosted file that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 	}
@@ -206,7 +206,7 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 	} else {
 		ret = append(ret, database.IpEvent{
 			IP:        r.SourceIP,
-			Type:      analysis.IpEventAttacked,
+			Type:      constants.IpEventAttacked,
 			RequestID: dl.LastRequestID,
 			Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 		})

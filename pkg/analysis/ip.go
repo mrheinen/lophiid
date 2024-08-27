@@ -24,17 +24,6 @@ import (
 	"time"
 )
 
-// This needs to be kept in sync with IP_EVENT_TYPE in the database.
-const (
-	IpEventCrawl         = "CRAWLED"
-	IpEventHostedMalware = "HOSTED_MALWARE"
-	IpEventRecon         = "RECONNED"
-	IpEventScanned       = "SCANNED"
-	IpEventAttacked      = "ATTACKED"
-	IpEventBrute         = "BRUTEFORCED"
-	IpEventHostC2        = "HOST_C2"
-)
-
 // IpEventManager queues and caches IP related events and periodically stores
 // them in the database.
 type IpEventManager interface {
@@ -117,10 +106,10 @@ func (i *IpEventManagerImpl) ProcessNewEvent(evt *database.IpEvent) error {
 	entry, err := i.ipCache.Get(cacheKey)
 	if err == nil {
 		entry.Count += 1
-  if err := i.ipCache.Replace(cacheKey, *entry); err != nil {
-      return fmt.Errorf("failed to replace cache entry: %w", err)
-  }
-  return nil
+		if err := i.ipCache.Replace(cacheKey, *entry); err != nil {
+			return fmt.Errorf("failed to replace cache entry: %w", err)
+		}
+		return nil
 	}
 
 	evt.Count = 1
