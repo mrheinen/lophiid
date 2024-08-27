@@ -34,8 +34,9 @@ import (
 	"sync"
 	"time"
 
-	"loophid/backend_service"
+	"lophiid/backend_service"
 	"lophiid/pkg/alerting"
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/ratelimit"
@@ -55,6 +56,11 @@ import (
 var userAgent = "Wget/1.13.4 (linux-gnu)"
 var maxUrlsToExtractForDownload = 15
 
+type ReqQueueEntry struct {
+	req  *database.Request
+	rule database.ContentRule
+}
+
 type BackendServer struct {
 	backend_service.BackendServiceServer
 	dbClient        database.DatabaseClient
@@ -67,7 +73,7 @@ type BackendServer struct {
 	safeRules       *SafeRules
 	maintenanceChan chan bool
 	reqsProcessChan chan bool
-	reqsQueue       chan *database.Request
+	reqsQueue       chan ReqQueueEntry
 	sessionCache    *util.StringMapCache[database.ContentRule]
 	ruleVsCache     *RuleVsContentCache
 	downloadQueue   map[string][]backend_service.CommandDownloadFile
@@ -75,11 +81,12 @@ type BackendServer struct {
 	downloadsCache  *util.StringMapCache[time.Time]
 	metrics         *BackendMetrics
 	rateLimiter     ratelimit.RateLimiter
+	ipEventManager  analysis.IpEventManager
 	config          Config
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
@@ -99,7 +106,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		safeRules:       &SafeRules{},
 		maintenanceChan: make(chan bool),
 		reqsProcessChan: make(chan bool),
-		reqsQueue:       make(chan *database.Request, config.Backend.Advanced.RequestsQueueSize),
+		reqsQueue:       make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
 		downloadQueue:   make(map[string][]backend_service.CommandDownloadFile),
 		downloadsCache:  dCache,
 		sessionCache:    sCache,
@@ -107,6 +114,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		metrics:         metrics,
 		config:          config,
 		rateLimiter:     rateLimiter,
+		ipEventManager:  ipEventManager,
 	}
 }
 
@@ -524,6 +532,12 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 			slog.Warn("could not update", slog.String("error", err.Error()))
 		}
 
+		if dm.VTAnalysisMalicious > 0 || dm.VTAnalysisSuspicious > 0 {
+			for _, evt := range s.vtMgr.GetEventsForDownload(&dm) {
+				s.ipEventManager.AddEvent(&evt)
+			}
+		}
+
 		if s.vtMgr != nil && len(dm.VTURLAnalysisID) == 0 {
 			slog.Warn("URL analysis ID is not set!")
 			s.vtMgr.QueueURL(dInfo.OriginalUrl)
@@ -620,12 +634,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	s.metrics.methodPerRequest.WithLabelValues(sReq.Method).Add(1)
 	s.metrics.honeypotRequests.WithLabelValues(sReq.HoneypotIP).Add(1)
 	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
-	// Put it in the queue so it can be stored async in the db. We don't know if
-	// the fetching and serving of content below works. However, we assume it will
-	// on purpose so that when a rule has multiple content and one is
-	// failing/gone; the next request that matches the rule will be skipping this
-	// content.
-	s.reqsQueue <- sReq
 
 	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq)
 	if err != nil {
@@ -641,6 +649,16 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		if matchedRule.Alert {
 			s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d, URI: %s", matchedRule.ID, sReq.Uri))
 		}
+	}
+
+	// Put it in the queue so it can be stored async in the db. We don't know if
+	// the fetching and serving of content below works. However, we assume it will
+	// on purpose so that when a rule has multiple content and one is
+	// failing/gone; the next request that matches the rule will be skipping this
+	// content.
+	s.reqsQueue <- ReqQueueEntry{
+		req:  sReq,
+		rule: matchedRule,
 	}
 
 	sReq.ContentID = matchedRule.ContentID
@@ -719,13 +737,13 @@ func (s *BackendServer) LoadRules() error {
 func (s *BackendServer) ProcessReqsQueue() {
 	for {
 		select {
-		case req := <-s.reqsQueue:
+		case entry := <-s.reqsQueue:
 			// TODO: consider doing the next line in a goroutine. Doing so might need
 			// some of the logic in ProcessRequest to change. For example, the whois
 			// lookup will be inefficient when quickly called for the requests from
 			// the same IP.
 			startTime := time.Now()
-			if err := s.ProcessRequest(req); err != nil {
+			if err := s.ProcessRequest(entry.req, entry.rule); err != nil {
 				slog.Warn("process request queue error", slog.String("error", err.Error()))
 			}
 			s.metrics.reqsQueueResponseTime.Observe(time.Since(startTime).Seconds())
@@ -738,13 +756,39 @@ func (s *BackendServer) ProcessReqsQueue() {
 
 }
 
-func (s *BackendServer) ProcessRequest(req *database.Request) error {
+func (s *BackendServer) ProcessRequest(req *database.Request, rule database.ContentRule) error {
 
 	s.whoisMgr.LookupIP(req.SourceIP)
 
 	dm, err := s.dbClient.Insert(req)
 	if err != nil {
 		return fmt.Errorf("error saving request: %s", err)
+	}
+
+	if rule.RequestPurpose != database.RuleRequestPurposeUnknown {
+		switch rule.RequestPurpose {
+		case database.RuleRequestPurposeAttack:
+			s.ipEventManager.AddEvent(&database.IpEvent{
+				IP:        req.SourceIP,
+				Type:      analysis.IpEventAttacked,
+				Details:   fmt.Sprintf("rule %d indicated the IP attacked", rule.ID),
+				RequestID: dm.ModelID(),
+			})
+		case database.RuleRequestPurposeCrawl:
+			s.ipEventManager.AddEvent(&database.IpEvent{
+				IP:        req.SourceIP,
+				Type:      analysis.IpEventCrawl,
+				Details:   fmt.Sprintf("rule %d indicated the IP crawled", rule.ID),
+				RequestID: dm.ModelID(),
+			})
+		case database.RuleRequestPurposeRecon:
+			s.ipEventManager.AddEvent(&database.IpEvent{
+				IP:        req.SourceIP,
+				Type:      analysis.IpEventRecon,
+				Details:   fmt.Sprintf("rule %d indicated the IP reconned", rule.ID),
+				RequestID: dm.ModelID(),
+			})
+		}
 	}
 
 	// Extract base64 strings

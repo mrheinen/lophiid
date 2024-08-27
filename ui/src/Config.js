@@ -7,6 +7,8 @@ export default {
   appsSegmentLink: '/apps/:offset/:limit',
   downloadsLink: '/downloads',
   downloadsSegmentLink: '/downloads/:offset/:limit',
+  eventLink: '/events',
+  eventSegmentLink: '/events/:offset/:limit',
   requestsLink: '/requests',
   honeypotsLink: '/honeypot',
   honeypotsSegmentLink: '/honeypot/:offset/:limit',
@@ -17,13 +19,14 @@ export default {
   tagsSegmentLink: '/tag/:offset/:limit',
   requestsSegmentLink: '/requests/:offset/:limit',
   requestsSegmentLinkName: 'reqSegmentLink',
-  //backendAddress: 'http://192.168.1.78:8088',
-  backendAddress: 'http://127.0.0.1:8088',
+  backendAddress: 'http://192.168.1.78:8088',
+  //backendAddress: 'http://127.0.0.1:8088',
   backendResultOk: 'OK',
   backendResultNotOk: 'ERR',
 
-  // There next 3 need to be in sync with the database enums.
+  // There next 4 need to be in sync with the database enums.
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
+  contentRuleRequestPurposes: ['UNKNOWN', 'RECON', 'CRAWL', 'ATTACK'],
   contentRuleHTTPMethods: ['ANY' , 'GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'],
   statusCodeValues: [
     { label: '200 - OK', value: '200' },

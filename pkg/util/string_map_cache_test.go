@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package util
 
 import (
@@ -23,15 +22,15 @@ import (
 )
 
 func TestStringMapCache(t *testing.T) {
-	c := NewStringMapCache[string]("test", time.Second * 0)
-	testIp := "127.0.0.1"
+	c := NewStringMapCache[string]("test", time.Second*0)
+	testKey := "127.0.0.1"
 
 	// Store the test rule and a few extra
-	c.Store(testIp, "22")
+	c.Store(testKey, "22")
 	c.Store("127.0.0.3", "23")
 	c.Store("127.0.0.4", "24")
 
-	ret, err := c.Get(testIp)
+	ret, err := c.Get(testKey)
 	if err != nil {
 		t.Errorf("got error: %s", err)
 	}
@@ -42,18 +41,38 @@ func TestStringMapCache(t *testing.T) {
 
 	rc := c.CleanExpired()
 	if rc != 3 {
-		t.Errorf("expected 4, got %d", rc)
+		t.Errorf("expected 3, got %d", rc)
 	}
 
 	// Cache is empty, try to remove something
-	ret, err = c.Get(testIp)
+	ret, err = c.Get(testKey)
 	if err == nil {
 		t.Errorf("expected error but got rule %v", *ret)
 	}
 }
 
+func TestStringMapCacheCleanupWithCallback(t *testing.T) {
+	c := NewStringMapCache[string]("test", time.Second*0)
+	testKey := "127.0.0.1"
+
+	// Store the test rule and a few extra
+	c.Store(testKey, "22")
+	c.Store("127.0.0.3", "23")
+	c.Store("127.0.0.4", "24")
+
+	rc := c.CleanExpiredWithCallback(func(string) bool { return false })
+	if rc != 0 {
+		t.Errorf("expected 0, got %d", rc)
+	}
+
+	rc = c.CleanExpiredWithCallback(func(string) bool { return true })
+	if rc != 3 {
+		t.Errorf("expected 3, got %d", rc)
+	}
+}
+
 func TestStringMapCacheCacheMiss(t *testing.T) {
-	c := NewStringMapCache[string]("test", time.Second * 0)
+	c := NewStringMapCache[string]("test", time.Second*0)
 
 	_, err := c.Get("1.2.3.4")
 	if err == nil {
@@ -62,7 +81,7 @@ func TestStringMapCacheCacheMiss(t *testing.T) {
 }
 
 func TestStringMapCacheDoesNotExpire(t *testing.T) {
-	c := NewStringMapCache[string]("test", time.Hour * 3)
+	c := NewStringMapCache[string]("test", time.Hour*3)
 	testIp := "127.0.0.1"
 	c.Store(testIp, "22")
 

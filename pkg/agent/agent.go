@@ -22,7 +22,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"loophid/backend_service"
+	"lophiid/backend_service"
 	"lophiid/pkg/backend"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"

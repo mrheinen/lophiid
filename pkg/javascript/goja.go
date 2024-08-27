@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"loophid/backend_service"
+	"lophiid/backend_service"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
 	"time"

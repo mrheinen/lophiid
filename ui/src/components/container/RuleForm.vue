@@ -83,15 +83,32 @@
             </div>
           </div>
         </div>
-         <div>
-          <label class="label">Port</label>
-          <InputNumber
-            v-model="localRule.port"
-            inputId="minmax"
-            :useGrouping="false"
-            :min="0"
-            :max="65535"
-          />
+
+
+        <div class="columns">
+          <div class="column">
+             <div>
+              <label class="label">Port</label>
+              <InputNumber
+                v-model="localRule.port"
+                inputId="minmax"
+                :useGrouping="false"
+                :min="0"
+                :max="65535"
+              />
+            </div>
+          </div>
+          <div class="column">
+
+            <div class="field">
+            <label class="label">Request purpose</label>
+            <DropDown v-model="localRule.request_purpose"
+            :options="config.contentRuleRequestPurposes" placeholder="Select a
+            method"
+            checkmark :highlightOnSelect="true" />
+            </div>
+
+          </div>
         </div>
 
          <div>
@@ -189,6 +206,7 @@ export default {
         uri_matching: "none",
         body_matching: "none",
         method: "ANY",
+        request_purpose: "UNKNOWN",
       };
     },
     submitForm() {

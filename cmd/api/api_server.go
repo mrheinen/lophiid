@@ -170,6 +170,8 @@ func main() {
 
 	r.HandleFunc("/datamodel/doc", as.HandleReturnDocField).Methods("GET")
 
+	r.HandleFunc("/events/segment", as.HandleSearchEvents).Methods("GET")
+
 	r.Use(as.AuthMW)
 
 	origins := make([]string, 0)

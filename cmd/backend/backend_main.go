@@ -26,8 +26,9 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"loophid/backend_service"
+	"lophiid/backend_service"
 	"lophiid/pkg/alerting"
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/backend"
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/ratelimit"
@@ -155,16 +156,21 @@ func main() {
 
 	vtHttpClient := &http.Client{Transport: secureHttpTransport, Timeout: cfg.VirusTotal.HttpClientTimeout}
 
+	analysisMetrics := analysis.CreateAnalysisMetrics(metricsRegistry)
+	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, analysisMetrics)
+	ipEventManager.Start()
+
 	var vtMgr vt.VTManager
 	if cfg.VirusTotal.ApiKey == "" {
 		vtMgr = nil
 	} else {
 		// Start the virustotal client/manager
-		vtc := vt.NewVTClient(cfg.VirusTotal.ApiKey, time.Hour*96, vtHttpClient)
+		vtc := vt.NewVTClient(cfg.VirusTotal.ApiKey, cfg.VirusTotal.CacheExpirationTime, vtHttpClient)
 		vtc.Start()
 
 		metrics := vt.CreateVTMetrics(metricsRegistry)
-		vtMgr = vt.NewVTBackgroundManager(dbc, metrics, vtc)
+
+		vtMgr = vt.NewVTBackgroundManager(dbc, ipEventManager, metrics, vtc)
 		vtMgr.Start()
 	}
 
@@ -175,7 +181,7 @@ func main() {
 
 	rateLimiter := ratelimit.NewWindowRateLimiter(cfg.Backend.RateLimiter.RateWindow, cfg.Backend.RateLimiter.BucketDuration, cfg.Backend.RateLimiter.MaxRequestsPerWindow, cfg.Backend.RateLimiter.MaxRequestsPerBucket, rMetrics)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, cfg)
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

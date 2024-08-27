@@ -14,6 +14,7 @@ import AppsList from './components/container/AppsList.vue';
 import DownList from './components/container/DownloadsList.vue';
 import HoneyList from './components/container/HoneypotList.vue';
 import QueryList from './components/container/QueryList.vue';
+import EventsList from './components/container/EventsList.vue';
 import TagList from './components/container/TagList.vue';
 import PrimeVue from './../node_modules/primevue/config';
 
@@ -49,6 +50,8 @@ const router = createRouter({
     {path: Config.tagsSegmentLink, component: TagList },
     {path: Config.requestsLink, component: RequestsList },
     {path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },
+    {path: Config.eventLink, component: EventsList },
+    {path: Config.eventSegmentLink, component: EventsList },
   ]
 });
 

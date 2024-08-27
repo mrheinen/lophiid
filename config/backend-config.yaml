@@ -51,6 +51,9 @@ virustotal:
   api_key: AAAAAAAAAAAAAAAAAA
   # HTTP timeout for communication with virustotal.
   http_timeout: 2m
+  # The time to cache URL and file scan results. Use this wisely to prevent
+  # using up all your quota.
+  cache_expiration_time: 96h
 
 prometheus:
   listen_address: 127.0.0.1:8998

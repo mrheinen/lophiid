@@ -14,18 +14,20 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package vt
 
 import (
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
+	"net"
 	"sync"
 	"time"
 )
 
 type VTManager interface {
+	GetEventsForDownload(dl *database.Download) []database.IpEvent
 	ProcessURLQueue() error
 	QueueURL(ip string)
 	SubmitFiles() error
@@ -40,6 +42,18 @@ type FakeVTManager struct {
 func (f *FakeVTManager) ProcessURLQueue() error {
 	return f.ErrorToReturn
 }
+func (f *FakeVTManager) GetEventsForDownload(dl *database.Download) []database.IpEvent {
+	return []database.IpEvent{
+		{
+			Type: analysis.IpEventAttacked,
+			IP:   "1.1.1.1",
+		},
+		{
+			Type: analysis.IpEventAttacked,
+			IP:   "1.1.1.1",
+		},
+	}
+}
 func (f *FakeVTManager) SubmitFiles() error {
 	return f.ErrorToReturn
 }
@@ -50,12 +64,13 @@ func (f *FakeVTManager) Stop()              {}
 // ProbeRequestToDatabaseRequest transforms aHandleProbeRequest to a
 
 type VTBackgroundManager struct {
-	vtClient VTClientInterface
-	dbClient database.DatabaseClient
-	urlQmu   sync.Mutex
-	urlQueue map[string]bool
-	bgChan   chan bool
-	metrics  *VTMetrics
+	vtClient       VTClientInterface
+	dbClient       database.DatabaseClient
+	urlQmu         sync.Mutex
+	urlQueue       map[string]bool
+	bgChan         chan bool
+	metrics        *VTMetrics
+	ipEventManager analysis.IpEventManager
 }
 
 // NewVTBackgroundManager creates a new VTBackgroundManager instance.
@@ -65,13 +80,14 @@ type VTBackgroundManager struct {
 // - metrics: pointer to VTMetrics
 // - vtClient: VTClientInterface
 // Returns a pointer to VTBackgroundManager.
-func NewVTBackgroundManager(dbClient database.DatabaseClient, metrics *VTMetrics, vtClient VTClientInterface) *VTBackgroundManager {
+func NewVTBackgroundManager(dbClient database.DatabaseClient, ipEventManager analysis.IpEventManager, metrics *VTMetrics, vtClient VTClientInterface) *VTBackgroundManager {
 	return &VTBackgroundManager{
-		vtClient: vtClient,
-		dbClient: dbClient,
-		urlQueue: make(map[string]bool),
-		bgChan:   make(chan bool),
-		metrics:  metrics,
+		vtClient:       vtClient,
+		dbClient:       dbClient,
+		urlQueue:       make(map[string]bool),
+		bgChan:         make(chan bool),
+		metrics:        metrics,
+		ipEventManager: ipEventManager,
 	}
 }
 
@@ -160,6 +176,43 @@ func (v *VTBackgroundManager) SubmitFiles() error {
 	return nil
 }
 
+func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []database.IpEvent {
+	ret := []database.IpEvent{}
+	// Register the IP hosting the malware.
+	evt := database.IpEvent{
+		IP:        dl.IP,
+		Type:      analysis.IpEventHostedMalware,
+		RequestID: dl.RequestID,
+		Details:   fmt.Sprintf("Hosted file that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+	}
+
+	host, _, err := net.SplitHostPort(dl.Host)
+	if err != nil {
+		host = dl.Host
+	}
+
+	if host != dl.IP {
+		// TODO: consider resolving the domain and also adding any additional
+		// IPs that yields.
+		evt.Domain = host
+	}
+
+	ret = append(ret, evt)
+
+	r, err := v.dbClient.GetRequestByID(dl.LastRequestID)
+	if err != nil {
+		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.LastRequestID))
+	} else {
+		ret = append(ret, database.IpEvent{
+			IP:        r.SourceIP,
+			Type:      analysis.IpEventAttacked,
+			RequestID: dl.LastRequestID,
+			Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		})
+	}
+	return ret
+}
+
 // Prefered engines for which we store the results for displaying in the UI
 var PreferedFileResultEngines = []string{"Fortinet", "Avast", "BitDefender", "Microsoft", "McAfee", "TrendMicro"}
 
@@ -188,6 +241,12 @@ func (v *VTBackgroundManager) GetFileAnalysis() error {
 		dl.VTAnalysisTimeout = cRes.Data.Attributes.Stats.Timeout
 		dl.VTAnalysisHarmless = cRes.Data.Attributes.Stats.Harmless
 		dl.VTFileAnalysisDone = true
+
+		if dl.VTAnalysisMalicious > 0 || dl.VTAnalysisSuspicious > 0 {
+			for _, evt := range v.GetEventsForDownload(&dl) {
+				v.ipEventManager.AddEvent(&evt)
+			}
+		}
 
 		// Append only the results from our prefered engines.
 		for _, en := range PreferedFileResultEngines {

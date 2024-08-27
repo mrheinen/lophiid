@@ -89,6 +89,13 @@ export default {
           },
         },
         {
+          label: "Events",
+          icon: "pi pi-server",
+          command: () => {
+            this.$router.push(this.config.eventLink);
+          },
+        },
+        {
           label: "Queries",
           icon: "pi pi-search",
           items: [

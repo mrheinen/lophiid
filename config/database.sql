@@ -29,6 +29,7 @@ CREATE TABLE content (
 
 CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'PAYLOAD_TCP_LINK', 'PAYLOAD_NETCAT', 'SCRIPT_RESPONSE_BODY', 'DECODED_STRING_BASE64');
 CREATE TYPE DOWNLOAD_STATUS AS ENUM ('UNKNOWN', 'SCHEDULED', 'DONE');
+CREATE TYPE REQUEST_PURPOSE AS ENUM ('UNKNOWN', 'RECON', 'CRAWL', 'ATTACK');
 
 CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
@@ -75,6 +76,7 @@ CREATE TABLE content_rule (
   port            INT NOT NULL DEFAULT 0,
   app_id          INT DEFAULT 0,
   alert           BOOL DEFAULT FALSE,
+  request_purpose   REQUEST_PURPOSE default 'UNKNOWN',
   CONSTRAINT fk_content_id FOREIGN KEY(content_id) REFERENCES content(id)
 );
 
@@ -251,6 +253,22 @@ CREATE TABLE whois (
   updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
+
+CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'ATTACKED', 'RECONNED', 'CRAWLED', 'SCANNED', 'BRUTEFORCED', 'HOSTED_MALWARE', 'HOST_C2');
+
+CREATE TABLE ip_event (
+  id                     SERIAL PRIMARY KEY,
+  ip                     VARCHAR(52),
+  domain                 VARCHAR(256),
+  details                VARCHAR(4096),
+  note                   VARCHAR(4096),
+  count                  INTEGER default 0,
+  type                   IP_EVENT_TYPE DEFAULT 'UNKNOWN',
+  request_id             INTEGER,   -- optional
+  created_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+);
+
 GRANT ALL PRIVILEGES ON content TO lo;
 GRANT ALL PRIVILEGES ON content_id_seq TO lo;
 GRANT ALL PRIVILEGES ON content_rule TO lo;
@@ -273,17 +291,14 @@ GRANT ALL PRIVILEGES ON stored_query TO lo;
 GRANT ALL PRIVILEGES ON stored_query_id_seq TO lo;
 GRANT ALL PRIVILEGES ON tag TO lo;
 GRANT ALL PRIVILEGES ON tag_id_seq TO lo;
-
 GRANT ALL PRIVILEGES ON tag_per_query TO lo;
 GRANT ALL PRIVILEGES ON tag_per_query_id_seq TO lo;
 GRANT ALL PRIVILEGES ON tag_per_request TO lo;
 GRANT ALL PRIVILEGES ON tag_per_request_id_seq TO lo;
 GRANT ALL PRIVILEGES ON p0f_result TO lo;
 GRANT ALL PRIVILEGES ON p0f_result_id_seq TO lo;
-
-
-
-
+GRANT ALL PRIVILEGES ON ip_event TO lo;
+GRANT ALL PRIVILEGES ON ip_event_id_seq TO lo;
 
 CREATE INDEX requests_idx ON request ( time_received desc );
 CREATE INDEX requests_port_idx ON request (

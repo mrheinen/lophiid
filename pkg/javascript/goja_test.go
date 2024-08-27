@@ -18,7 +18,7 @@ package javascript
 
 import (
 	"fmt"
-	"loophid/backend_service"
+	"lophiid/backend_service"
 	"lophiid/pkg/database"
 	"testing"
 

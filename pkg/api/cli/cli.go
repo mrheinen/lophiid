@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package cli
 
 import (
@@ -111,13 +110,14 @@ func (a *ApiCLI) CreateContentAndRule(app *database.Application, ports []int64, 
 	for _, port := range ports {
 		// Store the content rule.
 		newContentRule := database.ContentRule{
-			ContentID:    addedContent.ID,
-			Method:       http.MethodGet,
-			Uri:          pathQuery,
-			UriMatching:  "exact",
-			BodyMatching: "none",
-			AppID:        app.ID,
-			Port:         port,
+			ContentID:      addedContent.ID,
+			Method:         http.MethodGet,
+			Uri:            pathQuery,
+			UriMatching:    "exact",
+			BodyMatching:   "none",
+			AppID:          app.ID,
+			Port:           port,
+			RequestPurpose: "UNKNOWN",
 		}
 
 		addedContentRule, err := a.contentRuleAPI.UpsertDataModel(newContentRule)

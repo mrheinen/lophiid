@@ -43,6 +43,7 @@ var TagTable = ksql.NewTable("tag")
 var TagPerRequestTable = ksql.NewTable("tag_per_request")
 var TagPerQueryTable = ksql.NewTable("tag_per_query")
 var P0fResultTable = ksql.NewTable("p0f_result")
+var IpEventTable = ksql.NewTable("ip_event")
 
 type DataModel interface {
 	ModelID() int64
@@ -63,6 +64,15 @@ type Content struct {
 	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at" doc:"time.Time of last update"`
 }
 
+// The request purpose for the ContentRule needs to be kept in sync with the
+// database REQUEST_PURPOSE type.
+const (
+	RuleRequestPurposeUnknown = "UNKNOWN"
+	RuleRequestPurposeAttack  = "ATTACK"
+	RuleRequestPurposeRecon   = "RECON"
+	RuleRequestPurposeCrawl   = "CRAWL"
+)
+
 func (c *Content) ModelID() int64 { return c.ID }
 
 type ContentRule struct {
@@ -79,6 +89,15 @@ type ContentRule struct {
 	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
 	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
 	Alert        bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	// The request purpose should indicate what the request is intended to do. It
+	// is used, amongst other things, to determine whether a request is malicious
+	// or not.
+	// Valid values are:
+	//   - UNKNOWN : the purpose is unknown
+	//   - RECON : the purpose is reconnaissance
+	//   - CRAWL : the request is part of regular crawling
+	//   - ATTACK : the request is an attack (e.g. an RCE)
+	RequestPurpose string `ksql:"request_purpose" json:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
 }
 
 func (c *ContentRule) ModelID() int64 { return c.ID }
@@ -213,6 +232,21 @@ type Whois struct {
 
 func (c *Whois) ModelID() int64 { return c.ID }
 
+type IpEvent struct {
+	ID        int64     `ksql:"id,skipInserts" json:"id"`
+	IP        string    `ksql:"ip" json:"ip"`
+	Domain    string    `ksql:"domain" json:"domain"`
+	Type      string    `ksql:"type" json:"type"`
+	Details   string    `ksql:"details" json:"details"`
+	Note      string    `ksql:"note" json:"note"`
+	Count     int64     `ksql:"count" json:"count"`
+	RequestID int64     `ksql:"request_id" json:"request_id"`
+	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
+	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+}
+
+func (c *IpEvent) ModelID() int64 { return c.ID }
+
 type P0fResult struct {
 	ID               int64     `ksql:"id,skipInserts" json:"id"`
 	IP               string    `ksql:"ip" json:"ip"`
@@ -302,8 +336,10 @@ type DatabaseClient interface {
 	GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error)
 	GetHoneypots() ([]Honeypot, error)
 	GetRequests() ([]Request, error)
+	GetRequestByID(id int64) (Request, error)
 	GetRequestsForSourceIP(ip string) ([]Request, error)
 	GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error)
+	SearchEvents(offset int64, limit int64, query string) ([]IpEvent, error)
 	SearchRequests(offset int64, limit int64, query string) ([]Request, error)
 	SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error)
 	SearchContent(offset int64, limit int64, query string) ([]Content, error)
@@ -419,6 +455,9 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &TagPerRequestTable
 	case "P0fResult":
 		return &P0fResultTable
+	case "IpEvent":
+		return &IpEventTable
+
 	default:
 		fmt.Printf("Don't know %s datamodel\n", name)
 		return nil
@@ -531,6 +570,12 @@ func (d *KSQLClient) GetRequests() ([]Request, error) {
 	return rs, err
 }
 
+func (d *KSQLClient) GetRequestByID(id int64) (Request, error) {
+	var rs Request
+	err := d.db.Query(d.ctx, &rs, "FROM request WHERE id = $1", id)
+	return rs, err
+}
+
 func (d *KSQLClient) GetRequestsForSourceIP(ip string) ([]Request, error) {
 	var rs []Request
 	err := d.db.Query(d.ctx, &rs, "FROM request WHERE source_ip = $1 ORDER BY time_received", ip)
@@ -603,6 +648,25 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
 	return ret, err
 }
+func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
+	var rs []Content
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Content{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildComposedQuery(params, "FROM content", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
 
 func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
 	var rs []ContentRule
@@ -624,15 +688,15 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 	return rs, err
 }
 
-func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
-	var rs []Content
+func (d *KSQLClient) SearchEvents(offset int64, limit int64, query string) ([]IpEvent, error) {
+	var rs []IpEvent
 
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(Content{}))
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(IpEvent{}))
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM content", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM ip_event", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -874,6 +938,7 @@ type FakeDatabaseClient struct {
 	ContentRuleIDToReturn  int64
 	ContentRulesToReturn   []ContentRule
 	RequestsToReturn       []Request
+	RequestToReturn        Request
 	DownloadsToReturn      []Download
 	ApplicationToReturn    Application
 	HoneypotToReturn       Honeypot
@@ -887,6 +952,7 @@ type FakeDatabaseClient struct {
 	LastDataModelSeen      interface{}
 	P0fResultToReturn      P0fResult
 	P0fErrorToReturn       error
+	IpEventToReturn        IpEvent
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -949,6 +1015,9 @@ func (f *FakeDatabaseClient) GetMetadataByRequestID(id int64) ([]RequestMetadata
 func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, query string) ([]Request, error) {
 	return []Request{}, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) SearchEvents(offset int64, limit int64, query string) ([]IpEvent, error) {
+	return []IpEvent{f.IpEventToReturn}, f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
 	return f.ContentRulesToReturn, f.ErrorToReturn
 }
@@ -1003,4 +1072,7 @@ func (f *FakeDatabaseClient) GetTagPerRequestFullForRequest(id int64) ([]TagPerR
 }
 func (f *FakeDatabaseClient) GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error) {
 	return f.P0fResultToReturn, f.P0fErrorToReturn
+}
+func (f *FakeDatabaseClient) GetRequestByID(id int64) (Request, error) {
+	return f.RequestToReturn, f.ErrorToReturn
 }

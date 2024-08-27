@@ -3,27 +3,38 @@
     <div class="column is-three-fifths" style="margin-left: 15px">
       <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="storedquery"></DataSearchBar>
 
-      <table class="table is-hoverable" v-if="queries.length > 0">
+      <table class="table is-hoverable" v-if="events.length > 0">
         <thead>
           <th>ID</th>
-          <th>Created at</th>
-          <th>Last ran</th>
+          <th>Type</th>
+          <th>IP</th>
+          <th>Request ID</th>
+          <th>Domain</th>
+          <th>Details</th>
           <th>Count</th>
-          <th>Query</th>
+          <th>Actions</th>
         </thead>
         <tbody>
           <tr
-            v-for="query in queries"
-            @click="setSelected(query.id)"
-            :key="query.id"
-            :class="isSelectedId == query.id ? 'is-selected' : ''"
+            v-for="evt in events"
+            @click="setSelected(evt.id)"
+            :key="evt.id"
+            :class="isSelectedId == evt.id ? 'is-selected' : ''"
           >
-            <td>{{ query.id }}</td>
-            <td>{{ query.parsed.created_at }}</td>
-            <td>{{ query.parsed.last_ran_at }}</td>
-            <td>{{ query.record_count }}</td>
+            <td>{{ evt.id }}</td>
+            <td>{{ evt.type }}</td>
+            <td><a :href="config.eventLink + '?q=ip:' + evt.ip">{{ evt.ip }}</a></td>
+            <td><a :href="config.requestsLink + '?q=id:' + evt.request_id">{{ evt.request_id }}</a></td>
+            <td>{{ evt.domain }}</td>
+            <td>{{ evt.details }}</td>
+            <td>{{ evt.count }}</td>
             <td>
-              <a :href="'/requests?q=' + encodeURI(query.query)">{{ query.query }}</a>
+              <a :href="'/requests?q=source_ip:' + evt.ip">
+                <i
+                  title="View requests from this IP"
+                  class="pi pi-search"
+                ></i>
+              </a>
             </td>
           </tr>
         </tbody>
@@ -35,7 +46,7 @@
         class="pi pi-arrow-left pi-style"
       ></i>
       <i
-        v-if="queries.length == limit"
+        v-if="events.length == limit"
         @click="loadNext()"
         class="pi pi-arrow-right pi-style pi-style-right"
       ></i>
@@ -45,12 +56,11 @@
       @focusin="keyboardDisabled = true"
       @focusout="keyboardDisabled = false"
     >
-      <query-form
-        @update-query="onUpdateQuery"
-        @delete-query="onDeleteQuery"
+      <events-form
+        @update-query="onUpdateEvent"
         @require-auth="$emit('require-auth')"
-        :query="selectedQuery"
-      ></query-form>
+        :event="selectedEvent"
+      ></events-form>
     </div>
   </div>
 </template>
@@ -60,18 +70,18 @@ function dateToString(inDate) {
   const nd = new Date(Date.parse(inDate));
   return nd.toLocaleString();
 }
-import QueryForm from "./QueryForm.vue";
+import EventsForm from "./EventsForm.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
   components: {
-    QueryForm,
+    EventsForm,
     DataSearchBar,
   },
   emits: ["require-auth"],
   inject: ["config"],
   data() {
     return {
-      queries: [],
+      events: [],
       selected: null,
       isSelectedId: 0,
       query: null,
@@ -80,34 +90,26 @@ export default {
       keyboardDisabled: false,
       base: {
         id: 0,
-        query: "",
-        record_count: 0,
-        parsed: {
-          last_ran_at: "",
-        },
       },
     };
   },
   methods: {
-    onUpdateQuery(id) {
+    onUpdateEvent(id) {
       const that = this;
-      this.loadQueries(true, function () {
+      this.loadEvents(true, function () {
         that.setSelected(id);
       });
-    },
-    onDeleteQuery() {
-      this.loadQueries(true, function () {});
     },
     performNewSearch(query) {
       this.query = query;
       this.offset = 0;
-      this.loadQueries(true, function () {});
+      this.loadEvents(true, function () {});
     },
     setSelected(id) {
       var selected = null;
-      for (var i = 0; i < this.queries.length; i++) {
-        if (this.queries[i].id == id) {
-          selected = this.queries[i];
+      for (var i = 0; i < this.events.length; i++) {
+        if (this.events[i].id == id) {
+          selected = this.events[i];
           break;
         }
       }
@@ -115,16 +117,16 @@ export default {
       if (selected == null) {
         console.log("error: could not find ID: " + id);
       } else {
-        this.selectedQuery = selected;
+        this.selectedEvent = selected;
         this.isSelectedId = id;
       }
     },
-    getFreshQueryLink() {
-      return this.config.storedquerySegmentLink + "/0/" + this.limit;
+    getFreshEventLink() {
+      return this.config.eventLink + "/0/" + this.limit;
     },
-    getQueryLink() {
+    getEventLink() {
       let link =
-        this.config.storedquerySegmentLink +
+        this.config.eventLink +
         "/" +
         this.offset +
         "/" +
@@ -136,10 +138,10 @@ export default {
       return link;
     },
     setNextSelectedElement() {
-      for (var i = 0; i < this.queries.length; i++) {
-        if (this.queries[i].id == this.isSelectedId) {
-          if (i + 1 < this.queries.length) {
-            this.setSelected(this.queries[i + 1].id);
+      for (var i = 0; i < this.events.length; i++) {
+        if (this.events[i].id == this.isSelectedId) {
+          if (i + 1 < this.events.length) {
+            this.setSelected(this.events[i + 1].id);
           } else {
             return false;
           }
@@ -149,10 +151,10 @@ export default {
       return true;
     },
     setPrevSelectedElement() {
-      for (var i = this.queries.length - 1; i >= 0; i--) {
-        if (this.queries[i].id == this.isSelectedId) {
+      for (var i = this.events.length - 1; i >= 0; i--) {
+        if (this.events[i].id == this.isSelectedId) {
           if (i - 1 >= 0) {
-            this.setSelected(this.queries[i - 1].id);
+            this.setSelected(this.events[i - 1].id);
           } else {
             return false;
           }
@@ -163,21 +165,21 @@ export default {
     },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getQueryLink());
-      this.loadQueries(true, function () {});
+      this.$router.push(this.getEventLink());
+      this.loadEvents(true, function () {});
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getQueryLink());
-        this.loadQueries(false, function () {});
+        this.$router.push(this.getEventLink());
+        this.loadEvents(false, function () {});
       }
     },
 
-    loadQueries(selectFirst, callback) {
+    loadEvents(selectFirst, callback) {
       var url =
         this.config.backendAddress +
-        "/storedquery/segment?offset=" +
+        "/events/segment?offset=" +
         this.offset +
         "&limit=" +
         this.limit;
@@ -204,16 +206,13 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
-            this.queries = [];
+            this.events = [];
             if (response.data && response.data.length > 0) {
               for (var i = 0; i < response.data.length; i++) {
-                const newQuery = Object.assign({}, response.data[i]);
-                newQuery.parsed = {};
-                newQuery.parsed.created_at = dateToString(newQuery.created_at);
-                newQuery.parsed.last_ran_at = dateToString(
-                  newQuery.last_ran_at
-                );
-                this.queries.push(newQuery);
+                const newEvent = Object.assign({}, response.data[i]);
+                newEvent.parsed = {};
+                newEvent.parsed.created_at = dateToString(newEvent.created_at);
+                this.events.push(newEvent);
               }
 
               if (selectFirst) {
@@ -228,7 +227,7 @@ export default {
     },
   },
   beforeCreate() {
-    this.selectedQuery = this.baseQuery;
+    this.selectedEvent = this.baseEvent;
   },
   created() {
     if (this.$route.params.limit) {
@@ -244,7 +243,7 @@ export default {
       this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
     }
-    this.loadQueries(true, function () {});
+    this.loadEvents(true, function () {});
   },
 };
 </script>

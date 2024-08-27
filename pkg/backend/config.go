@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package backend
 
 import "time"
@@ -57,6 +56,13 @@ type Config struct {
 			MaintenanceRoutineInterval time.Duration `fig:"maintenance_routine_interval" default:"1m"`
 		} `fig:"advanced"`
 	} `fig:"backend"`
+	Analysis struct {
+		// Determines how long information for an IP will be cached before writing
+		// it to the database. During that time the information will be updated with
+		// new events if they happen.
+		IpCacheDuration  time.Duration `fig:"ip_cache_duration" default:"15m"`
+		IpEventQueueSize int           `fig:"ip_event_queue_size" default:"1500"`
+	} `fig:"analysis"`
 	Alerting struct {
 		Interval time.Duration `fig:"interval" default:"2m"`
 		Telegram struct {
@@ -65,8 +71,9 @@ type Config struct {
 		} `fig:"telegram"`
 	}
 	VirusTotal struct {
-		ApiKey            string        `fig:"api_key"`
-		HttpClientTimeout time.Duration `fig:"http_timeout" default:"2m"`
+		ApiKey              string        `fig:"api_key"`
+		HttpClientTimeout   time.Duration `fig:"http_timeout" default:"2m"`
+		CacheExpirationTime time.Duration `fig:"cache_expiration_time" default:"96h"`
 	} `fig:"virustotal"`
 	Metrics struct {
 		ListenAddress string `fig:"listen_address" default:"localhost:8998"`

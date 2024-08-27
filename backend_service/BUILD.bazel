@@ -6,7 +6,7 @@ go_library(
         "backend_service.pb.go",
         "backend_service_grpc.pb.go",
     ],
-    importpath = "loophid/backend_service",
+    importpath = "lophiid/backend_service",
     visibility = ["//visibility:public"],
     deps = [
         "@org_golang_google_grpc//:go_default_library",

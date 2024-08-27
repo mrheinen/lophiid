@@ -22,7 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"loophid/backend_service"
+	"lophiid/backend_service"
 	"lophiid/pkg/backend"
 	"lophiid/pkg/util"
 	"net/http"
