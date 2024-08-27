@@ -241,6 +241,7 @@ export default {
   },
   mounted() {
     if (this.$route.query.q) {
+      this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
     }
     this.loadQueries(true, function () {});
