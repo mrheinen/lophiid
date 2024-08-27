@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
+	"net"
 	"sync"
 	"time"
 )
@@ -185,10 +186,15 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 		Details:   fmt.Sprintf("Hosted file that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 	}
 
-	if dl.Host != dl.IP {
+	host, _, err := net.SplitHostPort(dl.Host)
+	if err != nil {
+		host = dl.Host
+	}
+
+	if host != dl.IP {
 		// TODO: consider resolving the domain and also adding any additional
 		// IPs that yields.
-		evt.Domain = dl.Host
+		evt.Domain = host
 	}
 
 	ret = append(ret, evt)

@@ -202,3 +202,88 @@ func TestManagerGetFileAnalysis(t *testing.T) {
 		})
 	}
 }
+
+func TestGetEventsForDownload(t *testing.T) {
+	for _, test := range []struct {
+		description    string
+		download       database.Download
+		request        database.Request
+		expectedEvents int
+		expectedIP     string
+		expectedDomain string
+	}{
+		{
+			description: "returns events OK",
+			download: database.Download{
+				RequestID: 42,
+				IP:        "1.1.1.1",
+				Host:      "1.1.1.1",
+			},
+			request: database.Request{
+				ID:       22,
+				SourceIP: "1.1.1.1",
+			},
+			expectedEvents: 2,
+			expectedIP:     "1.1.1.1",
+			expectedDomain: "",
+		},
+		{
+			description: "returns events with domain port",
+			download: database.Download{
+				RequestID: 42,
+				IP:        "1.1.1.1",
+				Host:      "example.org:888",
+			},
+			request: database.Request{
+				ID:       22,
+				SourceIP: "1.1.1.1",
+			},
+			expectedEvents: 2,
+			expectedIP:     "1.1.1.1",
+			expectedDomain: "example.org",
+		},
+		{
+			description: "returns events with domain",
+			download: database.Download{
+				RequestID: 42,
+				IP:        "1.1.1.1",
+				Host:      "example.org",
+			},
+			request: database.Request{
+				ID:       22,
+				SourceIP: "1.1.1.1",
+			},
+			expectedEvents: 2,
+			expectedIP:     "1.1.1.1",
+			expectedDomain: "example.org",
+		},
+
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fakeDBClient := database.FakeDatabaseClient{
+				RequestToReturn: test.request,
+			}
+			fakeVTClient := FakeVTClient{}
+
+			metrics := CreateVTMetrics(prometheus.NewRegistry())
+			fIpMgr := analysis.FakeIpEventManager{}
+			mgr := NewVTBackgroundManager(&fakeDBClient, &fIpMgr, metrics, &fakeVTClient)
+
+			events := mgr.GetEventsForDownload(&test.download)
+			if len(events) != test.expectedEvents {
+				t.Errorf("expected %d events, got %d", test.expectedEvents, len(events))
+			}
+
+			for _, evt := range events {
+				if evt.IP != test.expectedIP {
+					t.Errorf("expected IP %s, got %s", test.expectedIP, evt.IP)
+				}
+			}
+
+			if events[0].Domain != test.expectedDomain {
+				t.Errorf("expected domain %s, got %s", test.expectedDomain, events[0].Domain)
+			}
+		})
+	}
+}
