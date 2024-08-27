@@ -234,15 +234,17 @@ func (c *Whois) ModelID() int64 { return c.ID }
 
 type IpEvent struct {
 	ID        int64     `ksql:"id,skipInserts" json:"id"`
-	IP        string    `ksql:"ip" json:"ip"`
-	Domain    string    `ksql:"domain" json:"domain"`
-	Type      string    `ksql:"type" json:"type"`
-	Details   string    `ksql:"details" json:"details"`
+	IP        string    `ksql:"ip" json:"ip" doc:"The source IP"`
+	Domain    string    `ksql:"domain" json:"domain" doc:"The domain for the IP"`
+	Type      string    `ksql:"type" json:"type" doc:"The type of event (e.g. ATTACKED, CRAWLED)"`
+	Details   string    `ksql:"details" json:"details" doc:"Any additional details about the event"`
 	Note      string    `ksql:"note" json:"note"`
-	Count     int64     `ksql:"count" json:"count"`
-	RequestID int64     `ksql:"request_id" json:"request_id"`
-	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
-	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
+	Count     int64     `ksql:"count" json:"count" doc:"How often this event was seen"`
+	RequestID int64     `ksql:"request_id" json:"request_id" doc:"The ID of a request related to the event"`
+	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"When the event was created"`
+	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last time the event was updated"`
+	Source    string    `ksql:"source" json:"source" doc:"The source of the event"`
+	SourceRef string    `ksql:"source_ref" json:"source_ref" doc:"A reference related to the source of the event"`
 }
 
 func (c *IpEvent) ModelID() int64 { return c.ID }

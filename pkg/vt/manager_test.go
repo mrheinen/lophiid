@@ -19,6 +19,7 @@ package vt
 import (
 	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -257,7 +258,6 @@ func TestGetEventsForDownload(t *testing.T) {
 			expectedIP:     "1.1.1.1",
 			expectedDomain: "example.org",
 		},
-
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
@@ -278,6 +278,10 @@ func TestGetEventsForDownload(t *testing.T) {
 			for _, evt := range events {
 				if evt.IP != test.expectedIP {
 					t.Errorf("expected IP %s, got %s", test.expectedIP, evt.IP)
+				}
+
+				if evt.Source != constants.IpEventSourceVT {
+					t.Errorf("expected source %s, got %s", constants.IpEventSourceVT, evt.Source)
 				}
 			}
 

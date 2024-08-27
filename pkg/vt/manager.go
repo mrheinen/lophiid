@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"net"
 	"sync"
 	"time"
@@ -210,7 +211,16 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 			Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 		})
 	}
-	return ret
+
+	finalRet := []database.IpEvent{}
+	for _, evt := range ret {
+		evt.Source = constants.IpEventSourceVT
+		if dl.VTFileAnalysisID != "" {
+			evt.SourceRef = dl.VTFileAnalysisID
+		}
+		finalRet = append(finalRet, evt)
+	}
+	return finalRet
 }
 
 // Prefered engines for which we store the results for displaying in the UI
