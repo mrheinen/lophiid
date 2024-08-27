@@ -193,14 +193,14 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 
 	ret = append(ret, evt)
 
-	r, err := v.dbClient.GetRequestByID(dl.RequestID)
+	r, err := v.dbClient.GetRequestByID(dl.LastRequestID)
 	if err != nil {
-		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.RequestID))
+		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.LastRequestID))
 	} else {
 		ret = append(ret, database.IpEvent{
 			IP:        r.SourceIP,
 			Type:      analysis.IpEventAttacked,
-			RequestID: dl.RequestID,
+			RequestID: dl.LastRequestID,
 			Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 		})
 	}
