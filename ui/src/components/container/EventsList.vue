@@ -31,7 +31,7 @@
             <td>{{ evt.details }}</td>
             <td>{{ evt.source }}</td>
             <td v-if="evt.source == 'RULE'"><a :href="config.rulesLink + '?q=id:' + evt.source_ref">{{ evt.source_ref }}</a></td>
-            <td v-else-if="evt.source == 'VT'"><a :href="config.downloadsLike + '?q=vt_file_analysis_id:' + evt.source_ref">analysis</a></td>
+            <td v-else-if="evt.source == 'VT'"><a :href="config.downloadsLink + '?q=vt_file_analysis_id:' + evt.source_ref">analysis</a></td>
             <td v-else>{{ evt.source_ref }}</td>
             <td>{{ evt.count }}</td>
             <td>
