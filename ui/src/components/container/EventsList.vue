@@ -11,6 +11,8 @@
           <th>Request ID</th>
           <th>Domain</th>
           <th>Details</th>
+          <th>Source</th>
+          <th>Source Ref</th>
           <th>Count</th>
           <th>Actions</th>
         </thead>
@@ -27,6 +29,10 @@
             <td><a :href="config.requestsLink + '?q=id:' + evt.request_id">{{ evt.request_id }}</a></td>
             <td>{{ evt.domain }}</td>
             <td>{{ evt.details }}</td>
+            <td>{{ evt.source }}</td>
+            <td v-if="evt.source == 'RULE'"><a :href="config.rulesLink + '?q=id:' + evt.source_ref">{{ evt.source_ref }}</a></td>
+            <td v-else-if="evt.source == 'VT'"><a :href="config.downloadsLike + '?q=vt_file_analysis_id:' + evt.source_ref">analysis</a></td>
+            <td v-else>{{ evt.source_ref }}</td>
             <td>{{ evt.count }}</td>
             <td>
               <a :href="'/requests?q=source_ip:' + evt.ip">

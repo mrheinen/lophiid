@@ -184,7 +184,7 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 		IP:        dl.IP,
 		Type:      constants.IpEventHostedMalware,
 		RequestID: dl.RequestID,
-		Details:   fmt.Sprintf("Hosted file that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		Details:   fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 	}
 
 	host, _, err := net.SplitHostPort(dl.Host)
@@ -208,7 +208,7 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 			IP:        r.SourceIP,
 			Type:      constants.IpEventAttacked,
 			RequestID: dl.LastRequestID,
-			Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+			Details:   fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 		})
 	}
 
