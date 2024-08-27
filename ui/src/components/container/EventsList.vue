@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="storedquery"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="ipevent"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="events.length > 0">
         <thead>
