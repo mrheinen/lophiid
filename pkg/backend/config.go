@@ -60,11 +60,19 @@ type Config struct {
 		// Determines how long information for an IP will be cached before writing
 		// it to the database. During that time the information will be updated with
 		// new events if they happen.
-		IpCacheDuration  time.Duration `fig:"ip_cache_duration" default:"15m"`
-		IpEventQueueSize int           `fig:"ip_event_queue_size" default:"1500"`
+		IpCacheDuration time.Duration `fig:"ip_cache_duration" default:"15m"`
+		// How many events there can be in the queue. If this is exceeded then it
+		// will start blocking some logic in the backend so keep this number high
+		// and monitor the queue size with prometheus/grafana.
+		IpEventQueueSize int `fig:"ip_event_queue_size" default:"5000"`
 		// Determines how often the scan detection logic will look at the events in
 		// the cache. The value should be shorted than the IpCacheDuration
 		ScanMonitorInterval time.Duration `fig:"scan_monitor_interval" default:"5m"`
+		// Determines how long (approximately) the scan detection logic will keep
+		// aggregating scan events into a cached version before writing it to the db.
+		// So with the default, if there is a super slow scan, you will get an event
+		// every ~hour.
+		AggregateScanWindow time.Duration `fig:"scan_aggregation_window" default:"1h"`
 	} `fig:"analysis"`
 	Alerting struct {
 		Interval time.Duration `fig:"interval" default:"2m"`

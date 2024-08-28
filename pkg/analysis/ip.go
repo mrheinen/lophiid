@@ -36,8 +36,10 @@ type IpEventManagerImpl struct {
 	eventQueue          chan *database.IpEvent
 	controlChan         chan bool
 	ipCache             *util.StringMapCache[database.IpEvent]
+	scanCache           *util.StringMapCache[database.IpEvent]
 	metrics             *AnalysisMetrics
 	scanMonitorInterval time.Duration
+	aggregateScanWindow time.Duration
 }
 
 // FakeIpEventManager is used in tests
@@ -49,16 +51,19 @@ func (f *FakeIpEventManager) AddEvent(evt *database.IpEvent) {
 	f.Events = append(f.Events, *evt)
 }
 
-func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, scanMonitorWindow time.Duration, metrics *AnalysisMetrics) *IpEventManagerImpl {
-	ipCache := util.NewStringMapCache[database.IpEvent]("IP event cache", ipCacheDuration)
+func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, scanMonitorWindow time.Duration, aggregateScanWindow time.Duration, metrics *AnalysisMetrics) *IpEventManagerImpl {
+	ipCache := util.NewStringMapCache[database.IpEvent]("Analysis - IP event cache", ipCacheDuration)
+	scanCache := util.NewStringMapCache[database.IpEvent]("Analysis - IP scan cache", ipCacheDuration*2)
 
 	return &IpEventManagerImpl{
 		dbClient:            dbClient,
 		eventQueue:          make(chan *database.IpEvent, ipQueueSize),
 		controlChan:         make(chan bool),
 		ipCache:             ipCache,
+		scanCache:           scanCache,
 		metrics:             metrics,
 		scanMonitorInterval: scanMonitorWindow,
+		aggregateScanWindow: aggregateScanWindow,
 	}
 }
 
@@ -92,6 +97,7 @@ func (i *IpEventManagerImpl) MonitorQueue() {
 		case <-scanTicker.C:
 			i.CreateScanEvents()
 		case <-ticker.C:
+			i.scanCache.CleanExpired()
 			i.metrics.eventQueueGauge.Set(float64(len(i.eventQueue)))
 			i.ipCache.CleanExpiredWithCallback(func(evt database.IpEvent) bool {
 				_, err := i.dbClient.Insert(&evt)
@@ -107,14 +113,12 @@ func (i *IpEventManagerImpl) MonitorQueue() {
 
 func (i *IpEventManagerImpl) CreateScanEvents() int {
 	const scanThreshold = 3
+
 	eventReturnCount := 0
 	scanEvents := map[string]bool{
 		constants.IpEventAttacked: true,
 		constants.IpEventRecon:    true,
 	}
-
-	// Store existing scan events so we don't make duplicates.
-	existingScannedEvents := map[string]bool{}
 
 	scanCount := make(map[string]int64)
 
@@ -126,27 +130,39 @@ func (i *IpEventManagerImpl) CreateScanEvents() int {
 				scanCount[evt.IP] += evt.Count
 			}
 		}
-
-		if evt.Type == constants.IpEventScanned {
-			existingScannedEvents[evt.IP] = true
-		}
 	}
 
 	for ip, cnt := range scanCount {
 		if cnt >= scanThreshold {
 
-			// Avoid double events
-			if _, ok := existingScannedEvents[ip]; ok {
+			// If there already is a scan event for this IP in the cache than skip it.
+			// Don't make a new one but DO store the old one again to refresh it's
+			// cache timeout timestamp.
+			if existingEvt, err := i.scanCache.Get(ip); err == nil {
+				duration, err := i.scanCache.GetDurationStored(ip)
+				if err != nil {
+					slog.Warn("unable to get scan cache duration", slog.String("ip", ip), slog.String("error", err.Error()))
+					continue
+				}
+
+				// Only update if the age of the scan event is not too old. If it's too
+				// old we leave the entry alone and it will eventually expire.
+				if duration < i.aggregateScanWindow {
+					i.scanCache.Update(ip, *existingEvt)
+				}
 				continue
 			}
 
-			// TODO: Consider to check if such an event was already created during the
-			// previous runs of this method. Could be useful to reduce noise.
-			i.AddEvent(&database.IpEvent{
+			evt := database.IpEvent{
 				IP:      ip,
 				Type:    constants.IpEventScanned,
 				Details: fmt.Sprintf("found %d events", cnt),
-			})
+				Source:  constants.IpEventSourceAnalysis,
+			}
+
+			i.AddEvent(&evt)
+			i.scanCache.Store(ip, evt)
+
 			eventReturnCount += 1
 		}
 	}

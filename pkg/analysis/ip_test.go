@@ -14,7 +14,7 @@ func TestIpEventManagerStoresOnceOk(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateAnalysisMetrics(reg)
 
-	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, metrics)
+	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
 
 	testIp := "1.1.1.1"
 	testEvtName := "boof"
@@ -39,7 +39,7 @@ func TestIpEventManagerStoresTwiceOk(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateAnalysisMetrics(reg)
 
-	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, metrics)
+	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
 
 	testIp := "1.1.1.1"
 	testEvtName := "boof"
@@ -65,7 +65,6 @@ func TestIpEventManagerStoresTwiceOk(t *testing.T) {
 }
 
 func TestIpEventManagerCreatesScanEvents(t *testing.T) {
-
 	for _, test := range []struct {
 		description     string
 		events          []database.IpEvent
@@ -131,7 +130,7 @@ func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			metrics := CreateAnalysisMetrics(reg)
-			im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, metrics)
+			im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
 
 			for _, evt := range test.events {
 				im.ProcessNewEvent(&evt)
@@ -146,5 +145,35 @@ func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 
 		})
 	}
+}
 
+func TestIpEventManagerCreatesNoDuplicateScanEvents(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	metrics := CreateAnalysisMetrics(reg)
+	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
+
+	im.ProcessNewEvent(&database.IpEvent{
+		IP:   "1.1.1.1",
+		Type: constants.IpEventAttacked,
+	})
+
+	im.ProcessNewEvent(&database.IpEvent{
+		IP:   "1.1.1.1",
+		Type: constants.IpEventAttacked,
+	})
+
+	im.ProcessNewEvent(&database.IpEvent{
+		IP:   "1.1.1.1",
+		Type: constants.IpEventAttacked,
+	})
+
+	numberEvents := im.CreateScanEvents()
+	if numberEvents != 1 {
+		t.Errorf("expected 1 scan event, got %d", numberEvents)
+	}
+
+	numberEvents = im.CreateScanEvents()
+	if numberEvents != 0 {
+		t.Errorf("expected 0 scan event, got %d", numberEvents)
+	}
 }
