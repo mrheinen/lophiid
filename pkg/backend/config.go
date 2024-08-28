@@ -62,6 +62,9 @@ type Config struct {
 		// new events if they happen.
 		IpCacheDuration  time.Duration `fig:"ip_cache_duration" default:"15m"`
 		IpEventQueueSize int           `fig:"ip_event_queue_size" default:"1500"`
+		// Determines how often the scan detection logic will look at the events in
+		// the cache. The value should be shorted than the IpCacheDuration
+		ScanMonitorInterval time.Duration `fig:"scan_monitor_interval" default:"5m"`
 	} `fig:"analysis"`
 	Alerting struct {
 		Interval time.Duration `fig:"interval" default:"2m"`
