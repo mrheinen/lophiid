@@ -13,6 +13,10 @@
               <th>Type</th>
               <td>{{ localEvent.type}}</td>
             </tr>
+            <tr v-if="localEvent.subtype">
+              <th >Sub Type</th>
+              <td>{{ localEvent.subtype}}</td>
+            </tr>
             <tr v-if="localEvent.domain">
               <th>Domain</th>
               <td>{{ localEvent.domain }}</td>
@@ -25,6 +29,7 @@
               <th>Request ID</th>
               <td>{{ localEvent.request_id }}</td>
             </tr>
+
           </tbody>
         </table>
 

@@ -54,6 +54,7 @@ func main() {
 	WriteModelToFile(fo, database.Honeypot{}, "Honeypots")
 	WriteModelToFile(fo, database.StoredQuery{}, "Manage Queries")
 	WriteModelToFile(fo, database.Tag{}, "Manage tags")
+	WriteModelToFile(fo, database.IpEvent{}, "Manage IP events")
 	defer fo.Close()
 
 }

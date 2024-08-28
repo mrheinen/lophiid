@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="storedquery"></DataSearchBar>
+      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="ipevent"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="events.length > 0">
         <thead>
@@ -11,6 +11,8 @@
           <th>Request ID</th>
           <th>Domain</th>
           <th>Details</th>
+          <th>Source</th>
+          <th>Source Ref</th>
           <th>Count</th>
           <th>Actions</th>
         </thead>
@@ -27,6 +29,10 @@
             <td><a :href="config.requestsLink + '?q=id:' + evt.request_id">{{ evt.request_id }}</a></td>
             <td>{{ evt.domain }}</td>
             <td>{{ evt.details }}</td>
+            <td>{{ evt.source }}</td>
+            <td v-if="evt.source == 'RULE'"><a :href="config.rulesLink + '?q=id:' + evt.source_ref">{{ evt.source_ref }}</a></td>
+            <td v-else-if="evt.source == 'VT'"><a :href="config.downloadsLink + '?q=vt_file_analysis_id:' + evt.source_ref">analysis</a></td>
+            <td v-else>{{ evt.source_ref }}</td>
             <td>{{ evt.count }}</td>
             <td>
               <a :href="'/requests?q=source_ip:' + evt.ip">
@@ -240,8 +246,8 @@ export default {
   },
   mounted() {
     if (this.$route.query.q) {
-      this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
+      this.query = this.$route.query.q;
     }
     this.loadEvents(true, function () {});
   },

@@ -21,18 +21,8 @@ import (
 	"log/slog"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"time"
-)
-
-// This needs to be kept in sync with IP_EVENT_TYPE in the database.
-const (
-	IpEventCrawl         = "CRAWLED"
-	IpEventHostedMalware = "HOSTED_MALWARE"
-	IpEventRecon         = "RECONNED"
-	IpEventScanned       = "SCANNED"
-	IpEventAttacked      = "ATTACKED"
-	IpEventBrute         = "BRUTEFORCED"
-	IpEventHostC2        = "HOST_C2"
 )
 
 // IpEventManager queues and caches IP related events and periodically stores
@@ -42,11 +32,14 @@ type IpEventManager interface {
 }
 
 type IpEventManagerImpl struct {
-	dbClient    database.DatabaseClient
-	eventQueue  chan *database.IpEvent
-	controlChan chan bool
-	ipCache     *util.StringMapCache[database.IpEvent]
-	metrics     *AnalysisMetrics
+	dbClient            database.DatabaseClient
+	eventQueue          chan *database.IpEvent
+	controlChan         chan bool
+	ipCache             *util.StringMapCache[database.IpEvent]
+	scanCache           *util.StringMapCache[database.IpEvent]
+	metrics             *AnalysisMetrics
+	scanMonitorInterval time.Duration
+	aggregateScanWindow time.Duration
 }
 
 // FakeIpEventManager is used in tests
@@ -58,15 +51,19 @@ func (f *FakeIpEventManager) AddEvent(evt *database.IpEvent) {
 	f.Events = append(f.Events, *evt)
 }
 
-func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, metrics *AnalysisMetrics) *IpEventManagerImpl {
-	ipCache := util.NewStringMapCache[database.IpEvent]("IP event cache", ipCacheDuration)
+func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, scanMonitorWindow time.Duration, aggregateScanWindow time.Duration, metrics *AnalysisMetrics) *IpEventManagerImpl {
+	ipCache := util.NewStringMapCache[database.IpEvent]("Analysis - IP event cache", ipCacheDuration)
+	scanCache := util.NewStringMapCache[database.IpEvent]("Analysis - IP scan cache", ipCacheDuration*2)
 
 	return &IpEventManagerImpl{
-		dbClient:    dbClient,
-		eventQueue:  make(chan *database.IpEvent, ipQueueSize),
-		controlChan: make(chan bool),
-		ipCache:     ipCache,
-		metrics:     metrics,
+		dbClient:            dbClient,
+		eventQueue:          make(chan *database.IpEvent, ipQueueSize),
+		controlChan:         make(chan bool),
+		ipCache:             ipCache,
+		scanCache:           scanCache,
+		metrics:             metrics,
+		scanMonitorInterval: scanMonitorWindow,
+		aggregateScanWindow: aggregateScanWindow,
 	}
 }
 
@@ -86,6 +83,7 @@ func (i *IpEventManagerImpl) Stop() {
 // expired in the cache to the database.
 func (i *IpEventManagerImpl) MonitorQueue() {
 	ticker := time.NewTicker(time.Minute * 1)
+	scanTicker := time.NewTicker(i.scanMonitorInterval)
 	for {
 		select {
 		case evt := <-i.eventQueue:
@@ -96,18 +94,82 @@ func (i *IpEventManagerImpl) MonitorQueue() {
 			slog.Info("Stopping IP event handler")
 			return
 
+		case <-scanTicker.C:
+			i.CreateScanEvents()
 		case <-ticker.C:
+			i.scanCache.CleanExpired()
 			i.metrics.eventQueueGauge.Set(float64(len(i.eventQueue)))
 			i.ipCache.CleanExpiredWithCallback(func(evt database.IpEvent) bool {
 				_, err := i.dbClient.Insert(&evt)
 				if err != nil {
-					slog.Error("unable to store event", slog.String("error", err.Error()))
+					slog.Error("unable to store event",
+						slog.String("error", err.Error()),
+						slog.String("event", fmt.Sprintf("%+v", evt)))
 				}
 
 				return err == nil
 			})
 		}
 	}
+}
+
+func (i *IpEventManagerImpl) CreateScanEvents() int {
+	const scanThreshold = 3
+
+	eventReturnCount := 0
+	scanEvents := map[string]bool{
+		constants.IpEventAttacked: true,
+		constants.IpEventRecon:    true,
+	}
+
+	scanCount := make(map[string]int64)
+
+	for _, evt := range i.ipCache.GetAsMap() {
+		if _, ok := scanEvents[evt.Type]; ok {
+			if _, ok := scanCount[evt.IP]; !ok {
+				scanCount[evt.IP] = evt.Count
+			} else {
+				scanCount[evt.IP] += evt.Count
+			}
+		}
+	}
+
+	for ip, cnt := range scanCount {
+		if cnt >= scanThreshold {
+
+			// If there already is a scan event for this IP in the cache than skip it.
+			// Don't make a new one but DO store the old one again to refresh it's
+			// cache timeout timestamp.
+			if existingEvt, err := i.scanCache.Get(ip); err == nil {
+				duration, err := i.scanCache.GetDurationStored(ip)
+				if err != nil {
+					slog.Warn("unable to get scan cache duration", slog.String("ip", ip), slog.String("error", err.Error()))
+					continue
+				}
+
+				// Only update if the age of the scan event is not too old. If it's too
+				// old we leave the entry alone and it will eventually expire.
+				if duration < i.aggregateScanWindow {
+					i.scanCache.Update(ip, *existingEvt)
+				}
+				continue
+			}
+
+			evt := database.IpEvent{
+				IP:      ip,
+				Type:    constants.IpEventScanned,
+				Details: fmt.Sprintf("found %d events", cnt),
+				Source:  constants.IpEventSourceAnalysis,
+			}
+
+			i.AddEvent(&evt)
+			i.scanCache.Store(ip, evt)
+
+			eventReturnCount += 1
+		}
+	}
+
+	return eventReturnCount
 }
 
 // ProcessNewEvent adds new events to the cache and updates the count for
@@ -117,10 +179,10 @@ func (i *IpEventManagerImpl) ProcessNewEvent(evt *database.IpEvent) error {
 	entry, err := i.ipCache.Get(cacheKey)
 	if err == nil {
 		entry.Count += 1
-  if err := i.ipCache.Replace(cacheKey, *entry); err != nil {
-      return fmt.Errorf("failed to replace cache entry: %w", err)
-  }
-  return nil
+		if err := i.ipCache.Replace(cacheKey, *entry); err != nil {
+			return fmt.Errorf("failed to replace cache entry: %w", err)
+		}
+		return nil
 	}
 
 	evt.Count = 1

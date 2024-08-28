@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//pkg/database",
         "//pkg/util",
+        "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
     ],
 )
@@ -21,6 +22,7 @@ go_test(
     embed = [":analysis"],
     deps = [
         "//pkg/database",
+        "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
     ],
 )

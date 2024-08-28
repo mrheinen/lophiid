@@ -477,6 +477,7 @@ export default {
   mounted() {
    if (this.$route.query.q) {
       this.$refs.searchBar.setQuery(this.$route.query.q);
+      this.query = this.$route.query.q;
     } else {
       // If a uri and method parameter is given, reset the form and use the given
       // values.

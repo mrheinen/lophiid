@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"net"
 	"sync"
 	"time"
@@ -45,11 +46,11 @@ func (f *FakeVTManager) ProcessURLQueue() error {
 func (f *FakeVTManager) GetEventsForDownload(dl *database.Download) []database.IpEvent {
 	return []database.IpEvent{
 		{
-			Type: analysis.IpEventAttacked,
+			Type: constants.IpEventAttacked,
 			IP:   "1.1.1.1",
 		},
 		{
-			Type: analysis.IpEventAttacked,
+			Type: constants.IpEventAttacked,
 			IP:   "1.1.1.1",
 		},
 	}
@@ -180,10 +181,11 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 	ret := []database.IpEvent{}
 	// Register the IP hosting the malware.
 	evt := database.IpEvent{
-		IP:        dl.IP,
-		Type:      analysis.IpEventHostedMalware,
-		RequestID: dl.RequestID,
-		Details:   fmt.Sprintf("Hosted file that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		IP:         dl.IP,
+		Type:       constants.IpEventHostedMalware,
+		RequestID:  dl.LastRequestID,
+		Details:    fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		HoneypotIP: dl.HoneypotIP,
 	}
 
 	host, _, err := net.SplitHostPort(dl.Host)
@@ -204,13 +206,23 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.LastRequestID))
 	} else {
 		ret = append(ret, database.IpEvent{
-			IP:        r.SourceIP,
-			Type:      analysis.IpEventAttacked,
-			RequestID: dl.LastRequestID,
-			Details:   fmt.Sprintf("Sent payload that VirusTotal reported on (%d malicious, %d suspicious)", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+			IP:         r.SourceIP,
+			Type:       constants.IpEventAttacked,
+			RequestID:  dl.LastRequestID,
+			Details:    fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+			HoneypotIP: dl.HoneypotIP,
 		})
 	}
-	return ret
+
+	finalRet := []database.IpEvent{}
+	for _, evt := range ret {
+		evt.Source = constants.IpEventSourceVT
+		if dl.VTFileAnalysisID != "" {
+			evt.SourceRef = dl.VTFileAnalysisID
+		}
+		finalRet = append(finalRet, evt)
+	}
+	return finalRet
 }
 
 // Prefered engines for which we store the results for displaying in the UI

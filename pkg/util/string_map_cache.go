@@ -24,8 +24,9 @@ import (
 )
 
 type CacheEntry[T comparable] struct {
-	Data T
-	Time time.Time
+	Data          T
+	LastStoreTime time.Time
+	CreationTime  time.Time
 }
 
 type StringMapCache[T comparable] struct {
@@ -48,10 +49,28 @@ func NewStringMapCache[T comparable](name string, timeout time.Duration) *String
 func (r *StringMapCache[T]) Store(key string, data T) {
 	r.mu.Lock()
 	r.entries[key] = CacheEntry[T]{
-		Data: data,
-		Time: time.Now(),
+		Data:          data,
+		LastStoreTime: time.Now(),
+		CreationTime:  time.Now(),
 	}
 	r.mu.Unlock()
+}
+
+// Update the item and also update the cache timeout timestamp.
+func (r *StringMapCache[T]) Update(key string, data T) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	entry, ok := r.entries[key]
+	if !ok {
+		return fmt.Errorf("no entry for key %s", key)
+	}
+
+	entry.Data = data
+	entry.LastStoreTime = time.Now()
+	r.entries[key] = entry
+
+	return nil
 }
 
 // Replace replaces the data of an entry while preserving the timestamp meaning
@@ -80,6 +99,17 @@ func (r *StringMapCache[T]) Get(key string) (*T, error) {
 		return nil, fmt.Errorf("cannot find: %s", key)
 	}
 	return &ce.Data, nil
+}
+
+func (r *StringMapCache[T]) GetDurationStored(key string) (time.Duration, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	ce, ok := r.entries[key]
+
+	if !ok {
+		return time.Second, fmt.Errorf("cannot find: %s", key)
+	}
+	return time.Since(ce.CreationTime), nil
 }
 
 // Returns the content of the cache as a map.
@@ -111,7 +141,7 @@ func (r *StringMapCache[T]) CleanExpiredWithCallback(callback func(T) bool) (rem
 	defer r.mu.Unlock()
 
 	for k, v := range r.entries {
-		if time.Since(v.Time) > r.timeout {
+		if time.Since(v.LastStoreTime) > r.timeout {
 			if callback(v.Data) {
 				slog.Debug("removing entry from cache", slog.String("name", r.cacheName), slog.String("key", k))
 				removedCount++

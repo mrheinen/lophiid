@@ -623,19 +623,19 @@ func TestProcessQueue(t *testing.T) {
 		{
 			description:       "Runs ok, marked attack",
 			requestPurpose:    database.RuleRequestPurposeAttack,
-			expectedEventType: analysis.IpEventAttacked,
+			expectedEventType: constants.IpEventAttacked,
 			ruleID:            42,
 		},
 		{
 			description:       "Runs ok, marked crawl",
 			requestPurpose:    database.RuleRequestPurposeCrawl,
-			expectedEventType: analysis.IpEventCrawl,
+			expectedEventType: constants.IpEventCrawl,
 			ruleID:            43,
 		},
 		{
 			description:       "Runs ok, marked recon",
 			requestPurpose:    database.RuleRequestPurposeRecon,
-			expectedEventType: analysis.IpEventRecon,
+			expectedEventType: constants.IpEventRecon,
 			ruleID:            44,
 		},
 	} {
@@ -682,9 +682,13 @@ func TestProcessQueue(t *testing.T) {
 				t.Errorf("expected %s, got %s", test.expectedEventType, fIpMgr.Events[0].Type)
 			}
 
-			if !strings.Contains(fIpMgr.Events[0].Details, fmt.Sprintf("%d", test.ruleID)) {
+			if fIpMgr.Events[0].SourceRef != fmt.Sprintf("%d", test.ruleID) {
 				t.Errorf("expected %d in %s", test.ruleID, fIpMgr.Events[0].Details)
 			}
+
+			if fIpMgr.Events[0].Source != constants.IpEventSourceRule {
+        t.Errorf("expected %s, got %s", constants.IpEventSourceRule, fIpMgr.Events[0].Source)
+      }
 		})
 	}
 }

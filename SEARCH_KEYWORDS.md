@@ -73,6 +73,7 @@ the search bar.
 | id | int64 | The rule ID |
 | method | string | The HTTP method the rule matches on |
 | port | int64 | The TCP port the rue matches on. |
+| request_purpose | string | The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK) |
 | updated_at | Time | Last update date of the rule |
 | uri | string | The URI matching string |
 | uri_matching | string | The URI matching method (exact, regex, ..) |
@@ -158,5 +159,23 @@ the search bar.
 | id | int64 | The ID of the tag |
 | name | string | The name of the tag |
 | updated_at | Time | Date and time of last update |
+
+
+## Keywords for the Manage IP events (model: IpEvent)
+
+| Keyword | Type | Description |
+| --- | --- | --- |
+| count | int64 | How often this event was seen |
+| created_at | Time | When the event was created |
+| details | string | Any additional details about the event |
+| domain | string | The domain for the IP |
+| honeypot_ip | string | The honeypot IP |
+| ip | string | The source IP |
+| request_id | int64 | The ID of a request related to the event |
+| source | string | The source of the event |
+| source_ref | string | A reference related to the source of the event |
+| subtype | string | The subtype of the event (e.g. RCE, LFI) |
+| type | string | The type of event (e.g. ATTACKED, CRAWLED) |
+| updated_at | Time | Last time the event was updated |
 
 
