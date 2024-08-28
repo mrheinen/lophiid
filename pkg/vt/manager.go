@@ -183,7 +183,7 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 	evt := database.IpEvent{
 		IP:        dl.IP,
 		Type:      constants.IpEventHostedMalware,
-		RequestID: dl.RequestID,
+		RequestID: dl.LastRequestID,
 		Details:   fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
 	}
 
