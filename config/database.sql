@@ -269,6 +269,7 @@ CREATE TABLE ip_event (
   request_id             INTEGER,   -- optional
   source                 IP_EVENT_SOURCE default 'OTHER',
   source_ref             VARCHAR(512),
+  honeypot_ip            VARCHAR(52),
   created_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );

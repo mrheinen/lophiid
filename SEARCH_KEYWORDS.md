@@ -169,6 +169,7 @@ the search bar.
 | created_at | Time | When the event was created |
 | details | string | Any additional details about the event |
 | domain | string | The domain for the IP |
+| honeypot_ip | string | The honeypot IP |
 | ip | string | The source IP |
 | request_id | int64 | The ID of a request related to the event |
 | source | string | The source of the event |

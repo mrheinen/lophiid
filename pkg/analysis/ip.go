@@ -102,7 +102,9 @@ func (i *IpEventManagerImpl) MonitorQueue() {
 			i.ipCache.CleanExpiredWithCallback(func(evt database.IpEvent) bool {
 				_, err := i.dbClient.Insert(&evt)
 				if err != nil {
-					slog.Error("unable to store event", slog.String("error", err.Error()))
+					slog.Error("unable to store event",
+						slog.String("error", err.Error()),
+						slog.String("event", fmt.Sprintf("%+v", evt)))
 				}
 
 				return err == nil

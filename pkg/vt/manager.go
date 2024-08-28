@@ -181,10 +181,11 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 	ret := []database.IpEvent{}
 	// Register the IP hosting the malware.
 	evt := database.IpEvent{
-		IP:        dl.IP,
-		Type:      constants.IpEventHostedMalware,
-		RequestID: dl.LastRequestID,
-		Details:   fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		IP:         dl.IP,
+		Type:       constants.IpEventHostedMalware,
+		RequestID:  dl.LastRequestID,
+		Details:    fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		HoneypotIP: dl.HoneypotIP,
 	}
 
 	host, _, err := net.SplitHostPort(dl.Host)
@@ -205,10 +206,11 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.LastRequestID))
 	} else {
 		ret = append(ret, database.IpEvent{
-			IP:        r.SourceIP,
-			Type:      constants.IpEventAttacked,
-			RequestID: dl.LastRequestID,
-			Details:   fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+			IP:         r.SourceIP,
+			Type:       constants.IpEventAttacked,
+			RequestID:  dl.LastRequestID,
+			Details:    fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+			HoneypotIP: dl.HoneypotIP,
 		})
 	}
 

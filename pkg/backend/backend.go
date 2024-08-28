@@ -769,30 +769,33 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 		switch rule.RequestPurpose {
 		case database.RuleRequestPurposeAttack:
 			s.ipEventManager.AddEvent(&database.IpEvent{
-				IP:        req.SourceIP,
-				Type:      constants.IpEventAttacked,
-				Details:   "rule indicated the IP attacked",
-				Source:    constants.IpEventSourceRule,
-				SourceRef: fmt.Sprintf("%d", rule.ID),
-				RequestID: dm.ModelID(),
+				IP:         req.SourceIP,
+				Type:       constants.IpEventAttacked,
+				Details:    "rule indicated the IP attacked",
+				Source:     constants.IpEventSourceRule,
+				SourceRef:  fmt.Sprintf("%d", rule.ID),
+				RequestID:  dm.ModelID(),
+				HoneypotIP: req.HoneypotIP,
 			})
 		case database.RuleRequestPurposeCrawl:
 			s.ipEventManager.AddEvent(&database.IpEvent{
-				IP:        req.SourceIP,
-				Type:      constants.IpEventCrawl,
-				Source:    constants.IpEventSourceRule,
-				SourceRef: fmt.Sprintf("%d", rule.ID),
-				Details:   "rule indicated the IP crawled",
-				RequestID: dm.ModelID(),
+				IP:         req.SourceIP,
+				Type:       constants.IpEventCrawl,
+				Source:     constants.IpEventSourceRule,
+				SourceRef:  fmt.Sprintf("%d", rule.ID),
+				Details:    "rule indicated the IP crawled",
+				RequestID:  dm.ModelID(),
+				HoneypotIP: req.HoneypotIP,
 			})
 		case database.RuleRequestPurposeRecon:
 			s.ipEventManager.AddEvent(&database.IpEvent{
-				IP:        req.SourceIP,
-				Source:    constants.IpEventSourceRule,
-				SourceRef: fmt.Sprintf("%d", rule.ID),
-				Type:      constants.IpEventRecon,
-				Details:   "rule indicated the IP reconned",
-				RequestID: dm.ModelID(),
+				IP:         req.SourceIP,
+				Source:     constants.IpEventSourceRule,
+				SourceRef:  fmt.Sprintf("%d", rule.ID),
+				Type:       constants.IpEventRecon,
+				Details:    "rule indicated the IP reconned",
+				RequestID:  dm.ModelID(),
+				HoneypotIP: req.HoneypotIP,
 			})
 		}
 	}
