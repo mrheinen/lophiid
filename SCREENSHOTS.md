@@ -14,3 +14,8 @@ The downloads page shows information about all the downloaded payloads which
 were obtained via attacks. The payloads themselves are also stored locally in
 the malware directory (configurable via the backend config).
 ![Downloads page](./images/screenshot-payloads.png)
+
+## Events page
+The events page shows IP related events, such as when malware is detected from
+an IP or when a scan is detected.
+![Events page](./images/screenshot-events.png)
