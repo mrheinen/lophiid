@@ -46,6 +46,21 @@ alerting:
     api_key: AAAAAAAAAAAAAAAAAAAA
     channel_id: 111111
 
+analysis:
+  # Determines how long information for an IP will be cached before
+  # writing it to the database. During that time the information will be
+  # updated with new events if they happen.
+  ip_cache_duration: 15m
+  # How many events there can be in the queue. If this is exceeded then it
+  # will start blocking some logic in the backend so keep this number high
+  # and monitor the queue size with prometheus/grafana.
+  ip_event_queue_size: 5000
+  # Determines how long (approximately) the scan detection logic will keep
+  # aggregating scan events into a cached version before writing it to the db.
+  # So with the default below, if there is a super slow scan, you will
+  # get an event every ~1 hour.
+  scan_monitor_interval: 1h
+
 virustotal:
   # Your virus total API key.
   api_key: AAAAAAAAAAAAAAAAAA
