@@ -109,7 +109,7 @@ func TestRunScriptWithoutValidateOk(t *testing.T) {
 
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
-			jr := NewGojaJavascriptRunner(&fdb, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, metrics)
 
 			res := backend_service.HttpResponse{}
 
@@ -196,7 +196,7 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
-			jr := NewGojaJavascriptRunner(&fdb, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, metrics)
 			err := jr.RunScript(test.script, req, &res, true)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
@@ -294,7 +294,7 @@ func TestRunScriptUsesCache(t *testing.T) {
 
 			fdb := database.FakeDatabaseClient{}
 
-			jr := NewGojaJavascriptRunner(&fdb, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, metrics)
 
 			jr.RunScript(test.script1, test.request1, &res, false)
 			err := jr.RunScript(test.script2, test.request2, &res, false)
@@ -388,7 +388,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 				},
 			}
 
-			jr := NewGojaJavascriptRunner(&fdb, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, metrics)
 
 			err := jr.RunScript(test.script, test.request, &res, false)
 			if (err != nil) != test.expectError {
@@ -404,5 +404,93 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 			}
 		})
 
+	}
+}
+
+func TestRunScriptRunsCommands(t *testing.T) {
+	for _, test := range []struct {
+		description string
+		script      string
+		request     database.Request
+		content     database.Content
+		allowedCmds []string
+		expectError bool
+	}{
+		{
+			description: "runs ok",
+			script: `
+			function createResponse() {
+				var r = util.runner.getCommandRunner();
+			  if (!r.runCommand("/bin/echo", "aaa")) {
+					return 'command not allowed?';
+				}
+				return r.getStderr();
+			}
+			`,
+			request: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+			},
+			allowedCmds: []string{"/bin/echo"},
+			content: database.Content{
+				ID:   42,
+				Data: []byte("test"),
+			},
+			expectError: false,
+		},
+		{
+			description: "command not allowed and does not run",
+			script: `
+			function createResponse() {
+				var r = util.runner.getCommandRunner();
+			  if (!r.runCommand("/bin/echo", "aaa")) {
+					return 'fail is good in this case';
+				}
+				return '';
+			}
+			`,
+			request: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+			},
+			allowedCmds: []string{"/bin/false"},
+			content: database.Content{
+				ID:   42,
+				Data: []byte("test"),
+			},
+			expectError: true,
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+
+			fmt.Printf("Running test: %s\n", test.description)
+			res := backend_service.HttpResponse{}
+			reg := prometheus.NewRegistry()
+			metrics := CreateGoJaMetrics(reg)
+
+			fdb := database.FakeDatabaseClient{}
+
+			jr := NewGojaJavascriptRunner(&fdb, test.allowedCmds, metrics)
+
+			err := jr.RunScript(test.script, test.request, &res, false)
+			if (err != nil) != test.expectError {
+				t.Errorf("got error: %s", err)
+				return
+			}
+
+			if !test.expectError {
+				metric := testutil.ToFloat64(metrics.javascriptSuccessCount.WithLabelValues(RunSuccess))
+				if metric != 1 {
+					t.Errorf("expected success metrics to be 1, got %f", metric)
+				}
+			}
+		})
 	}
 }

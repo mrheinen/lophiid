@@ -74,6 +74,12 @@ type Config struct {
 		// every ~hour.
 		AggregateScanWindow time.Duration `fig:"scan_aggregation_window" default:"1h"`
 	} `fig:"analysis"`
+	Scripting struct {
+		// Whether the content scripts  can run commands.
+		AllowRunningCommands bool `fig:"allow_running_commands" default:"false"`
+		// The allowed commands.
+		AllowedCommands []string `fig:"allowed_commands"`
+	} `fig:"scripting"`
 	Alerting struct {
 		Interval time.Duration `fig:"interval" default:"2m"`
 		Telegram struct {

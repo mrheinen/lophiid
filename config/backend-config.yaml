@@ -37,7 +37,6 @@ backend:
     # How long to keep track of requests coming from the same attacker.
     attack_tracking_duration: 168h # week
 
-
 alerting:
   # The alerting interval.  Alerts are aggregated and send every <interval>.
   interval: 2m
@@ -45,6 +44,12 @@ alerting:
     # Telegram API key and channel ID.
     api_key: AAAAAAAAAAAAAAAAAAAA
     channel_id: 111111
+
+scripting:
+  allow_running_commands: true
+  allowed_commands:
+    - /usr/bin/false
+    - /usr/bin/echo
 
 analysis:
   # Determines how long information for an IP will be cached before

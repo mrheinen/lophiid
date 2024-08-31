@@ -3,8 +3,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "javascript",
     srcs = [
+        "command_runner.go",
+        "crypto.go",
+        "encoding.go",
         "goja.go",
         "metrics.go",
+        "time.go",
+        "wrappers.go",
     ],
     importpath = "lophiid/pkg/javascript",
     visibility = ["//visibility:public"],
@@ -20,7 +25,10 @@ go_library(
 
 go_test(
     name = "javascript_test",
-    srcs = ["goja_test.go"],
+    srcs = [
+        "command_runner_test.go",
+        "goja_test.go",
+    ],
     embed = [":javascript"],
     deps = [
         "//backend_service",

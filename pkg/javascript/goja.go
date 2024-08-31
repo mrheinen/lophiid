@@ -17,14 +17,8 @@
 package javascript
 
 import (
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
 	"lophiid/backend_service"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
@@ -35,72 +29,14 @@ import (
 
 var ErrScriptComplained = errors.New("script complained")
 
-// Contains helper methods for crypto operations.
-type Crypto struct {
-}
-
-// Md5sum returns an md5 checksum of the given string.
-func (c Crypto) Md5sum(s string) string {
-	h := md5.New()
-	io.WriteString(h, s)
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
-// Sha256sum returns a sha256 checksum of the given string.
-func (c Crypto) Sha256sum(s string) string {
-	h := sha256.New()
-	io.WriteString(h, s)
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
-// Sha1sum returns a sha1 checksum of the given string.
-func (c Crypto) Sha1sum(s string) string {
-	h := sha1.New()
-	io.WriteString(h, s)
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
-// Contains helper methods to decode strings.
-type Encoding struct {
-	Base64 Base64 `json:"base64"`
-}
-
-type Base64 struct {
-}
-
-// util.encoding.base64.decode()
-func (d Base64) Decode(s string) string {
-	dec, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		slog.Warn("unable to decode string", slog.String("input", s), slog.String("error", err.Error()))
-		return ""
-	}
-	return string(dec)
-}
-
-// util.encoding.base64.encode()
-func (d Base64) Encode(s string) string {
-	return base64.RawStdEncoding.EncodeToString([]byte(s))
-}
-
-type Time struct {
-}
-
-// Sleep allows a program to sleep the specified duration in milliseconds.
-func (t Time) Sleep(msec int) {
-	time.Sleep(time.Duration(msec) * time.Millisecond)
-}
-
-// Contains helper structs for use inside javascript. The following methods are
-// available:
-//
-// util.crypto.md5sum("string") returns an md5 checksum of the given string.
+// Contains helper structs for use inside javascript.
 type Util struct {
 	Crypto   Crypto                `json:"crypto"`
 	Time     Time                  `json:"time"`
 	Cache    CacheWrapper          `json:"cache"`
 	Encoding Encoding              `json:"encoding"`
 	Database DatabaseClientWrapper `json:"database"`
+	Runner   CommandRunnerWrapper  `json:"runner"`
 }
 
 type JavascriptRunner interface {
@@ -108,98 +44,24 @@ type JavascriptRunner interface {
 }
 
 type GojaJavascriptRunner struct {
-	strCache *util.StringMapCache[string]
-	dbClient database.DatabaseClient
-	metrics  *GojaMetrics
+	strCache        *util.StringMapCache[string]
+	dbClient        database.DatabaseClient
+	allowedCommands []string
+	metrics         *GojaMetrics
 }
 
-func NewGojaJavascriptRunner(dbClient database.DatabaseClient, metrics *GojaMetrics) *GojaJavascriptRunner {
+func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands []string, metrics *GojaMetrics) *GojaJavascriptRunner {
 	// The string cache timeout should be a low and targetted
 	// for the use case of holding something in cache between
 	// a couple requests for the same source.
 	cache := util.NewStringMapCache[string]("goja_cache", time.Minute*30)
 	cache.Start()
 	return &GojaJavascriptRunner{
-		strCache: cache,
-		metrics:  metrics,
-		dbClient: dbClient,
+		strCache:        cache,
+		metrics:         metrics,
+		dbClient:        dbClient,
+		allowedCommands: allowedCommands,
 	}
-}
-
-type CacheWrapper struct {
-	keyPrefix string
-	strCache  *util.StringMapCache[string]
-}
-
-func (c *CacheWrapper) Set(key string, value string) {
-	fkey := fmt.Sprintf("%s-%s", c.keyPrefix, key)
-	c.strCache.Store(fkey, value)
-}
-
-func (c *CacheWrapper) Get(key string) string {
-	fkey := fmt.Sprintf("%s-%s", c.keyPrefix, key)
-	val, err := c.strCache.Get(fkey)
-	if err != nil {
-		return ""
-	}
-	return *val
-}
-
-// ResponseWrapper wraps the response and makes it available via methods in the
-// javascript context.
-type ResponseWrapper struct {
-	response *backend_service.HttpResponse
-}
-
-func (r *ResponseWrapper) AddHeader(key string, value string) {
-	r.response.Header = append(r.response.Header, &backend_service.KeyValue{
-		Key:   key,
-		Value: value,
-	})
-}
-
-func (r *ResponseWrapper) SetBody(body string) {
-	r.response.Body = []byte(body)
-}
-
-func (r *ResponseWrapper) GetBody() string {
-	return string(r.response.Body)
-}
-
-func (r *ResponseWrapper) BodyString() string {
-	return string(r.response.Body)
-}
-
-// ContentWrapper wraps the database.Content
-type ContentWrapper struct {
-	Content database.Content
-}
-
-func (c *ContentWrapper) GetData() string {
-	return string(c.Content.Data)
-}
-
-func (c *ContentWrapper) GetID() int64 {
-	return c.Content.ID
-}
-
-func (c *ContentWrapper) GetContentType() string {
-	return c.Content.ContentType
-}
-
-// The DatabaseClientWrapper exposes database functions to ze Javascripts
-// Only update this to expose read functions.
-type DatabaseClientWrapper struct {
-	dbClient database.DatabaseClient
-}
-
-func (d *DatabaseClientWrapper) GetContentById(id int64) *ContentWrapper {
-	cn, err := d.dbClient.GetContentByID(id)
-	if err != nil {
-		return nil
-	}
-
-	return &ContentWrapper{Content: cn}
 }
 
 // The JavascriptRunner will run the given script and makes the given request
@@ -224,6 +86,9 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 			dbClient: j.dbClient,
 		},
 		Encoding: Encoding{},
+		Runner: CommandRunnerWrapper{
+			allowedCommands: j.allowedCommands,
+		},
 	})
 
 	vm.Set("request", req)
