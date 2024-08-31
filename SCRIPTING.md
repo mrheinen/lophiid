@@ -181,3 +181,37 @@ Tries to fetch database.Content with ID `id` from the database. Returns null
 upon error so please check for that. The returned object is a ContentWrapper
 type and get methods like getID(), getData() and getContentType() to get these
 fields from the embedded database.Content.
+
+## Command execution
+
+Running commands is not allowed by default and commands need to be explicitly
+allowed from the backend config. Arguments given to commands are not controlled
+and therefore you need to be careful that your command cannot be abused via
+parameters you give it. Especially when using information from the attackers
+request as a parameter to the command.
+
+As an example, you can use this to make an SSH honeypot available on a
+port that was chosen by an attacker.
+
+> [!IMPORTANT]
+> These commands run on the backend server and not on the honeypot.
+
+### util.runner.getCommandRunner()
+
+Get the command running which is intended for running a single command.
+
+### <command runner>.runCommand(cmd, arg1, arg2, ...)
+
+Run a single command. For example:
+
+```shell
+var r = util.runner.getCommandRunner();
+if (!r.runCommand("/bin/echo", "aaa")) {
+    return 'command not allowed?';
+}
+```
+
+It's important that the command itself is allowlisted in the backend
+config. Additionally the command should exit immediately which means that if you
+want to run a command for a long time (like in the background) then you need to
+wrap it in a shell script (or have the command fork to the background itself).
