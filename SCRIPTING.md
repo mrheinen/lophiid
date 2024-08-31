@@ -9,6 +9,11 @@ The script will get access to the request and response object. Additionally
 there are some build in methods exposed to the script (and please open a bug if
 there are some others you want to see exposed as well)
 
+The build in methods allow you to encode/decode content, query the database and
+even run commands. This document describes what methods are exposed to the
+script.  It is highly recommended to also peak at the code in ./pkg/javascript
+for more background on how things are implemented.
+
 ## Overview of the script
 
 Each script needs to have at least the __validate method and the
@@ -190,19 +195,28 @@ and therefore you need to be careful that your command cannot be abused via
 parameters you give it. Especially when using information from the attackers
 request as a parameter to the command.
 
-As an example, you can use this to make an SSH honeypot available on a
-port that was chosen by an attacker.
+Example scenario: an attacker sends a payload that spawns a dropbear SSH daemon
+on a random (to us, not the attacker) port. The attacker then tries to connect
+to that port on the honeypot.  You could use the command execution functionality
+to create a script that gets the port of the dropbear daemon and the IP of the
+honeypot that received the requests as parameters. The script will spawn an SSH
+honeypot and will forward that given port from the honeypot IP to this SSH
+honeypot.
+
+Commands executed should exit immediately and not cause delays.  Any large
+processing should be wrapped in a shell script that forks things to the background.
 
 > [!IMPORTANT]
 > These commands run on the backend server and not on the honeypot.
 
 ### util.runner.getCommandRunner()
 
-Get the command running which is intended for running a single command.
+Get the command runner which is a class that is intended to be single use for
+running a single command.
 
-### <command runner>.runCommand(cmd, arg1, arg2, ...)
+### <command runner>.runCommand(cmd, arg1, arg2, ...) bool
 
-Run a single command. For example:
+Run a single command, returns true or false depending on success. For example:
 
 ```shell
 var r = util.runner.getCommandRunner();
@@ -215,3 +229,14 @@ It's important that the command itself is allowlisted in the backend
 config. Additionally the command should exit immediately which means that if you
 want to run a command for a long time (like in the background) then you need to
 wrap it in a shell script (or have the command fork to the background itself).
+
+After running the command you can use r.getStdout() and r.getStderr() to get
+relevant output of the command. This is especially useful for error handling.
+
+### <command runner>.getStdout() string
+
+Get the stdout output of the command.
+
+### <command runner>.getStderr() string
+
+Get the stderr output of the command.
