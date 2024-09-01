@@ -139,6 +139,8 @@ func (c *Request) ModelID() int64 { return c.ID }
 // BodyString returns the body as a string and is used in the javascript
 // context for easy access.
 func (c *Request) BodyString() string { return string(c.Body) }
+// SetBodyString sets the body from a string.
+func (c *Request) SetBodyString(body string) { c.Body = []byte(body) }
 
 type RequestMetadata struct {
 	ID        int64     `ksql:"id,skipInserts" json:"id"`
@@ -680,7 +682,7 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildComposedQuery(params, fmt.Sprintf("FROM (SELECT * FROM content_rule ORDER BY updated_at DESC OFFSET %d LIMIT %d) AS subq ", offset, limit), "ORDER BY app_id")
+	query, values, err := buildComposedQuery(params, "FROM (SELECT * FROM content_rule ", fmt.Sprintf( "ORDER BY updated_at DESC OFFSET %d LIMIT %d) AS subq ORDER BY app_id", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}

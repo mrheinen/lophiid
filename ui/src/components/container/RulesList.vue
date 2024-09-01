@@ -343,7 +343,7 @@ export default {
         "&limit=" +
         this.limit;
       if (this.query) {
-        url += "&q=" + this.query;
+        url += "&q=" + encodeURIComponent(this.query);
       }
       this.rulesLoading = true;
       this.loadApps();

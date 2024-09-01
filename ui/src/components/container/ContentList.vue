@@ -130,7 +130,7 @@ export default {
       let link =
         this.config.contentLink + "/" + this.offset + "/" + this.limit;
       if (this.query) {
-        link += "?q=" + this.query;
+        link += "?q=" + encodeURIComponent(this.query);
       }
 
       return link;

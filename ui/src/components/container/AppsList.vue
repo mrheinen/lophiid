@@ -126,7 +126,7 @@ export default {
     getAppsLink() {
       let link = this.config.appsLink + "/" + this.offset + "/" + this.limit;
       if (this.query) {
-        link += "?q=" + this.query;
+        link += "?q=" + encodeURIComponent(this.query);
       }
 
       return link;
