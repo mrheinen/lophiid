@@ -60,6 +60,10 @@ type Config struct {
 		Url                string `fig:"url" validate:"required"`
 		MaxOpenConnections int    `fig:"max_open_connections" default:"10"`
 	} `fig:"database" validate:"required"`
+	Scripting struct {
+		// The allowed commands to run.
+		AllowedCommands []string `fig:"allowed_commands"`
+	} `fig:"scripting"`
 }
 
 func main() {
@@ -115,7 +119,7 @@ func main() {
 
 	reg := prometheus.NewRegistry()
 	dbc := database.NewKSQLClient(&db)
-	jRunner := javascript.NewGojaJavascriptRunner(dbc, []string{}, javascript.CreateGoJaMetrics(reg))
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, javascript.CreateGoJaMetrics(reg))
 	as := api.NewApiServer(dbc, jRunner, id.String())
 	defer dbc.Close()
 

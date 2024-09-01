@@ -46,10 +46,9 @@ alerting:
     channel_id: 111111
 
 scripting:
-  allow_running_commands: true
+  # A list of commands that can be called from the content javascripts.
   allowed_commands:
     - /usr/bin/false
-    - /usr/bin/echo
 
 analysis:
   # Determines how long information for an IP will be cached before
