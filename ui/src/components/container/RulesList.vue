@@ -37,18 +37,12 @@
               :key="rule.id + rule.alert"
               :class="isSelectedId == rule.id ? 'is-selected' : ''"
             >
-              <td
-                v-if="rule.rowspan >= 0"
-                :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
-              >
+              <td>
                 <a :href="'/rules?q=app_id:' + rule.app_id">
                   {{ rule.app_name }}</a
                 >
               </td>
-              <td
-                v-if="rule.rowspan >= 0"
-                :rowspan="rule.rowspan > 0 ? rule.rowspan : ''"
-              >
+              <td>
                 {{ rule.app_version }}
               </td>
               <td>{{ rule.id }}</td>
@@ -343,7 +337,7 @@ export default {
         "&limit=" +
         this.limit;
       if (this.query) {
-        url += "&q=" + this.query;
+        url += "&q=" + encodeURIComponent(this.query);
       }
       this.rulesLoading = true;
       this.loadApps();
@@ -447,21 +441,6 @@ export default {
 
         this.appRules.push(newRule);
       }
-
-      var appIdToSkip = -1;
-      for (var o = 0; o < this.appRules.length; o++) {
-        var appId = this.appRules[o].app_id;
-        if (appId == appIdToSkip) {
-          this.appRules[o].rowspan = -1;
-          continue;
-        }
-        if (appCount[appId] > 1) {
-          this.appRules[o].rowspan = appCount[appId];
-        } else {
-          this.appRules[o].rowspan = 0;
-        }
-        appIdToSkip = appId;
-      }
     },
   },
   created() {
@@ -478,6 +457,7 @@ export default {
    if (this.$route.query.q) {
       this.$refs.searchBar.setQuery(this.$route.query.q);
       this.query = this.$route.query.q;
+     this.loadRules(true, function () {});
     } else {
       // If a uri and method parameter is given, reset the form and use the given
       // values.

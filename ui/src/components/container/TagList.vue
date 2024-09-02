@@ -126,7 +126,7 @@ export default {
         "/" +
         this.limit;
       if (this.query) {
-        link += "?q=" + this.query;
+        link += "?q=" + encodeURIComponent(this.query);
       }
 
       return link;

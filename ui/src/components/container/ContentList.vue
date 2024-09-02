@@ -130,7 +130,7 @@ export default {
       let link =
         this.config.contentLink + "/" + this.offset + "/" + this.limit;
       if (this.query) {
-        link += "?q=" + this.query;
+        link += "?q=" + encodeURIComponent(this.query);
       }
 
       return link;
@@ -260,10 +260,10 @@ export default {
   mounted() {
 
     if (this.$route.query.q) {
+      this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
-    } else {
-      this.loadContents(true, function(){})
     }
+    this.loadContents(true, function(){})
 
     const that = this;
     window.addEventListener("keyup", function (event) {

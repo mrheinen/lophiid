@@ -380,11 +380,12 @@ export default {
       }
 
       var customHeaderTmp = "";
-      this.localContent.headers.forEach((header) => {
-        customHeaderTmp += header + "\n";
-      });
-      this.customHeaders = customHeaderTmp;
-      console.log(this.customHeaders);
+      if (this.localContent.headers) {
+        this.localContent.headers.forEach((header) => {
+          customHeaderTmp += header + "\n";
+        });
+        this.customHeaders = customHeaderTmp;
+      }
 
     },
   },
