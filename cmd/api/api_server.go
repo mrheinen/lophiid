@@ -29,6 +29,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"log/slog"
 
@@ -62,7 +63,8 @@ type Config struct {
 	} `fig:"database" validate:"required"`
 	Scripting struct {
 		// The allowed commands to run.
-		AllowedCommands []string `fig:"allowed_commands"`
+		AllowedCommands []string      `fig:"allowed_commands"`
+		CommandTimeout  time.Duration `fig:"command_timeout" default:"1m"`
 	} `fig:"scripting"`
 }
 
@@ -119,7 +121,7 @@ func main() {
 
 	reg := prometheus.NewRegistry()
 	dbc := database.NewKSQLClient(&db)
-	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, javascript.CreateGoJaMetrics(reg))
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, javascript.CreateGoJaMetrics(reg))
 	as := api.NewApiServer(dbc, jRunner, id.String())
 	defer dbc.Close()
 

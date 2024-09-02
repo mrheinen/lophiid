@@ -21,6 +21,7 @@ import (
 	"lophiid/backend_service"
 	"lophiid/pkg/database"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -109,7 +110,7 @@ func TestRunScriptWithoutValidateOk(t *testing.T) {
 
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
 
 			res := backend_service.HttpResponse{}
 
@@ -196,7 +197,7 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
 			err := jr.RunScript(test.script, req, &res, true)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
@@ -294,7 +295,7 @@ func TestRunScriptUsesCache(t *testing.T) {
 
 			fdb := database.FakeDatabaseClient{}
 
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
 
 			jr.RunScript(test.script1, test.request1, &res, false)
 			err := jr.RunScript(test.script2, test.request2, &res, false)
@@ -388,7 +389,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 				},
 			}
 
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
 
 			err := jr.RunScript(test.script, test.request, &res, false)
 			if (err != nil) != test.expectError {
@@ -414,6 +415,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 		request     database.Request
 		content     database.Content
 		allowedCmds []string
+		cmdTimeout time.Duration
 		expectError bool
 	}{
 		{
@@ -435,6 +437,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 				HoneypotIP: "2.2.2.2",
 			},
 			allowedCmds: []string{"/bin/echo"},
+			cmdTimeout: time.Minute,
 			content: database.Content{
 				ID:   42,
 				Data: []byte("test"),
@@ -460,6 +463,33 @@ func TestRunScriptRunsCommands(t *testing.T) {
 				HoneypotIP: "2.2.2.2",
 			},
 			allowedCmds: []string{"/bin/false"},
+			cmdTimeout: time.Minute,
+			content: database.Content{
+				ID:   42,
+				Data: []byte("test"),
+			},
+			expectError: true,
+		},
+		{
+			description: "runs ok",
+			script: `
+			function createResponse() {
+				var r = util.runner.getCommandRunner();
+			  if (!r.runCommand("/usr/bin/sleep", 1)) {
+					return 'command failed';
+				}
+				return r.getStderr();
+			}
+			`,
+			request: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+			},
+			allowedCmds: []string{"/usr/bin/sleep"},
+			cmdTimeout: time.Millisecond,
 			content: database.Content{
 				ID:   42,
 				Data: []byte("test"),
@@ -477,7 +507,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 
 			fdb := database.FakeDatabaseClient{}
 
-			jr := NewGojaJavascriptRunner(&fdb, test.allowedCmds, metrics)
+			jr := NewGojaJavascriptRunner(&fdb, test.allowedCmds, test.cmdTimeout, metrics)
 
 			err := jr.RunScript(test.script, test.request, &res, false)
 			if (err != nil) != test.expectError {

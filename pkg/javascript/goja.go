@@ -47,10 +47,11 @@ type GojaJavascriptRunner struct {
 	strCache        *util.StringMapCache[string]
 	dbClient        database.DatabaseClient
 	allowedCommands []string
+	commandTimeout  time.Duration
 	metrics         *GojaMetrics
 }
 
-func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands []string, metrics *GojaMetrics) *GojaJavascriptRunner {
+func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands []string, commandTimeout time.Duration, metrics *GojaMetrics) *GojaJavascriptRunner {
 	// The string cache timeout should be a low and targetted
 	// for the use case of holding something in cache between
 	// a couple requests for the same source.
@@ -61,6 +62,7 @@ func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands [
 		metrics:         metrics,
 		dbClient:        dbClient,
 		allowedCommands: allowedCommands,
+		commandTimeout:  commandTimeout,
 	}
 }
 
@@ -88,6 +90,7 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 		Encoding: Encoding{},
 		Runner: CommandRunnerWrapper{
 			allowedCommands: j.allowedCommands,
+			commandTimeout:  j.commandTimeout,
 		},
 	})
 

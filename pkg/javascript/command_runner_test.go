@@ -3,10 +3,11 @@ package javascript
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestSingleCommandRunner_RunCommand(t *testing.T) {
-	allowedCommands := []string{"ls", "echo", "false"}
+	allowedCommands := []string{"ls", "echo", "cat"}
 
 	tests := []struct {
 		name            string
@@ -42,8 +43,8 @@ func TestSingleCommandRunner_RunCommand(t *testing.T) {
 		},
 		{
 			name:            "Command fails",
-			command:         "false",
-			args:            nil,
+			command:         "cat",
+			args:            []string{"jksdjkjdjkjhjk"},
 			expectedSuccess: false,
 			expectedOutput:  "",
 			expectedError:   fmt.Errorf("exit status 1"),
@@ -52,7 +53,7 @@ func TestSingleCommandRunner_RunCommand(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			runner := NewSingleCommandRunner(allowedCommands)
+			runner := NewSingleCommandRunner(allowedCommands, time.Minute)
 			success := runner.RunCommand(test.command, test.args...)
 
 			if success != test.expectedSuccess {
@@ -64,7 +65,7 @@ func TestSingleCommandRunner_RunCommand(t *testing.T) {
 			}
 
 			if test.expectedError != nil && runner.Error == nil {
-				t.Error("expected an error, but got nil")
+				t.Errorf("expected an error, but got nil: %s", test.command)
 			} else if test.expectedError != nil && runner.Error.Error() != test.expectedError.Error() {
 				t.Errorf("expected error: '%s', but got: '%s'", test.expectedError, runner.Error)
 			}

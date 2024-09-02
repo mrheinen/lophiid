@@ -76,7 +76,8 @@ type Config struct {
 	} `fig:"analysis"`
 	Scripting struct {
 		// The allowed commands.
-		AllowedCommands []string `fig:"allowed_commands"`
+		AllowedCommands []string      `fig:"allowed_commands"`
+		CommandTimeout  time.Duration `fig:"command_timeout" default:"10s"`
 	} `fig:"scripting"`
 	Alerting struct {
 		Interval time.Duration `fig:"interval" default:"2m"`
