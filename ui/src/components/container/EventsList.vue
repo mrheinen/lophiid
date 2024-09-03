@@ -6,6 +6,7 @@
       <table class="table is-hoverable" v-if="events.length > 0">
         <thead>
           <th>ID</th>
+          <th>First Seen</th>
           <th>Type</th>
           <th>IP</th>
           <th>Request ID</th>
@@ -24,6 +25,7 @@
             :class="isSelectedId == evt.id ? 'is-selected' : ''"
           >
             <td>{{ evt.id }}</td>
+            <td>{{ evt.parsed.first_seen_at }}</td>
             <td>{{ evt.type }}</td>
             <td><a :href="config.eventLink + '?q=ip:' + evt.ip">{{ evt.ip }}</a></td>
             <td><a :href="config.requestsLink + '?q=id:' + evt.request_id">{{ evt.request_id }}</a></td>
@@ -218,6 +220,11 @@ export default {
                 const newEvent = Object.assign({}, response.data[i]);
                 newEvent.parsed = {};
                 newEvent.parsed.created_at = dateToString(newEvent.created_at);
+                if (newEvent.first_seen_at) {
+                  newEvent.parsed.first_seen_at = dateToString(newEvent.first_seen_at);
+                } else {
+                  newEvent.parsed.first_seen_at = dateToString(newEvent.created_at);
+                }
                 this.events.push(newEvent);
               }
 
