@@ -255,7 +255,7 @@ CREATE TABLE whois (
 
 
 -- These need to be kept in sync with pkg/util/constants/shared_constants.go
-CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'ATTACKED', 'RECONNED', 'CRAWLED', 'SCANNED', 'BRUTEFORCED', 'HOSTED_MALWARE', 'HOST_C2');
+CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'ATTACKED', 'RECONNED', 'CRAWLED', 'SCANNED', 'BRUTEFORCED', 'HOSTED_MALWARE', 'RATELIMITED', 'HOST_C2');
 CREATE TYPE IP_EVENT_SOURCE AS ENUM ('OTHER', 'VT', 'RULE', 'BACKEND', 'ANALYSIS', 'WHOIS');
 CREATE TABLE ip_event (
   id                     SERIAL PRIMARY KEY,
@@ -270,6 +270,7 @@ CREATE TABLE ip_event (
   source                 IP_EVENT_SOURCE default 'OTHER',
   source_ref             VARCHAR(512),
   honeypot_ip            VARCHAR(52),
+  first_seen_at          TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   created_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );

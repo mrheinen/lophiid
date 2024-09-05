@@ -381,8 +381,10 @@ export default {
 
       var customHeaderTmp = "";
       if (this.localContent.headers) {
+        var prefix = "";
         this.localContent.headers.forEach((header) => {
-          customHeaderTmp += header + "\n";
+          customHeaderTmp += prefix + header;
+          prefix = "\n";
         });
         this.customHeaders = customHeaderTmp;
       }

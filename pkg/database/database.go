@@ -139,6 +139,7 @@ func (c *Request) ModelID() int64 { return c.ID }
 // BodyString returns the body as a string and is used in the javascript
 // context for easy access.
 func (c *Request) BodyString() string { return string(c.Body) }
+
 // SetBodyString sets the body from a string.
 func (c *Request) SetBodyString(body string) { c.Body = []byte(body) }
 
@@ -235,20 +236,21 @@ type Whois struct {
 func (c *Whois) ModelID() int64 { return c.ID }
 
 type IpEvent struct {
-	ID         int64     `ksql:"id,skipInserts" json:"id"`
-	IP         string    `ksql:"ip" json:"ip" doc:"The source IP"`
-	HoneypotIP string    `ksql:"honeypot_ip" json:"honeypot_ip" doc:"The honeypot IP"`
-	Domain     string    `ksql:"domain" json:"domain" doc:"The domain for the IP"`
-	Type       string    `ksql:"type" json:"type" doc:"The type of event (e.g. ATTACKED, CRAWLED)"`
-	Subtype    string    `ksql:"subtype" json:"subtype" doc:"The subtype of the event (e.g. RCE, LFI)"`
-	Details    string    `ksql:"details" json:"details" doc:"Any additional details about the event"`
-	Note       string    `ksql:"note" json:"note"`
-	Count      int64     `ksql:"count" json:"count" doc:"How often this event was seen"`
-	RequestID  int64     `ksql:"request_id" json:"request_id" doc:"The ID of a request related to the event"`
-	CreatedAt  time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"When the event was created"`
-	UpdatedAt  time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last time the event was updated"`
-	Source     string    `ksql:"source" json:"source" doc:"The source of the event"`
-	SourceRef  string    `ksql:"source_ref" json:"source_ref" doc:"A reference related to the source of the event"`
+	ID          int64     `ksql:"id,skipInserts" json:"id"`
+	IP          string    `ksql:"ip" json:"ip" doc:"The source IP"`
+	HoneypotIP  string    `ksql:"honeypot_ip" json:"honeypot_ip" doc:"The honeypot IP"`
+	Domain      string    `ksql:"domain" json:"domain" doc:"The domain for the IP"`
+	Type        string    `ksql:"type" json:"type" doc:"The type of event (e.g. ATTACKED, CRAWLED)"`
+	Subtype     string    `ksql:"subtype" json:"subtype" doc:"The subtype of the event (e.g. RCE, LFI)"`
+	Details     string    `ksql:"details" json:"details" doc:"Any additional details about the event"`
+	Note        string    `ksql:"note" json:"note"`
+	Count       int64     `ksql:"count" json:"count" doc:"How often this event was seen"`
+	RequestID   int64     `ksql:"request_id" json:"request_id" doc:"The ID of a request related to the event"`
+	FirstSeenAt time.Time `ksql:"first_seen_at,skipUpdates" json:"first_seen_at" doc:"When the event was first seen"`
+	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"When the event was created in the database"`
+	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last time the event was updated"`
+	Source      string    `ksql:"source" json:"source" doc:"The source of the event"`
+	SourceRef   string    `ksql:"source_ref" json:"source_ref" doc:"A reference related to the source of the event"`
 }
 
 func (c *IpEvent) ModelID() int64 { return c.ID }
@@ -682,7 +684,7 @@ func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string)
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM (SELECT * FROM content_rule ", fmt.Sprintf( "ORDER BY updated_at DESC OFFSET %d LIMIT %d) AS subq ORDER BY app_id", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM (SELECT * FROM content_rule ", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d) AS subq ORDER BY app_id", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}

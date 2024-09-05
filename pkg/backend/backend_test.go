@@ -611,6 +611,14 @@ func TestHandleProbe(t *testing.T) {
 		t.Errorf("Expected error but got none")
 	}
 
+	if len(fIpMgr.Events) != 1 {
+		t.Fatalf("expected 1 AddEventTimes call, got %d", len(fIpMgr.Events))
+	}
+
+	if fIpMgr.Events[0].Type != constants.IpEventRateLimited {
+		t.Fatalf("expected rate limited event, got %s", fIpMgr.Events[0].Type)
+	}
+
 }
 
 func TestProcessQueue(t *testing.T) {

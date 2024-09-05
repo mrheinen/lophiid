@@ -24,4 +24,5 @@ const (
 	IpEventAttacked      = "ATTACKED"
 	IpEventBrute         = "BRUTEFORCED"
 	IpEventHostC2        = "HOST_C2"
+	IpEventRateLimited   = "RATELIMITED"
 )

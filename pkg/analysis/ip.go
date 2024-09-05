@@ -186,6 +186,7 @@ func (i *IpEventManagerImpl) ProcessNewEvent(evt *database.IpEvent) error {
 	}
 
 	evt.Count = 1
+	evt.FirstSeenAt = time.Now().UTC()
 	i.ipCache.Store(cacheKey, *evt)
 	return nil
 }
