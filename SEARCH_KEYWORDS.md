@@ -166,9 +166,10 @@ the search bar.
 | Keyword | Type | Description |
 | --- | --- | --- |
 | count | int64 | How often this event was seen |
-| created_at | Time | When the event was created |
+| created_at | Time | When the event was created in the database |
 | details | string | Any additional details about the event |
 | domain | string | The domain for the IP |
+| first_seen_at | Time | When the event was first seen |
 | honeypot_ip | string | The honeypot IP |
 | ip | string | The source IP |
 | request_id | int64 | The ID of a request related to the event |
