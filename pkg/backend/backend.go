@@ -617,6 +617,14 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
 	if !allowRequest {
 
+		s.ipEventManager.AddEvent(&database.IpEvent{
+			IP:         sReq.SourceIP,
+			Type:       constants.IpEventRateLimited,
+			Details:    err.Error(),
+			Source:     constants.IpEventSourceBackend,
+			HoneypotIP: sReq.HoneypotIP,
+		})
+
 		switch err {
 		case ratelimit.ErrBucketLimitExceeded:
 			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonBucket).Add(1)
