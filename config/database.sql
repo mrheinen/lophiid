@@ -23,9 +23,9 @@ CREATE TABLE content (
   is_default      BOOLEAN DEFAULT FALSE,
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+  ext_version     INT DEFAULT 1,
+  ext_uuid        VARCHAR(36),
 );
-
-
 
 CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'PAYLOAD_TCP_LINK', 'PAYLOAD_NETCAT', 'SCRIPT_RESPONSE_BODY', 'DECODED_STRING_BASE64');
 CREATE TYPE DOWNLOAD_STATUS AS ENUM ('UNKNOWN', 'SCHEDULED', 'DONE');
@@ -77,6 +77,8 @@ CREATE TABLE content_rule (
   app_id          INT DEFAULT 0,
   alert           BOOL DEFAULT FALSE,
   request_purpose   REQUEST_PURPOSE default 'UNKNOWN',
+  ext_version  INT DEFAULT 1,
+  ext_uuid            VARCHAR(36),
   CONSTRAINT fk_content_id FOREIGN KEY(content_id) REFERENCES content(id)
 );
 
@@ -128,6 +130,8 @@ CREATE TABLE app (
   link            VARCHAR(2048),
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+  ext_version  INT DEFAULT 1,
+  ext_uuid            VARCHAR(36),
 );
 
 

@@ -51,6 +51,8 @@ the search bar.
 | created_at | Time | time.Time of creation |
 | data |  | The content data itself |
 | description | string | The content description |
+| ext_uuid | string | The external unique ID of the content |
+| ext_version | int64 | The external numerical version of the content |
 | headers | FlatArray[string] | The content HTTP headers |
 | id | int64 | The ID of the content |
 | name | string | The content name |
@@ -70,6 +72,8 @@ the search bar.
 | body_matching | string | The body matching method |
 | content_id | int64 | The ID of the Content this rule serves |
 | created_at | Time | Creation date of the rule |
+| ext_uuid | string | The external unique ID of the rule |
+| ext_version | int64 | The external numerical version of the rule |
 | id | int64 | The rule ID |
 | method | string | The HTTP method the rule matches on |
 | port | int64 | The TCP port the rue matches on. |
@@ -84,6 +88,8 @@ the search bar.
 | Keyword | Type | Description |
 | --- | --- | --- |
 | created_at | Time | Date and time of creation |
+| ext_uuid | string | The external unique ID |
+| ext_version | int64 | The external numerical version |
 | id | int64 | The ID of the application |
 | link | string | A reference link |
 | name | string | The application name |

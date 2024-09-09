@@ -49,6 +49,13 @@ type DataModel interface {
 	ModelID() int64
 }
 
+type ExternalDataModel interface {
+	ModelID() int64
+	ExternalVersion() int64
+	ExternalUuid() string
+	SetModelID(id int64)
+}
+
 type Content struct {
 	ID          int64                    `ksql:"id,skipInserts" json:"id"           doc:"The ID of the content"`
 	Data        []byte                   `ksql:"data"           json:"data"         doc:"The content data itself"`
@@ -62,6 +69,8 @@ type Content struct {
 	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"      doc:"The content HTTP headers"`
 	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"time.Time of creation"`
 	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at" doc:"time.Time of last update"`
+	ExtVersion  int64                    `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the content"`
+	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the content"`
 }
 
 // The request purpose for the ContentRule needs to be kept in sync with the
@@ -73,7 +82,10 @@ const (
 	RuleRequestPurposeCrawl   = "CRAWL"
 )
 
-func (c *Content) ModelID() int64 { return c.ID }
+func (c *Content) ModelID() int64         { return c.ID }
+func (c *Content) ExternalVersion() int64 { return c.ExtVersion }
+func (c *Content) ExternalUuid() string   { return c.ExtUuid }
+func (c *Content) SetModelID(id int64)    { c.ID = id }
 
 type ContentRule struct {
 	ID           int64     `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
@@ -89,6 +101,8 @@ type ContentRule struct {
 	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
 	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
 	Alert        bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	ExtVersion   int64     `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the rule"`
+	ExtUuid      string    `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the rule"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.
@@ -100,7 +114,10 @@ type ContentRule struct {
 	RequestPurpose string `ksql:"request_purpose" json:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
 }
 
-func (c *ContentRule) ModelID() int64 { return c.ID }
+func (c *ContentRule) ModelID() int64         { return c.ID }
+func (c *ContentRule) ExternalVersion() int64 { return c.ExtVersion }
+func (c *ContentRule) ExternalUuid() string   { return c.ExtUuid }
+func (c *ContentRule) SetModelID(id int64)    { c.ID = id }
 
 type Request struct {
 	ID             int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the request"`
@@ -174,17 +191,22 @@ type Honeypot struct {
 func (c *Honeypot) ModelID() int64 { return c.ID }
 
 type Application struct {
-	ID        int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the application"`
-	Name      string    `ksql:"name" json:"name" doc:"The application name"`
-	Version   string    `ksql:"version" json:"version" doc:"The application version"`
-	Vendor    string    `ksql:"vendor" json:"vendor" doc:"The application vendor"`
-	OS        string    `ksql:"os" json:"os" doc:"The OS on which the application runs"`
-	Link      string    `ksql:"link" json:"link" doc:"A reference link"`
-	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
-	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
+	ID         int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the application"`
+	Name       string    `ksql:"name" json:"name" doc:"The application name"`
+	Version    string    `ksql:"version" json:"version" doc:"The application version"`
+	Vendor     string    `ksql:"vendor" json:"vendor" doc:"The application vendor"`
+	OS         string    `ksql:"os" json:"os" doc:"The OS on which the application runs"`
+	Link       string    `ksql:"link" json:"link" doc:"A reference link"`
+	CreatedAt  time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
+	UpdatedAt  time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
+	ExtVersion int64     `ksql:"ext_version" json:"ext_version" doc:"The external numerical version"`
+	ExtUuid    string    `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID"`
 }
 
-func (c *Application) ModelID() int64 { return c.ID }
+func (c *Application) ModelID() int64         { return c.ID }
+func (c *Application) ExternalVersion() int64 { return c.ExtVersion }
+func (c *Application) ExternalUuid() string   { return c.ExtUuid }
+func (c *Application) SetModelID(id int64)    { c.ID = id }
 
 type Download struct {
 	ID                      int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the download"`
@@ -330,25 +352,15 @@ type DatabaseClient interface {
 	Insert(dm DataModel) (DataModel, error)
 	Update(dm DataModel) error
 	Delete(dm DataModel) error
-	GetApps() ([]Application, error)
 	GetAppByID(id int64) (Application, error)
 	SearchApps(offset int64, limit int64, query string) ([]Application, error)
 	GetContentByID(id int64) (Content, error)
-	GetContent() ([]Content, error)
 	GetContentRuleByID(id int64) (ContentRule, error)
-	GetContentRules() ([]ContentRule, error)
-	GetDownloads() ([]Download, error)
-	GetDownloadBySum(sha256sum string) (Download, error)
-	GetHoneypotByIP(ip string) (Honeypot, error)
-	GetWhoisByIP(ip string) (Whois, error)
 	GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error)
-	GetHoneypots() ([]Honeypot, error)
-	GetRequests() ([]Request, error)
 	GetRequestByID(id int64) (Request, error)
-	GetRequestsForSourceIP(ip string) ([]Request, error)
-	GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error)
 	SearchEvents(offset int64, limit int64, query string) ([]IpEvent, error)
 	SearchRequests(offset int64, limit int64, query string) ([]Request, error)
+	SearchWhois(offset int64, limit int64, query string) ([]Whois, error)
 	SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error)
 	SearchContent(offset int64, limit int64, query string) ([]Content, error)
 	SearchDownloads(offset int64, limit int64, query string) ([]Download, error)
@@ -366,9 +378,15 @@ type DatabaseClient interface {
 // Helper function to get database field names.
 func getDatamodelDatabaseFields(datamodel interface{}) []string {
 	var ret []string
-	t := reflect.TypeOf(datamodel)
-	for i := 0; i < t.NumField(); i++ {
-		tvalue := t.Field(i).Tag.Get("ksql")
+
+	val := reflect.TypeOf(datamodel)
+	// If it's an interface or a pointer, unwrap it.
+	if val.Kind() == reflect.Ptr && val.Elem().Kind() == reflect.Struct {
+		val = val.Elem()
+	}
+
+	for i := 0; i < val.NumField(); i++ {
+		tvalue := val.Field(i).Tag.Get("ksql")
 		if tvalue != "" {
 			idx := strings.Index(tvalue, ",")
 			if idx != -1 {
@@ -431,6 +449,21 @@ func (d *KSQLClient) Close() {
 		return
 	}
 	d.db.Close()
+}
+
+func (d *KSQLClient) getTableNameForModel(dm DataModel) string {
+	name := util.GetStructName(dm)
+	switch name {
+	case "Application":
+		return "app"
+	case "Content":
+		return "content"
+	case "ContentRule":
+		return "content_rule"
+	default:
+		slog.Error("Don't know %s datamodel\n", slog.String("name", name))
+		return ""
+	}
 }
 
 func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
@@ -506,60 +539,6 @@ func (d *KSQLClient) GetAppByID(id int64) (Application, error) {
 	return ap, err
 }
 
-func (d *KSQLClient) GetApps() ([]Application, error) {
-	var apps []Application
-	err := d.db.Query(d.ctx, &apps, "FROM app ORDER BY name")
-	return apps, err
-}
-
-func (d *KSQLClient) GetDownloads() ([]Download, error) {
-	var dls []Download
-	err := d.db.Query(d.ctx, &dls, "FROM downloads ORDER BY created_at DESC")
-	return dls, err
-}
-
-func (d *KSQLClient) GetDownloadBySum(sha256sum string) (Download, error) {
-	var dl Download
-	err := d.db.QueryOne(d.ctx, &dl, "FROM downloads WHERE sha256sum = $1", sha256sum)
-	if dl.ID == 0 {
-		return dl, fmt.Errorf("found no download for hash: %s, %w", sha256sum, err)
-	}
-	return dl, err
-}
-
-func (d *KSQLClient) GetHoneypotByIP(ip string) (Honeypot, error) {
-	hp := Honeypot{}
-	err := d.db.QueryOne(d.ctx, &hp, "FROM honeypot WHERE ip = $1", ip)
-	return hp, err
-}
-
-func (d *KSQLClient) GetHoneypots() ([]Honeypot, error) {
-	var rs []Honeypot
-	err := d.db.Query(d.ctx, &rs, "FROM honeypot")
-
-	var ret []Honeypot
-	type Count struct {
-		Count int64 `ksql:"cnt"`
-	}
-	for _, h := range rs {
-		var cnt Count
-		err = d.db.QueryOne(d.ctx, &cnt, "SELECT COUNT(*) as cnt FROM request WHERE honeypot_ip = $1", h.IP)
-		if err != nil {
-			return rs, fmt.Errorf("error fetching count: %w", err)
-		}
-
-		h.RequestsCountLastDay = cnt.Count
-		ret = append(ret, h)
-	}
-	return ret, err
-}
-
-func (d *KSQLClient) GetWhoisByIP(ip string) (Whois, error) {
-	hp := Whois{}
-	err := d.db.QueryOne(d.ctx, &hp, "FROM whois WHERE ip = $1", ip)
-	return hp, err
-}
-
 func (d *KSQLClient) GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error) {
 	hp := P0fResult{}
 	err := d.db.QueryOne(d.ctx, &hp, fmt.Sprintf("FROM p0f_result WHERE ip = $1 %s", querySuffix), ip)
@@ -572,32 +551,9 @@ func (d *KSQLClient) GetTagsPerRequestForRequestID(id int64) ([]TagPerRequest, e
 	return tags, err
 }
 
-func (d *KSQLClient) GetRequests() ([]Request, error) {
-	var rs []Request
-	err := d.db.Query(d.ctx, &rs, "FROM request ORDER BY time_received")
-	return rs, err
-}
-
 func (d *KSQLClient) GetRequestByID(id int64) (Request, error) {
 	var rs Request
 	err := d.db.Query(d.ctx, &rs, "FROM request WHERE id = $1", id)
-	return rs, err
-}
-
-func (d *KSQLClient) GetRequestsForSourceIP(ip string) ([]Request, error) {
-	var rs []Request
-	err := d.db.Query(d.ctx, &rs, "FROM request WHERE source_ip = $1 ORDER BY time_received", ip)
-	return rs, err
-}
-
-func (d *KSQLClient) GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error) {
-	var rs []Request
-	var err error
-	if source_ip != nil {
-		err = d.db.Query(d.ctx, &rs, "FROM request WHERE source_ip = $1 ORDER BY time_received DESC OFFSET $2 LIMIT $3", *source_ip, offset, limit)
-	} else {
-		err = d.db.Query(d.ctx, &rs, "FROM request ORDER BY time_received DESC OFFSET $1 LIMIT $2", offset, limit)
-	}
 	return rs, err
 }
 
@@ -656,6 +612,7 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
 	return ret, err
 }
+
 func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
 	var rs []Content
 
@@ -846,6 +803,26 @@ func (d *KSQLClient) SearchTags(offset int64, limit int64, query string) ([]Tag,
 	return rs, err
 }
 
+func (d *KSQLClient) SearchWhois(offset int64, limit int64, query string) ([]Whois, error) {
+	var rs []Whois
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Whois{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildComposedQuery(params, "FROM whois", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
 func (d *KSQLClient) SearchTagPerQuery(offset int64, limit int64, query string) ([]TagPerQuery, error) {
 	var rs []TagPerQuery
 
@@ -915,22 +892,10 @@ func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
 	return ct, err
 }
 
-func (d *KSQLClient) GetContent() ([]Content, error) {
-	var cts []Content
-	err := d.db.Query(d.ctx, &cts, "FROM content")
-	return cts, err
-}
-
 func (d *KSQLClient) GetContentRuleByID(id int64) (ContentRule, error) {
 	cr := ContentRule{}
 	err := d.db.QueryOne(d.ctx, &cr, "FROM content_rule WHERE id = $1", id)
 	return cr, err
-}
-
-func (d *KSQLClient) GetContentRules() ([]ContentRule, error) {
-	var cts []ContentRule
-	err := d.db.Query(d.ctx, &cts, "FROM content_rule ORDER BY app_id DESC")
-	return cts, err
 }
 
 func (d *KSQLClient) DeleteContentRule(id int64) error {
@@ -961,6 +926,7 @@ type FakeDatabaseClient struct {
 	P0fResultToReturn      P0fResult
 	P0fErrorToReturn       error
 	IpEventToReturn        IpEvent
+	DataModelToReturn      DataModel
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -974,25 +940,6 @@ func (f *FakeDatabaseClient) GetContentByID(id int64) (Content, error) {
 	}
 	return ct, f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) GetContent() ([]Content, error) {
-	var ret []Content
-	for _, v := range f.ContentsToReturn {
-		ret = append(ret, v)
-	}
-	return ret, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetContentRules() ([]ContentRule, error) {
-	return f.ContentRulesToReturn, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetRequests() ([]Request, error) {
-	return []Request{}, nil
-}
-func (f *FakeDatabaseClient) GetRequestsForSourceIP(ip string) ([]Request, error) {
-	return []Request{}, nil
-}
-func (f *FakeDatabaseClient) GetRequestsSegment(offset int64, limit int64, source_ip *string) ([]Request, error) {
-	return []Request{}, f.ErrorToReturn
-}
 func (f *FakeDatabaseClient) Insert(dm DataModel) (DataModel, error) {
 	f.LastDataModelSeen = dm
 	return dm, f.ErrorToReturn
@@ -1000,15 +947,6 @@ func (f *FakeDatabaseClient) Insert(dm DataModel) (DataModel, error) {
 func (f *FakeDatabaseClient) Update(dm DataModel) error {
 	f.LastDataModelSeen = dm
 	return f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetApps() ([]Application, error) {
-	return []Application{f.ApplicationToReturn}, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetHoneypotByIP(ip string) (Honeypot, error) {
-	return f.HoneypotToReturn, f.HoneypotErrorToReturn
-}
-func (f *FakeDatabaseClient) GetHoneypots() ([]Honeypot, error) {
-	return []Honeypot{}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) Delete(dm DataModel) error {
 	return f.ErrorToReturn
@@ -1036,15 +974,6 @@ func (f *FakeDatabaseClient) SearchContent(offset int64, limit int64, query stri
 	}
 	return ret, f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) GetDownloads() ([]Download, error) {
-	return f.DownloadsToReturn, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetDownloadBySum(sha256sum string) (Download, error) {
-	if f.DownloadsToReturn != nil && len(f.DownloadsToReturn) > 0 {
-		return f.DownloadsToReturn[0], f.ErrorToReturn
-	}
-	return Download{}, f.ErrorToReturn
-}
 func (f *FakeDatabaseClient) GetAppByID(id int64) (Application, error) {
 	return f.ApplicationToReturn, nil
 }
@@ -1055,10 +984,7 @@ func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query st
 	return f.DownloadsToReturn, nil
 }
 func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error) {
-	return []Honeypot{f.HoneypotToReturn}, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetWhoisByIP(ip string) (Whois, error) {
-	return Whois{}, f.WhoisErrorToReturn
+	return []Honeypot{f.HoneypotToReturn}, f.HoneypotErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error) {
 	return f.QueriesToReturn, f.QueriesToReturnError
@@ -1083,4 +1009,7 @@ func (f *FakeDatabaseClient) GetP0fResultByIP(ip string, querySuffix string) (P0
 }
 func (f *FakeDatabaseClient) GetRequestByID(id int64) (Request, error) {
 	return f.RequestToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchWhois(offset int64, limit int64, query string) ([]Whois, error) {
+	return []Whois{f.WhoisToReturn}, f.WhoisErrorToReturn
 }

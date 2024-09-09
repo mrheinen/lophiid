@@ -264,7 +264,7 @@ export default {
         });
     },
     loadApps(callback) {
-      const url = this.config.backendAddress + "/app/all";
+      const url = this.config.backendAddress + "/app/segment?q=&limit=1000&offset=0";
       fetch(url, { headers: {
         'API-Key': this.$store.getters.apiToken,
       }})
