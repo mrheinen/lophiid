@@ -292,7 +292,7 @@ export default {
     loadApps() {
       this.appsLoading = true;
 
-      fetch(this.config.backendAddress + "/app/all", {
+      fetch(this.config.backendAddress + "/app/segment?q=&offset=0&limit=1000", {
         headers: {
           "API-Key": this.$store.getters.apiToken,
         },

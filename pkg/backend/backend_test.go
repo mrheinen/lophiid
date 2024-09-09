@@ -695,8 +695,8 @@ func TestProcessQueue(t *testing.T) {
 			}
 
 			if fIpMgr.Events[0].Source != constants.IpEventSourceRule {
-        t.Errorf("expected %s, got %s", constants.IpEventSourceRule, fIpMgr.Events[0].Source)
-      }
+				t.Errorf("expected %s, got %s", constants.IpEventSourceRule, fIpMgr.Events[0].Source)
+			}
 		})
 	}
 }
@@ -714,7 +714,7 @@ func TestSendStatus(t *testing.T) {
 		{
 			description:      "inserts new honeypot",
 			getHoneypotRet:   database.Honeypot{},
-			getHoneypotError: errors.New("boo"),
+			getHoneypotError: nil,
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
 				Ip:      "1.1.1.1",
@@ -723,18 +723,29 @@ func TestSendStatus(t *testing.T) {
 			expectedErrorString: "",
 		},
 		{
-			description:      "inserts new honeypot fails",
+			description:      "inserts new honeypot fails on query",
 			getHoneypotRet:   database.Honeypot{},
 			getHoneypotError: errors.New("boo"),
-			dbErrorToReturn:  errors.New("oh oh"),
+			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
 				Ip:      "1.1.1.1",
 				Version: constants.LophiidVersion,
 			},
-			expectedErrorString: "error inserting honeypot",
+			expectedErrorString: "error doing lookup",
 		},
 		{
-			description:      "updates honeypot fails",
+			description:      "inserts new honeypot fails on db",
+			getHoneypotRet:   database.Honeypot{},
+			getHoneypotError: nil,
+			dbErrorToReturn:  errors.New("foooo"),
+			request: &backend_service.StatusRequest{
+				Ip:      "1.1.1.1",
+				Version: constants.LophiidVersion,
+			},
+			expectedErrorString: "error updating",
+		},
+		{
+			description:      "updates honeypot fails on db",
 			getHoneypotRet:   database.Honeypot{},
 			getHoneypotError: nil,
 			dbErrorToReturn:  errors.New("oh oh"),

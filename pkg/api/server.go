@@ -29,8 +29,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/vingarcia/ksql"
 )
 
 type ApiServer struct {
@@ -175,16 +173,6 @@ func (a *ApiServer) HandleGetSingleContentRule(w http.ResponseWriter, req *http.
 	a.sendStatus(w, "", ResultSuccess, []database.ContentRule{cr})
 }
 
-func (a *ApiServer) HandleGetAllContentRules(w http.ResponseWriter, req *http.Request) {
-	crs, err := a.dbc.GetContentRules()
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-
-	a.sendStatus(w, "", ResultSuccess, crs)
-}
-
 func (a *ApiServer) HandleDeleteContentRule(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -312,16 +300,6 @@ func (a *ApiServer) HandleGetSingleContent(w http.ResponseWriter, req *http.Requ
 	a.sendStatus(w, "", ResultSuccess, []database.Content{cts})
 }
 
-func (a *ApiServer) HandleGetAllContent(w http.ResponseWriter, req *http.Request) {
-	cts, err := a.dbc.GetContent()
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-
-	a.sendStatus(w, "", ResultSuccess, cts)
-}
-
 func (a *ApiServer) HandleDeleteContent(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -350,19 +328,20 @@ func (a *ApiServer) HandleGetWhoisForIP(w http.ResponseWriter, req *http.Request
 		return
 	}
 	ip := req.Form.Get("ip")
-	res, err := a.dbc.GetWhoisByIP(ip)
-	if err != nil {
-		if errors.Is(err, ksql.ErrRecordNotFound) {
-			a.sendStatus(w, "No result", ResultSuccess, nil)
-			return
-		}
 
+	res, err := a.dbc.SearchWhois(0, 1, fmt.Sprintf("ip:%s", ip))
+	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	res.RdapString = string(res.Rdap)
-	a.sendStatus(w, "", ResultSuccess, res)
+	if len(res) == 0 {
+		a.sendStatus(w, "No result", ResultError, nil)
+		return
+	}
+
+	res[0].RdapString = string(res[0].Rdap)
+	a.sendStatus(w, "", ResultSuccess, res[0])
 }
 
 func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Request) {
@@ -448,15 +427,6 @@ func (a *ApiServer) HandleDeleteTag(w http.ResponseWriter, req *http.Request) {
 	}
 
 	a.sendStatus(w, fmt.Sprintf("Deleted tag with ID: %s, Name: %s", id, name), ResultSuccess, nil)
-}
-
-func (a *ApiServer) HandleGetAllApps(w http.ResponseWriter, req *http.Request) {
-	apps, err := a.dbc.GetApps()
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-	a.sendStatus(w, "", ResultSuccess, apps)
 }
 
 func (a *ApiServer) HandleUpdateRequest(w http.ResponseWriter, req *http.Request) {
@@ -627,40 +597,6 @@ func (a *ApiServer) HandleUpsertStoredQuery(w http.ResponseWriter, req *http.Req
 	}
 
 	a.sendStatus(w, "Saved changes", ResultSuccess, qj)
-}
-
-func (a *ApiServer) HandleGetAllDownloads(w http.ResponseWriter, req *http.Request) {
-	dls, err := a.dbc.GetDownloads()
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-	a.sendStatus(w, "", ResultSuccess, dls)
-}
-
-func (a *ApiServer) HandleGetAllHoneypots(w http.ResponseWriter, req *http.Request) {
-	dls, err := a.dbc.GetHoneypots()
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-	a.sendStatus(w, "", ResultSuccess, dls)
-}
-
-func (a *ApiServer) HandleGetAllRequests(w http.ResponseWriter, req *http.Request) {
-	ip := req.URL.Query().Get("ip")
-	var reqs []database.Request
-	var err error
-	if ip != "" {
-		reqs, err = a.dbc.GetRequestsForSourceIP(ip)
-	} else {
-		reqs, err = a.dbc.GetRequests()
-	}
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-	a.sendStatus(w, "", ResultSuccess, reqs)
 }
 
 func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Request) {

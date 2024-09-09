@@ -127,38 +127,32 @@ func main() {
 
 	r := mux.NewRouter()
 	// All content endpoints.
-	r.HandleFunc("/content/all", as.HandleGetAllContent).Methods("GET")
 	r.HandleFunc("/content/single", as.HandleGetSingleContent).Methods("GET")
 	r.HandleFunc("/content/upsert", as.HandleUpsertSingleContent).Methods("POST")
 	r.HandleFunc("/content/delete", as.HandleDeleteContent).Methods("POST")
 	r.HandleFunc("/content/segment", as.HandleSearchContent).Methods("GET")
 
 	// All rules endpoints.
-	r.HandleFunc("/contentrule/all", as.HandleGetAllContentRules).Methods("GET")
 	r.HandleFunc("/contentrule/single", as.HandleGetSingleContentRule).Methods("GET")
 	r.HandleFunc("/contentrule/upsert", as.HandleUpsertSingleContentRule).Methods("POST")
 	r.HandleFunc("/contentrule/delete", as.HandleDeleteContentRule).Methods("POST")
 	r.HandleFunc("/contentrule/segment", as.HandleSearchContentRules).Methods("GET")
 
 	// All requests endpoints
-	r.HandleFunc("/request/all", as.HandleGetAllRequests).Methods("GET")
 	r.HandleFunc("/request/update", as.HandleUpdateRequest).Methods("POST")
 	r.HandleFunc("/request/segment", as.HandleGetRequestsSegment).Methods("GET")
 
 	// All application endpoints
-	r.HandleFunc("/app/all", as.HandleGetAllApps).Methods("GET")
 	r.HandleFunc("/app/upsert", as.HandleUpsertSingleApp).Methods("POST")
 	r.HandleFunc("/app/delete", as.HandleDeleteApp).Methods("POST")
 	r.HandleFunc("/app/export", as.ExportAppWithContentAndRule).Methods("POST")
 	r.HandleFunc("/app/import", as.ImportAppWithContentAndRule).Methods("POST")
 	r.HandleFunc("/app/segment", as.HandleSearchApps).Methods("GET")
 
-	r.HandleFunc("/downloads/all", as.HandleGetAllDownloads).Methods("GET")
 	r.HandleFunc("/downloads/segment", as.HandleSearchDownloads).Methods("GET")
 
 	r.HandleFunc("/meta/request", as.HandleGetMetadataForRequest).Methods("POST")
 
-	r.HandleFunc("/honeypot/all", as.HandleGetAllHoneypots).Methods("GET")
 	r.HandleFunc("/honeypot/update", as.HandleUpdateHoneypot).Methods("POST")
 	r.HandleFunc("/honeypot/segment", as.HandleSearchHoneypots).Methods("GET")
 

@@ -315,9 +315,12 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		slog.Error("backend and honeypot version are incompatible", slog.String("backend_version", constants.LophiidVersion), slog.String("honeypot_version", req.GetVersion()), slog.String("error", err.Error()))
 	}
 
-	dm, err := s.dbClient.GetHoneypotByIP(req.GetIp())
+	dms, err := s.dbClient.SearchHoneypots(0, 1, fmt.Sprintf("ip:%s", req.GetIp()))
 	if err != nil {
-
+		slog.Error("error finding honeypot", slog.String("error", err.Error()), slog.String("honeypot", req.GetIp()))
+		return &backend_service.StatusResponse{}, status.Errorf(codes.NotFound, "error doing lookup")
+	}
+	if len(dms) == 0 {
 		_, err := s.dbClient.Insert(&database.Honeypot{
 			IP:          req.GetIp(),
 			Version:     req.GetVersion(),
@@ -329,9 +332,9 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		}
 		slog.Info("status: added honeypot ", slog.String("ip", req.GetIp()))
 	} else {
-		dm.LastCheckin = time.Now()
-		dm.Version = req.GetVersion()
-		if err := s.dbClient.Update(&dm); err != nil {
+		dms[0].LastCheckin = time.Now()
+		dms[0].Version = req.GetVersion()
+		if err := s.dbClient.Update(&dms[0]); err != nil {
 			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error updating honeypot: %s", err)
 		}
 		slog.Debug("status: updated honeypot ", slog.String("ip", req.GetIp()))
@@ -520,8 +523,9 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 
 	s.metrics.downloadResponseTime.Observe(req.GetInfo().GetDurationSec())
 
-	dm, err := s.dbClient.GetDownloadBySum(dInfo.SHA256sum)
-	if err == nil {
+	dms, err := s.dbClient.SearchDownloads(0, 1, fmt.Sprintf("sha256sum:%s", dInfo.SHA256sum))
+	if len(dms) == 1 && err == nil {
+		dm := dms[0]
 		dm.TimesSeen = dm.TimesSeen + 1
 		dm.LastRequestID = req.RequestId
 		dm.LastSeenAt = time.Now()
@@ -645,12 +649,13 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq)
 	if err != nil {
-		hp, err := s.dbClient.GetHoneypotByIP(sReq.HoneypotIP)
-		if err != nil {
+		hps, err := s.dbClient.SearchHoneypots(0, 1, fmt.Sprintf("ip:%s", sReq.HoneypotIP))
+
+		if err != nil || len(hps) == 0 {
 			slog.Warn("error finding honeypot", slog.String("error", err.Error()), slog.String("honeypot", sReq.HoneypotIP))
 			matchedRule = s.safeRules.Get()[0]
 		} else {
-			matchedRule.ContentID = hp.DefaultContentID
+			matchedRule.ContentID = hps[0].DefaultContentID
 			matchedRule.ID = 0
 		}
 	} else {
@@ -734,7 +739,8 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 // LoadRules loads the content rules from the database.
 func (s *BackendServer) LoadRules() error {
-	rules, err := s.dbClient.GetContentRules()
+	// TODO: Add logic that allowes only active rules to be selected here
+	rules, err := s.dbClient.SearchContentRules(0, 9999999, "")
 	if err != nil {
 		return err
 	}
