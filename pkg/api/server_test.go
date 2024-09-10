@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package api
 
 import (
@@ -377,12 +376,15 @@ func TestGetSingleContentRule(t *testing.T) {
 
 func TestExportApp(t *testing.T) {
 	for _, test := range []struct {
-		description    string
-		appID          int
-		app            database.Application
-		contentRules   []database.ContentRule
-		contents       map[int64]database.Content
-		expectedStatus string
+		description        string
+		appID              int
+		app                database.Application
+		contentRules       []database.ContentRule
+		contents           map[int64]database.Content
+		expectedStatus     string
+		expectedNrApps     int
+		expectedNrRules    int
+		expectedNrContents int
 	}{
 		{
 			description: "exports OK",
@@ -398,7 +400,30 @@ func TestExportApp(t *testing.T) {
 				60: {ID: 60},
 				61: {ID: 61},
 			},
-			expectedStatus: ResultSuccess,
+			expectedStatus:     ResultSuccess,
+			expectedNrApps:     1,
+			expectedNrRules:    2,
+			expectedNrContents: 2,
+		},
+		{
+			description: "exports OK, duplicate rule",
+			appID:       42,
+			app: database.Application{
+				ID: 42,
+			},
+			contentRules: []database.ContentRule{
+				{ContentID: 60},
+				{ContentID: 61},
+				{ContentID: 61},
+			},
+			contents: map[int64]database.Content{
+				60: {ID: 60},
+				61: {ID: 61},
+			},
+			expectedStatus:     ResultSuccess,
+			expectedNrApps:     1,
+			expectedNrRules:    3,
+			expectedNrContents: 2,
 		},
 		{
 			description: "misses content rule, is fine",
@@ -406,9 +431,12 @@ func TestExportApp(t *testing.T) {
 			app: database.Application{
 				ID: 42,
 			},
-			contentRules:   []database.ContentRule{},
-			contents:       map[int64]database.Content{},
-			expectedStatus: ResultSuccess,
+			contentRules:       []database.ContentRule{},
+			contents:           map[int64]database.Content{},
+			expectedStatus:     ResultSuccess,
+			expectedNrApps:     0,
+			expectedNrRules:    0,
+			expectedNrContents: 0,
 		},
 		{
 			description: "misses content, not happy",
@@ -420,8 +448,11 @@ func TestExportApp(t *testing.T) {
 				{ContentID: 60},
 				{ContentID: 61},
 			},
-			contents:       map[int64]database.Content{},
-			expectedStatus: ResultError,
+			contents:           map[int64]database.Content{},
+			expectedStatus:     ResultError,
+			expectedNrApps:     0,
+			expectedNrRules:    0,
+			expectedNrContents: 0,
 		},
 	} {
 
@@ -450,13 +481,26 @@ func TestExportApp(t *testing.T) {
 				t.Errorf("reading response body: %s", err)
 			}
 
-			pdata := HttpResult{}
+			type Export struct {
+				Status  string    `json:"status"`
+				Message string    `json:"message"`
+				Data    AppExport `json:"data"`
+			}
+			pdata := Export{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
 			}
 
 			if pdata.Status != test.expectedStatus {
 				t.Errorf("status %s expected, got %s (%v)", test.expectedStatus, pdata.Status, pdata)
+			}
+
+			if test.expectedNrApps > 0 {
+				if len(pdata.Data.Rules) != test.expectedNrRules {
+					t.Errorf("expected %d rules, got %d", test.expectedNrRules, len(pdata.Data.Rules))
+
+				}
+
 			}
 		})
 	}

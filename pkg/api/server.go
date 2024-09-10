@@ -891,9 +891,9 @@ func (a *ApiServer) HandleGetTagsForRequestFull(w http.ResponseWriter, req *http
 }
 
 type AppExport struct {
-	App      *database.Application
-	Rules    []database.ContentRule
-	Contents []database.Content
+	App      *database.Application  `json:"app"`
+	Rules    []database.ContentRule `json:"rules"`
+	Contents []database.Content     `json:"contents"`
 }
 
 func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http.Request) {
@@ -926,8 +926,15 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 		Rules: rules,
 	}
 
+	// Some rules can refer to the same rule. Make sure we get a unique list of
+	// rules.
+	cIdMap := make(map[int64]bool)
 	for _, rule := range rules {
-		content, err := a.dbc.GetContentByID(rule.ContentID)
+		cIdMap[rule.ContentID] = true
+	}
+
+	for ruleId := range cIdMap {
+		content, err := a.dbc.GetContentByID(ruleId)
 		if err != nil {
 			a.sendStatus(w, fmt.Sprintf("getting content by ID: %s", err.Error()), ResultError, nil)
 			return
