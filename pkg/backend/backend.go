@@ -740,11 +740,29 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 // LoadRules loads the content rules from the database.
 func (s *BackendServer) LoadRules() error {
 	// TODO: Add logic that allowes only active rules to be selected here
-	rules, err := s.dbClient.SearchContentRules(0, 9999999, "")
-	if err != nil {
-		return err
+
+	rulesBatchSize := 1000
+	rulesOffset := 0
+	maxBatchesToLoad := 10
+	var allRules []database.ContentRule
+
+	for i := 0; i < maxBatchesToLoad; i += 1 {
+		rules, err := s.dbClient.SearchContentRules(int64(rulesOffset), int64(rulesBatchSize), "")
+		if err != nil {
+			return err
+		}
+
+		allRules = append(allRules, rules...)
+
+		// If there are fewer rules than in a batch, we are done.
+		if len(rules) < rulesBatchSize {
+			break
+		}
+
+		rulesOffset += rulesBatchSize
 	}
-	s.safeRules.Set(rules)
+
+	s.safeRules.Set(allRules)
 	return nil
 }
 
