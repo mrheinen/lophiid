@@ -70,6 +70,7 @@ type Content struct {
 	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"time.Time of creation"`
 	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at" doc:"time.Time of last update"`
 	ExtVersion  int64                    `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the content"`
+	RuleUuid    string                   `ksql:"rule_uuid" json:"rule_uuid" doc:"The external UUID of the related rule"`
 	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the content"`
 }
 
@@ -98,6 +99,7 @@ type ContentRule struct {
 	BodyMatching string    `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
 	ContentID    int64     `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
 	AppID        int64     `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
+	AppUuid      string    `ksql:"app_uuid" json:"app_uuid" doc:"The external UUID of the related app"`
 	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
 	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
 	Alert        bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
