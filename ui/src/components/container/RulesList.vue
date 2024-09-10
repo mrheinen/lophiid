@@ -105,17 +105,9 @@
 </template>
 
 <script>
-function dateToString(inDate) {
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleString();
-}
 
-function truncateString(str, maxlen) {
-  if (str.length > maxlen) {
-    return str.substring(0, maxlen) + "...";
-  }
-  return str;
-}
+import { truncateString, dateToString } from "../../helpers.js";
+
 import RuleForm from "./RuleForm.vue";
 import ContentForm from "./ContentForm.vue";
 import AppForm from "./AppForm.vue";

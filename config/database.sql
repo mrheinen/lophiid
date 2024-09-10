@@ -76,6 +76,7 @@ CREATE TABLE content_rule (
   port            INT NOT NULL DEFAULT 0,
   app_id          INT DEFAULT 0,
   app_uuid        VARCHAR(36) default '',
+  content_uuid        VARCHAR(36) default '',
   alert           BOOL DEFAULT FALSE,
   request_purpose   REQUEST_PURPOSE default 'UNKNOWN',
   ext_version  INT DEFAULT 1,

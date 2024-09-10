@@ -89,22 +89,24 @@ func (c *Content) ExternalUuid() string   { return c.ExtUuid }
 func (c *Content) SetModelID(id int64)    { c.ID = id }
 
 type ContentRule struct {
-	ID           int64     `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
-	Host         string    `ksql:"host" json:"host"`
-	Uri          string    `ksql:"uri" json:"uri"           doc:"The URI matching string"`
-	Body         string    `ksql:"body" json:"body"         doc:"The body matching string"`
-	Method       string    `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
-	Port         int64     `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
-	UriMatching  string    `ksql:"uri_matching" json:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
-	BodyMatching string    `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
-	ContentID    int64     `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
-	AppID        int64     `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
-	AppUuid      string    `ksql:"app_uuid" json:"app_uuid" doc:"The external UUID of the related app"`
-	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
-	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
-	Alert        bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
-	ExtVersion   int64     `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the rule"`
-	ExtUuid      string    `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the rule"`
+	ID           int64  `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
+	Host         string `ksql:"host" json:"host"`
+	Uri          string `ksql:"uri" json:"uri"           doc:"The URI matching string"`
+	Body         string `ksql:"body" json:"body"         doc:"The body matching string"`
+	Method       string `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
+	Port         int64  `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
+	UriMatching  string `ksql:"uri_matching" json:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
+	BodyMatching string `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
+	ContentID    int64  `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
+	AppID        int64  `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
+	// The content and app UUID are only set on imported rules.
+	AppUuid     string    `ksql:"app_uuid" json:"app_uuid" doc:"The external UUID of the related app"`
+	ContentUuid string    `ksql:"content_uuid" json:"content_uuid" doc:"The external UUID of the related content"`
+	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
+	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
+	Alert       bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the rule"`
+	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the rule"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.

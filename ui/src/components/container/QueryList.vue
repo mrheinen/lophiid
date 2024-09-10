@@ -56,10 +56,7 @@
 </template>
 
 <script>
-function dateToString(inDate) {
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleString();
-}
+import { dateToString } from "../../helpers.js";
 import QueryForm from "./QueryForm.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
