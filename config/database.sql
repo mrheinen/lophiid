@@ -22,9 +22,9 @@ CREATE TABLE content (
   status_code     STATUS_CODE NOT NULL DEFAULT '200',
   is_default      BOOLEAN DEFAULT FALSE,
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   ext_version     INT DEFAULT 1,
-  ext_uuid        VARCHAR(36),
+  ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
 );
 
 CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'PAYLOAD_TCP_LINK', 'PAYLOAD_NETCAT', 'SCRIPT_RESPONSE_BODY', 'DECODED_STRING_BASE64');
@@ -78,7 +78,7 @@ CREATE TABLE content_rule (
   alert           BOOL DEFAULT FALSE,
   request_purpose   REQUEST_PURPOSE default 'UNKNOWN',
   ext_version  INT DEFAULT 1,
-  ext_uuid            VARCHAR(36),
+  ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
   CONSTRAINT fk_content_id FOREIGN KEY(content_id) REFERENCES content(id)
 );
 
@@ -129,9 +129,9 @@ CREATE TABLE app (
   os              VARCHAR(512),
   link            VARCHAR(2048),
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   ext_version  INT DEFAULT 1,
-  ext_uuid            VARCHAR(36),
+  ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
 );
 
 
