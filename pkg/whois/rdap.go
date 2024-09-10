@@ -18,6 +18,7 @@ package whois
 
 import (
 	"bytes"
+	"fmt"
 	"log/slog"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
@@ -162,12 +163,17 @@ func (c *CachedRdapManager) LookupIP(ip string) error {
 	}
 
 	// Next check if there is an entry in the database already.
-	_, err = c.dbClient.GetWhoisByIP(ip)
-	if err == nil {
-		// Update the cache to recored we already have an entry. In the future we
-		// might want to look at the age of the entry.
-		c.ipCache.Store(ip, true)
-		return nil
+	hps, err := c.dbClient.SearchWhois(0, 1, fmt.Sprintf("ip:%s", ip))
+	if err != nil {
+		slog.Error("Failed to query whois in database", slog.String("error", err.Error()))
+
+	} else {
+		if len(hps) != 0 {
+			// Update the cache to recored we already have an entry. In the future we
+			// might want to look at the age of the entry.
+			c.ipCache.Store(ip, true)
+			return nil
+		}
 	}
 
 	// Schedule for lookup, if not already in the map
