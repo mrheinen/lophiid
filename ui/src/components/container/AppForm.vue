@@ -60,7 +60,29 @@
           v-model="localApp.link"
         />
       </div>
-    <br/>
+
+      <div class="field">
+        <label class="label">Version</label>
+        <InputNumber
+        id="version"
+        type="text"
+        placeholder="The version of the app"
+        v-model="localApp.ext_version"
+        />
+      </div>
+
+      <div class="field">
+        <label class="label">UUID</label>
+        <InputText
+        id="uuid"
+        type="text"
+        disabled
+        placeholder="The UUID of the app"
+        v-model="localApp.ext_uuid"
+        />
+      </div>
+
+      <br/>
 
     <PrimeButton
       :label="localApp.id > 0 ? 'Submit' : 'Add'"
