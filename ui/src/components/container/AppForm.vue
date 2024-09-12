@@ -270,8 +270,8 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error("Could not export app");
           } else {
-            var filename = response.data.app['name'] + '-' + response.data.app['version'];
-            const blob = new Blob([JSON.stringify(response.data)], { type: 'application/json' })
+            var filename = response.data['name'] + '-' + response.data['version'];
+            const blob = new Blob([response.data['yaml']], { type: 'application/yaml' })
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;

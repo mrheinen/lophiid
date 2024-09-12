@@ -30,6 +30,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"gopkg.in/yaml.v3"
 )
 
 func TestUpsertSingleContent(t *testing.T) {
@@ -482,13 +483,19 @@ func TestExportApp(t *testing.T) {
 			}
 
 			type Export struct {
-				Status  string    `json:"status"`
-				Message string    `json:"message"`
-				Data    AppExport `json:"data"`
+				Status  string
+				Message string
+				Data    AppYamlExport
 			}
+
 			pdata := Export{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
-				t.Errorf("error parsing response: %s (%s)", err, string(data))
+				t.Errorf("error parsing json response: %s (%s)", err, string(data))
+			}
+
+			ydata := AppExport{}
+			if err = yaml.Unmarshal([]byte(pdata.Data.Yaml), &ydata); err != nil {
+				t.Errorf("error parsing yaml response: %s (%s)", err, string(data))
 			}
 
 			if pdata.Status != test.expectedStatus {
@@ -496,8 +503,8 @@ func TestExportApp(t *testing.T) {
 			}
 
 			if test.expectedNrApps > 0 {
-				if len(pdata.Data.Rules) != test.expectedNrRules {
-					t.Errorf("expected %d rules, got %d", test.expectedNrRules, len(pdata.Data.Rules))
+				if len(ydata.Rules) != test.expectedNrRules {
+					t.Errorf("expected %d rules, got %d", test.expectedNrRules, len(ydata.Rules))
 
 				}
 			}
@@ -629,10 +636,9 @@ func TestImportAppOk(t *testing.T) {
 			}
 
 			s := NewApiServer(&fd, &javascript.FakeJavascriptRunner{}, "apiKey")
-			buf := new(bytes.Buffer)
+			yamlData, _ := yaml.Marshal(test.appExport)
 
-			json.NewEncoder(buf).Encode(test.appExport)
-			req := httptest.NewRequest(http.MethodPost, "/foo", bytes.NewBufferString(buf.String()))
+			req := httptest.NewRequest(http.MethodPost, "/foo", bytes.NewBufferString(string(yamlData)))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			w := httptest.NewRecorder()
 			s.ImportAppWithContentAndRule(w, req)

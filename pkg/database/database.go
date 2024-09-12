@@ -76,19 +76,19 @@ func (yb *YammableBytes) UnmarshalYAML(node *yaml.Node) error {
 
 type Content struct {
 	ID          int64                    `ksql:"id,skipInserts" json:"id"           doc:"The ID of the content"`
-	Data        YammableBytes            `ksql:"data"           json:"data"         doc:"The content data itself"`
+	Data        YammableBytes            `ksql:"data"           json:"data"         yaml:"data,omitempty" doc:"The content data itself"`
 	Name        string                   `ksql:"name"           json:"name"         doc:"The content name"`
 	Description string                   `ksql:"description"    json:"description"  doc:"The content description"`
 	ContentType string                   `ksql:"content_type"   json:"content_type" yaml:"content_type" doc:"The HTTP content-type"`
 	Server      string                   `ksql:"server"         json:"server"       doc:"The HTTP server with which the content is served"`
 	IsDefault   bool                     `ksql:"is_default"     json:"is_default"   yaml:"is_default"`
 	StatusCode  string                   `ksql:"status_code"    json:"status_code"  yaml:"status_code" doc:"The HTTP status code"`
-	Script      string                   `ksql:"script"         json:"script"       doc:"The content script"`
-	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"      doc:"The content HTTP headers"`
+	Script      string                   `ksql:"script"         json:"script"       yaml:"script,omitempty" doc:"The content script"`
+	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"      yaml:"headers,omitempty" doc:"The content HTTP headers"`
 	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"time.Time of creation"`
 	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              yaml:"updated_at" json:"updated_at" doc:"time.Time of last update"`
 	ExtVersion  int64                    `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the content"`
-	ExtUuid     string                   `ksql:"ext_uuid,skipInserts" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the content"`
+	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the content"`
 }
 
 // The request purpose for the ContentRule needs to be kept in sync with the
@@ -123,7 +123,7 @@ type ContentRule struct {
 	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Last update date of the rule"`
 	Alert       bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
 	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
-	ExtUuid     string    `ksql:"ext_uuid,skipInserts" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
+	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.
@@ -221,7 +221,7 @@ type Application struct {
 	CreatedAt  time.Time `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Date and time of creation"`
 	UpdatedAt  time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Date and time of last update"`
 	ExtVersion int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version"`
-	ExtUuid    string    `ksql:"ext_uuid,skipInserts" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID"`
+	ExtUuid    string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID"`
 }
 
 func (c *Application) ModelID() int64         { return c.ID }

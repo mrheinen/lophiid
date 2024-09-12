@@ -47,6 +47,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "API-Key": this.$store.getters.apiToken,
           },
           body: this.localData,
         })

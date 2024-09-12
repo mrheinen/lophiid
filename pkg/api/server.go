@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"lophiid/backend_service"
 	"lophiid/pkg/database"
@@ -30,6 +31,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 )
 
 type ApiServer struct {
@@ -917,6 +921,12 @@ type AppExport struct {
 	Contents []database.Content     `json:"contents"`
 }
 
+type AppYamlExport struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Yaml    string `json:"yaml"`
+}
+
 func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, fmt.Sprintf("parsing form: %s", err.Error()), ResultError, nil)
@@ -942,14 +952,20 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 		return
 	}
 
+	if app.ExtUuid == "" {
+		app.ExtUuid = uuid.NewString()
+	}
+
 	ret := AppExport{App: &app}
 
 	// Some rules can refer to the same content. Make sure we get a unique list of
 	// contents.
-	cIdMap := make(map[int64]string)
+	cIdMap := make(map[int64]bool)
 	for _, rule := range rules {
-		cIdMap[rule.ContentID] = rule.ExtUuid
+		cIdMap[rule.ContentID] = true
 	}
+
+	cIdUuidMap := make(map[int64]string)
 
 	for contentId := range cIdMap {
 		content, err := a.dbc.GetContentByID(contentId)
@@ -958,6 +974,11 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 			return
 		}
 
+		if content.ExtUuid == "" {
+			content.ExtUuid = uuid.NewString()
+		}
+
+		cIdUuidMap[content.ID] = content.ExtUuid
 		ret.Contents = append(ret.Contents, content)
 	}
 
@@ -965,13 +986,25 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 		rule.AppUuid = app.ExtUuid
 
 		// These are guaranteed to be in the map.
-		uuid := cIdMap[rule.ContentID]
-		rule.ContentUuid = uuid
+		rule.ContentUuid = cIdUuidMap[rule.ContentID]
 
+		if rule.ExtUuid == "" {
+			rule.ExtUuid = uuid.NewString()
+		}
 		ret.Rules = append(ret.Rules, rule)
 	}
 
-	a.sendStatus(w, "", ResultSuccess, ret)
+	yamlData, err := yaml.Marshal(ret)
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("yaml conversion error: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "", ResultSuccess, AppYamlExport{
+		Yaml:    string(yamlData),
+		Name:    ret.App.Name,
+		Version: ret.App.Version,
+	})
 }
 
 // ImportAppWithContentAndRule imports the given app with its rules and contents
@@ -980,10 +1013,14 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 // effectively is a replace operation.
 func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http.Request) {
 	var ae AppExport
-	d := json.NewDecoder(req.Body)
-	d.DisallowUnknownFields()
 
-	if err := d.Decode(&ae); err != nil {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if err = yaml.Unmarshal(body, &ae); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
