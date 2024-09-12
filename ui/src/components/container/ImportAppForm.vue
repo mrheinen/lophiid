@@ -1,6 +1,9 @@
 <template>
   <div class="card">
     <FieldSet legend="Import app with rules" :toggleable="false">
+     <p>Select a yaml file to import an app with all it's rules and contents.</p>
+     <p>You should only import trusted files and verify them manually before importing them.</p>
+     <br/>
      <input type="file" @change="handleFileUpload" />
     </FieldSet>
 
