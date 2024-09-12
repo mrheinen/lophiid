@@ -20,7 +20,6 @@ CREATE TABLE content (
   server          VARCHAR(256) NOT NULL,
   headers         VARCHAR(4096) ARRAY,
   status_code     STATUS_CODE NOT NULL DEFAULT '200',
-  is_default      BOOLEAN DEFAULT FALSE,
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   ext_version     INT DEFAULT 1,

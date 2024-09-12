@@ -81,7 +81,6 @@ type Content struct {
 	Description string                   `ksql:"description"    json:"description"  doc:"The content description"`
 	ContentType string                   `ksql:"content_type"   json:"content_type" yaml:"content_type" doc:"The HTTP content-type"`
 	Server      string                   `ksql:"server"         json:"server"       doc:"The HTTP server with which the content is served"`
-	IsDefault   bool                     `ksql:"is_default"     json:"is_default"   yaml:"is_default"`
 	StatusCode  string                   `ksql:"status_code"    json:"status_code"  yaml:"status_code" doc:"The HTTP status code"`
 	Script      string                   `ksql:"script"         json:"script"       yaml:"script,omitempty" doc:"The content script"`
 	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"      yaml:"headers,omitempty" doc:"The content HTTP headers"`
