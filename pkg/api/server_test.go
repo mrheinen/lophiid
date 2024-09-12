@@ -500,8 +500,160 @@ func TestExportApp(t *testing.T) {
 					t.Errorf("expected %d rules, got %d", test.expectedNrRules, len(pdata.Data.Rules))
 
 				}
-
 			}
 		})
 	}
+}
+
+func TestImportAppOk(t *testing.T) {
+
+	for _, test := range []struct {
+		description    string
+		expectedStatus string
+		appExport      AppExport
+	}{
+		{
+			description:    "exports OK",
+			expectedStatus: ResultSuccess,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "de71fafb-12e1-489e-aff7-b50ef7d1b7ef",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+				Contents: []database.Content{
+					{
+						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+						ID:      55,
+					},
+				},
+			},
+		},
+		{
+			description:    "invalid App UUID",
+			expectedStatus: ResultError,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "OOOOOOOHLALA",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+				Contents: []database.Content{
+					{
+						ID:      55,
+						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+			},
+		},
+		{
+			description:    "invalid Rule UUID",
+			expectedStatus: ResultError,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "FAIL",
+						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+				Contents: []database.Content{
+					{
+						ID:      55,
+						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+			},
+		},
+		{
+			description:    "invalid Rule ContentUUID",
+			expectedStatus: ResultError,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+						ContentUuid: "POOOOL",
+					},
+				},
+				Contents: []database.Content{
+					{
+						ID:      55,
+						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+			},
+		},
+		{
+			description:    "exports misses content",
+			expectedStatus: ResultError,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "de71fafb-12e1-489e-aff7-b50ef7d1b7ef",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+				Contents: []database.Content{},
+			},
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fd := database.FakeDatabaseClient{
+				ContentsToReturn: map[int64]database.Content{},
+			}
+
+			for _, ct := range test.appExport.Contents {
+				fd.ContentsToReturn[ct.ID] = ct
+			}
+
+			s := NewApiServer(&fd, &javascript.FakeJavascriptRunner{}, "apiKey")
+			buf := new(bytes.Buffer)
+
+			json.NewEncoder(buf).Encode(test.appExport)
+			req := httptest.NewRequest(http.MethodPost, "/foo", bytes.NewBufferString(buf.String()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			s.ImportAppWithContentAndRule(w, req)
+			res := w.Result()
+
+			// Check the request body
+			defer res.Body.Close()
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Errorf("reading response body: %s", err)
+			}
+
+			pdata := HttpResult{}
+			if err = json.Unmarshal(data, &pdata); err != nil {
+				t.Errorf("error parsing response: %s (%s)", err, string(data))
+			}
+
+			if pdata.Status != test.expectedStatus {
+				t.Errorf("status %s expected, got %s (%v)", test.expectedStatus, pdata.Status, pdata)
+			}
+		})
+	}
+
 }

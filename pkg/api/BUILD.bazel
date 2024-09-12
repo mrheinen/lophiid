@@ -12,6 +12,7 @@ go_library(
         "//backend_service",
         "//pkg/database",
         "//pkg/javascript",
+        "//pkg/util",
     ],
 )
 

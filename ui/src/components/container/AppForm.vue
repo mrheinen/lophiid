@@ -270,7 +270,7 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error("Could not export app");
           } else {
-            var filename = response.data.App['name'] + '-' + response.data.App['version'];
+            var filename = response.data.app['name'] + '-' + response.data.app['version'];
             const blob = new Blob([JSON.stringify(response.data)], { type: 'application/json' })
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);

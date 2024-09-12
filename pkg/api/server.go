@@ -24,6 +24,7 @@ import (
 	"lophiid/backend_service"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/util"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -126,10 +127,30 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		return
 	}
 
-	if rb.ContentID == 0 || (rb.Uri == "" && rb.Body == "") {
-		errMsg := "Empty parameters given"
-		a.sendStatus(w, errMsg, ResultError, nil)
+	if rb.ContentID == 0 || rb.AppID == 0 || (rb.Uri == "" && rb.Body == "") {
+		a.sendStatus(w, "Empty parameters given", ResultError, nil)
 		return
+	}
+
+	// If we have no reference to the content UUID yet, fetch the content and take
+	// the UUID from it.
+	if rb.ContentUuid == "" {
+		content, err := a.dbc.GetContentByID(rb.ContentID)
+		if err != nil {
+			a.sendStatus(w, err.Error(), ResultError, nil)
+		}
+
+		rb.ContentUuid = content.ExtUuid
+	}
+
+	// If we have no reference to the app UUID yet, do the same.
+	if rb.AppUuid == "" {
+		app, err := a.dbc.GetAppByID(rb.AppID)
+		if err != nil {
+			a.sendStatus(w, err.Error(), ResultError, nil)
+		}
+
+		rb.AppUuid = app.ExtUuid
 	}
 
 	if rb.ID == 0 {
@@ -921,20 +942,17 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 		return
 	}
 
-	ret := AppExport{
-		App:   &app,
-		Rules: rules,
-	}
+	ret := AppExport{App: &app}
 
-	// Some rules can refer to the same rule. Make sure we get a unique list of
-	// rules.
-	cIdMap := make(map[int64]bool)
+	// Some rules can refer to the same content. Make sure we get a unique list of
+	// contents.
+	cIdMap := make(map[int64]string)
 	for _, rule := range rules {
-		cIdMap[rule.ContentID] = true
+		cIdMap[rule.ContentID] = rule.ExtUuid
 	}
 
-	for ruleId := range cIdMap {
-		content, err := a.dbc.GetContentByID(ruleId)
+	for contentId := range cIdMap {
+		content, err := a.dbc.GetContentByID(contentId)
 		if err != nil {
 			a.sendStatus(w, fmt.Sprintf("getting content by ID: %s", err.Error()), ResultError, nil)
 			return
@@ -943,11 +961,23 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 		ret.Contents = append(ret.Contents, content)
 	}
 
+	for _, rule := range rules {
+		rule.AppUuid = app.ExtUuid
+
+		// These are guaranteed to be in the map.
+		uuid := cIdMap[rule.ContentID]
+		rule.ContentUuid = uuid
+
+		ret.Rules = append(ret.Rules, rule)
+	}
+
 	a.sendStatus(w, "", ResultSuccess, ret)
 }
 
 // ImportAppWithContentAndRule imports the given app with its rules and contents
-// into the database. Everything is imported as new.
+// into the database. Everything is imported as new. It also deletes all old apps,
+// rules and contents that are linked through eachother via the app uuid. It
+// effectively is a replace operation.
 func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http.Request) {
 	var ae AppExport
 	d := json.NewDecoder(req.Body)
@@ -958,6 +988,48 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		return
 	}
 
+	// Collect all existing app(s), rule(s) and content(s) because after the
+	// import we will delete the old data from this app (if any).
+
+	if !util.IsValidUUID(ae.App.ExtUuid) {
+		a.sendStatus(w, "App UUID is not valid", ResultError, nil)
+		return
+	}
+
+	existingApps, err := a.dbc.SearchApps(0, 1, fmt.Sprintf("ext_uuid:%s", ae.App.ExtUuid))
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	existingRules, err := a.dbc.SearchContentRules(0, 254, fmt.Sprintf("app_uuid:%s", ae.App.ExtUuid))
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	existingContent := []database.Content{}
+	for _, rule := range existingRules {
+
+		if !util.IsValidUUID(rule.ContentUuid) {
+			a.sendStatus(w, "Content UUID is not valid", ResultError, nil)
+			return
+		}
+
+		cts, err := a.dbc.SearchContent(0, 1, fmt.Sprintf("ext_uuid:%s", rule.ContentUuid))
+		if err != nil {
+			a.sendStatus(w, err.Error(), ResultError, nil)
+			return
+		}
+
+		if len(cts) != 1 {
+			slog.Warn("did not find content for rule", slog.String("content_uuid", rule.ContentUuid), slog.String("rule_uuid", rule.ExtUuid))
+			// We warn but proceed. Perhaps the content was deleted manually.
+		} else {
+			existingContent = append(existingContent, cts[0])
+		}
+	}
+
 	// Set the app ID to 0 so that it gets inserted as new.
 	ae.App.ID = 0
 	appModel, err := a.dbc.Insert(ae.App)
@@ -966,32 +1038,64 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		return
 	}
 
-	cm := make(map[int64]database.Content)
+	cm := make(map[string]database.Content)
 	for _, cnt := range ae.Contents {
-		cm[cnt.ID] = cnt
+		cm[cnt.ExtUuid] = cnt
 	}
 
-	for _, r := range ae.Rules {
-		ct, ok := cm[r.ContentID]
+	for _, rule := range ae.Rules {
+
+		if !util.IsValidUUID(rule.ContentUuid) {
+			a.sendStatus(w, "rule ContentUUID is not valid", ResultError, nil)
+			return
+		}
+
+		ct, ok := cm[rule.ContentUuid]
 		if !ok {
-			a.sendStatus(w, "a rule is missing", ResultError, nil)
+			a.sendStatus(w, "a content is missing", ResultError, nil)
 			return
 		}
 
 		ct.ID = 0
+
+		if !util.IsValidUUID(rule.ExtUuid) {
+			a.sendStatus(w, "rule UUID is not valid", ResultError, nil)
+			return
+		}
+
 		contentModel, err := a.dbc.Insert(&ct)
 		if err != nil {
 			a.sendStatus(w, err.Error(), ResultError, nil)
 			return
 		}
 
-		r.ContentID = contentModel.ModelID()
-		r.AppID = appModel.ModelID()
-		r.ID = 0
-		_, err = a.dbc.Insert(&r)
+		rule.ID = 0
+		rule.ContentID = contentModel.ModelID()
+		rule.AppID = appModel.ModelID()
+		rule.AppUuid = appModel.(*database.Application).ExtUuid
+		rule.ContentUuid = contentModel.(*database.Content).ExtUuid
+		_, err = a.dbc.Insert(&rule)
 		if err != nil {
 			a.sendStatus(w, err.Error(), ResultError, nil)
 			return
+		}
+	}
+
+	for _, rule := range existingRules {
+		if err := a.dbc.Delete(&rule); err != nil {
+			slog.Error("error deleting rule", slog.String("error", err.Error()))
+		}
+	}
+
+	for _, cont := range existingContent {
+		if err := a.dbc.Delete(&cont); err != nil {
+			slog.Error("error deleting content", slog.String("error", err.Error()))
+		}
+	}
+
+	for _, app := range existingApps {
+		if err := a.dbc.Delete(&app); err != nil {
+			slog.Error("error deleting app", slog.String("error", err.Error()))
 		}
 	}
 

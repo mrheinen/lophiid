@@ -71,7 +71,7 @@ type Content struct {
 	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at" doc:"time.Time of last update"`
 	ExtVersion  int64                    `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the content"`
 	RuleUuid    string                   `ksql:"rule_uuid" json:"rule_uuid" doc:"The external UUID of the related rule"`
-	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the content"`
+	ExtUuid     string                   `ksql:"ext_uuid,skipInserts" json:"ext_uuid" doc:"The external unique ID of the content"`
 }
 
 // The request purpose for the ContentRule needs to be kept in sync with the
@@ -106,7 +106,7 @@ type ContentRule struct {
 	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
 	Alert       bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
 	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the rule"`
-	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the rule"`
+	ExtUuid     string    `ksql:"ext_uuid,skipInserts" json:"ext_uuid" doc:"The external unique ID of the rule"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.
@@ -204,7 +204,7 @@ type Application struct {
 	CreatedAt  time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
 	UpdatedAt  time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
 	ExtVersion int64     `ksql:"ext_version" json:"ext_version" doc:"The external numerical version"`
-	ExtUuid    string    `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID"`
+	ExtUuid    string    `ksql:"ext_uuid,skipInserts" json:"ext_uuid" doc:"The external unique ID"`
 }
 
 func (c *Application) ModelID() int64         { return c.ID }
@@ -890,6 +890,8 @@ func (d *KSQLClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
 func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
 	ct := Content{}
 	err := d.db.QueryOne(d.ctx, &ct, "FROM content WHERE id = $1", id)
+	// TODO: it should be safe to remove the next condition because QueryOne
+	// returns an error ErrRecordNotFound when no records are found.
 	if ct.ID == 0 {
 		return ct, fmt.Errorf("found no content for ID: %d", id)
 	}
