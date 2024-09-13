@@ -58,6 +58,7 @@ CREATE TABLE request (
   base_hash       VARCHAR(64) DEFAULT '',
   content_id      INT,
   rule_id         INT
+  rule_uuid       VARCHAR(36) default '',
 );
 
 

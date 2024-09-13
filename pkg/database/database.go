@@ -60,6 +60,8 @@ type ExternalDataModel interface {
 	SetModelID(id int64)
 }
 
+// YammableBytes is a type that can be marshalled into a YAML node. While doing
+// so the content is base64 encoded as a string.
 type YammableBytes []byte
 
 func (yb YammableBytes) MarshalYAML() (interface{}, error) {
