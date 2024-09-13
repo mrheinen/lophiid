@@ -60,7 +60,19 @@
           v-model="localApp.link"
         />
       </div>
-    <br/>
+
+      <div class="field">
+        <label class="label">UUID</label>
+        <InputText
+        id="uuid"
+        type="text"
+        disabled
+        placeholder="The UUID of the app"
+        v-model="localApp.ext_uuid"
+        />
+      </div>
+
+      <br/>
 
     <PrimeButton
       :label="localApp.id > 0 ? 'Submit' : 'Add'"
@@ -248,8 +260,8 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error("Could not export app");
           } else {
-            var filename = response.data.App['name'] + '-' + response.data.App['version'];
-            const blob = new Blob([JSON.stringify(response.data)], { type: 'application/json' })
+            var filename = response.data['name'] + '-' + response.data['version'] + '.yaml';
+            const blob = new Blob([response.data['yaml']], { type: 'application/yaml' })
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;

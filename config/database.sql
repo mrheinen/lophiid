@@ -20,11 +20,10 @@ CREATE TABLE content (
   server          VARCHAR(256) NOT NULL,
   headers         VARCHAR(4096) ARRAY,
   status_code     STATUS_CODE NOT NULL DEFAULT '200',
-  is_default      BOOLEAN DEFAULT FALSE,
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   ext_version     INT DEFAULT 1,
-  ext_uuid        VARCHAR(36),
+  ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
 );
 
 CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_LINK', 'PAYLOAD_TCP_LINK', 'PAYLOAD_NETCAT', 'SCRIPT_RESPONSE_BODY', 'DECODED_STRING_BASE64');
@@ -59,6 +58,7 @@ CREATE TABLE request (
   base_hash       VARCHAR(64) DEFAULT '',
   content_id      INT,
   rule_id         INT
+  rule_uuid       VARCHAR(36) default '',
 );
 
 
@@ -66,7 +66,6 @@ CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  host            VARCHAR(512) NOT NULL,
   uri             VARCHAR(2048) NOT NULL,
   uri_matching    MATCHING_TYPE,
   body            VARCHAR(2048),
@@ -75,10 +74,12 @@ CREATE TABLE content_rule (
   content_id      INT NOT NULL,
   port            INT NOT NULL DEFAULT 0,
   app_id          INT DEFAULT 0,
+  app_uuid        VARCHAR(36) default '',
+  content_uuid        VARCHAR(36) default '',
   alert           BOOL DEFAULT FALSE,
   request_purpose   REQUEST_PURPOSE default 'UNKNOWN',
   ext_version  INT DEFAULT 1,
-  ext_uuid            VARCHAR(36),
+  ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
   CONSTRAINT fk_content_id FOREIGN KEY(content_id) REFERENCES content(id)
 );
 
@@ -129,9 +130,9 @@ CREATE TABLE app (
   os              VARCHAR(512),
   link            VARCHAR(2048),
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   ext_version  INT DEFAULT 1,
-  ext_uuid            VARCHAR(36),
+  ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
 );
 
 

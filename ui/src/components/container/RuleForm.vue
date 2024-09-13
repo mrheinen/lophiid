@@ -111,23 +111,38 @@
           </div>
         </div>
 
-         <div>
-            <div class="field">
-            <label class="label">HTTP method</label>
-            <DropDown v-model="localRule.method"
-            :options="config.contentRuleHTTPMethods" placeholder="Select HTTP method"
-            checkmark :highlightOnSelect="true" />
+        <div class="columns">
+          <div class="column">
+            <div>
+              <label class="label">HTTP method</label>
+              <DropDown v-model="localRule.method"
+              :options="config.contentRuleHTTPMethods" placeholder="Select HTTP method"
+              checkmark :highlightOnSelect="true" />
             </div>
-         </div>
-      <br />
-      <PrimeButton
+          </div>
+          <div class="column">
+            <div>
+              <label class="label">UUID</label>
+              <InputText
+              id="uuid"
+              type="text"
+              disabled
+              placeholder="The UUID of the rule"
+              v-model="localRule.ext_uuid"
+              />
+            </div>
+          </div>
+        </div>
+
+        <br />
+        <PrimeButton
         :label="localRule.id > 0 ? 'Submit' : 'Add'"
         @click="submitForm()"
-      >
-      </PrimeButton>
-      &nbsp;
-      <PrimeButton
-        severity="secondary"
+        >
+    </PrimeButton>
+    &nbsp;
+    <PrimeButton
+    severity="secondary"
         label="New"
         @click="resetForm()"
       ></PrimeButton>

@@ -55,7 +55,43 @@ Created app with ID: 101
 Take a note of the ID (101 in this case) as you will need it to add Content to
 the app. If you want you can now also open the UI and go to the Apps tab and
 check that this app was created.
+### Importing previously exported Apps
 
+Apps can be exported and also can be found in the ./rules folder of the GitHub
+repository. These apps can be imported via the web UI (one by one) and via the
+CLI (one by one or a whole directory).
+
+To import a single app with the CLI, use the following example:
+
+```shell
+
+$ bazel run //cmd/api_client:api_client -- \
+  -api-server http://127.0.0.1:8088 \
+  -api-key ca357d9a-b98f-429c-83d7-e8088f69ba2f \
+  -app-import \
+  -app-import-file ./rules/Spring\ Framework-5.2.20.yaml
+...
+time=2024-09-13T11:51:56.090-04:00 level=INFO msg="Imported app" app="rules/Spring Framework-5.2.20.yaml"
+
+```
+
+To import a directory recursively use the following example:
+
+
+```shell
+
+$ bazel run //cmd/api_client:api_client -- \
+  -api-server http://127.0.0.1:8088 \
+  -api-key ca357d9a-b98f-429c-83d7-e8088f69ba2f \
+  -app-import \
+  -app-import-dir ./rules/
+...
+time=2024-09-13T11:51:56.090-04:00 level=INFO msg="Imported app" app="rules/Spring Framework-5.2.20.yaml"
+time=2024-09-13T11:51:56.090-05:00 level=INFO msg="Imported app" app="rules/Spring Framework-5.2.21.yaml"
+time=2024-09-13T11:51:56.090-06:00 level=INFO msg="Imported app" app="rules/Bla DieBla-42.yaml"
+...
+
+```
 
 ### Adding Content and a Rule to an app using a single URL
 
@@ -65,7 +101,8 @@ to serve when a request matches. You can do this for a single URL by using the
 
 Here is an example:
 
-```shell$ bazel run //cmd/api_client:api_client -- \
+```shell
+$ bazel run //cmd/api_client:api_client -- \
   -api-server http://127.0.0.1:8088 \
   -api-key ca357d9a-b98f-429c-83d7-e8088f69ba2f \
   -app-id 101 \    # The App ID for which to create the rules

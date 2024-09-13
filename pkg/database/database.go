@@ -18,6 +18,7 @@ package database
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -26,8 +27,10 @@ import (
 
 	"lophiid/pkg/util"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vingarcia/ksql"
+	"gopkg.in/yaml.v3"
 )
 
 var ContentTable = ksql.NewTable("content")
@@ -53,24 +56,42 @@ type ExternalDataModel interface {
 	ModelID() int64
 	ExternalVersion() int64
 	ExternalUuid() string
+	SetExternalUuid(uuid string)
 	SetModelID(id int64)
+}
+
+// YammableBytes is a type that can be marshalled into a YAML node. While doing
+// so the content is base64 encoded as a string.
+type YammableBytes []byte
+
+func (yb YammableBytes) MarshalYAML() (interface{}, error) {
+	return base64.StdEncoding.EncodeToString(yb), nil
+}
+
+func (yb *YammableBytes) UnmarshalYAML(node *yaml.Node) error {
+	value := node.Value
+	ba, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return err
+	}
+	*yb = ba
+	return nil
 }
 
 type Content struct {
 	ID          int64                    `ksql:"id,skipInserts" json:"id"           doc:"The ID of the content"`
-	Data        []byte                   `ksql:"data"           json:"data"         doc:"The content data itself"`
+	Data        YammableBytes            `ksql:"data"           json:"data"         yaml:"data,omitempty" doc:"The content data itself"`
 	Name        string                   `ksql:"name"           json:"name"         doc:"The content name"`
 	Description string                   `ksql:"description"    json:"description"  doc:"The content description"`
-	ContentType string                   `ksql:"content_type"   json:"content_type" doc:"The HTTP content-type"`
+	ContentType string                   `ksql:"content_type"   json:"content_type" yaml:"content_type" doc:"The HTTP content-type"`
 	Server      string                   `ksql:"server"         json:"server"       doc:"The HTTP server with which the content is served"`
-	IsDefault   bool                     `ksql:"is_default"     json:"is_default"`
-	StatusCode  string                   `ksql:"status_code"    json:"status_code"  doc:"The HTTP status code"`
-	Script      string                   `ksql:"script"         json:"script"       doc:"The content script"`
-	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"      doc:"The content HTTP headers"`
-	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"time.Time of creation"`
-	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              json:"updated_at" doc:"time.Time of last update"`
-	ExtVersion  int64                    `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the content"`
-	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the content"`
+	StatusCode  string                   `ksql:"status_code"    json:"status_code"  yaml:"status_code" doc:"The HTTP status code"`
+	Script      string                   `ksql:"script"         json:"script"       yaml:"script,omitempty" doc:"The content script"`
+	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"      yaml:"headers,omitempty" doc:"The content HTTP headers"`
+	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"time.Time of creation"`
+	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              yaml:"updated_at" json:"updated_at" doc:"time.Time of last update"`
+	ExtVersion  int64                    `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the content"`
+	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the content"`
 }
 
 // The request purpose for the ContentRule needs to be kept in sync with the
@@ -82,27 +103,31 @@ const (
 	RuleRequestPurposeCrawl   = "CRAWL"
 )
 
-func (c *Content) ModelID() int64         { return c.ID }
-func (c *Content) ExternalVersion() int64 { return c.ExtVersion }
-func (c *Content) ExternalUuid() string   { return c.ExtUuid }
-func (c *Content) SetModelID(id int64)    { c.ID = id }
+func (c *Content) ModelID() int64              { return c.ID }
+func (c *Content) ExternalVersion() int64      { return c.ExtVersion }
+func (c *Content) ExternalUuid() string        { return c.ExtUuid }
+func (c *Content) SetExternalUuid(uuid string) { c.ExtUuid = uuid }
+
+func (c *Content) SetModelID(id int64) { c.ID = id }
 
 type ContentRule struct {
-	ID           int64     `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
-	Host         string    `ksql:"host" json:"host"`
-	Uri          string    `ksql:"uri" json:"uri"           doc:"The URI matching string"`
-	Body         string    `ksql:"body" json:"body"         doc:"The body matching string"`
-	Method       string    `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
-	Port         int64     `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
-	UriMatching  string    `ksql:"uri_matching" json:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
-	BodyMatching string    `ksql:"body_matching" json:"body_matching" doc:"The body matching method"`
-	ContentID    int64     `ksql:"content_id" json:"content_id" doc:"The ID of the Content this rule serves"`
-	AppID        int64     `ksql:"app_id" json:"app_id"         doc:"The ID of the application for which this rule is"`
-	CreatedAt    time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the rule"`
-	UpdatedAt    time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last update date of the rule"`
-	Alert        bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
-	ExtVersion   int64     `ksql:"ext_version" json:"ext_version" doc:"The external numerical version of the rule"`
-	ExtUuid      string    `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID of the rule"`
+	ID           int64  `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
+	Uri          string `ksql:"uri" json:"uri"           doc:"The URI matching string"`
+	Body         string `ksql:"body" json:"body"         doc:"The body matching string"`
+	Method       string `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
+	Port         int64  `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
+	UriMatching  string `ksql:"uri_matching" json:"uri_matching" yaml:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
+	BodyMatching string `ksql:"body_matching" json:"body_matching" yaml:"body_matching" doc:"The body matching method"`
+	ContentID    int64  `ksql:"content_id" json:"content_id" yaml:"content_id" doc:"The ID of the Content this rule serves"`
+	AppID        int64  `ksql:"app_id" json:"app_id"         yaml:"app_id" doc:"The ID of the application for which this rule is"`
+	// The content and app UUID are only set on imported rules.
+	AppUuid     string    `ksql:"app_uuid" json:"app_uuid" yaml:"app_uuid" doc:"The external UUID of the related app"`
+	ContentUuid string    `ksql:"content_uuid" json:"content_uuid" yaml:"content_uuid" doc:"The external UUID of the related content"`
+	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Creation date of the rule"`
+	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Last update date of the rule"`
+	Alert       bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
+	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.
@@ -114,10 +139,11 @@ type ContentRule struct {
 	RequestPurpose string `ksql:"request_purpose" json:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
 }
 
-func (c *ContentRule) ModelID() int64         { return c.ID }
-func (c *ContentRule) ExternalVersion() int64 { return c.ExtVersion }
-func (c *ContentRule) ExternalUuid() string   { return c.ExtUuid }
-func (c *ContentRule) SetModelID(id int64)    { c.ID = id }
+func (c *ContentRule) ModelID() int64              { return c.ID }
+func (c *ContentRule) ExternalVersion() int64      { return c.ExtVersion }
+func (c *ContentRule) ExternalUuid() string        { return c.ExtUuid }
+func (c *ContentRule) SetExternalUuid(uuid string) { c.ExtUuid = uuid }
+func (c *ContentRule) SetModelID(id int64)         { c.ID = id }
 
 type Request struct {
 	ID             int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the request"`
@@ -145,6 +171,7 @@ type Request struct {
 	ContentID      int64                    `ksql:"content_id" json:"content_id" doc:"The Content ID that was served"`
 	ContentDynamic bool                     `ksql:"content_dynamic" json:"content_dynamic" doc:"A bool indicating if the Content is dynamic (script based)"`
 	RuleID         int64                    `ksql:"rule_id" json:"rule_id" doc:"The ID of the rule that matched this request"`
+	RuleUuid       string                   `ksql:"rule_uuid" json:"rule_uuid" doc:"The UUID of the rule that matched this request"`
 	Starred        bool                     `ksql:"starred" json:"starred" doc:"A bool if the request is starred"`
 	BaseHash       string                   `ksql:"base_hash" json:"base_hash" doc:"A base hash to find similar requests"`
 	Tags           []TagPerRequestFull      `json:"tags"`
@@ -197,16 +224,17 @@ type Application struct {
 	Vendor     string    `ksql:"vendor" json:"vendor" doc:"The application vendor"`
 	OS         string    `ksql:"os" json:"os" doc:"The OS on which the application runs"`
 	Link       string    `ksql:"link" json:"link" doc:"A reference link"`
-	CreatedAt  time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
-	UpdatedAt  time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
-	ExtVersion int64     `ksql:"ext_version" json:"ext_version" doc:"The external numerical version"`
-	ExtUuid    string    `ksql:"ext_uuid" json:"ext_uuid" doc:"The external unique ID"`
+	CreatedAt  time.Time `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Date and time of creation"`
+	UpdatedAt  time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Date and time of last update"`
+	ExtVersion int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version"`
+	ExtUuid    string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID"`
 }
 
-func (c *Application) ModelID() int64         { return c.ID }
-func (c *Application) ExternalVersion() int64 { return c.ExtVersion }
-func (c *Application) ExternalUuid() string   { return c.ExtUuid }
-func (c *Application) SetModelID(id int64)    { c.ID = id }
+func (c *Application) ModelID() int64              { return c.ID }
+func (c *Application) ExternalVersion() int64      { return c.ExtVersion }
+func (c *Application) ExternalUuid() string        { return c.ExtUuid }
+func (c *Application) SetModelID(id int64)         { c.ID = id }
+func (c *Application) SetExternalUuid(uuid string) { c.ExtUuid = uuid }
 
 type Download struct {
 	ID                      int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the download"`
@@ -350,8 +378,11 @@ type TagPerRequestFull struct {
 type DatabaseClient interface {
 	Close()
 	Insert(dm DataModel) (DataModel, error)
+	InsertExternalModel(dm ExternalDataModel) (DataModel, error)
+
 	Update(dm DataModel) error
 	Delete(dm DataModel) error
+
 	GetAppByID(id int64) (Application, error)
 	SearchApps(offset int64, limit int64, query string) ([]Application, error)
 	GetContentByID(id int64) (Content, error)
@@ -509,6 +540,21 @@ func (d *KSQLClient) Insert(dm DataModel) (DataModel, error) {
 	t := d.getTableForModel(dm)
 	if t == nil {
 		return dm, fmt.Errorf("unknown datamodel: %v", dm)
+	}
+	err := d.db.Insert(d.ctx, *t, dm)
+	return dm, err
+}
+
+// InsertExternalModel inserts the model in the database and makes sure the uuid
+// field is actually set.
+func (d *KSQLClient) InsertExternalModel(dm ExternalDataModel) (DataModel, error) {
+	t := d.getTableForModel(dm)
+	if t == nil {
+		return dm, fmt.Errorf("unknown datamodel: %v", dm)
+	}
+
+	if dm.ExternalUuid() == "" {
+		dm.SetExternalUuid(uuid.NewString())
 	}
 	err := d.db.Insert(d.ctx, *t, dm)
 	return dm, err
@@ -886,6 +932,8 @@ func (d *KSQLClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
 func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
 	ct := Content{}
 	err := d.db.QueryOne(d.ctx, &ct, "FROM content WHERE id = $1", id)
+	// TODO: it should be safe to remove the next condition because QueryOne
+	// returns an error ErrRecordNotFound when no records are found.
 	if ct.ID == 0 {
 		return ct, fmt.Errorf("found no content for ID: %d", id)
 	}
@@ -905,28 +953,29 @@ func (d *KSQLClient) DeleteContentRule(id int64) error {
 // FakeDatabaseClient is a struct specifically for testing users of the
 // DatabaseClient interface
 type FakeDatabaseClient struct {
-	ContentIDToReturn      int64
-	ContentsToReturn       map[int64]Content
-	ErrorToReturn          error
-	ContentRuleIDToReturn  int64
-	ContentRulesToReturn   []ContentRule
-	RequestsToReturn       []Request
-	RequestToReturn        Request
-	DownloadsToReturn      []Download
-	ApplicationToReturn    Application
-	HoneypotToReturn       Honeypot
-	HoneypotErrorToReturn  error
-	QueriesToReturn        []StoredQuery
-	QueriesToReturnError   error
-	TagPerQueryReturn      []TagPerQuery
-	TagPerQueryReturnError error
-	WhoisToReturn          Whois
-	WhoisErrorToReturn     error
-	LastDataModelSeen      interface{}
-	P0fResultToReturn      P0fResult
-	P0fErrorToReturn       error
-	IpEventToReturn        IpEvent
-	DataModelToReturn      DataModel
+	ContentIDToReturn         int64
+	ContentsToReturn          map[int64]Content
+	ErrorToReturn             error
+	ContentRuleIDToReturn     int64
+	ContentRulesToReturn      []ContentRule
+	RequestsToReturn          []Request
+	RequestToReturn           Request
+	DownloadsToReturn         []Download
+	ApplicationToReturn       Application
+	HoneypotToReturn          Honeypot
+	HoneypotErrorToReturn     error
+	QueriesToReturn           []StoredQuery
+	QueriesToReturnError      error
+	TagPerQueryReturn         []TagPerQuery
+	TagPerQueryReturnError    error
+	WhoisToReturn             Whois
+	WhoisErrorToReturn        error
+	LastDataModelSeen         interface{}
+	LastExternalDataModelSeen interface{}
+	P0fResultToReturn         P0fResult
+	P0fErrorToReturn          error
+	IpEventToReturn           IpEvent
+	DataModelToReturn         DataModel
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -942,6 +991,10 @@ func (f *FakeDatabaseClient) GetContentByID(id int64) (Content, error) {
 }
 func (f *FakeDatabaseClient) Insert(dm DataModel) (DataModel, error) {
 	f.LastDataModelSeen = dm
+	return dm, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) InsertExternalModel(dm ExternalDataModel) (DataModel, error) {
+	f.LastExternalDataModelSeen = dm
 	return dm, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) Update(dm DataModel) error {

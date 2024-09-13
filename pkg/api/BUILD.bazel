@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "api",
     srcs = [
-        "client.go",
+        "generic_client.go",
         "server.go",
     ],
     importpath = "lophiid/pkg/api",
@@ -12,13 +12,16 @@ go_library(
         "//backend_service",
         "//pkg/database",
         "//pkg/javascript",
+        "//pkg/util",
+        "@com_github_google_uuid//:uuid",
+        "@in_gopkg_yaml_v3//:yaml_v3",
     ],
 )
 
 go_test(
     name = "api_test",
     srcs = [
-        "client_test.go",
+        "generic_client_test.go",
         "server_test.go",
     ],
     embed = [":api"],
@@ -26,5 +29,6 @@ go_test(
         "//pkg/database",
         "//pkg/javascript",
         "@com_github_jackc_pgx_v5//pgtype",
+        "@in_gopkg_yaml_v3//:yaml_v3",
     ],
 )

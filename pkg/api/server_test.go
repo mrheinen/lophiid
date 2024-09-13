@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package api
 
 import (
@@ -31,6 +30,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"gopkg.in/yaml.v3"
 )
 
 func TestUpsertSingleContent(t *testing.T) {
@@ -377,12 +377,15 @@ func TestGetSingleContentRule(t *testing.T) {
 
 func TestExportApp(t *testing.T) {
 	for _, test := range []struct {
-		description    string
-		appID          int
-		app            database.Application
-		contentRules   []database.ContentRule
-		contents       map[int64]database.Content
-		expectedStatus string
+		description        string
+		appID              int
+		app                database.Application
+		contentRules       []database.ContentRule
+		contents           map[int64]database.Content
+		expectedStatus     string
+		expectedNrApps     int
+		expectedNrRules    int
+		expectedNrContents int
 	}{
 		{
 			description: "exports OK",
@@ -398,7 +401,30 @@ func TestExportApp(t *testing.T) {
 				60: {ID: 60},
 				61: {ID: 61},
 			},
-			expectedStatus: ResultSuccess,
+			expectedStatus:     ResultSuccess,
+			expectedNrApps:     1,
+			expectedNrRules:    2,
+			expectedNrContents: 2,
+		},
+		{
+			description: "exports OK, duplicate rule",
+			appID:       42,
+			app: database.Application{
+				ID: 42,
+			},
+			contentRules: []database.ContentRule{
+				{ContentID: 60},
+				{ContentID: 61},
+				{ContentID: 61},
+			},
+			contents: map[int64]database.Content{
+				60: {ID: 60},
+				61: {ID: 61},
+			},
+			expectedStatus:     ResultSuccess,
+			expectedNrApps:     1,
+			expectedNrRules:    3,
+			expectedNrContents: 2,
 		},
 		{
 			description: "misses content rule, is fine",
@@ -406,9 +432,12 @@ func TestExportApp(t *testing.T) {
 			app: database.Application{
 				ID: 42,
 			},
-			contentRules:   []database.ContentRule{},
-			contents:       map[int64]database.Content{},
-			expectedStatus: ResultSuccess,
+			contentRules:       []database.ContentRule{},
+			contents:           map[int64]database.Content{},
+			expectedStatus:     ResultSuccess,
+			expectedNrApps:     0,
+			expectedNrRules:    0,
+			expectedNrContents: 0,
 		},
 		{
 			description: "misses content, not happy",
@@ -420,8 +449,11 @@ func TestExportApp(t *testing.T) {
 				{ContentID: 60},
 				{ContentID: 61},
 			},
-			contents:       map[int64]database.Content{},
-			expectedStatus: ResultError,
+			contents:           map[int64]database.Content{},
+			expectedStatus:     ResultError,
+			expectedNrApps:     0,
+			expectedNrRules:    0,
+			expectedNrContents: 0,
 		},
 	} {
 
@@ -450,6 +482,175 @@ func TestExportApp(t *testing.T) {
 				t.Errorf("reading response body: %s", err)
 			}
 
+			type Export struct {
+				Status  string
+				Message string
+				Data    AppYamlExport
+			}
+
+			pdata := Export{}
+			if err = json.Unmarshal(data, &pdata); err != nil {
+				t.Errorf("error parsing json response: %s (%s)", err, string(data))
+			}
+
+			ydata := AppExport{}
+			if err = yaml.Unmarshal([]byte(pdata.Data.Yaml), &ydata); err != nil {
+				t.Errorf("error parsing yaml response: %s (%s)", err, string(data))
+			}
+
+			if pdata.Status != test.expectedStatus {
+				t.Errorf("status %s expected, got %s (%v)", test.expectedStatus, pdata.Status, pdata)
+			}
+
+			if test.expectedNrApps > 0 {
+				if len(ydata.Rules) != test.expectedNrRules {
+					t.Errorf("expected %d rules, got %d", test.expectedNrRules, len(ydata.Rules))
+
+				}
+			}
+		})
+	}
+}
+
+func TestImportAppOk(t *testing.T) {
+
+	for _, test := range []struct {
+		description    string
+		expectedStatus string
+		appExport      AppExport
+	}{
+		{
+			description:    "exports OK",
+			expectedStatus: ResultSuccess,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "de71fafb-12e1-489e-aff7-b50ef7d1b7ef",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+				Contents: []database.Content{
+					{
+						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+						ID:      55,
+					},
+				},
+			},
+		},
+		{
+			description:    "invalid App UUID",
+			expectedStatus: ResultError,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "OOOOOOOHLALA",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+				Contents: []database.Content{
+					{
+						ID:      55,
+						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+			},
+		},
+		{
+			description:    "invalid Rule UUID",
+			expectedStatus: ResultError,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "FAIL",
+						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+				Contents: []database.Content{
+					{
+						ID:      55,
+						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+			},
+		},
+		{
+			description:    "invalid Rule ContentUUID",
+			expectedStatus: ResultError,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+						ContentUuid: "POOOOL",
+					},
+				},
+				Contents: []database.Content{
+					{
+						ID:      55,
+						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+			},
+		},
+		{
+			description:    "exports misses content",
+			expectedStatus: ResultError,
+			appExport: AppExport{
+				App: &database.Application{
+					ID:      42,
+					ExtUuid: "de71fafb-12e1-489e-aff7-b50ef7d1b7ef",
+				},
+				Rules: []database.ContentRule{
+					{
+						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
+						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
+					},
+				},
+				Contents: []database.Content{},
+			},
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fd := database.FakeDatabaseClient{
+				ContentsToReturn: map[int64]database.Content{},
+			}
+
+			for _, ct := range test.appExport.Contents {
+				fd.ContentsToReturn[ct.ID] = ct
+			}
+
+			s := NewApiServer(&fd, &javascript.FakeJavascriptRunner{}, "apiKey")
+			yamlData, _ := yaml.Marshal(test.appExport)
+
+			req := httptest.NewRequest(http.MethodPost, "/foo", bytes.NewBufferString(string(yamlData)))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			s.ImportAppWithContentAndRule(w, req)
+			res := w.Result()
+
+			// Check the request body
+			defer res.Body.Close()
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Errorf("reading response body: %s", err)
+			}
+
 			pdata := HttpResult{}
 			if err = json.Unmarshal(data, &pdata); err != nil {
 				t.Errorf("error parsing response: %s (%s)", err, string(data))
@@ -460,4 +661,5 @@ func TestExportApp(t *testing.T) {
 			}
 		})
 	}
+
 }

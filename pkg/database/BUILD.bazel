@@ -11,8 +11,10 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/util",
+        "@com_github_google_uuid//:uuid",
         "@com_github_jackc_pgx_v5//pgtype",
         "@com_github_vingarcia_ksql//:ksql",
+        "@in_gopkg_yaml_v3//:yaml_v3",
     ],
 )
 

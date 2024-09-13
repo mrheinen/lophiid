@@ -14,18 +14,19 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package main
 
 import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"io/fs"
 	"lophiid/pkg/api"
 	"lophiid/pkg/api/cli"
 	"lophiid/pkg/database"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -44,11 +45,34 @@ var appVendor = flag.String("app-vendor", "", "The application vendor")
 var appOS = flag.String("app-os", "", "The application OS")
 var appLink = flag.String("app-link", "", "The application reference link")
 
+var appImport = flag.Bool("app-import", false, "Import apps")
+var appImportFile = flag.String("app-import-file", "", "Import the given app, rules and content")
+var appImportDir = flag.String("app-import-dir", "", "Import the apps, rules and content from this dir")
+
 // Download flags
 var appID = flag.Int64("app-id", 0, "The application ID")
 var targetURL = flag.String("url", "", "The URL to download")
 var targetURLFile = flag.String("url-file", "", "The file with URLs to download")
 var ports = flag.String("ports", "0", "The port to limit on. Multiple ports can be separated by comma.")
+
+func GetFilesRecursivelyFromDir(dir string) ([]string, error) {
+	var retFiles []string
+	err := filepath.WalkDir(dir, func(s string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("error accessing path %q: %w", s, err)
+		}
+		if !d.IsDir() {
+			retFiles = append(retFiles, s)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return retFiles, fmt.Errorf("error walking directory %q: %w", dir, err)
+	}
+
+	return retFiles, nil
+}
 
 func main() {
 	flag.Parse()
@@ -94,8 +118,35 @@ func main() {
 	appAPI := api.NewApplicationApiClient(&httpClient, fmt.Sprintf("%s/app", *apiLocation), *apiKey)
 	contentAPI := api.NewContentApiClient(&httpClient, fmt.Sprintf("%s/content", *apiLocation), *apiKey)
 	contentRuleAPI := api.NewContentRuleApiClient(&httpClient, fmt.Sprintf("%s/contentrule", *apiLocation), *apiKey)
-
 	apiCliClient := cli.NewApiCLI(&httpClient, contentAPI, appAPI, contentRuleAPI)
+
+	if *appImport {
+		if *appImportFile != "" {
+			if err := apiCliClient.ImportApp(*appImportFile); err != nil {
+				slog.Error("Cannot import app", slog.String("error", err.Error()))
+			}
+			slog.Info("Imported app", slog.String("app", *appImportFile))
+			return
+		} else if *appImportDir != "" {
+			files, err := GetFilesRecursivelyFromDir(*appImportDir)
+			if err != nil {
+				slog.Error("Cannot get files", slog.String("error", err.Error()))
+			}
+
+			for _, file := range files {
+				if err := apiCliClient.ImportApp(file); err != nil {
+					slog.Error("Cannot import app", slog.String("error", err.Error()))
+					return
+				}
+
+				slog.Info("Imported app", slog.String("app", file))
+			}
+
+		} else {
+			slog.Warn("Add -app-import-file or -app-import-dir")
+			return
+		}
+	}
 
 	if *targetURL != "" || *targetURLFile != "" {
 		if *appID == 0 {

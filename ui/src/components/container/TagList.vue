@@ -52,10 +52,7 @@
 </template>
 
 <script>
-function dateToString(inDate) {
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleString();
-}
+import { dateToString } from "../../helpers.js";
 import TagForm from "./TagForm.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {

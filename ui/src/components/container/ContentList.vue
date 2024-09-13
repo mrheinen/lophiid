@@ -20,7 +20,8 @@
             :class="isSelectedId == content.id ? 'is-selected' : ''"
           >
             <td>{{ content.id }}</td>
-            <td><span v-if="content.script.length > 0" class="pi pi-play"></span>{{ content.name }} <b class="default" v-if="content.is_default">default</b>
+            <td><span v-if="content.script.length > 0" class="pi
+                pi-play"></span>{{ content.parsed.name }} <b class="default" v-if="content.is_default">default</b>
 
             </td>
             <td>{{ content.content_type }}</td>
@@ -69,10 +70,8 @@
 </template>
 
 <script>
-function dateToString(inDate) {
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleString();
-}
+import { truncateString, dateToString } from "../../helpers.js";
+
 import ContentForm from "./ContentForm.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
@@ -227,6 +226,8 @@ export default {
                 newContent.parsed.updated_at = dateToString(
                   newContent.updated_at
                 );
+
+                newContent.parsed.name = truncateString(newContent.name, 40)
 
                 if (newContent.data) {
                   newContent.data = atob(newContent.data);
