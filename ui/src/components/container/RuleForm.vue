@@ -120,6 +120,7 @@
               checkmark :highlightOnSelect="true" />
             </div>
           </div>
+          <div class="column">
             <div>
               <label class="label">UUID</label>
               <InputText
@@ -130,7 +131,7 @@
               v-model="localRule.ext_uuid"
               />
             </div>
-          <br/>
+          </div>
         </div>
 
         <br />
