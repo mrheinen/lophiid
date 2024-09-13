@@ -34,6 +34,7 @@ the search bar.
 | raw_response | string | The raw HTTP response (only used for scripted Content) |
 | referer | string | The referer header value |
 | rule_id | int64 | The ID of the rule that matched this request |
+| rule_uuid | string | The UUID of the rule that matched this request |
 | source_ip | string | The HTTP client source IP |
 | source_port | int64 | The HTTP client source port |
 | starred | bool | A bool if the request is starred |
@@ -49,7 +50,7 @@ the search bar.
 | --- | --- | --- |
 | content_type | string | The HTTP content-type |
 | created_at | Time | time.Time of creation |
-| data |  | The content data itself |
+| data | YammableBytes | The content data itself |
 | description | string | The content description |
 | ext_uuid | string | The external unique ID of the content |
 | ext_version | int64 | The external numerical version of the content |
@@ -68,9 +69,11 @@ the search bar.
 | --- | --- | --- |
 | alert | bool | A bool (0 or 1) indicating if the rule should alert |
 | app_id | int64 | The ID of the application for which this rule is |
+| app_uuid | string | The external UUID of the related app |
 | body | string | The body matching string |
 | body_matching | string | The body matching method |
 | content_id | int64 | The ID of the Content this rule serves |
+| content_uuid | string | The external UUID of the related content |
 | created_at | Time | Creation date of the rule |
 | ext_uuid | string | The external unique ID of the rule |
 | ext_version | int64 | The external numerical version of the rule |

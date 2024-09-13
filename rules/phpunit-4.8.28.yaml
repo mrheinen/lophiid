@@ -1,0 +1,67 @@
+app:
+    id: 124
+    name: phpunit
+    version: 4.8.28
+    vendor: phpunit
+    os: Linux
+    link: https://www.exploit-db.com/exploits/50702
+    created_at: 2024-09-13T12:11:25.02878Z
+    updated_at: 2024-09-13T16:11:25.028628Z
+    ext_version: 1
+    ext_uuid: e57fc09b-7b0c-4fe2-a38f-74d24044f1c5
+rules:
+    - id: 82
+      uri: /vendor/phpunit/phpunit/phpunit.xml
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 101
+      app_id: 124
+      app_uuid: e57fc09b-7b0c-4fe2-a38f-74d24044f1c5
+      content_uuid: 3e9c6425-59fd-4011-a93e-3ebba51acb78
+      created_at: 2024-01-12T12:50:25.0827Z
+      updated_at: 2024-09-13T16:12:35.393182Z
+      alert: false
+      ext_version: 1
+      ext_uuid: b81b67a1-ad4a-4ab9-97c9-bf39dd952612
+      requestpurpose: UNKNOWN
+    - id: 80
+      uri: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
+      method: POST
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 99
+      app_id: 124
+      app_uuid: e57fc09b-7b0c-4fe2-a38f-74d24044f1c5
+      content_uuid: 994f7577-a249-44e2-a17c-4ffd2978aefb
+      created_at: 2024-01-10T12:01:14.778938Z
+      updated_at: 2024-09-13T16:11:40.030875Z
+      alert: false
+      ext_version: 1
+      ext_uuid: 6fcf2605-05c6-466a-a1f6-bf0d40c5994f
+      requestpurpose: ATTACK
+contents:
+    - id: 101
+      data: PHBocHVuaXQgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOm5vTmFtZXNwYWNlU2NoZW1hTG9jYXRpb249InBocHVuaXQueHNkIiBib290c3RyYXA9InRlc3RzL2Jvb3RzdHJhcC5waHAiIGNvbG9ycz0idHJ1ZSIgdmVyYm9zZT0idHJ1ZSI+Cjx0ZXN0c3VpdGVzPgo8dGVzdHN1aXRlIG5hbWU9InVuaXQiPgo8ZGlyZWN0b3J5PnRlc3RzL3VuaXQ8L2RpcmVjdG9yeT4KPC90ZXN0c3VpdGU+Cjx0ZXN0c3VpdGUgbmFtZT0iZW5kLXRvLWVuZCI+CjxkaXJlY3Rvcnkgc3VmZml4PSIucGhwdCI+dGVzdHMvZW5kLXRvLWVuZDwvZGlyZWN0b3J5Pgo8ZXhjbHVkZT50ZXN0cy9lbmQtdG8tZW5kL19maWxlczwvZXhjbHVkZT4KPC90ZXN0c3VpdGU+CjwvdGVzdHN1aXRlcz4KPGZpbHRlcj4KPHdoaXRlbGlzdCBwcm9jZXNzVW5jb3ZlcmVkRmlsZXNGcm9tV2hpdGVsaXN0PSJ0cnVlIj4KPGRpcmVjdG9yeSBzdWZmaXg9Ii5waHAiPnNyYzwvZGlyZWN0b3J5Pgo8ZXhjbHVkZT4KPGZpbGU+c3JjL0ZyYW1ld29yay9Bc3NlcnQvRnVuY3Rpb25zLnBocDwvZmlsZT4KPGZpbGU+c3JjL1V0aWwvUEhQL2V2YWwtc3RkaW4ucGhwPC9maWxlPgo8L2V4Y2x1ZGU+Cjwvd2hpdGVsaXN0Pgo8L2ZpbHRlcj4KPHBocD4KPGNvbnN0IG5hbWU9IlBIUFVOSVRfVEVTVFNVSVRFIiB2YWx1ZT0idHJ1ZSIvPgo8L3BocD4KPC9waHB1bml0Pg==
+      name: phpunit XML file
+      description: "A phpunit XML file that sometimes gets scanned for."
+      content_type: text/xml; charset=UTF-8
+      server: Apache
+      status_code: "200"
+      created_at: 2024-01-12T12:50:17.445135Z
+      updated_at: 2024-01-12T17:50:17.444972Z
+      ext_version: 1
+      ext_uuid: 3e9c6425-59fd-4011-a93e-3ebba51acb78
+    - id: 99
+      name: 'Script: match php md5'
+      description: The payload expects a response that contains an MD5 hash of a string the payload sends. Additionally, some payloads also want to see the uname of the system.
+      content_type: text/plain; charset=UTF-8
+      server: Apache
+      status_code: "200"
+      script: "\nfunction __validate() {\n  // With php_uname()\n  request.body = \"<? md5(12345); echo strtoupper(php_uname('s'))  ?>\";\n  const err = createResponse();\n  \n  if (err != \"\") {\n    return err;\n  }\n\n\n  if (response.bodyString()  != '827ccb0eea8a706c4c34a16891f84e7bLINUX') {\n    return \"unexpected response: \" + response.bodyString();\n  }\n\n  // Without php_uname\n  request.body = \"<? md5(12345)?>\";\n  const err2 = createResponse();\n  if (err2 != \"\") {\n    return err2;\n  }\n\n  if (response.bodyString() != '827ccb0eea8a706c4c34a16891f84e7b') {\n    return \"unexpected response: \" + response.bodyString() ;\n  }\n\n  return \"\";\n}\n\nfunction createResponse() {\n\n  const regex = /md5\\([\"']?([\\w\\-\\_\\.]+)['\"]?\\)/;\n  const found = request.bodyString().match(regex);\n  if (!found || found.length != 2) {\n    return \"body did not match\";\n  }\n\n  let ret = util.crypto.md5sum(found[1]);\n  if (request.bodyString().includes(\"php_uname\")) {\n     ret = ret + 'LINUX';\n  }\n\n  response.setBody(ret)\n  return \"\";\n}"
+      created_at: 2024-01-10T12:01:03.050854Z
+      updated_at: 2024-09-13T16:20:12.594966Z
+      ext_version: 1
+      ext_uuid: 994f7577-a249-44e2-a17c-4ffd2978aefb

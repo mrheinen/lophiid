@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package api
 
 import (
@@ -44,6 +43,7 @@ type ApiClient[T any] interface {
 	GetDatamodelSegment(query string, offset, limit int) ([]T, error)
 	UpsertDataModel(dm T) (T, error)
 	DeleteDataModel(modelId int64) error
+	Import(data string) error
 }
 
 type FakeApiClient[T any] struct {
@@ -62,6 +62,10 @@ func (f *FakeApiClient[T]) UpsertDataModel(dm T) (T, error) {
 }
 
 func (f *FakeApiClient[T]) DeleteDataModel(modelId int64) error {
+	return f.ErrorToReturn
+}
+
+func (f *FakeApiClient[T]) Import(data string) error {
 	return f.ErrorToReturn
 }
 
@@ -195,6 +199,45 @@ func (a *GenericApiClient[T]) DeleteDataModel(modelId int64) error {
 
 	if httpRes.Status != ResultSuccess {
 		return fmt.Errorf("could not delete: %s", httpRes.Message)
+	}
+	return nil
+}
+
+func (a *GenericApiClient[T]) Import(data string) error {
+	payload := bytes.NewReader([]byte(data))
+
+	// Right now only the application API allows importing.
+	var check T
+	switch any(check).(type) {
+	case database.Application:
+		slog.Debug("Importing application")
+	default:
+		return fmt.Errorf("api does not support import: %s", a.apiLocation)
+	}
+
+	apiUrl := fmt.Sprintf("%s/import", a.apiLocation)
+
+	req, _ := http.NewRequest(http.MethodPost, apiUrl, payload)
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("API-Key", a.apiKey)
+
+	res, err := a.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("while submitting: %s", err)
+	}
+
+	defer res.Body.Close()
+
+	d := json.NewDecoder(res.Body)
+	d.DisallowUnknownFields()
+
+	var httpRes GenericHttpResult[T]
+	if err := d.Decode(&httpRes); err != nil {
+		return fmt.Errorf("when decoding: %w", err)
+	}
+
+	if httpRes.Status != ResultSuccess {
+		return fmt.Errorf("api call failed: %+v", httpRes)
 	}
 	return nil
 }

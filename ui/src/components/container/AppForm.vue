@@ -62,16 +62,6 @@
       </div>
 
       <div class="field">
-        <label class="label">Version</label>
-        <InputNumber
-        id="version"
-        type="text"
-        placeholder="The version of the app"
-        v-model="localApp.ext_version"
-        />
-      </div>
-
-      <div class="field">
         <label class="label">UUID</label>
         <InputText
         id="uuid"

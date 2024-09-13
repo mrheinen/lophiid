@@ -120,22 +120,6 @@
               checkmark :highlightOnSelect="true" />
             </div>
           </div>
-          <div class="column">
-            <div class="field">
-              <label class="label">Version</label>
-              <InputNumber
-              id="version"
-              type="text"
-              placeholder="The version of the rule"
-              v-model="localRule.ext_version"
-              />
-            </div>
-          </div>
-          <br/>
-        </div>
-
-        <div class="columns">
-          <div class="column">
             <div>
               <label class="label">UUID</label>
               <InputText
@@ -146,11 +130,9 @@
               v-model="localRule.ext_uuid"
               />
             </div>
-          </div>
-          <div class="column">
-          </div>
           <br/>
         </div>
+
         <br />
         <PrimeButton
         :label="localRule.id > 0 ? 'Submit' : 'Add'"

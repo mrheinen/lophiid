@@ -33,15 +33,6 @@
         />
       </div>
 
-      <div>
-        <label class="label">Version</label>
-        <InputNumber
-          id="version"
-          type="text"
-          placeholder="The version of the content"
-          v-model="localContent.ext_version"
-        />
-      </div>
       <br/>
 
       <input v-if="!scriptMode" type="file" @change="handleFileUpload" />
