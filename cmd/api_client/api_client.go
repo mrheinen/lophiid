@@ -59,14 +59,19 @@ func GetFilesRecursivelyFromDir(dir string) ([]string, error) {
 	var retFiles []string
 	err := filepath.WalkDir(dir, func(s string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("error accessing path %q: %w", s, err)
 		}
 		if !d.IsDir() {
 			retFiles = append(retFiles, s)
 		}
 		return nil
 	})
-	return retFiles, err
+
+	if err != nil {
+		return retFiles, fmt.Errorf("error walking directory %q: %w", dir, err)
+	}
+
+	return retFiles, nil
 }
 
 func main() {
