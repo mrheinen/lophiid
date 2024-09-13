@@ -11,6 +11,7 @@
           <th>Version</th>
           <th>Vendor</th>
           <th>OS</th>
+          <th>Action</th>
         </thead>
         <tbody>
           <tr
@@ -24,6 +25,14 @@
             <td>{{ app.version }}</td>
             <td>{{ app.vendor }}</td>
             <td>{{ app.os }}</td>
+            <td>
+              <a :href="'/rules?q=app_id:' + app.id">
+                <i
+                  title="View rules for this app"
+                  class="pi pi-search"
+                ></i>
+              </a>
+            </td>
           </tr>
         </tbody>
       </table>
