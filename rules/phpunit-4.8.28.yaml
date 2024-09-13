@@ -25,7 +25,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: b81b67a1-ad4a-4ab9-97c9-bf39dd952612
-      requestpurpose: UNKNOWN
+      requestpurpose: RECON
     - id: 80
       uri: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
       method: POST
