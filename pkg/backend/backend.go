@@ -676,6 +676,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	sReq.ContentID = matchedRule.ContentID
 	sReq.RuleID = matchedRule.ID
+	sReq.RuleUuid = matchedRule.ExtUuid
 
 	slog.Debug("Fetching content", slog.Int64("content_id", matchedRule.ContentID))
 	content, err := s.dbClient.GetContentByID(matchedRule.ContentID)

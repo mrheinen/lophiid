@@ -27,6 +27,7 @@ import (
 
 	"lophiid/pkg/util"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vingarcia/ksql"
 	"gopkg.in/yaml.v3"
@@ -55,6 +56,7 @@ type ExternalDataModel interface {
 	ModelID() int64
 	ExternalVersion() int64
 	ExternalUuid() string
+	SetExternalUuid(uuid string)
 	SetModelID(id int64)
 }
 
@@ -99,10 +101,12 @@ const (
 	RuleRequestPurposeCrawl   = "CRAWL"
 )
 
-func (c *Content) ModelID() int64         { return c.ID }
-func (c *Content) ExternalVersion() int64 { return c.ExtVersion }
-func (c *Content) ExternalUuid() string   { return c.ExtUuid }
-func (c *Content) SetModelID(id int64)    { c.ID = id }
+func (c *Content) ModelID() int64              { return c.ID }
+func (c *Content) ExternalVersion() int64      { return c.ExtVersion }
+func (c *Content) ExternalUuid() string        { return c.ExtUuid }
+func (c *Content) SetExternalUuid(uuid string) { c.ExtUuid = uuid }
+
+func (c *Content) SetModelID(id int64) { c.ID = id }
 
 type ContentRule struct {
 	ID           int64  `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
@@ -134,10 +138,11 @@ type ContentRule struct {
 	RequestPurpose string `ksql:"request_purpose" json:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
 }
 
-func (c *ContentRule) ModelID() int64         { return c.ID }
-func (c *ContentRule) ExternalVersion() int64 { return c.ExtVersion }
-func (c *ContentRule) ExternalUuid() string   { return c.ExtUuid }
-func (c *ContentRule) SetModelID(id int64)    { c.ID = id }
+func (c *ContentRule) ModelID() int64              { return c.ID }
+func (c *ContentRule) ExternalVersion() int64      { return c.ExtVersion }
+func (c *ContentRule) ExternalUuid() string        { return c.ExtUuid }
+func (c *ContentRule) SetExternalUuid(uuid string) { c.ExtUuid = uuid }
+func (c *ContentRule) SetModelID(id int64)         { c.ID = id }
 
 type Request struct {
 	ID             int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the request"`
@@ -165,6 +170,7 @@ type Request struct {
 	ContentID      int64                    `ksql:"content_id" json:"content_id" doc:"The Content ID that was served"`
 	ContentDynamic bool                     `ksql:"content_dynamic" json:"content_dynamic" doc:"A bool indicating if the Content is dynamic (script based)"`
 	RuleID         int64                    `ksql:"rule_id" json:"rule_id" doc:"The ID of the rule that matched this request"`
+	RuleUuid       string                   `ksql:"rule_uuid" json:"rule_uuid" doc:"The UUID of the rule that matched this request"`
 	Starred        bool                     `ksql:"starred" json:"starred" doc:"A bool if the request is starred"`
 	BaseHash       string                   `ksql:"base_hash" json:"base_hash" doc:"A base hash to find similar requests"`
 	Tags           []TagPerRequestFull      `json:"tags"`
@@ -223,10 +229,11 @@ type Application struct {
 	ExtUuid    string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID"`
 }
 
-func (c *Application) ModelID() int64         { return c.ID }
-func (c *Application) ExternalVersion() int64 { return c.ExtVersion }
-func (c *Application) ExternalUuid() string   { return c.ExtUuid }
-func (c *Application) SetModelID(id int64)    { c.ID = id }
+func (c *Application) ModelID() int64              { return c.ID }
+func (c *Application) ExternalVersion() int64      { return c.ExtVersion }
+func (c *Application) ExternalUuid() string        { return c.ExtUuid }
+func (c *Application) SetModelID(id int64)         { c.ID = id }
+func (c *Application) SetExternalUuid(uuid string) { c.ExtUuid = uuid }
 
 type Download struct {
 	ID                      int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the download"`
@@ -370,8 +377,11 @@ type TagPerRequestFull struct {
 type DatabaseClient interface {
 	Close()
 	Insert(dm DataModel) (DataModel, error)
+	InsertExternalModel(dm ExternalDataModel) (DataModel, error)
+
 	Update(dm DataModel) error
 	Delete(dm DataModel) error
+
 	GetAppByID(id int64) (Application, error)
 	SearchApps(offset int64, limit int64, query string) ([]Application, error)
 	GetContentByID(id int64) (Content, error)
@@ -529,6 +539,21 @@ func (d *KSQLClient) Insert(dm DataModel) (DataModel, error) {
 	t := d.getTableForModel(dm)
 	if t == nil {
 		return dm, fmt.Errorf("unknown datamodel: %v", dm)
+	}
+	err := d.db.Insert(d.ctx, *t, dm)
+	return dm, err
+}
+
+// InsertExternalModel inserts the model in the database and makes sure the uuid
+// field is actually set.
+func (d *KSQLClient) InsertExternalModel(dm ExternalDataModel) (DataModel, error) {
+	t := d.getTableForModel(dm)
+	if t == nil {
+		return dm, fmt.Errorf("unknown datamodel: %v", dm)
+	}
+
+	if dm.ExternalUuid() == "" {
+		dm.SetExternalUuid(uuid.NewString())
 	}
 	err := d.db.Insert(d.ctx, *t, dm)
 	return dm, err
@@ -927,28 +952,29 @@ func (d *KSQLClient) DeleteContentRule(id int64) error {
 // FakeDatabaseClient is a struct specifically for testing users of the
 // DatabaseClient interface
 type FakeDatabaseClient struct {
-	ContentIDToReturn      int64
-	ContentsToReturn       map[int64]Content
-	ErrorToReturn          error
-	ContentRuleIDToReturn  int64
-	ContentRulesToReturn   []ContentRule
-	RequestsToReturn       []Request
-	RequestToReturn        Request
-	DownloadsToReturn      []Download
-	ApplicationToReturn    Application
-	HoneypotToReturn       Honeypot
-	HoneypotErrorToReturn  error
-	QueriesToReturn        []StoredQuery
-	QueriesToReturnError   error
-	TagPerQueryReturn      []TagPerQuery
-	TagPerQueryReturnError error
-	WhoisToReturn          Whois
-	WhoisErrorToReturn     error
-	LastDataModelSeen      interface{}
-	P0fResultToReturn      P0fResult
-	P0fErrorToReturn       error
-	IpEventToReturn        IpEvent
-	DataModelToReturn      DataModel
+	ContentIDToReturn         int64
+	ContentsToReturn          map[int64]Content
+	ErrorToReturn             error
+	ContentRuleIDToReturn     int64
+	ContentRulesToReturn      []ContentRule
+	RequestsToReturn          []Request
+	RequestToReturn           Request
+	DownloadsToReturn         []Download
+	ApplicationToReturn       Application
+	HoneypotToReturn          Honeypot
+	HoneypotErrorToReturn     error
+	QueriesToReturn           []StoredQuery
+	QueriesToReturnError      error
+	TagPerQueryReturn         []TagPerQuery
+	TagPerQueryReturnError    error
+	WhoisToReturn             Whois
+	WhoisErrorToReturn        error
+	LastDataModelSeen         interface{}
+	LastExternalDataModelSeen interface{}
+	P0fResultToReturn         P0fResult
+	P0fErrorToReturn          error
+	IpEventToReturn           IpEvent
+	DataModelToReturn         DataModel
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -964,6 +990,10 @@ func (f *FakeDatabaseClient) GetContentByID(id int64) (Content, error) {
 }
 func (f *FakeDatabaseClient) Insert(dm DataModel) (DataModel, error) {
 	f.LastDataModelSeen = dm
+	return dm, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) InsertExternalModel(dm ExternalDataModel) (DataModel, error) {
+	f.LastExternalDataModelSeen = dm
 	return dm, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) Update(dm DataModel) error {

@@ -54,14 +54,14 @@
                   {{ rule.content_id }}</a
                 >
               </td>
-
               <td>
-                <a :href="'/requests?q=rule_id:' + rule.id">
+                <a :href="'/requests?q=rule_uuid:' + rule.ext_uuid">
                   <i
                     title="View requests that matched this rule"
                     class="pi pi-search"
                   ></i>
                 </a>
+
                 &nbsp;
                 <i
                   @click="toggleAlert(rule)"

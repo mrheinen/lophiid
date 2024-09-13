@@ -158,7 +158,7 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	}
 
 	if rb.ID == 0 {
-		dm, err := a.dbc.Insert(&rb)
+		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
 			errMsg := fmt.Sprintf("unable to update %d: %s", dm.ModelID(), err.Error())
 			a.sendStatus(w, errMsg, ResultError, nil)
@@ -287,7 +287,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 
 	if rb.ID == 0 {
 		// This is an insert
-		dm, err := a.dbc.Insert(&rb)
+		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
 			a.sendStatus(w, fmt.Sprintf("unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
 			return
@@ -388,7 +388,7 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 
 	if rb.ID == 0 {
 		// This is an insert
-		dm, err := a.dbc.Insert(&rb)
+		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
 			a.sendStatus(w, fmt.Sprintf("unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
 			return
