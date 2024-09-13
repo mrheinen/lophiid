@@ -66,7 +66,6 @@ CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  host            VARCHAR(512) NOT NULL,
   uri             VARCHAR(2048) NOT NULL,
   uri_matching    MATCHING_TYPE,
   body            VARCHAR(2048),

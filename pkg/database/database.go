@@ -112,7 +112,6 @@ func (c *Content) SetModelID(id int64) { c.ID = id }
 
 type ContentRule struct {
 	ID           int64  `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
-	Host         string `ksql:"host" json:"host"`
 	Uri          string `ksql:"uri" json:"uri"           doc:"The URI matching string"`
 	Body         string `ksql:"body" json:"body"         doc:"The body matching string"`
 	Method       string `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
