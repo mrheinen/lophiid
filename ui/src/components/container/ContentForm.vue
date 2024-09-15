@@ -21,6 +21,20 @@
           cols="40"
         />
       </div>
+
+      <div>
+        <label class="label">UUID</label>
+        <InputText
+          id="uuid"
+          type="text"
+          disabled
+          placeholder="The UUID of the content"
+          v-model="localContent.ext_uuid"
+        />
+      </div>
+
+      <br/>
+
       <input v-if="!scriptMode" type="file" @change="handleFileUpload" />
       <div v-if="scriptMode">
         <label class="label">Content Script</label>

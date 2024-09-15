@@ -60,7 +60,29 @@
           v-model="localApp.link"
         />
       </div>
-    <br/>
+
+      <div>
+        <label class="label">CVEs</label>
+        <TextArea
+          v-model="cves"
+          autoResize
+          rows="4"
+          cols="25"
+        />
+      </div>
+
+      <div class="field">
+        <label class="label">UUID</label>
+        <InputText
+        id="uuid"
+        type="text"
+        disabled
+        placeholder="The UUID of the app"
+        v-model="localApp.ext_uuid"
+        />
+      </div>
+
+      <br/>
 
     <PrimeButton
       :label="localApp.id > 0 ? 'Submit' : 'Add'"
@@ -124,6 +146,11 @@
 
 import ImportAppForm from './ImportAppForm.vue';
 
+function isCVE(str) {
+  const cveRegex = /^CVE-\d{4}-\d{4,7}$/i;
+  return cveRegex.test(str);
+}
+
 export default {
   components: {
     ImportAppForm,
@@ -133,6 +160,7 @@ export default {
   inject: ["config"],
   data() {
     return {
+      cves: "",
       localApp: {},
       importFormVisible: false,
     };
@@ -153,6 +181,7 @@ export default {
     },
     resetForm() {
       this.localApp = {};
+      this.cves = "";
     },
     onImportDone() {
       this.$emit("update-app");
@@ -168,6 +197,28 @@ export default {
       const appToSubmit = Object.assign({}, this.localApp);
       // Remove the added fields.
       delete appToSubmit.parsed;
+
+      appToSubmit.cves = []
+      if (this.cves != "") {
+        var allCves = this.cves.split("\n");
+        if (!allCves || allCves.length == 0) {
+          if (!isCVE(this.cves)) {
+            this.$toast.error("Please provide a valid CVE");
+            return
+          }
+          allCves.push(this.cves);
+        }
+
+        allCves.forEach((cve) => {
+          if (cve != "") {
+            if (!isCVE(this.cves)) {
+              this.$toast.error("Please provide valid CVEs");
+              return
+            }
+            appToSubmit.cves.push(cve);
+          }
+        });
+      }
 
       fetch(this.config.backendAddress + "/app/upsert", {
         method: "POST",
@@ -248,8 +299,8 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error("Could not export app");
           } else {
-            var filename = response.data.App['name'] + '-' + response.data.App['version'];
-            const blob = new Blob([JSON.stringify(response.data)], { type: 'application/json' })
+            var filename = response.data['name'] + '-' + response.data['version'] + '.yaml';
+            const blob = new Blob([response.data['yaml']], { type: 'application/yaml' })
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = filename;
@@ -264,6 +315,17 @@ export default {
   watch: {
     app() {
       this.localApp = Object.assign({}, this.app);
+
+      var tmpCves = "";
+      this.cves = "";
+      if (this.localApp.cves) {
+        var prefix = "";
+        this.localApp.cves.forEach((cve) => {
+          tmpCves += prefix + cve;
+          prefix = "\n";
+        });
+        this.cves = tmpCves;
+      }
     },
   },
   created() {

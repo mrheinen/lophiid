@@ -524,7 +524,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	s.metrics.downloadResponseTime.Observe(req.GetInfo().GetDurationSec())
 
 	dms, err := s.dbClient.SearchDownloads(0, 1, fmt.Sprintf("sha256sum:%s", dInfo.SHA256sum))
-	if len(dms) == 1 && err == nil {
+	if len(dms) == 1 {
 		dm := dms[0]
 		dm.TimesSeen = dm.TimesSeen + 1
 		dm.LastRequestID = req.RequestId
@@ -553,7 +553,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 		return &backend_service.UploadFileResponse{}, nil
 	}
 
-	if !errors.Is(err, ksql.ErrRecordNotFound) {
+	if err != nil && !errors.Is(err, ksql.ErrRecordNotFound) {
 		slog.Warn("unexpected database error", slog.String("error", err.Error()))
 		return &backend_service.UploadFileResponse{}, status.Errorf(codes.Internal, "unexpected database error: %s", err)
 	}
@@ -676,6 +676,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	sReq.ContentID = matchedRule.ContentID
 	sReq.RuleID = matchedRule.ID
+	sReq.RuleUuid = matchedRule.ExtUuid
 
 	slog.Debug("Fetching content", slog.Int64("content_id", matchedRule.ContentID))
 	content, err := s.dbClient.GetContentByID(matchedRule.ContentID)

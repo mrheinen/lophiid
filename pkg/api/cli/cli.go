@@ -25,6 +25,7 @@ import (
 	"lophiid/pkg/util"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -194,4 +195,18 @@ func (a *ApiCLI) FetchUrlToContent(namePrefix string, targetUrl string) (databas
 		retContent.ContentType = "text/plain"
 	}
 	return retContent, nil
+}
+
+func (a *ApiCLI) ImportApp(appFile string) error {
+	data, err := os.ReadFile(appFile)
+	if err != nil {
+		return fmt.Errorf("error reading file: %w", err)
+	}
+
+	err = a.appAPI.Import(string(data))
+	if err != nil {
+		return fmt.Errorf("error importing app: %w", err)
+	}
+
+	return nil
 }

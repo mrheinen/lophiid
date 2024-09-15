@@ -19,6 +19,7 @@ go_library(
 go_test(
     name = "util_test",
     srcs = [
+        "general_test.go",
         "net_test.go",
         "string_map_cache_test.go",
         "versioning_test.go",

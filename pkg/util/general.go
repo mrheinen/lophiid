@@ -19,6 +19,8 @@ package util
 import (
 	"os"
 	"reflect"
+	"regexp"
+	"strings"
 )
 
 func GetStructName(m interface{}) string {
@@ -35,4 +37,10 @@ func ReadFileToString(filePath string) (string, error) {
 		return "", err
 	}
 	return string(data), nil
+}
+
+func IsValidUUID(uuid string) bool {
+	pattern := "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+	match, _ := regexp.MatchString(pattern, strings.ToLower(uuid))
+	return match
 }

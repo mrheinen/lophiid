@@ -1,7 +1,10 @@
 <template>
   <div class="card">
     <FieldSet legend="Import app with rules" :toggleable="false">
-     <input type="file" @change="handleFileUpload" />
+     <p>Select a yaml file to import an app with all it's rules and contents.</p>
+     <p>You should only import trusted files and verify them manually before importing them.</p>
+     <br/>
+     <input type="file" @change="handleFileUpload" accept=".yaml,.yml"  />
     </FieldSet>
 
     <PrimeButton
@@ -47,6 +50,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "API-Key": this.$store.getters.apiToken,
           },
           body: this.localData,
         })

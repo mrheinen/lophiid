@@ -24,4 +24,14 @@ export function copyToClipboardHelper(textToCopy) {
     }
   }
 
+export function truncateString(str, maxlen) {
+  if (str.length > maxlen) {
+    return str.substring(0, maxlen) + "...";
+  }
+  return str;
+}
 
+export function dateToString(inDate) {
+  const nd = new Date(Date.parse(inDate));
+  return nd.toLocaleString();
+}

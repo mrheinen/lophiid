@@ -54,14 +54,14 @@
                   {{ rule.content_id }}</a
                 >
               </td>
-
               <td>
-                <a :href="'/requests?q=rule_id:' + rule.id">
+                <a :href="'/requests?q=rule_uuid:' + rule.ext_uuid">
                   <i
                     title="View requests that matched this rule"
                     class="pi pi-search"
                   ></i>
                 </a>
+
                 &nbsp;
                 <i
                   @click="toggleAlert(rule)"
@@ -105,17 +105,9 @@
 </template>
 
 <script>
-function dateToString(inDate) {
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleString();
-}
 
-function truncateString(str, maxlen) {
-  if (str.length > maxlen) {
-    return str.substring(0, maxlen) + "...";
-  }
-  return str;
-}
+import { truncateString, dateToString } from "../../helpers.js";
+
 import RuleForm from "./RuleForm.vue";
 import ContentForm from "./ContentForm.vue";
 import AppForm from "./AppForm.vue";

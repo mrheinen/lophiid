@@ -14,13 +14,14 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package api
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -80,4 +81,46 @@ func TestGenericClientSegment(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGenericClientImport(t *testing.T) {
+	client := NewTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString("{\"status\":\"OK\",\"message\":\"\",\"data\":[ {\"id\":153} ]}")),
+		}
+	})
+
+	contentApiClient := NewContentApiClient(client, "http://localhost", "AAAA")
+	appApiClient := NewApplicationApiClient(client, "http://localhost", "AAAA")
+
+	if err := contentApiClient.Import(""); err == nil {
+		t.Errorf("expected error, got none")
+	}
+
+	if err := appApiClient.Import(""); err != nil {
+		t.Errorf("got unexpected error %s", err)
+	}
+}
+
+func TestGenericClientImportHttpError(t *testing.T) {
+	httpErrorCode := 403
+	client := NewTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: httpErrorCode,
+			Body:       io.NopCloser(bytes.NewBufferString("")),
+		}
+	})
+
+	appApiClient := NewApplicationApiClient(client, "http://localhost", "AAAA")
+
+	err := appApiClient.Import("")
+	if err == nil {
+		t.Errorf("expected error, got none")
+	}
+
+	if !strings.Contains(err.Error(), fmt.Sprintf("%d", httpErrorCode)) {
+		t.Errorf("expected error code %d, got %s", httpErrorCode, err)
+	}
+
 }
