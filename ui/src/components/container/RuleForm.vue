@@ -190,7 +190,6 @@ export default {
       localRule: {
         uri_matching: "exact",
         body_matching: "exact",
-        host: "",
         method: "ANY",
       },
       appValues: [],
