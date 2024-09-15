@@ -133,6 +133,7 @@ CREATE TABLE app (
   updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   ext_version  INT DEFAULT 1,
   ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
+  cves            VARCHAR(15) ARRAY
 );
 
 

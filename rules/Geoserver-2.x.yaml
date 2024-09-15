@@ -9,6 +9,8 @@ app:
     updated_at: 2024-09-14T19:58:56.32021Z
     ext_version: 1
     ext_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+    cves:
+      - CVE-2024-36401
 rules:
     - id: 307
       uri: /geoserver/wfs?service=WFS&version=2.0.0&request=GetPropertyValue&typeNames=sf:archsites&valueReference=

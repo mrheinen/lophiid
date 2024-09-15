@@ -9,6 +9,8 @@ app:
     updated_at: 2024-09-13T16:11:25.028628Z
     ext_version: 1
     ext_uuid: e57fc09b-7b0c-4fe2-a38f-74d24044f1c5
+    cves:
+      - CVE-2017-9841
 rules:
     - id: 82
       uri: /vendor/phpunit/phpunit/phpunit.xml

@@ -9,6 +9,8 @@ app:
     updated_at: 2024-09-13T18:55:27.530016Z
     ext_version: 1
     ext_uuid: 6cbb2aae-92f8-4cec-a493-9885d2c0aa98
+    cves:
+      - CVE-2023-42793
 rules:
     - id: 250
       uri: /hax?jsp=/app/rest/debug/jvm/systemProperties;.jsp
