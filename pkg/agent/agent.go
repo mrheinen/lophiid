@@ -205,8 +205,6 @@ func (a *Agent) SendContext() error {
 			},
 		}
 
-		fmt.Printf("Sending context: %+v\n", &req)
-
 		if _, err = a.backendClient.SendSourceContext(&req); err != nil {
 			slog.Warn("error sending context RPC", slog.String("error", err.Error()))
 			// Continue and try to submit the others. Because in this case the cahce

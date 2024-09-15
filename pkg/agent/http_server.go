@@ -126,7 +126,7 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 
 	raw, err := httputil.DumpRequest(r, true)
 	if err != nil {
-		fmt.Printf("Problem decoding requests: %s", err)
+		slog.Error("Problem decoding requests", slog.String("error", err.Error()), slog.String("request", fmt.Sprintf("%+#v", r)))
 	}
 
 	pr := &backend_service.HandleProbeRequest{
@@ -177,7 +177,7 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 	if r.Body != nil {
 		b, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.Printf("parsing body: %s", err)
+			slog.Error("unable to parse body", slog.String("error", err.Error()))
 		} else {
 			pr.Request.Body = b
 		}
@@ -192,11 +192,10 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("got request for: %s\n", pr.RequestUri)
+	slog.Debug("got new request", slog.String("request_uri", pr.RequestUri))
 
 	if res == nil || res.Response == nil {
-		fmt.Printf("Got nil ? Res: %+v, ProbeRequest: %+v\n", res, pr)
-		fmt.Printf("HTTP request: %+v\n", r)
+		slog.Error("got nil!!", slog.String("response", fmt.Sprintf("%+v", res)), slog.String("probe_request", fmt.Sprintf("%+v", pr)))
 		return
 	}
 
