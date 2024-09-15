@@ -25,7 +25,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: b81b67a1-ad4a-4ab9-97c9-bf39dd952612
-      requestpurpose: RECON
+      request_purpose: RECON
     - id: 80
       uri: /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php
       method: POST
@@ -41,7 +41,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: 6fcf2605-05c6-466a-a1f6-bf0d40c5994f
-      requestpurpose: ATTACK
+      request_purpose: ATTACK
 contents:
     - id: 101
       data: PHBocHVuaXQgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOm5vTmFtZXNwYWNlU2NoZW1hTG9jYXRpb249InBocHVuaXQueHNkIiBib290c3RyYXA9InRlc3RzL2Jvb3RzdHJhcC5waHAiIGNvbG9ycz0idHJ1ZSIgdmVyYm9zZT0idHJ1ZSI+Cjx0ZXN0c3VpdGVzPgo8dGVzdHN1aXRlIG5hbWU9InVuaXQiPgo8ZGlyZWN0b3J5PnRlc3RzL3VuaXQ8L2RpcmVjdG9yeT4KPC90ZXN0c3VpdGU+Cjx0ZXN0c3VpdGUgbmFtZT0iZW5kLXRvLWVuZCI+CjxkaXJlY3Rvcnkgc3VmZml4PSIucGhwdCI+dGVzdHMvZW5kLXRvLWVuZDwvZGlyZWN0b3J5Pgo8ZXhjbHVkZT50ZXN0cy9lbmQtdG8tZW5kL19maWxlczwvZXhjbHVkZT4KPC90ZXN0c3VpdGU+CjwvdGVzdHN1aXRlcz4KPGZpbHRlcj4KPHdoaXRlbGlzdCBwcm9jZXNzVW5jb3ZlcmVkRmlsZXNGcm9tV2hpdGVsaXN0PSJ0cnVlIj4KPGRpcmVjdG9yeSBzdWZmaXg9Ii5waHAiPnNyYzwvZGlyZWN0b3J5Pgo8ZXhjbHVkZT4KPGZpbGU+c3JjL0ZyYW1ld29yay9Bc3NlcnQvRnVuY3Rpb25zLnBocDwvZmlsZT4KPGZpbGU+c3JjL1V0aWwvUEhQL2V2YWwtc3RkaW4ucGhwPC9maWxlPgo8L2V4Y2x1ZGU+Cjwvd2hpdGVsaXN0Pgo8L2ZpbHRlcj4KPHBocD4KPGNvbnN0IG5hbWU9IlBIUFVOSVRfVEVTVFNVSVRFIiB2YWx1ZT0idHJ1ZSIvPgo8L3BocD4KPC9waHB1bml0Pg==

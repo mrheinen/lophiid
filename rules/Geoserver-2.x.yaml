@@ -25,7 +25,7 @@ rules:
       alert: false
       ext_version: 0
       ext_uuid: 75fe1ae2-7f53-47b0-a847-55dc1d1c2683
-      requestpurpose: ATTACK
+      request_purpose: ATTACK
     - id: 287
       uri: /geoserver/wfs
       method: GET
@@ -41,7 +41,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: 04272895-6789-47fb-a57f-4fe11d02bceb
-      requestpurpose: UNKNOWN
+      request_purpose: UNKNOWN
     - id: 286
       uri: /geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage
       method: GET
@@ -57,7 +57,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: b6e54851-d501-4ee5-92a9-9d9b823db6b2
-      requestpurpose: UNKNOWN
+      request_purpose: UNKNOWN
     - id: 285
       uri: /geoserver/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage
       method: GET
@@ -73,7 +73,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: 63900cda-baa7-4070-8aa6-edb7032a02c7
-      requestpurpose: UNKNOWN
+      request_purpose: UNKNOWN
     - id: 284
       uri: /geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage?2&filter=false
       method: GET
@@ -89,7 +89,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: abf0bd64-7650-48a6-a87f-9182e0fa1a18
-      requestpurpose: UNKNOWN
+      request_purpose: UNKNOWN
     - id: 283
       uri: /geoserver/web
       method: GET
@@ -105,7 +105,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: d9d4955a-4f72-4761-833b-dab197bec07e
-      requestpurpose: UNKNOWN
+      request_purpose: UNKNOWN
     - id: 282
       uri: /geoserver/web/?1
       method: GET
@@ -121,7 +121,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: 834d24e6-280d-4f4e-9ca0-7781a21c4a9b
-      requestpurpose: UNKNOWN
+      request_purpose: UNKNOWN
     - id: 281
       uri: /
       method: GET
@@ -137,7 +137,7 @@ rules:
       alert: false
       ext_version: 1
       ext_uuid: 9aaf9b80-df6e-4f8e-b25d-90300143e935
-      requestpurpose: UNKNOWN
+      request_purpose: UNKNOWN
 contents:
     - id: 283
       name: Geoserver - /geoserver/web/
