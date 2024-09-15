@@ -91,6 +91,7 @@ the search bar.
 | Keyword | Type | Description |
 | --- | --- | --- |
 | created_at | Time | Date and time of creation |
+| cves | FlatArray[string] | Related Mitre CVEs |
 | ext_uuid | string | The external unique ID |
 | ext_version | int64 | The external numerical version |
 | id | int64 | The ID of the application |

@@ -1,0 +1,261 @@
+app:
+    id: 106
+    name: Geoserver
+    version: 2.x
+    vendor: Geoserver
+    os: Linux
+    link: https://geoserver.org/
+    created_at: 2024-09-03T12:24:40.724045Z
+    updated_at: 2024-09-14T19:58:56.32021Z
+    ext_version: 1
+    ext_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+    cves:
+      - CVE-2024-36401
+rules:
+    - id: 307
+      uri: /geoserver/wfs?service=WFS&version=2.0.0&request=GetPropertyValue&typeNames=sf:archsites&valueReference=
+      method: ANY
+      port: 0
+      uri_matching: prefix
+      body_matching: none
+      content_id: 312
+      app_id: 106
+      app_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+      content_uuid: 2001a0bc-b34b-4a57-a6f8-4582b1e54b08
+      created_at: 2024-09-14T19:55:25.394817Z
+      updated_at: 2024-09-14T19:56:09.209806Z
+      alert: false
+      ext_version: 0
+      ext_uuid: 75fe1ae2-7f53-47b0-a847-55dc1d1c2683
+      request_purpose: ATTACK
+    - id: 287
+      uri: /geoserver/wfs
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 288
+      app_id: 106
+      app_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+      content_uuid: b078d5f0-f05b-468e-b2ba-05bd41c8a08c
+      created_at: 2024-09-03T16:29:35.416105Z
+      updated_at: 2024-09-03T16:29:35.416079Z
+      alert: false
+      ext_version: 1
+      ext_uuid: 04272895-6789-47fb-a57f-4fe11d02bceb
+      request_purpose: UNKNOWN
+    - id: 286
+      uri: /geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 287
+      app_id: 106
+      app_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+      content_uuid: ad5d9e89-9ae6-4c3c-ac3c-d19028e5775b
+      created_at: 2024-09-03T16:28:57.775764Z
+      updated_at: 2024-09-03T16:28:57.775622Z
+      alert: false
+      ext_version: 1
+      ext_uuid: b6e54851-d501-4ee5-92a9-9d9b823db6b2
+      request_purpose: UNKNOWN
+    - id: 285
+      uri: /geoserver/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 286
+      app_id: 106
+      app_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+      content_uuid: 849e6786-6595-415c-adde-b2bdc4b76e59
+      created_at: 2024-09-03T16:28:32.627023Z
+      updated_at: 2024-09-03T16:28:32.626998Z
+      alert: false
+      ext_version: 1
+      ext_uuid: 63900cda-baa7-4070-8aa6-edb7032a02c7
+      request_purpose: UNKNOWN
+    - id: 284
+      uri: /geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage?2&filter=false
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 285
+      app_id: 106
+      app_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+      content_uuid: 78e9fb76-2c38-4e1c-a927-5836f63f1a8a
+      created_at: 2024-09-03T16:27:51.409741Z
+      updated_at: 2024-09-03T16:27:51.40959Z
+      alert: false
+      ext_version: 1
+      ext_uuid: abf0bd64-7650-48a6-a87f-9182e0fa1a18
+      request_purpose: UNKNOWN
+    - id: 283
+      uri: /geoserver/web
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 284
+      app_id: 106
+      app_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+      content_uuid: 90f2af95-e2db-4ebe-a3c4-669ef6930e89
+      created_at: 2024-09-03T16:27:29.3828Z
+      updated_at: 2024-09-03T16:27:29.382711Z
+      alert: false
+      ext_version: 1
+      ext_uuid: d9d4955a-4f72-4761-833b-dab197bec07e
+      request_purpose: UNKNOWN
+    - id: 282
+      uri: /geoserver/web/?1
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 283
+      app_id: 106
+      app_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+      content_uuid: 716ad4c3-ad66-45d4-98c0-e2d840f05e02
+      created_at: 2024-09-03T16:27:26.905318Z
+      updated_at: 2024-09-03T16:27:26.905274Z
+      alert: false
+      ext_version: 1
+      ext_uuid: 834d24e6-280d-4f4e-9ca0-7781a21c4a9b
+      request_purpose: UNKNOWN
+    - id: 281
+      uri: /
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 282
+      app_id: 106
+      app_uuid: 34ca88eb-a857-4d7e-acbb-2b061eb97ce7
+      content_uuid: 8c67fa4b-9727-4891-b377-19cda90f8f7e
+      created_at: 2024-09-03T16:26:30.701647Z
+      updated_at: 2024-09-03T16:26:30.70162Z
+      alert: false
+      ext_version: 1
+      ext_uuid: 9aaf9b80-df6e-4f8e-b25d-90300143e935
+      request_purpose: UNKNOWN
+contents:
+    - id: 283
+      name: Geoserver - /geoserver/web/
+      description: 'Fetched from URL: http://127.0.0.1:8222/geoserver/web/?1'
+      content_type: text/plain
+      server: Jetty(9.4.51.v20230217)
+      status_code: "302"
+      headers:
+        - 'Set-Cookie: JSESSIONID=node01q6qolue8fy87120kj7aqjpm0s2.node0; Path=/geoserver'
+        - 'Location: http://127.0.0.1:8222/geoserver/web/'
+        - 'Pragma: no-cache'
+        - 'Cache-Control: no-cache, no-store'
+        - 'Content-Length: 0'
+        - 'X-Frame-Options: SAMEORIGIN'
+      created_at: 2024-09-03T16:27:26.901076Z
+      updated_at: 2024-09-03T16:27:26.90105Z
+      ext_version: 1
+      ext_uuid: 716ad4c3-ad66-45d4-98c0-e2d840f05e02
+    - id: 282
+      data: PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+Cjx0aXRsZT5FcnJvciA0MDQgLSBOb3QgRm91bmQ8L3RpdGxlPgo8bWV0YSBjaGFyc2V0PSJ1dGYtOCI+CjxzdHlsZT5ib2R5IHsgZm9udC1mYW1pbHk6IHNhbnMtc2VyaWY7IH0gdGFibGUsIHRkIHsgYm9yZGVyOiAxcHggc29saWQgIzMzMzsgfSB0ZCwgdGggeyBwYWRkaW5nOiA1cHg7IH0gdGhlYWQsIHRmb290IHsgYmFja2dyb3VuZC1jb2xvcjogIzMzMzsgY29sb3I6ICNmZmY7IH0gPC9zdHlsZT4KPC9oZWFkPgo8Ym9keT4KPGgyPkVycm9yIDQwNCAtIE5vdCBGb3VuZC48L2gyPgo8cD5ObyBjb250ZXh0IG9uIHRoaXMgc2VydmVyIG1hdGNoZWQgb3IgaGFuZGxlZCB0aGlzIHJlcXVlc3QuPC9wPgo8cD5Db250ZXh0cyBrbm93biB0byB0aGlzIHNlcnZlciBhcmU6PC9wPgo8dGFibGUgY2xhc3M9ImNvbnRleHRzIj48dGhlYWQ+PHRyPjx0aD5Db250ZXh0IFBhdGg8L3RoPjx0aD5EaXNwbGF5IE5hbWU8L3RoPjx0aD5TdGF0dXM8L3RoPjx0aD5MaWZlQ3ljbGU8L3RoPjwvdHI+PC90aGVhZD48dGJvZHk+Cjx0cj48dGQ+PGEgaHJlZj0iL2dlb3NlcnZlci8iPi9nZW9zZXJ2ZXI8L2E+PC90ZD48dGQ+R2VvU2VydmVyJm5ic3A7PC90ZD48dGQ+QXZhaWxhYmxlPC90ZD48dGQ+U1RBUlRFRDwvdGQ+PC90cj4KPC90Ym9keT48L3RhYmxlPjxoci8+CjxhIGhyZWY9Imh0dHBzOi8vZWNsaXBzZS5vcmcvamV0dHkiPjxpbWcgYWx0PSJpY29uIiBzcmM9Ii9mYXZpY29uLmljbyIvPjwvYT4mbmJzcDs8YSBocmVmPSJodHRwczovL2VjbGlwc2Uub3JnL2pldHR5Ij5Qb3dlcmVkIGJ5IEVjbGlwc2UgSmV0dHk6Ly8gU2VydmVyPC9hPjxoci8+CjwvYm9keT4KPC9odG1sPgo=
+      name: Geoserver - /
+      description: 'Fetched from URL: http://127.0.0.1:8222/'
+      content_type: text/html;charset=utf-8
+      server: Jetty(9.4.51.v20230217)
+      status_code: "404"
+      headers:
+        - 'Content-Length: 866'
+      created_at: 2024-09-03T16:26:30.696531Z
+      updated_at: 2024-09-03T16:26:30.696477Z
+      ext_version: 1
+      ext_uuid: 8c67fa4b-9727-4891-b377-19cda90f8f7e
+    - id: 312
+      data: PG93czpFeGNlcHRpb25SZXBvcnQgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxuczpvd3M9Imh0dHA6Ly93d3cub3Blbmdpcy5uZXQvb3dzLzEuMSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgdmVyc2lvbj0iMi4wLjAiIHhzaTpzY2hlbWFMb2NhdGlvbj0iaHR0cDovL3d3dy5vcGVuZ2lzLm5ldC9vd3MvMS4xIGh0dHA6Ly8xMjcuMC4wLjE6ODA4MC9nZW9zZXJ2ZXIvc2NoZW1hcy9vd3MvMS4xLjAvb3dzQWxsLnhzZCI+Cjxvd3M6RXhjZXB0aW9uIGV4Y2VwdGlvbkNvZGU9Ik5vQXBwbGljYWJsZUNvZGUiPgo8b3dzOkV4Y2VwdGlvblRleHQ+amF2YS5sYW5nLkNsYXNzQ2FzdEV4Y2VwdGlvbjogY2xhc3MgamF2YS5sYW5nLlByb2Nlc3NJbXBsIGNhbm5vdCBiZSBjYXN0IHRvIGNsYXNzIG9yZy5vcGVuZ2lzLmZlYXR1cmUudHlwZS5BdHRyaWJ1dGVEZXNjcmlwdG9yIChqYXZhLmxhbmcuUHJvY2Vzc0ltcGwgaXMgaW4gbW9kdWxlIGphdmEuYmFzZSBvZiBsb2FkZXIgJmFwb3M7Ym9vdHN0cmFwJmFwb3M7OyBvcmcub3Blbmdpcy5mZWF0dXJlLnR5cGUuQXR0cmlidXRlRGVzY3JpcHRvciBpcyBpbiB1bm5hbWVkIG1vZHVsZSBvZiBsb2FkZXIgb3JnLmVjbGlwc2UuamV0dHkud2ViYXBwLldlYkFwcENsYXNzTG9hZGVyIEA0NGMwMzY5NSkgY2xhc3MgamF2YS5sYW5nLlByb2Nlc3NJbXBsIGNhbm5vdCBiZSBjYXN0IHRvIGNsYXNzIG9yZy5vcGVuZ2lzLmZlYXR1cmUudHlwZS5BdHRyaWJ1dGVEZXNjcmlwdG9yIChqYXZhLmxhbmcuUHJvY2Vzc0ltcGwgaXMgaW4gbW9kdWxlIGphdmEuYmFzZSBvZiBsb2FkZXIgJmFwb3M7Ym9vdHN0cmFwJmFwb3M7OyBvcmcub3Blbmdpcy5mZWF0dXJlLnR5cGUuQXR0cmlidXRlRGVzY3JpcHRvciBpcyBpbiB1bm5hbWVkIG1vZHVsZSBvZiBsb2FkZXIgb3JnLmVjbGlwc2UuamV0dHkud2ViYXBwLldlYkFwcENsYXNzTG9hZGVyIEA0NGMwMzY5NSk8L293czpFeGNlcHRpb25UZXh0Pgo8L293czpFeGNlcHRpb24+Cjwvb3dzOkV4Y2VwdGlvblJlcG9ydD4=
+      name: Geoserver exec response
+      description: ""
+      content_type: text/xml; charset=UTF-8
+      server: Apache
+      status_code: "200"
+      created_at: 2024-09-14T19:51:47.739177Z
+      updated_at: 2024-09-14T19:51:47.738968Z
+      ext_version: 0
+      ext_uuid: 2001a0bc-b34b-4a57-a6f8-4582b1e54b08
+    - id: 288
+      data: PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48d2ZzOkxpc3RTdG9yZWRRdWVyaWVzUmVzcG9uc2UgeG1sbnM6c2Y9Imh0dHA6Ly93d3cub3BlbnBsYW5zLm9yZy9zcGVhcmZpc2giIHhtbG5zOm5lPSJodHRwczovL3d3dy5uYXR1cmFsZWFydGhkYXRhLmNvbSIgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxuczp0aWdlcj0iaHR0cDovL3d3dy5jZW5zdXMuZ292IiB4bWxuczp0b3BwPSJodHRwOi8vd3d3Lm9wZW5wbGFucy5vcmcvdG9wcCIgeG1sbnM6ZmVzPSJodHRwOi8vd3d3Lm9wZW5naXMubmV0L2Zlcy8yLjAiIHhtbG5zOndmcz0iaHR0cDovL3d3dy5vcGVuZ2lzLm5ldC93ZnMvMi4wIiB4bWxuczpnbWw9Imh0dHA6Ly93d3cub3Blbmdpcy5uZXQvZ21sLzMuMiIgeG1sbnM6b3dzPSJodHRwOi8vd3d3Lm9wZW5naXMubmV0L293cy8xLjEiIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6c2NoZW1hTG9jYXRpb249Imh0dHA6Ly93d3cub3Blbmdpcy5uZXQvd2ZzLzIuMCBodHRwOi8vMTg1LjkzLjIyMS4xMTM6NzAwMS9nZW9zZXJ2ZXIvc2NoZW1hcy93ZnMvMi4wL3dmcy54c2QiPjx3ZnM6U3RvcmVkUXVlcnkgaWQ9InVybjpvZ2M6ZGVmOnF1ZXJ5Ok9HQy1XRlM6OkdldEZlYXR1cmVCeUlkIj48d2ZzOlRpdGxlIHhtbDpsYW5nPSJlbiI+R2V0IGZlYXR1cmUgYnkgaWRlbnRpZmllcjwvd2ZzOlRpdGxlPjx3ZnM6UmV0dXJuRmVhdHVyZVR5cGU+dGlnZXI6Z2lhbnRfcG9seWdvbjwvd2ZzOlJldHVybkZlYXR1cmVUeXBlPjx3ZnM6UmV0dXJuRmVhdHVyZVR5cGU+dGlnZXI6cG9pPC93ZnM6UmV0dXJuRmVhdHVyZVR5cGU+PHdmczpSZXR1cm5GZWF0dXJlVHlwZT50aWdlcjpwb2x5X2xhbmRtYXJrczwvd2ZzOlJldHVybkZlYXR1cmVUeXBlPjx3ZnM6UmV0dXJuRmVhdHVyZVR5cGU+dGlnZXI6dGlnZXJfcm9hZHM8L3dmczpSZXR1cm5GZWF0dXJlVHlwZT48d2ZzOlJldHVybkZlYXR1cmVUeXBlPnRvcHA6c3RhdGVzPC93ZnM6UmV0dXJuRmVhdHVyZVR5cGU+PHdmczpSZXR1cm5GZWF0dXJlVHlwZT50b3BwOnRhc21hbmlhX2NpdGllczwvd2ZzOlJldHVybkZlYXR1cmVUeXBlPjx3ZnM6UmV0dXJuRmVhdHVyZVR5cGU+dG9wcDp0YXNtYW5pYV9yb2Fkczwvd2ZzOlJldHVybkZlYXR1cmVUeXBlPjx3ZnM6UmV0dXJuRmVhdHVyZVR5cGU+dG9wcDp0YXNtYW5pYV9zdGF0ZV9ib3VuZGFyaWVzPC93ZnM6UmV0dXJuRmVhdHVyZVR5cGU+PHdmczpSZXR1cm5GZWF0dXJlVHlwZT50b3BwOnRhc21hbmlhX3dhdGVyX2JvZGllczwvd2ZzOlJldHVybkZlYXR1cmVUeXBlPjx3ZnM6UmV0dXJuRmVhdHVyZVR5cGU+c2Y6YXJjaHNpdGVzPC93ZnM6UmV0dXJuRmVhdHVyZVR5cGU+PHdmczpSZXR1cm5GZWF0dXJlVHlwZT5zZjpidWdzaXRlczwvd2ZzOlJldHVybkZlYXR1cmVUeXBlPjx3ZnM6UmV0dXJuRmVhdHVyZVR5cGU+c2Y6cmVzdHJpY3RlZDwvd2ZzOlJldHVybkZlYXR1cmVUeXBlPjx3ZnM6UmV0dXJuRmVhdHVyZVR5cGU+c2Y6cm9hZHM8L3dmczpSZXR1cm5GZWF0dXJlVHlwZT48d2ZzOlJldHVybkZlYXR1cmVUeXBlPnNmOnN0cmVhbXM8L3dmczpSZXR1cm5GZWF0dXJlVHlwZT48d2ZzOlJldHVybkZlYXR1cmVUeXBlPm5lOmJvdW5kYXJ5X2xpbmVzPC93ZnM6UmV0dXJuRmVhdHVyZVR5cGU+PHdmczpSZXR1cm5GZWF0dXJlVHlwZT5uZTpjb2FzdGxpbmVzPC93ZnM6UmV0dXJuRmVhdHVyZVR5cGU+PHdmczpSZXR1cm5GZWF0dXJlVHlwZT5uZTpjb3VudHJpZXM8L3dmczpSZXR1cm5GZWF0dXJlVHlwZT48d2ZzOlJldHVybkZlYXR1cmVUeXBlPm5lOmRpc3B1dGVkX2FyZWFzPC93ZnM6UmV0dXJuRmVhdHVyZVR5cGU+PHdmczpSZXR1cm5GZWF0dXJlVHlwZT5uZTpwb3B1bGF0ZWRfcGxhY2VzPC93ZnM6UmV0dXJuRmVhdHVyZVR5cGU+PC93ZnM6U3RvcmVkUXVlcnk+PC93ZnM6TGlzdFN0b3JlZFF1ZXJpZXNSZXNwb25zZT4K
+      name: Geoserver - /geoserver/wfs
+      description: 'Fetched from URL: http://127.0.0.1:8222/geoserver/wfs'
+      content_type: application/xml
+      server: Jetty(9.4.51.v20230217)
+      status_code: "200"
+      headers:
+        - 'X-Frame-Options: SAMEORIGIN'
+      created_at: 2024-09-03T16:29:35.411688Z
+      updated_at: 2024-09-03T16:35:48.161554Z
+      ext_version: 1
+      ext_uuid: b078d5f0-f05b-468e-b2ba-05bd41c8a08c
+    - id: 287
+      name: Geoserver - /geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage
+      description: 'Fetched from URL: http://127.0.0.1:8222/geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage'
+      content_type: text/plain
+      server: Jetty(9.4.51.v20230217)
+      status_code: "302"
+      headers:
+        - 'Pragma: no-cache'
+        - 'Cache-Control: no-cache, no-store'
+        - 'Location: http://127.0.0.1:8222/geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage;jsessionid=node01lv2a8n5pab03ciukaxkgb7zj5.node0?0'
+        - 'Content-Length: 0'
+        - 'Set-Cookie: JSESSIONID=node01lv2a8n5pab03ciukaxkgb7zj5.node0; Path=/geoserver'
+        - 'X-Frame-Options: SAMEORIGIN'
+      created_at: 2024-09-03T16:28:57.769362Z
+      updated_at: 2024-09-03T16:28:57.769223Z
+      ext_version: 1
+      ext_uuid: ad5d9e89-9ae6-4c3c-ac3c-d19028e5775b
+    - id: 286
+      data: PGh0bWw+CjxoZWFkPgo8bWV0YSBodHRwLWVxdWl2PSJDb250ZW50LVR5cGUiIGNvbnRlbnQ9InRleHQvaHRtbDtjaGFyc2V0PUlTTy04ODU5LTEiLz4KPHRpdGxlPkVycm9yIDQwNCBOb3QgRm91bmQ8L3RpdGxlPgo8L2hlYWQ+Cjxib2R5PjxoMj5IVFRQIEVSUk9SIDQwNCBOb3QgRm91bmQ8L2gyPgo8dGFibGU+Cjx0cj48dGg+VVJJOjwvdGg+PHRkPi9nZW9zZXJ2ZXIvZ2Vvc2VydmVyL3dlYi93aWNrZXQvYm9va21hcmthYmxlL29yZy5nZW9zZXJ2ZXIud2ViLmRlbW8uTWFwUHJldmlld1BhZ2U8L3RkPjwvdHI+Cjx0cj48dGg+U1RBVFVTOjwvdGg+PHRkPjQwNDwvdGQ+PC90cj4KPHRyPjx0aD5NRVNTQUdFOjwvdGg+PHRkPk5vdCBGb3VuZDwvdGQ+PC90cj4KPHRyPjx0aD5TRVJWTEVUOjwvdGg+PHRkPmRpc3BhdGNoZXI8L3RkPjwvdHI+CjwvdGFibGU+Cjxoci8+PGEgaHJlZj0iaHR0cHM6Ly9lY2xpcHNlLm9yZy9qZXR0eSI+UG93ZXJlZCBieSBKZXR0eTovLyA5LjQuNTEudjIwMjMwMjE3PC9hPjxoci8+Cgo8L2JvZHk+CjwvaHRtbD4K
+      name: Geoserver - /geoserver/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage
+      description: 'Fetched from URL: http://127.0.0.1:8222/geoserver/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage'
+      content_type: text/html;charset=iso-8859-1
+      server: Jetty(9.4.51.v20230217)
+      status_code: "404"
+      headers:
+        - 'Content-Length: 534'
+        - 'X-Frame-Options: SAMEORIGIN'
+        - 'Cache-Control: must-revalidate,no-cache,no-store'
+      created_at: 2024-09-03T16:28:32.62217Z
+      updated_at: 2024-09-03T16:28:32.622111Z
+      ext_version: 1
+      ext_uuid: 849e6786-6595-415c-adde-b2bdc4b76e59
+    - id: 285
+      name: Geoserver - /geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage
+      description: 'Fetched from URL: http://127.0.0.1:8222/geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage?2&filter=false'
+      content_type: text/plain
+      server: Jetty(9.4.51.v20230217)
+      status_code: "302"
+      headers:
+        - 'X-Frame-Options: SAMEORIGIN'
+        - 'Pragma: no-cache'
+        - 'Cache-Control: no-cache, no-store'
+        - 'Location: http://127.0.0.1:8222/geoserver/web/wicket/bookmarkable/org.geoserver.web.AboutGeoServerPage;jsessionid=node0aiknfbhzoutoldrpt4a05m84.node0?filter=false'
+        - 'Set-Cookie: JSESSIONID=node0aiknfbhzoutoldrpt4a05m84.node0; Path=/geoserver'
+        - 'Content-Length: 0'
+      created_at: 2024-09-03T16:27:51.404143Z
+      updated_at: 2024-09-03T16:27:51.40408Z
+      ext_version: 1
+      ext_uuid: 78e9fb76-2c38-4e1c-a927-5836f63f1a8a
+    - id: 284
+      name: Geoserver - /geoserver/web
+      description: 'Fetched from URL: http://127.0.0.1:8222/geoserver/web'
+      content_type: text/plain
+      server: Jetty(9.4.51.v20230217)
+      status_code: "302"
+      headers:
+        - 'Location: http://127.0.0.1:8222/geoserver/web/;jsessionid=node01mn6ojpqzt0uyvs6qjb65bsj43.node0'
+        - 'Content-Length: 0'
+        - 'X-Frame-Options: SAMEORIGIN'
+        - 'Set-Cookie: JSESSIONID=node01mn6ojpqzt0uyvs6qjb65bsj43.node0; Path=/geoserver'
+      created_at: 2024-09-03T16:27:29.377199Z
+      updated_at: 2024-09-03T16:27:29.377176Z
+      ext_version: 1
+      ext_uuid: 90f2af95-e2db-4ebe-a3c4-669ef6930e89
