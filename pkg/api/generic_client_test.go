@@ -18,8 +18,10 @@ package api
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -97,6 +99,28 @@ func TestGenericClientImport(t *testing.T) {
 	}
 
 	if err := appApiClient.Import(""); err != nil {
+		t.Errorf("got unexpected error %s", err)
+	}
+}
+
+func TestGenericClientImportHttpError(t *testing.T) {
+	httpErrorCode := 403
+	client := NewTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: httpErrorCode,
+			Body:       io.NopCloser(bytes.NewBufferString("")),
+		}
+	})
+
+	appApiClient := NewApplicationApiClient(client, "http://localhost", "AAAA")
+
+	err := appApiClient.Import("")
+	if err == nil {
 		t.Errorf("expected error, got none")
 	}
+
+	if !strings.Contains(err.Error(), fmt.Sprintf("%d", httpErrorCode)) {
+		t.Errorf("expected error code %d, got %s", httpErrorCode, err)
+	}
+
 }

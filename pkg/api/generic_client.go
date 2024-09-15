@@ -226,6 +226,10 @@ func (a *GenericApiClient[T]) Import(data string) error {
 		return fmt.Errorf("while submitting: %s", err)
 	}
 
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("got HTTP error code: %d", res.StatusCode)
+	}
+
 	defer res.Body.Close()
 
 	d := json.NewDecoder(res.Body)
