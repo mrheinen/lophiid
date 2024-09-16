@@ -80,4 +80,4 @@ prometheus:
 whois_manager:
   client_timeout: 2s
   cache_expiration_time: 12h
-  max_attempts: 3
+  max_attempts: 6

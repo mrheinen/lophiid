@@ -97,6 +97,6 @@ type Config struct {
 	WhoisManager struct {
 		ClientTimeout       time.Duration `fig:"client_timeout" default:"2s"`
 		CacheExpirationTime time.Duration `fig:"cache_expiration_time" default:"12h"`
-		MaxAttempts         int           `fig:"max_attempts" default:"3"`
+		MaxAttempts         int           `fig:"max_attempts" default:"6"`
 	} `fig:"whois_manager"`
 }
