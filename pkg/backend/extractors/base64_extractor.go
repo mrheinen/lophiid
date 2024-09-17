@@ -14,27 +14,17 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package extractors
 
 import (
 	"encoding/base64"
 	"lophiid/pkg/database"
+	"lophiid/pkg/util"
 	"regexp"
 	"strings"
-	"unicode"
 )
 
 var base64Reg = regexp.MustCompile(`([a-zA-Z0-9=/+]*)`)
-
-func isASCII(s string) bool {
-	for i := 0; i < len(s); i++ {
-		if s[i] > unicode.MaxASCII {
-			return false
-		}
-	}
-	return true
-}
 
 type Base64Extractor struct {
 	result        map[string][]byte
@@ -107,7 +97,7 @@ func (b *Base64Extractor) FindAndAdd(data string) int64 {
 		decoded, err := base64.StdEncoding.DecodeString(v)
 		if err == nil {
 			// Finally check if the string is ascii or not.
-			if !b.asciiOnly || isASCII(string(decoded)) {
+			if !b.asciiOnly || util.IsStringASCII(string(decoded)) {
 				b.result[v] = decoded
 
 				for _, ex := range b.subExtractors {

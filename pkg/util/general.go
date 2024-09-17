@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 func GetStructName(m interface{}) string {
@@ -43,4 +44,14 @@ func IsValidUUID(uuid string) bool {
 	pattern := "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 	match, _ := regexp.MatchString(pattern, strings.ToLower(uuid))
 	return match
+}
+
+// Checks if a string is ASCII.
+func IsStringASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] > unicode.MaxASCII {
+			return false
+		}
+	}
+	return true
 }
