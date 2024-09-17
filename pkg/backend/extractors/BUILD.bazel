@@ -7,12 +7,14 @@ go_library(
         "extractors.go",
         "nc_extractor.go",
         "tcp_extractor.go",
+        "unicode_extractor.go",
         "url_extractor.go",
     ],
     importpath = "lophiid/pkg/backend/extractors",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",
+        "//pkg/util",
         "@cc_mvdan_xurls_v2//:xurls",
     ],
 )
@@ -24,6 +26,7 @@ go_test(
         "extractors_test.go",
         "nc_extractor_test.go",
         "tcp_extractor_test.go",
+        "unicode_extractor_test.go",
         "url_extractor_test.go",
     ],
     embed = [":extractors"],

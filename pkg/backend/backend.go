@@ -833,20 +833,23 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 		}
 	}
 
-	// Extract base64 strings
-	b64Map := make(map[string][]byte)
-	bx := extractors.NewBase64Extractor(b64Map, true)
-
 	linksMap := make(map[string]struct{})
-	lx := extractors.NewURLExtractor(linksMap)
+	linkExtractor := extractors.NewURLExtractor(linksMap)
 
 	tcpAddressesMap := make(map[string]int)
-	tx := extractors.NewTCPExtractor(tcpAddressesMap)
+	tcpExtractor := extractors.NewTCPExtractor(tcpAddressesMap)
 
-	bx.AddSubExtractor(lx)
-	bx.AddSubExtractor(tx)
+	// Extract base64 strings
+	b64Map := make(map[string][]byte)
+	base64Extractor := extractors.NewBase64Extractor(b64Map, true)
+	base64Extractor.AddSubExtractor(linkExtractor)
+	base64Extractor.AddSubExtractor(tcpExtractor)
 
-	extracts := []extractors.Extractor{bx, lx, tx}
+	uniMap := make(map[string]string)
+	uniExtractor := extractors.NewUnicodeExtractor(uniMap, true)
+	uniExtractor.AddSubExtractor(base64Extractor)
+
+	extracts := []extractors.Extractor{base64Extractor, linkExtractor, tcpExtractor, uniExtractor}
 	for _, extractor := range extracts {
 		extractor.ParseRequest(req)
 	}
