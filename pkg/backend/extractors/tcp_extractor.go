@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package extractors
 
 import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"regexp"
 	"strconv"
 )
@@ -41,7 +41,7 @@ type TCPExtractor struct {
 func NewTCPExtractor(result map[string]int) *TCPExtractor {
 	return &TCPExtractor{
 		result:   result,
-		metaType: "PAYLOAD_TCP_LINK",
+		metaType: constants.ExtractorTypeTcpLink,
 	}
 }
 

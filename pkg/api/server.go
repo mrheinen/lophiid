@@ -23,6 +23,7 @@ import (
 	"io"
 	"log/slog"
 	"lophiid/backend_service"
+	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util"
@@ -248,6 +249,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 		// Try running the script with a fake request. This to see if it compiles
 		// and doesn't produce any errors.
 		modifiedScript := fmt.Sprintf("%s\ncreateResponse();", rb.Script)
+		eCol := extractors.NewExtractorCollection(true)
 		err := a.jRunner.RunScript(modifiedScript, database.Request{
 			ID:            42,
 			Port:          80,
@@ -258,7 +260,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 			ContentLength: 42,
 			UserAgent:     "wget",
 			Body:          []byte("this is body"),
-		}, &backend_service.HttpResponse{}, true)
+		}, &backend_service.HttpResponse{}, eCol, true)
 
 		// The script itself may complain because of the fake data we provided in
 		// the above request. We therefore ignore it if this happens and really just

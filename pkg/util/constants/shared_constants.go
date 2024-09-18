@@ -26,3 +26,12 @@ const (
 	IpEventHostC2        = "HOST_C2"
 	IpEventRateLimited   = "RATELIMITED"
 )
+
+// These constants are the extractor types used in ./pkg/backend/extractors
+
+const (
+	ExtractorTypeBase64  = "DECODED_STRING_BASE64"
+	ExtractorTypeUnicode = "DECODED_STRING_UNICODE"
+	ExtractorTypeLink    = "PAYLOAD_LINK"
+	ExtractorTypeTcpLink = "PAYLOAD_TCP_LINK"
+)

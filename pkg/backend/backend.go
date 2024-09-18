@@ -693,7 +693,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	res.StatusCode = content.StatusCode
 	if content.Script != "" {
 		slog.Debug("running script")
-		err := s.jRunner.RunScript(content.Script, *sReq, res, false)
+		err := s.jRunner.RunScript(content.Script, *sReq, res, colEx, false)
 		if err != nil {
 			slog.Warn("couldn't run script", slog.String("error", err.Error()))
 		} else {
@@ -841,7 +841,7 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 	downloadsScheduled := 0
 	eCollector.IterateMetadata(dm.ModelID(), func(m *database.RequestMetadata) error {
 
-		if m.Type == "PAYLOAD_LINK" {
+		if m.Type == constants.ExtractorTypeLink {
 			if downloadsScheduled <= maxUrlsToExtractForDownload {
 				ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(m.Data)
 				if err != nil {

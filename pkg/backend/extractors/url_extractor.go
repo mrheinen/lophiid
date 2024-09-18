@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package extractors
 
 import (
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"regexp"
 	"strings"
 
@@ -69,7 +69,7 @@ type URLExtractor struct {
 func NewURLExtractor(result map[string]struct{}) *URLExtractor {
 	return &URLExtractor{
 		result:   result,
-		metaType: "PAYLOAD_LINK",
+		metaType: constants.ExtractorTypeLink,
 	}
 }
 

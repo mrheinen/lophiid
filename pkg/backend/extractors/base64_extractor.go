@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"regexp"
 	"strings"
 )
@@ -37,7 +38,7 @@ func NewBase64Extractor(result map[string][]byte, asciiOnly bool) *Base64Extract
 	return &Base64Extractor{
 		result:    result,
 		asciiOnly: asciiOnly,
-		metaType:  "DECODED_STRING_BASE64",
+		metaType:  constants.ExtractorTypeBase64,
 	}
 }
 

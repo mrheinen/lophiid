@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"regexp"
 	"strconv"
 	"strings"
@@ -39,7 +40,7 @@ func NewUnicodeExtractor(result map[string]string, asciiOnly bool) *UnicodeExtra
 	return &UnicodeExtractor{
 		result:    result,
 		asciiOnly: asciiOnly,
-		metaType:  "DECODED_STRING_UNICODE",
+		metaType:  constants.ExtractorTypeUnicode,
 	}
 }
 

@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",
+        "//pkg/backend/extractors",
         "//pkg/database",
         "//pkg/javascript",
         "//pkg/util",

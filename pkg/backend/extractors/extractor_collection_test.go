@@ -2,6 +2,7 @@ package extractors
 
 import (
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"testing"
 )
 
@@ -32,12 +33,12 @@ func TestUniExtractorNesting(t *testing.T) {
 	// get and decode a base64 string from that result. Finally the link extractor
 	// needs to get the link.
 
-	if len(metadataMap["PAYLOAD_LINK"]) != 1 {
-		t.Fatalf("expected 1 PAYLOAD_LINK, got %d", len(metadataMap["PAYLOAD_LINK"]))
+	if len(metadataMap[constants.ExtractorTypeLink]) != 1 {
+		t.Fatalf("expected 1 %s, got %d", constants.ExtractorTypeLink, len(metadataMap[constants.ExtractorTypeLink]))
 	}
 
 	expectedUrl := "http://87.121.112.46/wget.sh"
-	if metadataMap["PAYLOAD_LINK"][0].Data != expectedUrl {
-		t.Errorf("expected %s, got %s", expectedUrl, metadataMap["PAYLOAD_LINK"][0].Data)
+	if metadataMap[constants.ExtractorTypeLink][0].Data != expectedUrl {
+		t.Errorf("expected %s, got %s", expectedUrl, metadataMap[constants.ExtractorTypeLink][0].Data)
 	}
 }

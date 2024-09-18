@@ -19,7 +19,9 @@ package javascript
 import (
 	"fmt"
 	"lophiid/backend_service"
+	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"testing"
 	"time"
 
@@ -113,8 +115,9 @@ func TestRunScriptWithoutValidateOk(t *testing.T) {
 			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
 
 			res := backend_service.HttpResponse{}
+			eCol := extractors.NewExtractorCollection(true)
 
-			err := jr.RunScript(test.script, req, &res, false)
+			err := jr.RunScript(test.script, req, &res, eCol, false)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
 				return
@@ -195,10 +198,11 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 
 			fdb := database.FakeDatabaseClient{}
 
+			eCol := extractors.NewExtractorCollection(true)
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
 			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
-			err := jr.RunScript(test.script, req, &res, true)
+			err := jr.RunScript(test.script, req, &res, eCol, true)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
 				return
@@ -297,8 +301,9 @@ func TestRunScriptUsesCache(t *testing.T) {
 
 			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
 
-			jr.RunScript(test.script1, test.request1, &res, false)
-			err := jr.RunScript(test.script2, test.request2, &res, false)
+			eCol := extractors.NewExtractorCollection(true)
+			jr.RunScript(test.script1, test.request1, &res, eCol, false)
+			err := jr.RunScript(test.script2, test.request2, &res, eCol, false)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
 				return
@@ -391,7 +396,8 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 
 			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
 
-			err := jr.RunScript(test.script, test.request, &res, false)
+			eCol := extractors.NewExtractorCollection(true)
+			err := jr.RunScript(test.script, test.request, &res, eCol, false)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
 				return
@@ -404,7 +410,6 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 				}
 			}
 		})
-
 	}
 }
 
@@ -415,7 +420,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 		request     database.Request
 		content     database.Content
 		allowedCmds []string
-		cmdTimeout time.Duration
+		cmdTimeout  time.Duration
 		expectError bool
 	}{
 		{
@@ -437,7 +442,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 				HoneypotIP: "2.2.2.2",
 			},
 			allowedCmds: []string{"/bin/echo"},
-			cmdTimeout: time.Minute,
+			cmdTimeout:  time.Minute,
 			content: database.Content{
 				ID:   42,
 				Data: []byte("test"),
@@ -463,7 +468,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 				HoneypotIP: "2.2.2.2",
 			},
 			allowedCmds: []string{"/bin/false"},
-			cmdTimeout: time.Minute,
+			cmdTimeout:  time.Minute,
 			content: database.Content{
 				ID:   42,
 				Data: []byte("test"),
@@ -489,7 +494,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 				HoneypotIP: "2.2.2.2",
 			},
 			allowedCmds: []string{"/usr/bin/sleep"},
-			cmdTimeout: time.Millisecond,
+			cmdTimeout:  time.Millisecond,
 			content: database.Content{
 				ID:   42,
 				Data: []byte("test"),
@@ -509,7 +514,73 @@ func TestRunScriptRunsCommands(t *testing.T) {
 
 			jr := NewGojaJavascriptRunner(&fdb, test.allowedCmds, test.cmdTimeout, metrics)
 
-			err := jr.RunScript(test.script, test.request, &res, false)
+			eCol := extractors.NewExtractorCollection(true)
+			err := jr.RunScript(test.script, test.request, &res, eCol, false)
+			if (err != nil) != test.expectError {
+				t.Errorf("got error: %s", err)
+				return
+			}
+
+			if !test.expectError {
+				metric := testutil.ToFloat64(metrics.javascriptSuccessCount.WithLabelValues(RunSuccess))
+				if metric != 1 {
+					t.Errorf("expected success metrics to be 1, got %f", metric)
+				}
+			}
+		})
+	}
+}
+
+func TestRunScriptHasContext(t *testing.T) {
+	for _, test := range []struct {
+		description string
+		script      string
+		request     database.Request
+		content     database.Content
+		expectError bool
+	}{
+		{
+			description: "runs ok",
+			script: fmt.Sprintf(`
+			function createResponse() {
+				var metadatas = util.context.requestMetadataByType("%s");
+				if (metadatas.length != 1) {
+					return "Did not find decoded string";
+				}
+				if (metadatas[0].data != "throw new Exception('id'.execute().text);") {
+					return "Unexpected decoded string";
+				}
+				return "";
+			}
+			`, constants.ExtractorTypeUnicode),
+			request: database.Request{
+				ID:         42,
+				Port:       80,
+				Uri:        "/foo",
+				SourceIP:   "1.1.1.1",
+				HoneypotIP: "2.2.2.2",
+				Body:       []byte(`groovyProgram=\u0074\u0068\u0072\u006f\u0077\u0020\u006e\u0065\u0077\u0020\u0045\u0078\u0063\u0065\u0070\u0074\u0069\u006f\u006e\u0028\u0027\u0069\u0064\u0027\u002e\u0065\u0078\u0065\u0063\u0075\u0074\u0065\u0028\u0029\u002e\u0074\u0065\u0078\u0074\u0029\u003b`),
+			},
+			expectError: false,
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+
+			fmt.Printf("Running test: %s\n", test.description)
+			res := backend_service.HttpResponse{}
+			reg := prometheus.NewRegistry()
+			metrics := CreateGoJaMetrics(reg)
+
+			fdb := database.FakeDatabaseClient{}
+
+			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, metrics)
+
+			// Ensure metadata is extracted from the request.
+			eCol := extractors.NewExtractorCollection(true)
+			eCol.ParseRequest(&test.request)
+
+			err := jr.RunScript(test.script, test.request, &res, eCol, false)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
 				return
