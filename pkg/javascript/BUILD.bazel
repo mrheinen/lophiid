@@ -15,6 +15,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//backend_service",
+        "//pkg/backend/extractors",
         "//pkg/database",
         "//pkg/metrics",
         "//pkg/util",
@@ -32,7 +33,9 @@ go_test(
     embed = [":javascript"],
     deps = [
         "//backend_service",
+        "//pkg/backend/extractors",
         "//pkg/database",
+        "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_golang//prometheus/testutil",
     ],

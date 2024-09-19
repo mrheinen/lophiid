@@ -81,18 +81,29 @@
 
   <div v-if="metadata.length" class="card">
     <FieldSet legend="Metadata" :toggleable="true">
+      <div v-if="localUnicodeMetadata.length">
+        <div style="width: 700px">
+        <label class="label">Decoded unicode strings</label>
+        <div v-for="meta in localUnicodeMetadata" :key="meta.id">
+          <highlightjs autodetect :code="meta.data" />
+        </div>
+        </div>
+      </div>
+
       <div v-for="meta in localBase64Metadata" :key="meta.id">
         <div style="width: 700px">
           <label class="label">Decoded base64 string</label>
           <highlightjs autodetect :code="meta.data" />
         </div>
       </div>
+
       <div v-if="localLinkMetadata.length">
         <label class="label">Extracted URLs</label>
         <div v-for="meta in localLinkMetadata" :key="meta.id">
           <p>{{ meta.data }}</p>
         </div>
       </div>
+
      <div v-if="localTCPMetadata.length">
         <label class="label">Extracted TCP links</label>
         <div v-for="meta in localTCPMetadata" :key="meta.id">
@@ -156,6 +167,7 @@ export default {
       localLinkMetadata: [],
       localTCPMetadata: [],
       localNetcatMetadata: [],
+      localUnicodeMetadata: [],
     };
   },
   methods: {
@@ -177,6 +189,7 @@ export default {
       this.localLinkMetadata = [];
       this.localTCPMetadata = [];
       this.localNetcatMetadata = [];
+      this.localUnicodeMetadata = [];
       for (var i = 0; i < this.metadata.length; i++) {
         if (this.metadata[i].type == "DECODED_STRING_BASE64") {
           this.localBase64Metadata.push(this.metadata[i]);
@@ -186,6 +199,8 @@ export default {
           this.localTCPMetadata.push(this.metadata[i]);
         } else if (this.metadata[i].type == "PAYLOAD_NETCAT") {
           this.localNetcatMetadata.push(this.metadata[i]);
+        } else if (this.metadata[i].type == "DECODED_STRING_UNICODE") {
+          this.localUnicodeMetadata.push(this.metadata[i]);
         }
       }
       this.localMetadata = this.metadata;

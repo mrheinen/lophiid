@@ -54,6 +54,7 @@ go_test(
         "//pkg/alerting",
         "//pkg/analysis",
         "//pkg/backend/auth",
+        "//pkg/backend/extractors",
         "//pkg/backend/ratelimit",
         "//pkg/database",
         "//pkg/javascript",

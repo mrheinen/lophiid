@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package extractors
 
 import (
 	"fmt"
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"testing"
 )
 
@@ -217,8 +217,8 @@ func TestURLExtractor(t *testing.T) {
 			foundUrls := make(map[string]bool)
 			for _, md := range mds {
 				foundUrls[md.Data] = true
-				if md.Type != "PAYLOAD_LINK" {
-					t.Errorf("expected PAYLOAD_LINK, got %s", md.Type)
+				if md.Type != constants.ExtractorTypeLink {
+					t.Errorf("expected %s, got %s", constants.ExtractorTypeLink, md.Type)
 				}
 			}
 

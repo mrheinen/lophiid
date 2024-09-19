@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package extractors
 
 import (
 	"fmt"
 	"lophiid/pkg/database"
+	"lophiid/pkg/util/constants"
 	"testing"
 )
 
@@ -89,8 +89,8 @@ func TestTCPExtractor(t *testing.T) {
 						t.Errorf("expected: %s, found: %s", fmt.Sprintf("/dev/tcp/%s/%d", k, v), md.Data)
 					}
 
-					if md.Type != "PAYLOAD_TCP_LINK" {
-						t.Errorf("expected PAYLOAD_TCP_LINK, found %s", md.Type)
+					if md.Type != constants.ExtractorTypeTcpLink {
+						t.Errorf("expected %s, found %s", constants.ExtractorTypeTcpLink, md.Type)
 					}
 				}
 			}

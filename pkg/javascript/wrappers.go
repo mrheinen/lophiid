@@ -3,6 +3,7 @@ package javascript
 import (
 	"fmt"
 	"lophiid/backend_service"
+	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
 )
@@ -81,4 +82,25 @@ func (d *DatabaseClientWrapper) GetContentById(id int64) *ContentWrapper {
 	}
 
 	return &ContentWrapper{Content: cn}
+}
+
+// RequestContext contains context information about the request.
+type RequestContext struct {
+	eCol *extractors.ExtractorCollection
+}
+
+func (r *RequestContext) AllRequestMetadata() []database.RequestMetadata {
+	return r.eCol.AllMetadata(0)
+}
+
+func (r *RequestContext) RequestMetadataByType(metaType string) []database.RequestMetadata {
+	ret := []database.RequestMetadata{}
+
+	for _, m := range r.eCol.AllMetadata(0) {
+		if m.Type == metaType {
+			ret = append(ret, m)
+		}
+	}
+
+	return ret
 }

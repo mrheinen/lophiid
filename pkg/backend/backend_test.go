@@ -25,6 +25,7 @@ import (
 	"lophiid/pkg/alerting"
 	"lophiid/pkg/analysis"
 	"lophiid/pkg/backend/auth"
+	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
@@ -673,10 +674,11 @@ func TestProcessQueue(t *testing.T) {
 
 		t.Run(test.description, func(t *testing.T) {
 
+			eCol := extractors.NewExtractorCollection(true)
 			err := b.ProcessRequest(&req, database.ContentRule{
 				ID:             int64(test.ruleID),
 				RequestPurpose: test.requestPurpose,
-			})
+			}, eCol)
 
 			if err != nil {
 				t.Fatalf("got error: %s", err)

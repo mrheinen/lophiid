@@ -57,8 +57,9 @@ var userAgent = "Wget/1.13.4 (linux-gnu)"
 var maxUrlsToExtractForDownload = 15
 
 type ReqQueueEntry struct {
-	req  *database.Request
-	rule database.ContentRule
+	req        *database.Request
+	rule       database.ContentRule
+	eCollector *extractors.ExtractorCollection
 }
 
 type BackendServer struct {
@@ -664,19 +665,23 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	}
 
-	// Put it in the queue so it can be stored async in the db. We don't know if
-	// the fetching and serving of content below works. However, we assume it will
-	// on purpose so that when a rule has multiple content and one is
-	// failing/gone; the next request that matches the rule will be skipping this
-	// content.
-	s.reqsQueue <- ReqQueueEntry{
-		req:  sReq,
-		rule: matchedRule,
-	}
-
 	sReq.ContentID = matchedRule.ContentID
 	sReq.RuleID = matchedRule.ID
 	sReq.RuleUuid = matchedRule.ExtUuid
+
+	colEx := extractors.NewExtractorCollection(true)
+	colEx.ParseRequest(sReq)
+
+	// Defer adding it to the requests queue. We always want it added, even on
+	// failure but we want to add it as late as possible because some additional
+	// data can be added to the request in the logic below.
+	defer func() {
+		s.reqsQueue <- ReqQueueEntry{
+			req:        sReq,
+			rule:       matchedRule,
+			eCollector: colEx,
+		}
+	}()
 
 	slog.Debug("Fetching content", slog.Int64("content_id", matchedRule.ContentID))
 	content, err := s.dbClient.GetContentByID(matchedRule.ContentID)
@@ -688,7 +693,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	res.StatusCode = content.StatusCode
 	if content.Script != "" {
 		slog.Debug("running script")
-		err := s.jRunner.RunScript(content.Script, *sReq, res, false)
+		err := s.jRunner.RunScript(content.Script, *sReq, res, colEx, false)
 		if err != nil {
 			slog.Warn("couldn't run script", slog.String("error", err.Error()))
 		} else {
@@ -776,7 +781,7 @@ func (s *BackendServer) ProcessReqsQueue() {
 			// lookup will be inefficient when quickly called for the requests from
 			// the same IP.
 			startTime := time.Now()
-			if err := s.ProcessRequest(entry.req, entry.rule); err != nil {
+			if err := s.ProcessRequest(entry.req, entry.rule, entry.eCollector); err != nil {
 				slog.Warn("process request queue error", slog.String("error", err.Error()))
 			}
 			s.metrics.reqsQueueResponseTime.Observe(time.Since(startTime).Seconds())
@@ -789,7 +794,7 @@ func (s *BackendServer) ProcessReqsQueue() {
 
 }
 
-func (s *BackendServer) ProcessRequest(req *database.Request, rule database.ContentRule) error {
+func (s *BackendServer) ProcessRequest(req *database.Request, rule database.ContentRule, eCollector *extractors.ExtractorCollection) error {
 
 	s.whoisMgr.LookupIP(req.SourceIP)
 
@@ -833,47 +838,29 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 		}
 	}
 
-	// Extract base64 strings
-	b64Map := make(map[string][]byte)
-	bx := extractors.NewBase64Extractor(b64Map, true)
+	downloadsScheduled := 0
+	eCollector.IterateMetadata(dm.ModelID(), func(m *database.RequestMetadata) error {
 
-	linksMap := make(map[string]struct{})
-	lx := extractors.NewURLExtractor(linksMap)
-
-	tcpAddressesMap := make(map[string]int)
-	tx := extractors.NewTCPExtractor(tcpAddressesMap)
-
-	bx.AddSubExtractor(lx)
-	bx.AddSubExtractor(tx)
-
-	extracts := []extractors.Extractor{bx, lx, tx}
-	for _, extractor := range extracts {
-		extractor.ParseRequest(req)
-	}
-
-	// Iterate over the links and try to download them.
-	for v := range linksMap {
-		if len(linksMap) <= maxUrlsToExtractForDownload {
-			ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(v)
-			if err != nil {
-				slog.Warn("error converting URL", slog.String("url", v), slog.String("error", err.Error()))
-				continue
-			}
-			s.ScheduleDownloadOfPayload(req.HoneypotIP, v, ip, ipBasedUrl, hostHeader, dm.ModelID())
-		} else {
-			slog.Warn("skipping download due to excessive links")
-		}
-	}
-
-	// Store the metadata.
-	for _, x := range extracts {
-		for _, m := range x.GetMetadatas(req.ID) {
-			_, err := s.dbClient.Insert(&m)
-			if err != nil {
-				slog.Warn("Could not save metadata for request", slog.String("error", err.Error()))
+		if m.Type == constants.ExtractorTypeLink {
+			if downloadsScheduled <= maxUrlsToExtractForDownload {
+				ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(m.Data)
+				if err != nil {
+					slog.Warn("error converting URL", slog.String("url", m.Data), slog.String("error", err.Error()))
+				} else {
+					s.ScheduleDownloadOfPayload(req.HoneypotIP, m.Data, ip, ipBasedUrl, hostHeader, dm.ModelID())
+					downloadsScheduled += 1
+				}
+			} else {
+				slog.Warn("skipping download due to excessive links", slog.String("url", m.Data))
 			}
 		}
-	}
+
+		_, err := s.dbClient.Insert(m)
+		if err != nil {
+			slog.Warn("Could not save metadata for request", slog.String("error", err.Error()))
+		}
+		return nil
+	})
 
 	return nil
 }

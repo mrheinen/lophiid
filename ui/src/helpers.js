@@ -35,3 +35,13 @@ export function dateToString(inDate) {
   const nd = new Date(Date.parse(inDate));
   return nd.toLocaleString();
 }
+
+// Decodes unicode strings in the given encodesString.
+export function decodeUnicodeString(encodedString) {
+  const unicodeRegex = /\\u([0-9a-fA-F]{4})/g;
+  const decodedString = encodedString.replace(unicodeRegex, (match, codePoint) => {
+    return String.fromCharCode(parseInt(codePoint, 16));
+  });
+
+  return decodedString;
+}

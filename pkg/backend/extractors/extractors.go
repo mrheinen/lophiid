@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package extractors
 
 import (
@@ -33,7 +32,6 @@ type Extractor interface {
 	ParseString(s string)
 	GetMetadatas(requestID int64) []database.RequestMetadata
 }
-
 
 // StringsFromRequest function will iterate over the request and collect strings
 // from varies HTTP fields. It will also decode and parse data where necessary
