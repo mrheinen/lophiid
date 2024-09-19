@@ -211,7 +211,7 @@ export default {
 
         allCves.forEach((cve) => {
           if (cve != "") {
-            if (!isCVE(this.cves)) {
+            if (!isCVE(cve)) {
               this.$toast.error("Please provide valid CVEs");
               return
             }
