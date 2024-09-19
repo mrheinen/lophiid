@@ -29,6 +29,13 @@ func TestUnicodeExtractorFindAndAdd(t *testing.T) {
 				`\u0061\u0062\u0061\u0062\u0061\u0062`: "ababab",
 			},
 		},
+		{
+			description: "non-ASCII Unicode character",
+			input:       `Hello \u03A9 World`,
+			result: map[string]string{
+				`\u03A9`: "Ω",
+			},
+		},
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
