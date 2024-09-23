@@ -32,8 +32,10 @@ import (
 	"lophiid/pkg/backend"
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/ratelimit"
+	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/llm"
 	"lophiid/pkg/util"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
@@ -181,7 +183,14 @@ func main() {
 
 	rateLimiter := ratelimit.NewWindowRateLimiter(cfg.Backend.RateLimiter.RateWindow, cfg.Backend.RateLimiter.BucketDuration, cfg.Backend.RateLimiter.MaxRequestsPerWindow, cfg.Backend.RateLimiter.MaxRequestsPerBucket, rMetrics)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, cfg)
+	llmClient := llm.NewOpenAILLMClient("AA", "http://localhost:8000/v1", "")
+	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Minute*10)
+	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+
+	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Minute*5)
+	llmResponder := responder.NewLLMResponder(llmManager)
+
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

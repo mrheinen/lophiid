@@ -137,6 +137,8 @@ type ContentRule struct {
 	//   - CRAWL : the request is part of regular crawling
 	//   - ATTACK : the request is an attack (e.g. an RCE)
 	RequestPurpose string `ksql:"request_purpose" json:"request_purpose" yaml:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
+	Responder      string `ksql:"responder" json:"responder" doc:"The responder type for this rule (e.g. COMMAND_INJECTION)"`
+	ResponderRegex string `ksql:"responder_regex" json:"responder_regex" yaml:"responder_regex" doc:"The responder regex to grab the relevant bits"`
 }
 
 func (c *ContentRule) ModelID() int64              { return c.ID }

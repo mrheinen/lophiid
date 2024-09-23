@@ -35,3 +35,8 @@ const (
 	ExtractorTypeLink    = "PAYLOAD_LINK"
 	ExtractorTypeTcpLink = "PAYLOAD_TCP_LINK"
 )
+
+const (
+	ResponderTypeUnknown          = "UNKNOWN"
+	ResponderTypeCommandInjection = "COMMAND_INJECTION"
+)

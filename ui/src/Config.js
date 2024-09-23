@@ -28,6 +28,7 @@ export default {
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
   contentRuleRequestPurposes: ['UNKNOWN', 'RECON', 'CRAWL', 'ATTACK'],
   contentRuleHTTPMethods: ['ANY' , 'GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'],
+  ruleResponderTypes: ['UNKNOWN', 'COMMAND_INJECTION'],
   statusCodeValues: [
     { label: '200 - OK', value: '200' },
     { label: '301 - Permanent redirect', value: '301' },

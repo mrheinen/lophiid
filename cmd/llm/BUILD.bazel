@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "llm_lib",
+    srcs = ["main.go"],
+    importpath = "lophiid/cmd/llm",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/llm"],
+)
+
+go_binary(
+    name = "llm",
+    embed = [":llm_lib"],
+    visibility = ["//visibility:public"],
+)

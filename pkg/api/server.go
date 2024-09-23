@@ -143,9 +143,18 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		content, err := a.dbc.GetContentByID(rb.ContentID)
 		if err != nil {
 			a.sendStatus(w, err.Error(), ResultError, nil)
+			return
 		}
 
 		rb.ContentUuid = content.ExtUuid
+	}
+
+	if rb.ResponderRegex != "" {
+		_, err := regexp.Compile(rb.ResponderRegex)
+		if err != nil {
+			a.sendStatus(w, "responder regex did not compile", ResultError, nil)
+			return
+		}
 	}
 
 	// If we have no reference to the app UUID yet, do the same.

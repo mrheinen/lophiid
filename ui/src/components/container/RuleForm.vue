@@ -134,6 +134,28 @@
           </div>
         </div>
 
+       <div class="columns">
+          <div class="column">
+            <div>
+              <label class="label">Responder (optional)</label>
+              <DropDown v-model="localRule.responder"
+              :options="config.ruleResponderTypes" placeholder="Responder type"
+              checkmark :highlightOnSelect="true" />
+            </div>
+          </div>
+          <div class="column">
+            <div>
+              <label class="label">Responder regex</label>
+              <InputText
+              id="responder_regex"
+              type="text"
+              placeholder="Responder regex"
+              v-model="localRule.responder_regex"
+              />
+            </div>
+          </div>
+        </div>
+
         <br />
         <PrimeButton
         :label="localRule.id > 0 ? 'Submit' : 'Add'"
