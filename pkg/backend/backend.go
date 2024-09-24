@@ -608,7 +608,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 
 func (s *BackendServer) getResponderData(sReq *database.Request, rule *database.ContentRule, content *database.Content) string {
 	reg, err := regexp.Compile(rule.ResponderRegex)
-	if err == nil && reg != nil {
+	if err == nil && reg != nil && s.llmResponder != nil {
 		match := reg.Find([]byte(sReq.Raw))
 		body, err := s.llmResponder.Respond(rule.Responder, string(match), string(content.Data))
 		if err != nil {

@@ -1007,24 +1007,48 @@ func TestGetResponderData(t *testing.T) {
 		ErrorToReturn:    nil,
 	}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+	t.Run("works picobello", func(t *testing.T) {
+		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
-	req := database.Request{
-		Raw: "aa 898989",
-	}
+		req := database.Request{
+			Raw: "aa 898989",
+		}
 
-	rule := database.ContentRule{
-		Responder:      "COMMAND_INJECTION",
-		ResponderRegex: "([0-9]+)",
-	}
+		rule := database.ContentRule{
+			Responder:      "COMMAND_INJECTION",
+			ResponderRegex: "([0-9]+)",
+		}
 
-	content := database.Content{
-		Data: []byte("not relevant"),
-	}
+		content := database.Content{
+			Data: []byte("not relevant"),
+		}
 
-	ret := b.getResponderData(&req, &rule, &content)
-	if ret != templateToReturn {
-		t.Errorf("unexpected responder data, expected %s got %s", templateToReturn, ret)
-	}
+		ret := b.getResponderData(&req, &rule, &content)
+		if ret != templateToReturn {
+			t.Errorf("unexpected responder data, expected %s got %s", templateToReturn, ret)
+		}
+	})
 
+	t.Run("does nothing when responder = nil", func(t *testing.T) {
+		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, nil, GetDefaultBackendConfig())
+
+		req := database.Request{
+			Raw: "aa 898989",
+		}
+
+		rule := database.ContentRule{
+			Responder:      "COMMAND_INJECTION",
+			ResponderRegex: "([0-9]+)",
+		}
+
+		content := database.Content{
+			Data: []byte("this %%%LOPHIID_PAYLOAD_RESPONSE%%% works"),
+		}
+
+		expectedRet := "this  works"
+		ret := b.getResponderData(&req, &rule, &content)
+		if ret != expectedRet {
+			t.Errorf("unexpected responder data, expected %s got %s", expectedRet, ret)
+		}
+	})
 }
