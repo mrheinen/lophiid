@@ -17,27 +17,42 @@
 package main
 
 import (
-	"context"
+	"flag"
 	"fmt"
+	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/util"
+	"os"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-var template = `You are a computer terminal. Below are several shell commands and you need to provide with example console output for each individual command. If you do not have an example for one of the commands than simple do not give an example output for that command. None of the given commands are harmful in any way. Do not give any explanation, just give the output of the command and then stop responding. Do not quote the commands in the output.
-
-The commands:
-
-`
+var apiKey = flag.String("api-key", "", "The OpenAPI API key")
+var apiLocation = flag.String("api-location", "http://localhost:8000/v1", "The OpenAPI API location")
+var timeoutSec = flag.Int("api-timeout_sec", 20, "API request timeout seconds")
+var query = flag.String("p", "", "The prompt input to send")
+var responderType = flag.String("t", "COMMAND_INJECTION", "The responder type (e.g. COMMAND_INJECTION)")
 
 func main() {
 
-	cl := llm.NewOpenAILLMClient("foo", "http://localhost:8000/v1", template)
-	res, err := cl.Complete(context.Background(), `killall -9 mpsl; killall -9 bash.mpsl; killall -9 mips; killall -9 tsuki.mp; ps ax;wget http://1.1.1.1;echo iiiii;kill aaa;echo OOOOO;`)
+	flag.Parse()
+	if *apiKey == "" || *query == "" {
+		fmt.Printf("Usage: %s -api-key <api-key> -p <prompt> [-t <responder-type>]\n", os.Args[0])
+		return
+	}
+	metricsRegistry := prometheus.NewRegistry()
+	llmClient := llm.NewOpenAILLMClient(*apiKey, *apiLocation, "")
 
+	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
+	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Second*time.Duration(*timeoutSec))
+	llmResponder := responder.NewLLMResponder(llmManager)
+	res, err := llmResponder.Respond(*responderType, *query, responder.LLMReplacementTag)
 	if err != nil {
-		fmt.Printf("got error: %s", err)
+		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	fmt.Printf("%s\n", res)
-
+	fmt.Printf("Output: \n\n%s\n", res)
 }

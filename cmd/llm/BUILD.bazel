@@ -5,7 +5,12 @@ go_library(
     srcs = ["main.go"],
     importpath = "lophiid/cmd/llm",
     visibility = ["//visibility:private"],
-    deps = ["//pkg/llm"],
+    deps = [
+        "//pkg/backend/responder",
+        "//pkg/llm",
+        "//pkg/util",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
 )
 
 go_binary(
