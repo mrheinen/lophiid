@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "responder",
+    srcs = [
+        "llm_prompts.go",
+        "llm_responder.go",
+        "responder.go",
+        "responder_manager.go",
+    ],
+    importpath = "lophiid/pkg/backend/responder",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/llm",
+        "//pkg/util/constants",
+    ],
+)
