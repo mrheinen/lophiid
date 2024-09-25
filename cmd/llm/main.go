@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"lophiid/pkg/llm"
 )
@@ -30,7 +31,7 @@ The commands:
 func main() {
 
 	cl := llm.NewOpenAILLMClient("foo", "http://localhost:8000/v1", template)
-	res, err := cl.Complete(`killall -9 mpsl; killall -9 bash.mpsl; killall -9 mips; killall -9 tsuki.mp; ps ax;wget http://1.1.1.1;echo iiiii;kill aaa;echo OOOOO;`)
+	res, err := cl.Complete(context.Background(), `killall -9 mpsl; killall -9 bash.mpsl; killall -9 mips; killall -9 tsuki.mp; ps ax;wget http://1.1.1.1;echo iiiii;kill aaa;echo OOOOO;`)
 
 	if err != nil {
 		fmt.Printf("got error: %s", err)

@@ -37,6 +37,6 @@ const (
 )
 
 const (
-	ResponderTypeUnknown          = "UNKNOWN"
+	ResponderTypeNone             = "NONE"
 	ResponderTypeCommandInjection = "COMMAND_INJECTION"
 )

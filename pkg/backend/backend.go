@@ -728,7 +728,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	} else {
 
-		if matchedRule.Responder != "" && matchedRule.Responder != constants.ResponderTypeUnknown {
+		if matchedRule.Responder != "" && matchedRule.Responder != constants.ResponderTypeNone  {
 			res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
 			sReq.RawResponse = string(res.Body)
 		} else {

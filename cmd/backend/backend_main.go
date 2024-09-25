@@ -183,12 +183,17 @@ func main() {
 
 	rateLimiter := ratelimit.NewWindowRateLimiter(cfg.Backend.RateLimiter.RateWindow, cfg.Backend.RateLimiter.BucketDuration, cfg.Backend.RateLimiter.MaxRequestsPerWindow, cfg.Backend.RateLimiter.MaxRequestsPerBucket, rMetrics)
 
-	llmClient := llm.NewOpenAILLMClient("AA", "http://localhost:8000/v1", "")
-	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Minute*10)
-	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+	var llmResponder responder.Responder
+	if cfg.Responder.Enable {
+		llmClient := llm.NewOpenAILLMClient(cfg.Responder.ApiKey, cfg.Responder.ApiLocation, "")
+		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.Responder.CacheExpirationTime)
+		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 
-	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Minute*5)
-	llmResponder := responder.NewLLMResponder(llmManager)
+		llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.Responder.LLMCompletionTimeout)
+		llmResponder = responder.NewLLMResponder(llmManager)
+	} else {
+		llmResponder = nil
+	}
 
 	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, cfg)
 	if err = bs.Start(); err != nil {
