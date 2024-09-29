@@ -3,6 +3,7 @@ package responder
 import (
 	"fmt"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"strings"
 )
@@ -31,7 +32,9 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		return "", fmt.Errorf("invalid responder type: %s", resType)
 	}
 
-	res, err := l.llmManager.Complete(fmt.Sprintf(basePrompt, promptInput))
+	deli := util.GenerateRandomString(20)
+	finalPrompt := fmt.Sprintf(basePrompt, deli, deli, promptInput)
+	res, err := l.llmManager.Complete(finalPrompt)
 	if err != nil {
 		return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
 	}

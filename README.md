@@ -107,6 +107,22 @@ Additionally the backend will perform whois lookups of the source IPs and also,
 if configured, collects OS fingerprinting information from p0f instances running
 on the honeypot systems. All this information is available in the UI.
 
+### AI / LLM integration
+
+Lophiid can use a local running LLM to help it with creating the best response
+for an attack. For example, say an attacker want to exploit a remote command
+execution vulnerability but you can not anticipate up front what commands will
+be executed during the attack: lophiid will use the LLM to create example
+command outputs that match with what the attacker has send.
+
+This results in lophiid responses that look more realistic than, for example,
+typical honeypot responses that try to cover all bases by putting many different
+command outputs in the response.
+
+For more information about the AI integration, look at [./AI.md](./AI.md).
+
+NOTE: this is a very experimental feature.
+
 ### Queries and labels
 
 In the UI you can store queries for two purposes. First it can just be handy to
