@@ -121,7 +121,7 @@ func main() {
 
 	reg := prometheus.NewRegistry()
 	dbc := database.NewKSQLClient(&db)
-	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, javascript.CreateGoJaMetrics(reg))
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, nil, javascript.CreateGoJaMetrics(reg))
 	as := api.NewApiServer(dbc, jRunner, id.String())
 	defer dbc.Close()
 
