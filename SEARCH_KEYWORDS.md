@@ -81,6 +81,9 @@ the search bar.
 | method | string | The HTTP method the rule matches on |
 | port | int64 | The TCP port the rue matches on. |
 | request_purpose | string | The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK) |
+| responder | string | The responder type for this rule (e.g. COMMAND_INJECTION) |
+| responder_decoder | string | The responder decoder to use (e.g. NONE, URI, HTML) |
+| responder_regex | string | The responder regex to grab the relevant bits |
 | updated_at | Time | Last update date of the rule |
 | uri | string | The URI matching string |
 | uri_matching | string | The URI matching method (exact, regex, ..) |
