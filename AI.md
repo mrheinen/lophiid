@@ -42,6 +42,9 @@ To enable AI support for a content rule you need to do the following:
    responder that matches with the type of vulnerability being exploited.
  * Write a regular expression that is used against the Raw field of the request
    and that extracts a string that is given to the responser.
+ * Optional: select a response decoder. This will decode the string you selected
+   with the regex before it is given to the decoder. Useful if, for example, the
+   string is uri encoded.
  * Optional: in the Content for the rule, add the following string to
    the Data field somewhere: %%%LOPHIID_PAYLOAD_RESPONSE%%% . In the response to
    the attacker this string will be substituted with the AI reply. If you do not
