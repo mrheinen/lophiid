@@ -16,9 +16,11 @@ go_library(
     deps = [
         "//backend_service",
         "//pkg/backend/extractors",
+        "//pkg/backend/responder",
         "//pkg/database",
         "//pkg/metrics",
         "//pkg/util",
+        "//pkg/util/decoding",
         "@com_github_dop251_goja//:goja",
         "@com_github_prometheus_client_golang//prometheus",
     ],
@@ -34,6 +36,7 @@ go_test(
     deps = [
         "//backend_service",
         "//pkg/backend/extractors",
+        "//pkg/backend/responder",
         "//pkg/database",
         "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
