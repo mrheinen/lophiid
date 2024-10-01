@@ -146,17 +146,14 @@ func isFormUrlEncoded(body string) bool {
 // package decoding which is strict but very complete. If that fails then it
 // will fall back to a very simplistic search/replace decode function.
 func DecodeURLOrEmptyString(encoded string, removeSpace bool) string {
-	// TODO: reconsider this hack.
-	decoded := strings.ReplaceAll(encoded, ";", " ")
-
 	if removeSpace {
-		decoded = strings.ReplaceAll(decoded, "+", " ")
+		encoded = strings.ReplaceAll(encoded, "+", " ")
 	}
 
-	ret, err := DecodeURL(decoded)
+	ret, err := DecodeURL(encoded)
 	if err != nil {
 		slog.Warn("could not decode, falling back", slog.String("error", err.Error()))
-		return RoughDecodeURL(decoded)
+		return RoughDecodeURL(encoded)
 	}
 	return ret
 }
