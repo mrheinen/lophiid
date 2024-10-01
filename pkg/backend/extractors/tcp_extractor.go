@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util/constants"
+	"lophiid/pkg/util/decoding"
 	"regexp"
 	"strconv"
 )
@@ -50,7 +51,7 @@ func (u *TCPExtractor) MetaType() string {
 }
 
 func (u *TCPExtractor) ParseRequest(req *database.Request) {
-	for _, s := range StringsFromRequest(req) {
+	for _, s := range decoding.StringsFromRequest(req) {
 		u.ParseString(s)
 	}
 }

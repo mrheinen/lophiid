@@ -22,6 +22,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
+	"lophiid/pkg/util/decoding"
 	"regexp"
 	"strconv"
 	"strings"
@@ -49,7 +50,7 @@ func (b *UnicodeExtractor) MetaType() string {
 }
 
 func (b *UnicodeExtractor) ParseRequest(req *database.Request) {
-	for _, v := range StringsFromRequest(req) {
+	for _, v := range decoding.StringsFromRequest(req) {
 		b.FindAndAdd(v)
 	}
 }
