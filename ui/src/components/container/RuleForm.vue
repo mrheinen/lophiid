@@ -156,6 +156,22 @@
           </div>
         </div>
 
+
+       <div class="columns">
+          <div class="column">
+            <div>
+              <label class="label">Responder decoder</label>
+              <DropDown v-model="localRule.responder_decoder"
+              :options="config.ruleResponderDecoders" placeholder="Responder decoder"
+              checkmark :highlightOnSelect="true" />
+            </div>
+          </div>
+          <div class="column">
+          </div>
+        </div>
+
+
+
         <br />
         <PrimeButton
         :label="localRule.id > 0 ? 'Submit' : 'Add'"

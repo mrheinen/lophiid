@@ -45,6 +45,7 @@ import (
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
+	"lophiid/pkg/util/decoding"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
 
@@ -609,10 +610,34 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 func (s *BackendServer) getResponderData(sReq *database.Request, rule *database.ContentRule, content *database.Content) string {
 	reg, err := regexp.Compile(rule.ResponderRegex)
 	if err == nil && reg != nil && s.llmResponder != nil {
-		match := reg.Find([]byte(sReq.Raw))
-		body, err := s.llmResponder.Respond(rule.Responder, string(match), string(content.Data))
+		match := reg.FindStringSubmatch(sReq.Raw)
+
+		if len(match) < 2 {
+			return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
+		}
+
+		final_match := ""
+		switch rule.ResponderDecoder {
+		case constants.ResponderDecoderTypeNone:
+			final_match = match[1]
+		case constants.ResponderDecoderTypeUri:
+			final_match = decoding.DecodeURLOrEmptyString(match[1], true)
+			if final_match == "" {
+				slog.Error("could not decode URI", slog.String("match", match[1]))
+			}
+		case constants.ResponderDecoderTypeHtml:
+			final_match = decoding.DecodeHTML(match[1])
+		default:
+			slog.Error("unknown responder decoder", slog.String("decoder", rule.ResponderDecoder))
+		}
+
+		if final_match == "" {
+			return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
+    }
+
+		body, err := s.llmResponder.Respond(rule.Responder, final_match, string(content.Data))
 		if err != nil {
-			slog.Error("error responding", slog.String("match", string(match)), slog.String("error", err.Error()))
+			slog.Error("error responding", slog.String("match", final_match), slog.String("error", err.Error()))
 		}
 		return body
 	}
@@ -728,7 +753,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	} else {
 
-		if matchedRule.Responder != "" && matchedRule.Responder != constants.ResponderTypeNone  {
+		if matchedRule.Responder != "" && matchedRule.Responder != constants.ResponderTypeNone {
 			res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
 			sReq.RawResponse = string(res.Body)
 		} else {

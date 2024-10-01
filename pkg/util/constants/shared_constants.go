@@ -28,7 +28,6 @@ const (
 )
 
 // These constants are the extractor types used in ./pkg/backend/extractors
-
 const (
 	ExtractorTypeBase64  = "DECODED_STRING_BASE64"
 	ExtractorTypeUnicode = "DECODED_STRING_UNICODE"
@@ -36,7 +35,15 @@ const (
 	ExtractorTypeTcpLink = "PAYLOAD_TCP_LINK"
 )
 
+// This needs to be kept in sync with RESPONDER_TYPE in the database.
 const (
 	ResponderTypeNone             = "NONE"
 	ResponderTypeCommandInjection = "COMMAND_INJECTION"
+)
+
+// This needs to be kept in sync with RESPONDER_DECODER_TYPE in the database.
+const (
+	ResponderDecoderTypeNone = "NONE"
+	ResponderDecoderTypeUri  = "URI"
+	ResponderDecoderTypeHtml = "HTML"
 )

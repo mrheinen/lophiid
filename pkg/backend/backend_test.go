@@ -981,7 +981,7 @@ func TestHandleP0fResult(t *testing.T) {
 	}
 }
 
-func TestGetResponderData(t *testing.T) {
+func TestGetResponderDataCases(t *testing.T) {
 
 	fdbc := &database.FakeDatabaseClient{
 		P0fResultToReturn: database.P0fResult{},
@@ -1001,54 +1001,110 @@ func TestGetResponderData(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
-	templateToReturn := "this is it"
-	fakeRes := &responder.FakeResponder{
-		TemplateToReturn: templateToReturn,
-		ErrorToReturn:    nil,
+
+	for _, test := range []struct {
+		description      string
+		rule             database.ContentRule
+		request          database.Request
+		content          database.Content
+		responder        *responder.FakeResponder
+		lastPromptInput  string
+		templateToReturn string
+		expectedReturn   string
+	}{
+		{
+			description: "work ok, NONE decoder",
+			rule: database.ContentRule{
+				Responder:        "COMMAND_INJECTION",
+				ResponderRegex:   "([0-9]+)",
+				ResponderDecoder: constants.ResponderDecoderTypeNone,
+			},
+			request: database.Request{
+				Raw: "aa 898989",
+			},
+			content: database.Content{
+				Data: []byte("not relevant"),
+			},
+			responder: &responder.FakeResponder{
+				TemplateToReturn: "this is it",
+				ErrorToReturn:    nil,
+			},
+			expectedReturn:  "this is it",
+			lastPromptInput: "898989",
+		},
+		{
+			description: "work ok, unknown decoder",
+			rule: database.ContentRule{
+				Responder:        "COMMAND_INJECTION",
+				ResponderRegex:   "([0-9]+)",
+				ResponderDecoder: "DOESNOTEXIST",
+			},
+			request: database.Request{
+				Raw: "aa 898989",
+			},
+			content: database.Content{
+				Data: []byte("this should be returned"),
+			},
+			responder: &responder.FakeResponder{
+				TemplateToReturn: "this is it",
+				ErrorToReturn:    nil,
+			},
+			expectedReturn:  "this should be returned",
+			lastPromptInput: "",
+		},
+		{
+			description: "work ok, URI decoder",
+			rule: database.ContentRule{
+				Responder:        "COMMAND_INJECTION",
+				ResponderRegex:   "foo=([0-9a-f%]+)",
+				ResponderDecoder: constants.ResponderDecoderTypeUri,
+			},
+			request: database.Request{
+				Raw: "foo=%2e%2e%2e%41%41",
+			},
+			content: database.Content{
+				Data: []byte("not relevant"),
+			},
+			responder: &responder.FakeResponder{
+				TemplateToReturn: "this is it",
+				ErrorToReturn:    nil,
+			},
+			expectedReturn:  "this is it",
+			lastPromptInput: "...AA",
+		},
+		{
+			description: "work ok, HTML decoder",
+			rule: database.ContentRule{
+				Responder:        "COMMAND_INJECTION",
+				ResponderRegex:   "foo=([&a-z;]+)",
+				ResponderDecoder: constants.ResponderDecoderTypeHtml,
+			},
+			request: database.Request{
+				Raw: "foo=&gt;&lt;",
+			},
+			content: database.Content{
+				Data: []byte("not relevant"),
+			},
+			responder: &responder.FakeResponder{
+				TemplateToReturn: "this is it",
+				ErrorToReturn:    nil,
+			},
+			expectedReturn:  "this is it",
+			lastPromptInput: "><",
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, test.responder, GetDefaultBackendConfig())
+			ret := b.getResponderData(&test.request, &test.rule, &test.content)
+
+			if ret != test.expectedReturn {
+				t.Errorf("unexpected responder data, expected %s got %s", test.expectedReturn, ret)
+			}
+
+			if test.responder != nil && test.lastPromptInput != test.responder.LastPromptInput {
+				t.Errorf("expected last prompt input %s but got %s", test.lastPromptInput, test.responder.LastPromptInput)
+			}
+		})
 	}
-
-	t.Run("works picobello", func(t *testing.T) {
-		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
-
-		req := database.Request{
-			Raw: "aa 898989",
-		}
-
-		rule := database.ContentRule{
-			Responder:      "COMMAND_INJECTION",
-			ResponderRegex: "([0-9]+)",
-		}
-
-		content := database.Content{
-			Data: []byte("not relevant"),
-		}
-
-		ret := b.getResponderData(&req, &rule, &content)
-		if ret != templateToReturn {
-			t.Errorf("unexpected responder data, expected %s got %s", templateToReturn, ret)
-		}
-	})
-
-	t.Run("does nothing when responder = nil", func(t *testing.T) {
-		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, nil, GetDefaultBackendConfig())
-
-		req := database.Request{
-			Raw: "aa 898989",
-		}
-
-		rule := database.ContentRule{
-			Responder:      "COMMAND_INJECTION",
-			ResponderRegex: "([0-9]+)",
-		}
-
-		content := database.Content{
-			Data: []byte("this %%%LOPHIID_PAYLOAD_RESPONSE%%% works"),
-		}
-
-		expectedRet := "this  works"
-		ret := b.getResponderData(&req, &rule, &content)
-		if ret != expectedRet {
-			t.Errorf("unexpected responder data, expected %s got %s", expectedRet, ret)
-		}
-	})
 }

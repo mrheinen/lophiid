@@ -6,7 +6,6 @@ go_library(
         "llm_prompts.go",
         "llm_responder.go",
         "responder.go",
-        "responder_manager.go",
     ],
     importpath = "lophiid/pkg/backend/responder",
     visibility = ["//visibility:public"],

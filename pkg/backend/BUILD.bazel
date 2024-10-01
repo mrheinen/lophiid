@@ -28,6 +28,7 @@ go_library(
         "//pkg/metrics",
         "//pkg/util",
         "//pkg/util/constants",
+        "//pkg/util/decoding",
         "//pkg/vt",
         "//pkg/whois",
         "@com_github_prometheus_client_golang//prometheus",
