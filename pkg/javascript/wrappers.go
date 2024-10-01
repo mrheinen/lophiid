@@ -2,8 +2,10 @@ package javascript
 
 import (
 	"fmt"
+	"log/slog"
 	"lophiid/backend_service"
 	"lophiid/pkg/backend/extractors"
+	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
 )
@@ -103,4 +105,22 @@ func (r *RequestContext) RequestMetadataByType(metaType string) []database.Reque
 	}
 
 	return ret
+}
+
+type ResponderWrapper struct {
+	responder responder.Responder
+}
+
+func (r *ResponderWrapper) Respond(resType string, promptInput string, template string) string {
+	if r.responder == nil {
+		slog.Warn("responder is nil")
+		return ""
+	}
+	res, err := r.responder.Respond(resType, promptInput, template)
+	if err != nil {
+		slog.Error("error in responder", slog.String("error", err.Error()))
+		return ""
+	}
+
+	return res
 }

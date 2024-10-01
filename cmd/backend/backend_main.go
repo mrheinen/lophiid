@@ -176,7 +176,6 @@ func main() {
 		vtMgr.Start()
 	}
 
-	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, javascript.CreateGoJaMetrics(metricsRegistry))
 	queryRunner := backend.NewQueryRunnerImpl(dbc)
 	bMetrics := backend.CreateBackendMetrics(metricsRegistry)
 	rMetrics := ratelimit.CreateRatelimiterMetrics(metricsRegistry)
@@ -194,6 +193,8 @@ func main() {
 	} else {
 		llmResponder = nil
 	}
+
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
 
 	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, cfg)
 	if err = bs.Start(); err != nil {

@@ -132,6 +132,16 @@ Base64 encodes the given string and returns the encoded string.
 Returns the base64 decoded value of the given string. On error an empty string
 is returned.
 
+### util.encoding.uri.decode(string)
+
+Returns the URI decoded value of the given string. On error an empty string
+is returned.
+
+### util.encoding.html.decode(string)
+
+Returns the HTML decoded value of the given string. On error an empty string
+is returned.
+
 ### util.crypto.md5sum(string)
 
 Returns an md5 hash of the given string.
@@ -240,3 +250,38 @@ Get the stdout output of the command.
 ### <command runner>.getStderr() string
 
 Get the stderr output of the command.
+
+## LLM access
+
+### util.responder.Respond(resType, promptInput, template) string
+
+Gives access to the LLM responder. For resType, you can currently only use
+COMMAND_INJECTION. For promptInput use one or more commands (separated by ;).
+
+For template, you can use a string with %%%LOPHIID_PAYLOAD_RESPONSE%%% embedded
+and the LLM response will replace that tag.  You can also use an empty string
+and you will then just get the LLM response.
+
+Make sure that the promptInput string is properly decoded. E.g. if you expect a
+URI encoded string, decode that first or else you might not get a good response
+from the LLM.
+
+Here is an example usage:
+
+```shell
+
+  var commands = ... // These are the commands from the request
+  // Get the content data which you prepared up front. This is a bit cleaner
+  // than embedding an entire response here in the script.
+  template = util.database.getContentById(42)
+
+  res = util.responder.Respond('COMMAND_INJECTION', commands, template)
+  if (res == "") {
+    // it failed
+  }
+
+  response.setBody(res)
+```
+
+Note that the LLM responder will cache prompts and LLM responses so while
+initial calls can be slow; future ones for the same promptInput are fast.

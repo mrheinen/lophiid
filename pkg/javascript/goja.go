@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"lophiid/backend_service"
 	"lophiid/pkg/backend/extractors"
+	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
 	"time"
@@ -32,13 +33,14 @@ var ErrScriptComplained = errors.New("script complained")
 
 // Contains helper structs for use inside javascript.
 type Util struct {
-	Crypto   Crypto                `json:"crypto"`
-	Time     Time                  `json:"time"`
-	Cache    CacheWrapper          `json:"cache"`
-	Encoding Encoding              `json:"encoding"`
-	Database DatabaseClientWrapper `json:"database"`
-	Runner   CommandRunnerWrapper  `json:"runner"`
-	Context  RequestContext        `json:"context"`
+	Crypto    Crypto                `json:"crypto"`
+	Time      Time                  `json:"time"`
+	Cache     CacheWrapper          `json:"cache"`
+	Encoding  Encoding              `json:"encoding"`
+	Database  DatabaseClientWrapper `json:"database"`
+	Runner    CommandRunnerWrapper  `json:"runner"`
+	Context   RequestContext        `json:"context"`
+	Responder ResponderWrapper      `json:"responder"`
 }
 
 type JavascriptRunner interface {
@@ -51,9 +53,10 @@ type GojaJavascriptRunner struct {
 	allowedCommands []string
 	commandTimeout  time.Duration
 	metrics         *GojaMetrics
+	responder       responder.Responder
 }
 
-func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands []string, commandTimeout time.Duration, metrics *GojaMetrics) *GojaJavascriptRunner {
+func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands []string, commandTimeout time.Duration, responder responder.Responder, metrics *GojaMetrics) *GojaJavascriptRunner {
 	// The string cache timeout should be a low and targetted
 	// for the use case of holding something in cache between
 	// a couple requests for the same source.
@@ -65,6 +68,7 @@ func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands [
 		dbClient:        dbClient,
 		allowedCommands: allowedCommands,
 		commandTimeout:  commandTimeout,
+		responder:       responder,
 	}
 }
 
@@ -95,6 +99,9 @@ func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, re
 		},
 		Context: RequestContext{
 			eCol: eCol,
+		},
+		Responder: ResponderWrapper{
+			responder: j.responder,
 		},
 	})
 
