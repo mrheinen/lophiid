@@ -121,7 +121,7 @@ command outputs in the response.
 
 For more information about the AI integration, look at [./AI.md](./AI.md).
 
-NOTE: this is a very experimental feature.
+NOTE: This is a very experimental feature. Be aware that using AI-generated responses in a honeypot system may have security implications. Use with caution and ensure you understand the risks before enabling this feature in a production environment.
 
 ### Queries and labels
 
