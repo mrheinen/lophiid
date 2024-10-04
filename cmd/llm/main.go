@@ -32,7 +32,7 @@ var apiKey = flag.String("api-key", "", "The OpenAPI API key")
 var apiLocation = flag.String("api-location", "http://localhost:8000/v1", "The OpenAPI API location")
 var timeoutSec = flag.Int("api-timeout_sec", 20, "API request timeout seconds")
 var query = flag.String("p", "", "The prompt input to send")
-var responderType = flag.String("t", "COMMAND_INJECTION", "The responder type (e.g. COMMAND_INJECTION)")
+var responderType = flag.String("t", "COMMAND_INJECTION", "The responder type (e.g. COMMAND_INJECTION, SOURCE_CODE_EXECUTION)")
 
 func main() {
 

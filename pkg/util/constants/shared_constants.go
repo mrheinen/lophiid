@@ -37,8 +37,9 @@ const (
 
 // This needs to be kept in sync with RESPONDER_TYPE in the database.
 const (
-	ResponderTypeNone             = "NONE"
-	ResponderTypeCommandInjection = "COMMAND_INJECTION"
+	ResponderTypeNone                = "NONE"
+	ResponderTypeCommandInjection    = "COMMAND_INJECTION"
+	ResponderTypeSourceCodeExecution = "SOURCE_CODE_EXECUTION"
 )
 
 // This needs to be kept in sync with RESPONDER_DECODER_TYPE in the database.

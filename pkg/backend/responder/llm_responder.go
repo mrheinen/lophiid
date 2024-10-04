@@ -27,6 +27,8 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 	switch resType {
 	case constants.ResponderTypeCommandInjection:
 		basePrompt = commandInjectionPrompt
+	case constants.ResponderTypeSourceCodeExecution:
+		basePrompt = sourceCodeExecutionPrompt
 
 	default:
 		return "", fmt.Errorf("invalid responder type: %s", resType)
