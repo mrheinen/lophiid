@@ -14,15 +14,32 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package extractors
+package llm
 
 import (
-	"lophiid/pkg/database"
+	"lophiid/pkg/util"
+	"testing"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-type Extractor interface {
-	MetaType() string
-	ParseRequest(req *database.Request)
-	ParseString(s string)
-	GetMetadatas(requestID int64) []database.RequestMetadata
+func TestComplete(t *testing.T) {
+	testCompletionString := "completion"
+	client := MockLLMClient{CompletionToReturn: testCompletionString, ErrorToReturn: nil}
+	pCache := util.NewStringMapCache[string]("", time.Second)
+	pReg := prometheus.NewRegistry()
+
+	metrics := CreateLLMMetrics(pReg)
+
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour)
+	res, err := lm.Complete("aaaa")
+
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if res != testCompletionString {
+		t.Errorf("expected %s, got %s", testCompletionString, res)
+	}
 }

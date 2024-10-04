@@ -21,6 +21,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
+	"lophiid/pkg/util/decoding"
 	"regexp"
 	"strings"
 )
@@ -47,7 +48,7 @@ func (b *Base64Extractor) MetaType() string {
 }
 
 func (b *Base64Extractor) ParseRequest(req *database.Request) {
-	for _, v := range StringsFromRequest(req) {
+	for _, v := range decoding.StringsFromRequest(req) {
 		b.FindAndAdd(v)
 	}
 }

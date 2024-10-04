@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "llm_lib",
+    srcs = ["main.go"],
+    importpath = "lophiid/cmd/llm",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/backend/responder",
+        "//pkg/llm",
+        "//pkg/util",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
+)
+
+go_binary(
+    name = "llm",
+    embed = [":llm_lib"],
+    visibility = ["//visibility:public"],
+)

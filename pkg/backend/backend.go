@@ -40,10 +40,12 @@ import (
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/ratelimit"
+	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
+	"lophiid/pkg/util/decoding"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
 
@@ -84,10 +86,11 @@ type BackendServer struct {
 	rateLimiter     ratelimit.RateLimiter
 	ipEventManager  analysis.IpEventManager
 	config          Config
+	llmResponder    responder.Responder
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
@@ -116,6 +119,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		config:          config,
 		rateLimiter:     rateLimiter,
 		ipEventManager:  ipEventManager,
+		llmResponder:    llmResponder,
 	}
 }
 
@@ -603,6 +607,44 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	return &backend_service.UploadFileResponse{}, nil
 }
 
+func (s *BackendServer) getResponderData(sReq *database.Request, rule *database.ContentRule, content *database.Content) string {
+	reg, err := regexp.Compile(rule.ResponderRegex)
+	if err == nil && reg != nil && s.llmResponder != nil {
+		match := reg.FindStringSubmatch(sReq.Raw)
+
+		if len(match) < 2 {
+			return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
+		}
+
+		final_match := ""
+		switch rule.ResponderDecoder {
+		case constants.ResponderDecoderTypeNone:
+			final_match = match[1]
+		case constants.ResponderDecoderTypeUri:
+			final_match = decoding.DecodeURLOrEmptyString(match[1], true)
+			if final_match == "" {
+				slog.Error("could not decode URI", slog.String("match", match[1]))
+			}
+		case constants.ResponderDecoderTypeHtml:
+			final_match = decoding.DecodeHTML(match[1])
+		default:
+			slog.Error("unknown responder decoder", slog.String("decoder", rule.ResponderDecoder))
+		}
+
+		if final_match == "" {
+			return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
+    }
+
+		body, err := s.llmResponder.Respond(rule.Responder, final_match, string(content.Data))
+		if err != nil {
+			slog.Error("error responding", slog.String("match", final_match), slog.String("error", err.Error()))
+		}
+		return body
+	}
+	// Remove the tag and send the template as-is
+	return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
+}
+
 // HandleProbe receives requests from te honeypots and tells them how to
 // respond.
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
@@ -710,7 +752,13 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 
 	} else {
-		res.Body = content.Data
+
+		if matchedRule.Responder != "" && matchedRule.Responder != constants.ResponderTypeNone {
+			res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
+			sReq.RawResponse = string(res.Body)
+		} else {
+			res.Body = content.Data
+		}
 	}
 
 	// Append custom headers

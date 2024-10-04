@@ -17,6 +17,7 @@
 package util
 
 import (
+	"math/rand"
 	"os"
 	"reflect"
 	"regexp"
@@ -54,4 +55,14 @@ func IsStringASCII(s string) bool {
 		}
 	}
 	return true
+}
+
+const printableChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
+func GenerateRandomString(length int) string {
+	result := make([]byte, length)
+	for i := 0; i < length; i++ {
+		result[i] = printableChars[rand.Intn(len(printableChars))]
+	}
+	return string(result)
 }

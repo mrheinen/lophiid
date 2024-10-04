@@ -982,6 +982,13 @@ def go_dependencies():
         version = "v2.0.1",
     )
     go_repository(
+        name = "com_github_sashabaranov_go_openai",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/sashabaranov/go-openai",
+        sum = "h1:fHv9urGxABfm885xGWsXFSk5cksa+8dJ4jGli/UQQcI=",
+        version = "v1.30.0",
+    )
+    go_repository(
         name = "com_github_seccomp_libseccomp_golang",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/seccomp/libseccomp-golang",

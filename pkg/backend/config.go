@@ -99,4 +99,12 @@ type Config struct {
 		CacheExpirationTime time.Duration `fig:"cache_expiration_time" default:"12h"`
 		MaxAttempts         int           `fig:"max_attempts" default:"6"`
 	} `fig:"whois_manager"`
+
+	Responder struct {
+		Enable               bool          `fig:"enable" default:"0"`
+		ApiLocation          string        `fig:"api_location" default:"http://localhost:8000/v1"`
+		ApiKey               string        `fig:"api_key"`
+		CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"24h"`
+		LLMCompletionTimeout time.Duration `fig:"llm_completion_timeout" default:"1m"`
+	} `fig:"responder"`
 }
