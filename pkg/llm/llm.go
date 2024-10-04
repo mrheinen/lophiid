@@ -115,7 +115,7 @@ func (l *OpenAILLMClient) SelectModel() error {
 	}
 
 	if len(models.Models) > 1 {
-		slog.Warn("Found multiple models! Using the first.")
+		slog.Warn("Found multiple models! Using the first.", slog.String("model", models.Models[0].ID))
 	}
 
 	l.model = models.Models[0].ID
