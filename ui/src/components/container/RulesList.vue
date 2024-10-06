@@ -16,7 +16,7 @@
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
 
-      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="contentrule"></DataSearchBar>
+      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="contentrule"></DataSearchBar>
 
       <div>
         <table class="table is-hoverable" v-if="rules.length > 0">

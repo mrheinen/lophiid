@@ -3,7 +3,8 @@
       <form @submit.prevent="performNewSearch()">
           <IconField iconPosition="left">
             <InputIcon
-              class="pi pi-info-circle search-info-icon pointer"
+              ref="icon"
+              :class="iconClass"
               @click="showPopover"
             >
             </InputIcon>
@@ -25,7 +26,7 @@ export default {
   components: {
     SearchPopover,
   },
-  props: ["options", "query", "modelname"],
+  props: ["options", "query", "modelname", "isloading"],
   emits: ["search"],
   data() {
     return {
@@ -48,6 +49,11 @@ export default {
       this.localQuery = this.$route.query.q;
     }
   },
+  computed: {
+    iconClass() {
+      return  "pi pi-info-circle search-info-icon pointer" + (this.isloading ? " pi-spin bold" : "")
+    },
+  }
 }
 </script>
 
@@ -58,6 +64,9 @@ export default {
   width: 100%;
 }
 
+.bold {
+  font-weight: bold !important;
+}
 span.search-info-icon {
   color: black;
 }

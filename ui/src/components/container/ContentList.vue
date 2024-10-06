@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px;">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="content"></DataSearchBar>
+      <DataSearchBar ref="searchBar" :isLoading="isLoading" @search="performNewSearch" modelname="content"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="contents.length > 0">
         <thead>
@@ -89,6 +89,7 @@ export default {
       limit: 24,
       offset: 0,
       query: null,
+      isLoading: false,
       keyboardDisabled: false,
       baseContent: {
         id: 0,
@@ -190,6 +191,7 @@ export default {
       }
     },
     loadContents(selectFirst, callback) {
+      this.isLoading = true;
       var url = this.config.backendAddress + "/content/segment?offset=" +
         this.offset + "&limit=" + this.limit;
       if (this.query) {
@@ -209,6 +211,7 @@ export default {
         })
         .then((response) => {
           if (!response) {
+            this.isLoading = false;
             return;
           }
           if (response.status == this.config.backendResultNotOk) {
@@ -243,6 +246,7 @@ export default {
             }
           }
           callback();
+          this.isLoading = false;
         });
     },
   },

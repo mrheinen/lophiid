@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="tag"></DataSearchBar>
+      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="tag"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="tags.length > 0">
         <thead>
@@ -71,6 +71,7 @@ export default {
       limit: 24,
       offset: 0,
       keyboardDisabled: false,
+      isLoading: false,
       baseTag: {
         id: 0,
         query: "",
@@ -168,6 +169,7 @@ export default {
     },
 
     loadTags(selectFirst, callback) {
+      this.isLoading = true;
       var url =
         this.config.backendAddress +
         "/tag/segment?offset=" +
@@ -192,6 +194,7 @@ export default {
         })
         .then((response) => {
           if (!response) {
+            this.isLoading = false;
             return;
           }
           if (response.status == this.config.backendResultNotOk) {
@@ -214,6 +217,7 @@ export default {
             }
           }
           callback();
+          this.isLoading = false;
         });
     },
   },
