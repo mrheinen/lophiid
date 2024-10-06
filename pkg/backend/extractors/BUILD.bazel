@@ -17,6 +17,7 @@ go_library(
         "//pkg/database",
         "//pkg/util",
         "//pkg/util/constants",
+        "//pkg/util/decoding",
         "@cc_mvdan_xurls_v2//:xurls",
     ],
 )
@@ -26,7 +27,6 @@ go_test(
     srcs = [
         "base64_extractor_test.go",
         "extractor_collection_test.go",
-        "extractors_test.go",
         "nc_extractor_test.go",
         "tcp_extractor_test.go",
         "unicode_extractor_test.go",

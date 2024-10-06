@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "llm",
+    srcs = [
+        "llm.go",
+        "llm_manager.go",
+        "metrics.go",
+    ],
+    importpath = "lophiid/pkg/llm",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/metrics",
+        "//pkg/util",
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_sashabaranov_go_openai//:go-openai",
+    ],
+)
+
+go_test(
+    name = "llm_test",
+    srcs = ["llm_manager_test.go"],
+    embed = [":llm"],
+    deps = [
+        "//pkg/util",
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
+)

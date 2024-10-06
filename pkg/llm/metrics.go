@@ -14,15 +14,29 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package extractors
+package llm
 
 import (
-	"lophiid/pkg/database"
+	"lophiid/pkg/metrics"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-type Extractor interface {
-	MetaType() string
-	ParseRequest(req *database.Request)
-	ParseString(s string)
-	GetMetadatas(requestID int64) []database.RequestMetadata
+type LLMMetrics struct {
+	llmQueryResponseTime prometheus.Histogram
+}
+
+// Register Metrics
+func CreateLLMMetrics(reg prometheus.Registerer) *LLMMetrics {
+	m := &LLMMetrics{
+		llmQueryResponseTime: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "lophiid_backend_llm_complete_response_time",
+				Help:    "Response time for successful LLM completion requests",
+				Buckets: metrics.MediumResponseTimebuckets},
+		),
+	}
+
+	reg.MustRegister(m.llmQueryResponseTime)
+	return m
 }

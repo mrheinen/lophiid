@@ -19,6 +19,7 @@ package extractors
 import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/util/constants"
+	"lophiid/pkg/util/decoding"
 	"regexp"
 	"strings"
 
@@ -79,7 +80,7 @@ func (u *URLExtractor) MetaType() string {
 
 func (u *URLExtractor) ParseRequest(req *database.Request) {
 	var member struct{}
-	for _, s := range StringsFromRequest(req) {
+	for _, s := range decoding.StringsFromRequest(req) {
 		for _, url := range ExtractUrls(s) {
 			// Skip the URL if it contains our honeypot IP.
 			if !strings.Contains(url, req.HoneypotIP) {

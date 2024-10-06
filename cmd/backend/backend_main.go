@@ -32,8 +32,10 @@ import (
 	"lophiid/pkg/backend"
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/ratelimit"
+	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/llm"
 	"lophiid/pkg/util"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
@@ -174,14 +176,27 @@ func main() {
 		vtMgr.Start()
 	}
 
-	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, javascript.CreateGoJaMetrics(metricsRegistry))
 	queryRunner := backend.NewQueryRunnerImpl(dbc)
 	bMetrics := backend.CreateBackendMetrics(metricsRegistry)
 	rMetrics := ratelimit.CreateRatelimiterMetrics(metricsRegistry)
 
 	rateLimiter := ratelimit.NewWindowRateLimiter(cfg.Backend.RateLimiter.RateWindow, cfg.Backend.RateLimiter.BucketDuration, cfg.Backend.RateLimiter.MaxRequestsPerWindow, cfg.Backend.RateLimiter.MaxRequestsPerBucket, rMetrics)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, cfg)
+	var llmResponder responder.Responder
+	if cfg.Responder.Enable {
+		llmClient := llm.NewOpenAILLMClient(cfg.Responder.ApiKey, cfg.Responder.ApiLocation, "")
+		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.Responder.CacheExpirationTime)
+		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+
+		llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.Responder.LLMCompletionTimeout)
+		llmResponder = responder.NewLLMResponder(llmManager)
+	} else {
+		llmResponder = nil
+	}
+
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
+
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

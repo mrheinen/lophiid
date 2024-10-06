@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
-package extractors
+package decoding
 
 import (
 	"fmt"
@@ -34,7 +33,7 @@ func BenchmarkSadencodeURL(b *testing.B) {
 	for _, v := range table {
 		b.Run(fmt.Sprintf("input_%s", v.input), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				roughDecodeURL(v.input)
+				RoughDecodeURL(v.input)
 			}
 		})
 	}
@@ -79,7 +78,7 @@ func TestRoughDencodeURL(t *testing.T) {
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
-			res := roughDecodeURL(test.stringToDecode)
+			res := RoughDecodeURL(test.stringToDecode)
 			if res != test.expectedResult {
 				t.Errorf("got %s, expected %s", res, test.expectedResult)
 			}

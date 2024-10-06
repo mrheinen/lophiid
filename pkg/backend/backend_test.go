@@ -27,6 +27,7 @@ import (
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/ratelimit"
+	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util/constants"
@@ -197,7 +198,8 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			}
 
 			fIpMgr := analysis.FakeIpEventManager{}
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+			fakeRes := &responder.FakeResponder{}
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
 			if (err != nil) != test.errorExpected {
@@ -234,7 +236,8 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	}
 
 	fIpMgr := analysis.FakeIpEventManager{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+	fakeRes := &responder.FakeResponder{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
 		Uri:  "/aa",
@@ -286,7 +289,8 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+	fakeRes := &responder.FakeResponder{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
 		Request: &backend_service.HttpRequest{
@@ -377,7 +381,8 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 				ErrorToReturn: nil,
 			}
 			fIpMgr := analysis.FakeIpEventManager{}
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+			fakeRes := &responder.FakeResponder{}
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
 			if b.MaybeExtractLinksFromPayload(test.content, test.dInfo) != test.expectedReturn {
 				t.Errorf("expected return %t but got %t", test.expectedReturn, !test.expectedReturn)
@@ -411,7 +416,8 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+	fakeRes := &responder.FakeResponder{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
 	ret := b.ScheduleDownloadOfPayload("1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
 	if ret != true {
@@ -529,7 +535,8 @@ func TestHandleProbe(t *testing.T) {
 	}
 
 	fIpMgr := analysis.FakeIpEventManager{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+	fakeRes := &responder.FakeResponder{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -664,7 +671,8 @@ func TestProcessQueue(t *testing.T) {
 			ErrorToReturn: nil,
 		}
 		fIpMgr := analysis.FakeIpEventManager{}
-		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+		fakeRes := &responder.FakeResponder{}
+		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 		req := database.Request{
 			ID:   42,
 			Uri:  "/aaaaa",
@@ -793,7 +801,8 @@ func TestSendStatus(t *testing.T) {
 				ErrorToReturn: nil,
 			}
 			fIpMgr := analysis.FakeIpEventManager{}
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+			fakeRes := &responder.FakeResponder{}
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
 			_, err := b.SendStatus(context.Background(), test.request)
 			if err == nil && test.expectedErrorString != "" {
@@ -834,7 +843,8 @@ func TestSendStatusSendsCommands(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+	fakeRes := &responder.FakeResponder{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
 	statusRequest := backend_service.StatusRequest{
 		Ip:      testHoneypotIP,
@@ -887,7 +897,8 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+	fakeRes := &responder.FakeResponder{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
 	uploadRequest := backend_service.UploadFileRequest{
 		RequestId: 42,
@@ -939,7 +950,8 @@ func TestHandleP0fResult(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, GetDefaultBackendConfig())
+	fakeRes := &responder.FakeResponder{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
 
 	// Insert a generic one. Should succeed
 	fdbc.P0fErrorToReturn = ksql.ErrRecordNotFound
@@ -967,5 +979,132 @@ func TestHandleP0fResult(t *testing.T) {
 	if hasInserted != false {
 		t.Errorf("p0f result was inserted")
 	}
+}
 
+func TestGetResponderDataCases(t *testing.T) {
+
+	fdbc := &database.FakeDatabaseClient{
+		P0fResultToReturn: database.P0fResult{},
+		ErrorToReturn:     nil,
+	}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+
+	fakeLimiter := ratelimit.FakeRateLimiter{
+		BoolToReturn:  true,
+		ErrorToReturn: nil,
+	}
+	fIpMgr := analysis.FakeIpEventManager{}
+
+	for _, test := range []struct {
+		description      string
+		rule             database.ContentRule
+		request          database.Request
+		content          database.Content
+		responder        *responder.FakeResponder
+		lastPromptInput  string
+		templateToReturn string
+		expectedReturn   string
+	}{
+		{
+			description: "work ok, NONE decoder",
+			rule: database.ContentRule{
+				Responder:        "COMMAND_INJECTION",
+				ResponderRegex:   "([0-9]+)",
+				ResponderDecoder: constants.ResponderDecoderTypeNone,
+			},
+			request: database.Request{
+				Raw: "aa 898989",
+			},
+			content: database.Content{
+				Data: []byte("not relevant"),
+			},
+			responder: &responder.FakeResponder{
+				TemplateToReturn: "this is it",
+				ErrorToReturn:    nil,
+			},
+			expectedReturn:  "this is it",
+			lastPromptInput: "898989",
+		},
+		{
+			description: "work ok, unknown decoder",
+			rule: database.ContentRule{
+				Responder:        "COMMAND_INJECTION",
+				ResponderRegex:   "([0-9]+)",
+				ResponderDecoder: "DOESNOTEXIST",
+			},
+			request: database.Request{
+				Raw: "aa 898989",
+			},
+			content: database.Content{
+				Data: []byte("this should be returned"),
+			},
+			responder: &responder.FakeResponder{
+				TemplateToReturn: "this is it",
+				ErrorToReturn:    nil,
+			},
+			expectedReturn:  "this should be returned",
+			lastPromptInput: "",
+		},
+		{
+			description: "work ok, URI decoder",
+			rule: database.ContentRule{
+				Responder:        "COMMAND_INJECTION",
+				ResponderRegex:   "foo=([0-9a-f%]+)",
+				ResponderDecoder: constants.ResponderDecoderTypeUri,
+			},
+			request: database.Request{
+				Raw: "foo=%2e%2e%2e%41%41",
+			},
+			content: database.Content{
+				Data: []byte("not relevant"),
+			},
+			responder: &responder.FakeResponder{
+				TemplateToReturn: "this is it",
+				ErrorToReturn:    nil,
+			},
+			expectedReturn:  "this is it",
+			lastPromptInput: "...AA",
+		},
+		{
+			description: "work ok, HTML decoder",
+			rule: database.ContentRule{
+				Responder:        "COMMAND_INJECTION",
+				ResponderRegex:   "foo=([&a-z;]+)",
+				ResponderDecoder: constants.ResponderDecoderTypeHtml,
+			},
+			request: database.Request{
+				Raw: "foo=&gt;&lt;",
+			},
+			content: database.Content{
+				Data: []byte("not relevant"),
+			},
+			responder: &responder.FakeResponder{
+				TemplateToReturn: "this is it",
+				ErrorToReturn:    nil,
+			},
+			expectedReturn:  "this is it",
+			lastPromptInput: "><",
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, test.responder, GetDefaultBackendConfig())
+			ret := b.getResponderData(&test.request, &test.rule, &test.content)
+
+			if ret != test.expectedReturn {
+				t.Errorf("unexpected responder data, expected %s got %s", test.expectedReturn, ret)
+			}
+
+			if test.responder != nil && test.lastPromptInput != test.responder.LastPromptInput {
+				t.Errorf("expected last prompt input %s but got %s", test.lastPromptInput, test.responder.LastPromptInput)
+			}
+		})
+	}
 }
