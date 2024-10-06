@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="honeypot"></DataSearchBar>
+      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="honeypot"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="honeypots.length > 0">
         <thead>
@@ -82,6 +82,7 @@ export default {
       offset: 0,
       selectedHoneypot: null,
       keyboardDisabled: false,
+      isLoading: false,
       base: {
         id: 0,
         ip: "",
@@ -175,6 +176,7 @@ export default {
     },
 
     loadHoneypots(selectFirst, callback) {
+      this.isLoading = true;
       var url =
         this.config.backendAddress +
         "/honeypot/segment?offset=" +
@@ -199,6 +201,7 @@ export default {
         })
         .then((response) => {
           if (!response) {
+            this.isLoading = false;
             return;
           }
           if (response.status == this.config.backendResultNotOk) {
@@ -226,6 +229,7 @@ export default {
             }
           }
           callback();
+          this.isLoading = false;
         });
     },
   },

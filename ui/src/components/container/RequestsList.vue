@@ -1,7 +1,7 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" modelname="request"></DataSearchBar>
+      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="request"></DataSearchBar>
 
       <table class="table is-hoverable" v-if="requests.length > 0">
         <thead>
@@ -124,6 +124,7 @@ export default {
       query: null,
       isSelectedElement: null,
       isSelectedId: 0,
+      isLoading: false,
       limit: 25,
       offset: 0,
     };
@@ -311,6 +312,9 @@ export default {
         });
     },
     loadRequests(selectFirst) {
+      // Start the spinner
+      this.isLoading = true;
+
       var url =
         this.config.backendAddress +
         "/request/segment?offset=" +
@@ -330,6 +334,7 @@ export default {
         .then((response) => {
           if (response.status == 403) {
             this.$emit("require-auth");
+            this.isLoading = false;
             return null;
           } else {
             return response.json();
@@ -337,6 +342,7 @@ export default {
         })
         .then((response) => {
           if (!response) {
+            this.isLoading = false;
             return;
           }
           if (response.status == this.config.backendResultNotOk) {
@@ -345,6 +351,7 @@ export default {
             this.requests = [];
             if (!response.data) {
               this.$toast.info("No data found");
+              this.isLoading = false;
               return;
             }
             for (var i = 0; i < response.data.length; i++) {
@@ -367,6 +374,7 @@ export default {
               this.setSelectedReq(response.data[response.data.length - 1].id);
             }
           }
+          this.isLoading = false;
         });
     },
   },
