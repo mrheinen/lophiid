@@ -51,7 +51,7 @@ export default {
   },
   computed: {
     iconClass() {
-      return  "pi pi-info-circle search-info-icon pointer" + (this.isloading ? " pi-spin" : "")
+      return  "pi pi-info-circle search-info-icon pointer" + (this.isloading ? " pi-spin bold" : "")
     },
   }
 }
@@ -64,6 +64,9 @@ export default {
   width: 100%;
 }
 
+.bold {
+  font-weight: bold !important;
+}
 span.search-info-icon {
   color: black;
 }
