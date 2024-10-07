@@ -28,7 +28,7 @@ Key features:
 
 - A distributed honeypot approach
 - Rule based interactions with attacks
-- Support both static and scripted (Javascript) response handling
+- Static, scripted (Javascript) and LLM supported response handling
 - Alerting possible (Telegram, extensible)
 - UI with comprehensive search
 - Automatic tagging of requests and attacks to help triage
