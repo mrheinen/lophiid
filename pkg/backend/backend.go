@@ -633,7 +633,7 @@ func (s *BackendServer) getResponderData(sReq *database.Request, rule *database.
 
 		if final_match == "" {
 			return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
-    }
+		}
 
 		body, err := s.llmResponder.Respond(rule.Responder, final_match, string(content.Data))
 		if err != nil {
@@ -793,7 +793,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 // LoadRules loads the content rules from the database.
 func (s *BackendServer) LoadRules() error {
-	// TODO: Add logic that allowes only active rules to be selected here
 
 	rulesBatchSize := 1000
 	rulesOffset := 0
@@ -801,7 +800,7 @@ func (s *BackendServer) LoadRules() error {
 	var allRules []database.ContentRule
 
 	for i := 0; i < maxBatchesToLoad; i += 1 {
-		rules, err := s.dbClient.SearchContentRules(int64(rulesOffset), int64(rulesBatchSize), "")
+		rules, err := s.dbClient.SearchContentRules(int64(rulesOffset), int64(rulesBatchSize), "enabled:true")
 		if err != nil {
 			return err
 		}

@@ -139,10 +139,11 @@ export default {
       contentFormVisible: false,
       appFormVisible: false,
       baseRule: {
-        host: "",
         uri_matching: "exact",
-        body_matching: "exact",
+        body_matching: "none",
         method: "ANY",
+        enabled: true,
+        alert: false,
       },
     };
   },
