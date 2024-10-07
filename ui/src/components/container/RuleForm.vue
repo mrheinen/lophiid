@@ -167,11 +167,18 @@
             </div>
           </div>
           <div class="column">
+            <label class="label">Misc options</label>
+            <div>
+            <CheckBox inputId="alert" v-model="localRule.alert" :binary="true" />
+            <label for="alert">Alert</label>
+            </div>
+
+            <div>
+            <CheckBox inputId="enabled" v-model="localRule.enabled" :binary="true" />
+            <label for="enabled">Enable</label>
+            </div>
           </div>
         </div>
-
-
-
         <br />
         <PrimeButton
         :label="localRule.id > 0 ? 'Submit' : 'Add'"

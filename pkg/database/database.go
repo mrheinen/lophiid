@@ -126,6 +126,7 @@ type ContentRule struct {
 	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Creation date of the rule"`
 	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Last update date of the rule"`
 	Alert       bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	Enabled     bool      `ksql:"enabled" json:"enabled" doc:"A bool (0 or 1) indicating if the rule is enabled"`
 	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
 	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
 	// The request purpose should indicate what the request is intended to do. It

@@ -86,6 +86,7 @@ CREATE TABLE content_rule (
   responder       RESPONDER_TYPE default 'UNKNOWN',
   responder_regex VARCHAR(1024) default '',
   responder_decoder RESPONDER_DECODER_TYPE default 'NONE',
+  enabled         BOOL DEFAULT TRUE,
   CONSTRAINT fk_content_id FOREIGN KEY(content_id) REFERENCES content(id)
 );
 
