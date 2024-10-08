@@ -8,59 +8,58 @@
             <div>
               <label class="label">URI match string</label>
               <InputText
-                id="title"
-                type="text"
-                placeholder=""
-                v-model="localRule.uri"
+              id="title"
+              type="text"
+              placeholder=""
+              v-model="localRule.uri"
               />
             </div>
           </div>
           <div class="column">
             <div class="field">
-            <label class="label">URI matching method</label>
-            <DropDown v-model="localRule.uri_matching"
-            :options="config.backendMatchingMethods" placeholder="Select a
-            method"
-            checkmark :highlightOnSelect="true" />
+              <label class="label">URI matching method</label>
+              <DropDown v-model="localRule.uri_matching"
+              :options="config.backendMatchingMethods" placeholder="Select a
+              method"
+              checkmark :highlightOnSelect="true" />
             </div>
           </div>
         </div>
 
         <div class="columns">
           <div class="column">
-             <div>
-                <label class="label">Request body match string</label>
-                <InputText
-                  id="title"
-                  type="text"
-                  placeholder=""
-                  v-model="localRule.body"
-                />
-              </div>
+            <div>
+              <label class="label">Request body match string</label>
+              <InputText
+              id="title"
+              type="text"
+              placeholder=""
+              v-model="localRule.body"
+              />
+            </div>
           </div>
           <div class="column">
 
             <div class="field">
-            <label class="label">Body matching method</label>
-            <DropDown v-model="localRule.body_matching"
-            :options="config.backendMatchingMethods" placeholder="Select a
-            method"
-            checkmark :highlightOnSelect="true" />
+              <label class="label">Body matching method</label>
+              <DropDown v-model="localRule.body_matching"
+              :options="config.backendMatchingMethods" placeholder="Select a
+              method"
+              checkmark :highlightOnSelect="true" />
             </div>
           </div>
         </div>
-
 
         <div class="columns">
           <div class="column">
             <div>
               <label class="label">Content ID</label>
               <InputNumber
-                v-model="localRule.content_id"
-                inputId="minmax"
-                :useGrouping="false"
-                :min="0"
-                :max="65535"
+              v-model="localRule.content_id"
+              inputId="minmax"
+              :useGrouping="false"
+              :min="0"
+              :max="65535"
               />
               &nbsp;
               <i @click="onContentFormOpen()" class="pi pi-plus-circle pointer"></i>
@@ -70,12 +69,12 @@
             <div>
               <label class="label">App ID</label>
               <DropDown
-                v-model="localRule.app_id"
-                :options="appValues"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Select app"
-                class="w-full md:w-14rem"
+              v-model="localRule.app_id"
+              :options="appValues"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select app"
+              class="w-full md:w-14rem"
               />
 
               &nbsp;
@@ -87,25 +86,25 @@
 
         <div class="columns">
           <div class="column">
-             <div>
+            <div>
               <label class="label">Port</label>
               <InputNumber
-                v-model="localRule.port"
-                inputId="minmax"
-                :useGrouping="false"
-                :min="0"
-                :max="65535"
+              v-model="localRule.port"
+              inputId="minmax"
+              :useGrouping="false"
+              :min="0"
+              :max="65535"
               />
             </div>
           </div>
           <div class="column">
 
             <div class="field">
-            <label class="label">Request purpose</label>
-            <DropDown v-model="localRule.request_purpose"
-            :options="config.contentRuleRequestPurposes" placeholder="Select a
-            method"
-            checkmark :highlightOnSelect="true" />
+              <label class="label">Request purpose</label>
+              <DropDown v-model="localRule.request_purpose"
+              :options="config.contentRuleRequestPurposes" placeholder="Select a
+              method"
+              checkmark :highlightOnSelect="true" />
             </div>
 
           </div>
@@ -134,7 +133,7 @@
           </div>
         </div>
 
-       <div class="columns">
+        <div class="columns">
           <div class="column">
             <div>
               <label class="label">Responder (optional)</label>
@@ -157,7 +156,7 @@
         </div>
 
 
-       <div class="columns">
+        <div class="columns">
           <div class="column">
             <div>
               <label class="label">Responder decoder</label>
@@ -169,13 +168,13 @@
           <div class="column">
             <label class="label">Misc options</label>
             <div>
-            <CheckBox inputId="alert" v-model="localRule.alert" :binary="true" />
-            <label for="alert">Alert</label>
+              <CheckBox inputId="alert" v-model="localRule.alert" :binary="true" />
+              <label for="alert">Alert</label>
             </div>
 
             <div>
-            <CheckBox inputId="enabled" v-model="localRule.enabled" :binary="true" />
-            <label for="enabled">Enable</label>
+              <CheckBox inputId="enabled" v-model="localRule.enabled" :binary="true" />
+              <label for="enabled">Enable</label>
             </div>
           </div>
         </div>
@@ -184,43 +183,43 @@
         :label="localRule.id > 0 ? 'Submit' : 'Add'"
         @click="submitForm()"
         >
-    </PrimeButton>
-    &nbsp;
-    <PrimeButton
-    severity="secondary"
+        </PrimeButton>
+        &nbsp;
+        <PrimeButton
+        severity="secondary"
         label="New"
         @click="resetForm()"
-      ></PrimeButton>
-      &nbsp;
-      <PrimeButton
+        ></PrimeButton>
+        &nbsp;
+        <PrimeButton
         severity="danger"
         @click="requireConfirmation($event)"
         label="Delete"
-      ></PrimeButton>
+        ></PrimeButton>
       </FieldSet>
     </div>
 
     <ConfirmPopup group="headless">
-      <template #container="{ message, acceptCallback, rejectCallback }">
-        <div class="bg-gray-900 text-white border-round p-3">
-          <span>{{ message.message }}</span>
-          <div class="flex align-items-center gap-2 mt-3">
-            <PrimeButton
-              icon="pi pi-check"
-              label="Save"
-              @click="acceptCallback"
-              class="p-button-sm p-button-outlined"
-            ></PrimeButton>
-            <PrimeButton
-              label="Cancel"
-              severity="secondary"
-              outlined
-              @click="rejectCallback"
-              class="p-button-sm p-button-text"
-            ></PrimeButton>
-          </div>
+    <template #container="{ message, acceptCallback, rejectCallback }">
+      <div class="bg-gray-900 text-white border-round p-3">
+        <span>{{ message.message }}</span>
+        <div class="flex align-items-center gap-2 mt-3">
+          <PrimeButton
+          icon="pi pi-check"
+          label="Save"
+          @click="acceptCallback"
+          class="p-button-sm p-button-outlined"
+          ></PrimeButton>
+          <PrimeButton
+          label="Cancel"
+          severity="secondary"
+          outlined
+          @click="rejectCallback"
+          class="p-button-sm p-button-text"
+          ></PrimeButton>
         </div>
-      </template>
+      </div>
+    </template>
     </ConfirmPopup>
   </div>
 </template>

@@ -28,7 +28,7 @@ export default {
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
   contentRuleRequestPurposes: ['UNKNOWN', 'RECON', 'CRAWL', 'ATTACK'],
   contentRuleHTTPMethods: ['ANY' , 'GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'],
-  ruleResponderTypes: ['NONE', 'COMMAND_INJECTION'],
+  ruleResponderTypes: ['NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION'],
   ruleResponderDecoders: ['NONE', 'URI', 'HTML'],
   statusCodeValues: [
     { label: '200 - OK', value: '200' },

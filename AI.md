@@ -61,6 +61,19 @@ exploitation technique. They contain an AI prompt that prepares the AI for how
 it should interpret the data the rule is sending (remember, what you grabbed
 with the regex) and tells the AI how it should respond.
 
+### SOURCE_CODE_INJECTION responder
+
+To use this responder you will use the regex to grep the source code that is
+being send by the attacker to the server. The responder will try to determine
+what the output is that this source code would generate. Currently only tested
+with simple PHP snippets.
+
+### CODE_EXECUTION responder
+
+To use this render you let the regex grab the commands that the attacker is
+trying to execute on the honeypot. The responder will try to determine what the
+output of those commands would be and returns that.
+
 ## Some implementation details
 
 The AI interaction caused by a rule is cached and the timeout of this cache is
