@@ -78,6 +78,9 @@
   <RawHttpCard v-if="localRequest.raw" label="HTTP request"
     :data="localRequest.raw"></RawHttpCard>
   <br />
+  <RawHttpCard v-if="localRequest.raw_response" label="Raw response"
+    :data="localRequest.raw_response"></RawHttpCard>
+  <br />
 
   <div v-if="metadata.length" class="card">
     <FieldSet legend="Metadata" :toggleable="true">
