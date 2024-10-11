@@ -63,6 +63,10 @@
               />
               &nbsp;
               <i @click="onContentFormOpen()" class="pi pi-plus-circle pointer"></i>
+              &nbsp;
+              <a :href="'/content?q=id:' + localRule.content_id">
+                <i class="pi pi-external-link pointer"></i>
+              </a>
             </div>
           </div>
           <div class="column">
