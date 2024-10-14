@@ -189,7 +189,7 @@ func main() {
 		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 
 		llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.Responder.LLMCompletionTimeout)
-		llmResponder = responder.NewLLMResponder(llmManager)
+		llmResponder = responder.NewLLMResponder(llmManager, cfg.Responder.MaxInputCharacters)
 	} else {
 		llmResponder = nil
 	}

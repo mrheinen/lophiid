@@ -93,3 +93,5 @@ responder:
   cache_expiration_time: 24h
   # How long a completion is allowed to take.
   llm_completion_timeout: 60s
+  # Maximum string length of the prompt input.
+  max_input_characters: 4096
