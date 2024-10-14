@@ -13,7 +13,7 @@ go_library(
     ],
     importpath = "lophiid/pkg/util",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_blang_semver_v4//:go_default_library"],
+    deps = ["@com_github_blang_semver_v4//:semver"],
 )
 
 go_test(
