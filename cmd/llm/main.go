@@ -31,6 +31,7 @@ import (
 var apiKey = flag.String("api-key", "", "The OpenAPI API key")
 var apiLocation = flag.String("api-location", "http://localhost:8000/v1", "The OpenAPI API location")
 var timeoutSec = flag.Int("api-timeout_sec", 20, "API request timeout seconds")
+var maxInputLength = flag.Int("m", 10000, "Max input length")
 var query = flag.String("p", "", "The prompt input to send")
 var responderType = flag.String("t", "COMMAND_INJECTION", "The responder type (e.g. COMMAND_INJECTION, SOURCE_CODE_EXECUTION)")
 
@@ -47,7 +48,7 @@ func main() {
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Second*time.Duration(*timeoutSec))
-	llmResponder := responder.NewLLMResponder(llmManager)
+	llmResponder := responder.NewLLMResponder(llmManager, *maxInputLength)
 	res, err := llmResponder.Respond(*responderType, *query, responder.LLMReplacementTag)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
