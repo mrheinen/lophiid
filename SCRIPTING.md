@@ -275,7 +275,7 @@ Here is an example usage:
   // than embedding an entire response here in the script.
   template = util.database.getContentById(42)
 
-  res = util.responder.Respond('COMMAND_INJECTION', commands, template)
+  res = util.responder.Respond('COMMAND_INJECTION', commands, template.getData())
   if (res == "") {
     // it failed
   }
