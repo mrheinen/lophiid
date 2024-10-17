@@ -41,6 +41,7 @@ type Util struct {
 	Runner    CommandRunnerWrapper  `json:"runner"`
 	Context   RequestContext        `json:"context"`
 	Responder ResponderWrapper      `json:"responder"`
+	Log       Logger                `json:"log"`
 }
 
 type JavascriptRunner interface {
