@@ -36,10 +36,3 @@ go_library(
     importpath = "/backend_service",
     visibility = ["//visibility:public"],
 )
-
-go_library(
-    name = "lophiid",
-    srcs = ["logger.go"],
-    importpath = "lophiid",
-    visibility = ["//visibility:public"],
-)
