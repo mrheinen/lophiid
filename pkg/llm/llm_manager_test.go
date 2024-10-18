@@ -17,11 +17,13 @@
 package llm
 
 import (
+	"errors"
 	"lophiid/pkg/util"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestComplete(t *testing.T) {
@@ -41,5 +43,26 @@ func TestComplete(t *testing.T) {
 
 	if res != testCompletionString {
 		t.Errorf("expected %s, got %s", testCompletionString, res)
+	}
+}
+
+func TestCompleteErrorCounted(t *testing.T) {
+	testCompletionString := "completion"
+	client := MockLLMClient{CompletionToReturn: testCompletionString, ErrorToReturn: errors.New("beh")}
+	pCache := util.NewStringMapCache[string]("", time.Second)
+	pReg := prometheus.NewRegistry()
+
+	metrics := CreateLLMMetrics(pReg)
+
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour)
+	_, err := lm.Complete("aaaa")
+
+	if err == nil {
+		t.Errorf("expected error")
+	}
+
+	count := testutil.ToFloat64(metrics.llmErrorCount)
+	if count != 1 {
+		t.Errorf("expected 1 error, got %f", count)
 	}
 }

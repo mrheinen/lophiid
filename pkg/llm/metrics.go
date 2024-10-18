@@ -24,6 +24,7 @@ import (
 
 type LLMMetrics struct {
 	llmQueryResponseTime prometheus.Histogram
+	llmErrorCount        prometheus.Counter
 }
 
 // Register Metrics
@@ -35,8 +36,14 @@ func CreateLLMMetrics(reg prometheus.Registerer) *LLMMetrics {
 				Help:    "Response time for successful LLM completion requests",
 				Buckets: metrics.MediumResponseTimebuckets},
 		),
+		llmErrorCount: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_llm_error_count",
+				Help: "Total LLM comunication errors",
+			}),
 	}
 
 	reg.MustRegister(m.llmQueryResponseTime)
+	reg.MustRegister(m.llmErrorCount)
 	return m
 }

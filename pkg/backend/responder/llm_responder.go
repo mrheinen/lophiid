@@ -2,6 +2,7 @@ package responder
 
 import (
 	"fmt"
+	"log/slog"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
@@ -22,6 +23,7 @@ func NewLLMResponder(llmManager *llm.LLMManager, maxInputChars int) *LLMResponde
 
 func (l *LLMResponder) Respond(resType string, promptInput string, template string) (string, error) {
 	if len(promptInput) > l.maxInputChars {
+		slog.Error("input too long", slog.Int("size", len(promptInput)))
 		return "", fmt.Errorf("input too long (size: %d)", len(promptInput))
 	}
 
@@ -39,6 +41,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		basePrompt = sourceCodeExecutionPrompt
 
 	default:
+		slog.Error("invalid responder type", slog.String("type", resType))
 		return "", fmt.Errorf("invalid responder type: %s", resType)
 	}
 
@@ -46,6 +49,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 	finalPrompt := fmt.Sprintf(basePrompt, deli, deli, promptInput)
 	res, err := l.llmManager.Complete(finalPrompt)
 	if err != nil {
+		slog.Error("could not complete LLM request", slog.String("error", err.Error()))
 		return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
 	}
 
