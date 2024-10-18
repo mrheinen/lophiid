@@ -23,7 +23,7 @@ import (
 
 func TestInputLength(t *testing.T) {
 	res := NewLLMResponder(nil, 50)
-	randomString := util.GenerateRandomString(51)
+	randomString := util.GenerateRandomAlphaNumericString(51)
 
 	_, err := res.Respond("", randomString, "")
 	if err == nil {

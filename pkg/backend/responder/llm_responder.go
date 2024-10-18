@@ -42,7 +42,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		return "", fmt.Errorf("invalid responder type: %s", resType)
 	}
 
-	deli := util.GenerateRandomString(20)
+	deli := util.GenerateRandomAlphaNumericString(20)
 	finalPrompt := fmt.Sprintf(basePrompt, deli, deli, promptInput)
 	res, err := l.llmManager.Complete(finalPrompt)
 	if err != nil {
