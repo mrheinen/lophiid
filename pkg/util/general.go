@@ -58,11 +58,16 @@ func IsStringASCII(s string) bool {
 }
 
 const printableChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+const printableAlphaNumericChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func GenerateRandomString(length int) string {
+func GenerateRandomString(length int, inputChars string) string {
 	result := make([]byte, length)
 	for i := 0; i < length; i++ {
-		result[i] = printableChars[rand.Intn(len(printableChars))]
+		result[i] = inputChars[rand.Intn(len(inputChars))]
 	}
 	return string(result)
+}
+
+func GenerateRandomAlphaNumericString(length int) string {
+	return GenerateRandomString(length, printableAlphaNumericChars)
 }

@@ -82,6 +82,12 @@ whois_manager:
   cache_expiration_time: 12h
   max_attempts: 6
 
+ratelimiter:
+  rate_window: 1h
+  bucket_duration: 1m
+  max_requests_per_window: 1000
+  max_requests_per_bucket: 50
+
 responder:
   # Whether to enable the responder.
   enable: 1
@@ -93,3 +99,5 @@ responder:
   cache_expiration_time: 24h
   # How long a completion is allowed to take.
   llm_completion_timeout: 60s
+  # Maximum string length of the prompt input.
+  max_input_characters: 4096

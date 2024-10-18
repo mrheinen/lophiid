@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "responder",
@@ -14,4 +14,11 @@ go_library(
         "//pkg/util",
         "//pkg/util/constants",
     ],
+)
+
+go_test(
+    name = "responder_test",
+    srcs = ["llm_responder_test.go"],
+    embed = [":responder"],
+    deps = ["//pkg/util"],
 )

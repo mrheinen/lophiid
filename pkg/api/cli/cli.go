@@ -111,14 +111,17 @@ func (a *ApiCLI) CreateContentAndRule(app *database.Application, ports []int64, 
 	for _, port := range ports {
 		// Store the content rule.
 		newContentRule := database.ContentRule{
-			ContentID:      addedContent.ID,
-			Method:         http.MethodGet,
-			Uri:            pathQuery,
-			UriMatching:    "exact",
-			BodyMatching:   "none",
-			AppID:          app.ID,
-			Port:           port,
-			RequestPurpose: "UNKNOWN",
+			ContentID:        addedContent.ID,
+			Method:           http.MethodGet,
+			Uri:              pathQuery,
+			UriMatching:      "exact",
+			BodyMatching:     "none",
+			AppID:            app.ID,
+			Port:             port,
+			RequestPurpose:   "UNKNOWN",
+			Responder:        "NONE",
+			ResponderDecoder: "NONE",
+			Enabled:          true,
 		}
 
 		addedContentRule, err := a.contentRuleAPI.UpsertDataModel(newContentRule)

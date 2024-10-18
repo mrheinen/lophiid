@@ -106,5 +106,6 @@ type Config struct {
 		ApiKey               string        `fig:"api_key"`
 		CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"24h"`
 		LLMCompletionTimeout time.Duration `fig:"llm_completion_timeout" default:"1m"`
+		MaxInputCharacters   int           `fig:"max_input_characters" default:"4096"`
 	} `fig:"responder"`
 }

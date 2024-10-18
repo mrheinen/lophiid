@@ -9,14 +9,22 @@ import (
 )
 
 type LLMResponder struct {
-	llmManager *llm.LLMManager
+	llmManager    *llm.LLMManager
+	maxInputChars int
 }
 
-func NewLLMResponder(llmManager *llm.LLMManager) *LLMResponder {
-	return &LLMResponder{llmManager: llmManager}
+func NewLLMResponder(llmManager *llm.LLMManager, maxInputChars int) *LLMResponder {
+	return &LLMResponder{
+		llmManager:    llmManager,
+		maxInputChars: maxInputChars,
+	}
 }
 
 func (l *LLMResponder) Respond(resType string, promptInput string, template string) (string, error) {
+	if len(promptInput) > l.maxInputChars {
+		return "", fmt.Errorf("input too long (size: %d)", len(promptInput))
+	}
+
 	// First make sure there actually is a replacement tag. If the tag is missing
 	// then we will append one to the end of the template.
 	if !strings.Contains(template, LLMReplacementTag) {
@@ -34,7 +42,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		return "", fmt.Errorf("invalid responder type: %s", resType)
 	}
 
-	deli := util.GenerateRandomString(20)
+	deli := util.GenerateRandomAlphaNumericString(20)
 	finalPrompt := fmt.Sprintf(basePrompt, deli, deli, promptInput)
 	res, err := l.llmManager.Complete(finalPrompt)
 	if err != nil {
