@@ -55,6 +55,7 @@ func (l *LLMManager) Complete(prompt string) (string, error) {
 
 	if err != nil {
 		slog.Error("Error completing prompt", slog.String("prompt", prompt), slog.String("error", err.Error()))
+		l.metrics.llmErrorCount.Inc()
 		return "", fmt.Errorf("error completing prompt: %w", err)
 	}
 

@@ -24,5 +24,6 @@ go_test(
     deps = [
         "//pkg/util",
         "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/testutil",
     ],
 )
