@@ -158,6 +158,32 @@ Returns a sha1 hash of the given string.
 
 Sleep the given amount of milliseconds.
 
+## Logging
+
+The logger will log to stdout in the process that executes the Javascript. It
+also caches the log messages and makes them available to the javascript itself
+with the getMessages() method.
+
+### util.log.info(string)
+
+Log info messages.
+
+### util.log.warn(string)
+
+Log warn messages.
+
+### util.log.debug(string)
+
+Log debug messages.
+
+### util.log.error(string)
+
+Log error messages.
+
+### util.log.getMessages() []string
+
+Get all previously logged messages.
+
 ## Cache
 
 The cache deserves a little bit extra documentation. The purpose of the cache is
