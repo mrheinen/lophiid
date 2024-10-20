@@ -9,7 +9,10 @@ app:
     updated_at: 2024-10-20T18:28:23.026018Z
     ext_version: 0
     ext_uuid: dc46f9ae-57e7-4835-be70-0d9847e30a88
-    cves: []
+    cves:
+      - CVE-2024-41723
+      - CVE-2024-27202
+      - CVE-2024-45844
 rules:
     - id: 372
       uri: /xui/common/scripts/utility.js
