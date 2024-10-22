@@ -168,6 +168,22 @@ func (r *StringMapCache[T]) Start() {
 	}()
 }
 
+func (r *StringMapCache[T]) StartWithCallback(callback func(T) bool) {
+  ticker := time.NewTicker(time.Minute * 1)
+  go func() {
+    for {
+      select {
+      case <-r.bgChan:
+        ticker.Stop()
+        return
+      case <-ticker.C:
+        r.CleanExpiredWithCallback(callback)
+      }
+    }
+  }()
+}
+
+
 func (r *StringMapCache[T]) Stop() {
 	slog.Info("stopping cache", slog.String("name", r.cacheName))
 	r.bgChan <- true

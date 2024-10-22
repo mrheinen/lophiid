@@ -143,6 +143,16 @@ CREATE TABLE app (
   cves            VARCHAR(15) ARRAY
 );
 
+CREATE TABLE session (
+  id              SERIAL PRIMARY KEY,
+  active          BOOL DEFAULT FALSE,
+  ip              VARCHAR(52) NOT NULL,
+  started_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+);
+
+
 
 CREATE TABLE downloads (
   id              SERIAL PRIMARY KEY,

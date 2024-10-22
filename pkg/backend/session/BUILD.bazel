@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "session",
+    srcs = ["session.go"],
+    importpath = "lophiid/pkg/backend/session",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/database",
+        "//pkg/util",
+    ],
+)
+
+go_test(
+    name = "session_test",
+    srcs = ["session_test.go"],
+    embed = [":session"],
+    deps = ["//pkg/database"],
+)
