@@ -25,6 +25,11 @@ import (
 )
 
 type SessionManager interface {
+	CleanupStaleSessions(limit int64) (int, error)
+	GetCachedSession(ip string) (*database.Session, error)
+	UpdateCachedSession(ip string, session *database.Session) error
+	StartSession(ip string) (*database.Session, error)
+	EndSession(session *database.Session) error
 }
 
 // DatabaseSessionManager manages the sessions in the database. It does use a

@@ -41,6 +41,7 @@ import (
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/backend/responder"
+	"lophiid/pkg/backend/session"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util"
@@ -78,7 +79,6 @@ type BackendServer struct {
 	reqsProcessChan chan bool
 	reqsQueue       chan ReqQueueEntry
 	sessionCache    *util.StringMapCache[database.ContentRule]
-	ruleVsCache     *RuleVsContentCache
 	downloadQueue   map[string][]backend_service.CommandDownloadFile
 	downloadQueueMu sync.Mutex
 	downloadsCache  *util.StringMapCache[time.Time]
@@ -87,17 +87,17 @@ type BackendServer struct {
 	ipEventManager  analysis.IpEventManager
 	config          Config
 	llmResponder    responder.Responder
+	sessionMgr      session.SessionManager
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
 	// we get a request with the same download (payload URL) within that time
 	// window then we will not download it again.
 	dCache := util.NewStringMapCache[time.Time]("download_cache", config.Backend.Advanced.DownloadCacheDuration)
-	rCache := NewRuleVsContentCache(config.Backend.Advanced.AttackTrackingDuration)
 
 	return &BackendServer{
 		dbClient:        c,
@@ -114,7 +114,6 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		downloadQueue:   make(map[string][]backend_service.CommandDownloadFile),
 		downloadsCache:  dCache,
 		sessionCache:    sCache,
-		ruleVsCache:     rCache,
 		metrics:         metrics,
 		config:          config,
 		rateLimiter:     rateLimiter,
@@ -259,31 +258,30 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 		return database.ContentRule{}, fmt.Errorf("no rule found")
 	}
 
-	if len(matchedRules) == 1 {
-		s.UpdateCaches(req.SourceIP, matchedRules[0])
-		return matchedRules[0], nil
+	session, err := s.sessionMgr.GetCachedSession(req.SourceIP)
+	if err != nil || session == nil {
+		session, err = s.sessionMgr.StartSession(req.SourceIP)
+		session.LastRuleServed.AppID = -1
+		if err != nil {
+			slog.Error("error starting session", slog.String("ip", req.SourceIP), slog.String("error", err.Error()))
+		}
 	}
 
-	lastMatchedRule, err := s.sessionCache.Get(req.SourceIP)
-	var lastMatchedAppId int64
-	if err == nil {
-		lastMatchedAppId = lastMatchedRule.AppID
-	} else {
-		lastMatchedAppId = -1
+	if len(matchedRules) == 1 {
+		s.UpdateSessionWithRule(req.SourceIP, session, &matchedRules[0])
+		return matchedRules[0], nil
 	}
 
 	var unservedRules []database.ContentRule
 	// Find out what rules match but haven't been served.
 	for _, r := range matchedRules {
-		// We combine the content and rule ID here because some rules can point
-		// to the same content but with different settings (e.g. server,
-		// content-type) so we want all combinations.
-		if !s.ruleVsCache.Has(req.SourceIP, r.ID, r.ContentID) {
+
+		if _, ok := session.RuleIDsServed[r.ID]; !ok {
 			unservedRules = append(unservedRules, r)
 
 			// A rule matching the same app id is prefered.
-			if r.AppID == lastMatchedAppId {
-				s.UpdateCaches(req.SourceIP, r)
+			if r.AppID == session.LastRuleServed.AppID {
+				s.UpdateSessionWithRule(req.SourceIP, session, &r)
 				return r, nil
 			}
 		}
@@ -299,15 +297,16 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 		matchedRule = matchedRules[rand.Int()%len(matchedRules)]
 	}
 
-	s.UpdateCaches(req.SourceIP, matchedRule)
+	s.UpdateSessionWithRule(req.SourceIP, session, &matchedRule)
 	return matchedRule, nil
 }
 
-func (s *BackendServer) UpdateCaches(ip string, rule database.ContentRule) {
-	// Cache the rule to influence future requests.
-	// TODO: consider cleaning expired sessions via a go routine.
-	s.sessionCache.Store(ip, rule)
-	s.ruleVsCache.Store(ip, rule.ID, rule.ContentID)
+func (s *BackendServer) UpdateSessionWithRule(ip string, session *database.Session, rule *database.ContentRule) {
+	session.LastRuleServed = *rule
+	session.RuleIDsServed[rule.ID] = rule.ContentID
+	if err := s.sessionMgr.UpdateCachedSession(ip, session); err != nil {
+		slog.Error("error updating session", slog.String("ip", ip), slog.String("error", err.Error()))
+	}
 }
 
 // SendStatus receives status information from honeypots and sends commands back
@@ -912,23 +911,7 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 	return nil
 }
 
-func (s *BackendServer) loadRuleIdContentIdCombos() error {
-	// Load the rule/content ID combos into the cache.
-	reqs, err := s.dbClient.GetRequestsDistinctComboLastMonth()
-	if err != nil {
-		return err
-	}
-
-	for _, r := range reqs {
-		s.ruleVsCache.Store(r.SourceIP, r.RuleID, r.ContentID)
-	}
-	return nil
-}
-
 func (s *BackendServer) Start() error {
-	if err := s.loadRuleIdContentIdCombos(); err != nil {
-		return fmt.Errorf("loading combos: %s", err)
-	}
 	// Load the rules once.
 	err := s.LoadRules()
 	if err != nil {

@@ -380,6 +380,7 @@ type Session struct {
 	Active         bool   `ksql:"active" json:"active" doc:"Is the session active"`
 	IP             string `ksql:"ip" json:"ip" doc:"IP of the client"`
 	LastRuleServed ContentRule
+	RuleIDsServed  map[int64]int64
 	CreatedAt      time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the session in the database (not session start!)"`
 	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
 	StartedAt      time.Time `ksql:"started_at" json:"started_at" doc:"Start time of the session"`
