@@ -49,3 +49,46 @@ func TestSessionManagerCache(t *testing.T) {
 		t.Errorf("unexpected session ID: %d", session.ID)
 	}
 }
+
+func TestSessionManagerCleansStaleSessions(t *testing.T) {
+	dbClient := database.FakeDatabaseClient{
+		SessionToReturn: database.Session{},
+		ErrorToReturn:   nil,
+	}
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute)
+
+	cnt, err := sm.CleanupStaleSessions(10)
+	if err != nil {
+		t.Errorf("error cleaning up sessions: %s", err.Error())
+	}
+
+	if cnt != 1 {
+		t.Errorf("expected 1 stale session, got %d", cnt)
+	}
+}
+
+func TestSessionManagerEndSession(t *testing.T) {
+	dbClient := database.FakeDatabaseClient{
+		ErrorToReturn: nil,
+	}
+
+	sess := database.Session{
+		ID:     42,
+		Active: true,
+	}
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute)
+	if err := sm.EndSession(&sess); err != nil {
+		t.Errorf("error ending session: %s", err.Error())
+	}
+
+	dmSess := dbClient.LastDataModelSeen.(*database.Session)
+	if dmSess.ID != 42 {
+		t.Errorf("expected session to be ended, got %d", dmSess.ID)
+	}
+
+	if dmSess.Active != false {
+		t.Errorf("expected session to be ended, got %t", dmSess.Active)
+	}
+}
