@@ -186,21 +186,8 @@ export default {
     honeypot() {
       this.localHoneypot = Object.assign({}, this.honeypot);
 
-      this.localHoneypot.ports.forEach((port) => {
-        if (this.localPorts == "") {
-          this.localPorts += port;
-        } else {
-          this.localPorts +=  ", " + port;
-        }
-      })
-
-      this.localHoneypot.ssl_ports.forEach((port) => {
-        if (this.localSSLPorts == "") {
-          this.localSSLPorts += port;
-        } else {
-          this.localSSLPorts +=  ", " + port;
-        }
-      })
+      this.localPorts = this.localHoneypot.ports.join(", ");
+      this.localSSLPorts = this.localHoneypot.ssl_ports.join(", ");
     },
   },
   created() {
