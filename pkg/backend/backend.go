@@ -346,10 +346,7 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		dms[0].LastCheckin = time.Now()
 		dms[0].Version = req.GetVersion()
 
-		dms[0].Ports = []int64{}
 		dms[0].Ports = req.GetListenPort()
-
-		dms[0].SSLPorts = []int64{}
 		dms[0].SSLPorts = req.GetListenPortSsl()
 
 		if err := s.dbClient.Update(&dms[0]); err != nil {
