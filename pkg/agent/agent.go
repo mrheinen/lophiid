@@ -80,7 +80,7 @@ func (a *Agent) Start() error {
 		if s.ssl {
 			a.sslPorts = append(a.sslPorts, s.port)
 		} else {
-			a.ports = append(a.sslPorts, s.port)
+			a.ports = append(a.ports, s.port)
 		}
 
 		go func(server *HttpServer) {
