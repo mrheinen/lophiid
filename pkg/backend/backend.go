@@ -347,10 +347,10 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		dms[0].Version = req.GetVersion()
 
 		dms[0].Ports = []int64{}
-		dms[0].Ports = append(dms[0].Ports, req.GetListenPort()...)
+		dms[0].Ports = req.GetListenPort()
 
 		dms[0].SSLPorts = []int64{}
-		dms[0].SSLPorts = append(dms[0].SSLPorts, req.GetListenPortSsl()...)
+		dms[0].SSLPorts = req.GetListenPortSsl()
 
 		if err := s.dbClient.Update(&dms[0]); err != nil {
 			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error updating honeypot: %s", err)
