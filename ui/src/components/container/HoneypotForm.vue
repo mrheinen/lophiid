@@ -35,6 +35,21 @@
         />
       </div>
 
+
+      <div class="field">
+        <label class="label">HTTP Ports</label>
+
+        {{ localPorts }}
+      </div>
+
+      <div class="field">
+        <label class="label">HTTPS Ports</label>
+
+        {{ localSSLPorts }}
+      </div>
+
+
+
       <br/>
     <PrimeButton
       :label="localHoneypot.id > 0 ? 'Submit' : 'Add'"
@@ -89,6 +104,8 @@ export default {
   data() {
     return {
       localHoneypot: {},
+      localPorts: "",
+      localSSLPorts: "",
     };
   },
   methods: {
@@ -168,6 +185,22 @@ export default {
   watch: {
     honeypot() {
       this.localHoneypot = Object.assign({}, this.honeypot);
+
+      this.localHoneypot.ports.forEach((port) => {
+        if (this.localPorts == "") {
+          this.localPorts += port;
+        } else {
+          this.localPorts +=  ", " + port;
+        }
+      })
+
+      this.localHoneypot.ssl_ports.forEach((port) => {
+        if (this.localSSLPorts == "") {
+          this.localSSLPorts += port;
+        } else {
+          this.localSSLPorts +=  ", " + port;
+        }
+      })
     },
   },
   created() {
