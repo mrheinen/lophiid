@@ -727,8 +727,10 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: nil,
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
-				Ip:      "1.1.1.1",
-				Version: constants.LophiidVersion,
+				Ip:            "1.1.1.1",
+				Version:       constants.LophiidVersion,
+				ListenPort:    []int64{80},
+				ListenPortSsl: []int64{443},
 			},
 			expectedErrorString: "",
 		},
@@ -738,8 +740,10 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: errors.New("boo"),
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
-				Ip:      "1.1.1.1",
-				Version: constants.LophiidVersion,
+				Ip:            "1.1.1.1",
+				Version:       constants.LophiidVersion,
+				ListenPort:    []int64{80},
+				ListenPortSsl: []int64{443},
 			},
 			expectedErrorString: "error doing lookup",
 		},
@@ -749,8 +753,10 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: nil,
 			dbErrorToReturn:  errors.New("foooo"),
 			request: &backend_service.StatusRequest{
-				Ip:      "1.1.1.1",
-				Version: constants.LophiidVersion,
+				Ip:            "1.1.1.1",
+				Version:       constants.LophiidVersion,
+				ListenPort:    []int64{80},
+				ListenPortSsl: []int64{443},
 			},
 			expectedErrorString: "error updating",
 		},
@@ -760,8 +766,10 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: nil,
 			dbErrorToReturn:  errors.New("oh oh"),
 			request: &backend_service.StatusRequest{
-				Ip:      "1.1.1.1",
-				Version: constants.LophiidVersion,
+				Ip:            "1.1.1.1",
+				Version:       constants.LophiidVersion,
+				ListenPort:    []int64{80},
+				ListenPortSsl: []int64{443},
 			},
 			expectedErrorString: "error updating honeypot",
 		},
@@ -771,8 +779,10 @@ func TestSendStatus(t *testing.T) {
 			getHoneypotError: nil,
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
-				Ip:      "1.1.1.1",
-				Version: constants.LophiidVersion,
+				Ip:            "1.1.1.1",
+				Version:       constants.LophiidVersion,
+				ListenPort:    []int64{80},
+				ListenPortSsl: []int64{443},
 			},
 			expectedErrorString: "",
 		},
@@ -813,6 +823,25 @@ func TestSendStatus(t *testing.T) {
 				t.Errorf("expected error \"%s\", to contain \"%s\"", err, test.expectedErrorString)
 			}
 
+			if test.dbErrorToReturn != nil {
+				lastDm := fdbc.LastDataModelSeen.(*database.Honeypot)
+
+				if len(lastDm.SSLPorts) != len(test.request.ListenPortSsl) {
+					t.Errorf("expected %d, got %d", len(test.request.ListenPortSsl), len(lastDm.SSLPorts))
+				}
+
+				if len(lastDm.Ports) != len(test.request.ListenPort) {
+					t.Errorf("expected %d, got %d", len(test.request.ListenPort), len(lastDm.Ports))
+				}
+
+				if lastDm.SSLPorts[0] != test.request.ListenPortSsl[0] {
+					t.Errorf("expected %d, got %d", test.request.ListenPortSsl[0], lastDm.SSLPorts[0])
+				}
+
+				if lastDm.Ports[0] != test.request.ListenPort[0] {
+					t.Errorf("expected %d, got %d", test.request.ListenPort[0], lastDm.Ports[0])
+				}
+			}
 		})
 	}
 }

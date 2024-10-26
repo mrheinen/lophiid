@@ -48,6 +48,8 @@ type Agent struct {
 	mimeInstance    *magicmime.Decoder
 	ipCache         *util.StringMapCache[bool]
 	p0fRunner       P0fRunner
+	ports           []int64
+	sslPorts        []int64
 }
 
 func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, statusInterval time.Duration, contextInterval time.Duration, reportIP string) *Agent {
@@ -75,6 +77,12 @@ func (a *Agent) Start() error {
 
 	slog.Info("Starting HTTP(S) servers")
 	for _, s := range a.httpServers {
+		if s.ssl {
+			a.sslPorts = append(a.sslPorts, s.port)
+		} else {
+			a.ports = append(a.ports, s.port)
+		}
+
 		go func(server *HttpServer) {
 			// TODO: find a more elegant way
 			if a.p0fRunner != nil {
@@ -96,8 +104,10 @@ func (a *Agent) Start() error {
 				return
 			case <-ticker.C:
 				resp, err := a.backendClient.SendStatus(&backend_service.StatusRequest{
-					Ip:      a.reportIP,
-					Version: constants.LophiidVersion,
+					Ip:            a.reportIP,
+					Version:       constants.LophiidVersion,
+					ListenPort:    a.ports,
+					ListenPortSsl: a.sslPorts,
 				})
 
 				if err != nil {
