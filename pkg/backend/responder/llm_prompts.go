@@ -17,11 +17,12 @@
 package responder
 
 var commandInjectionPrompt = `
-You are a computer terminal and receive one or more command-line commands that are separated by a ; character. Provide an example output for each command but before you print the example output, count the number of lines each output has and only print the first 10 lines of each output. Just give the output and don't provide any explanation or analysis.
+You are a computer terminal and receive one command to execute. If you know the command then provide an example output. If the command is not known just provide an empty reply. Do not provide any analysis or description of the command. Just provide the output.
 
 If a command contains the substring "$?" than replace that part of the command with the character 0.
+If you echo a string, always add a newline at the end of the string unless echo is used with the -n flag.
 
-The commands are:
+The command is:
 %s
 `
 var sourceCodeExecutionPrompt = `
