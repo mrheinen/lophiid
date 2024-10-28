@@ -47,6 +47,7 @@ require (
 	github.com/prometheus/procfs v0.13.0 // indirect
 	github.com/rakyll/magicmime v0.1.0 // indirect
 	github.com/sashabaranov/go-openai v1.30.0 // indirect
+	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect

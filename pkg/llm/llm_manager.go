@@ -22,6 +22,8 @@ import (
 	"log/slog"
 	"lophiid/pkg/util"
 	"time"
+
+	"github.com/sourcegraph/conc/pool"
 )
 
 // LLMManager wraps an LLMClient and caches the prompts and responses.
@@ -30,15 +32,41 @@ type LLMManager struct {
 	pCache            *util.StringMapCache[string]
 	metrics           *LLMMetrics
 	completionTimeout time.Duration
+	multiplePoolSize  int
 }
 
-func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metrics *LLMMetrics, completionTimeout time.Duration) *LLMManager {
+func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metrics *LLMMetrics, completionTimeout time.Duration, poolSize int) *LLMManager {
 	return &LLMManager{
 		client:            client,
 		pCache:            pCache,
 		metrics:           metrics,
 		completionTimeout: completionTimeout,
+		multiplePoolSize:  poolSize,
 	}
+}
+
+// CompleteMultiple completes multiple prompts in parallel. It will return a map
+// where each key is the prompt and each value is the completion.
+func (l *LLMManager) CompleteMultiple(prompts []string) (map[string]string, error) {
+	result := map[string]string{}
+	p := pool.New().WithErrors().WithMaxGoroutines(l.multiplePoolSize)
+
+	for _, prompt := range prompts {
+		p.Go(func() error {
+			localPrompt := prompt
+			ret, err := l.Complete(localPrompt)
+			if err != nil {
+				return err
+			}
+
+			result[localPrompt] = ret
+			return nil
+		})
+	}
+
+	err := p.Wait()
+
+	return result, err
 }
 
 func (l *LLMManager) Complete(prompt string) (string, error) {
@@ -54,7 +82,7 @@ func (l *LLMManager) Complete(prompt string) (string, error) {
 	retStr, err := l.client.Complete(ctx, prompt)
 
 	if err != nil {
-		slog.Error("Error completing prompt", slog.String("prompt", prompt), slog.String("error", err.Error()))
+		slog.Error("error completing prompt", slog.String("prompt", prompt), slog.String("error", err.Error()))
 		l.metrics.llmErrorCount.Inc()
 		return "", fmt.Errorf("error completing prompt: %w", err)
 	}

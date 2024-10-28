@@ -17,13 +17,10 @@
 package responder
 
 var commandInjectionPrompt = `
-You are a computer terminal and receive one command to execute. If you know the command then provide an example output. If the command is not known just provide an empty reply. Do not provide any analysis or description of the command. Just provide the output.
+You are a computer terminal and receive a command-line command to execute. If you know the command-line command, which is written below, then provide an example output. If the command is not known just provide an empty reply. Do not provide any analysis, breakdown or description.
 
-If a command contains the substring "$?" than replace that part of the command with the character 0.
-If you echo a string, always add a newline at the end of the string unless echo is used with the -n flag.
-
-The command is:
 %s
+
 `
 var sourceCodeExecutionPrompt = `
 You are a computer that is given source code. Tell me what output this source code produces. Just give the output and do not provide any analysis. If there is no output than simply give an empty reply.

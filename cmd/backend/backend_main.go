@@ -188,7 +188,7 @@ func main() {
 		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.Responder.CacheExpirationTime)
 		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 
-		llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.Responder.LLMCompletionTimeout)
+		llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.Responder.LLMCompletionTimeout, cfg.Responder.LLMConcurrentRequests)
 		llmResponder = responder.NewLLMResponder(llmManager, cfg.Responder.MaxInputCharacters)
 	} else {
 		llmResponder = nil
