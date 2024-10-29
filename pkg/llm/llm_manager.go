@@ -46,27 +46,32 @@ func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metric
 }
 
 // CompleteMultiple completes multiple prompts in parallel. It will return a map
-// where each key is the prompt and each value is the completion.
 func (l *LLMManager) CompleteMultiple(prompts []string) (map[string]string, error) {
-	result := map[string]string{}
-	p := pool.New().WithErrors().WithMaxGoroutines(l.multiplePoolSize)
+    var result sync.Map
+    p := pool.New().WithErrors().WithMaxGoroutines(l.multiplePoolSize)
 
-	for _, prompt := range prompts {
-		p.Go(func() error {
-			localPrompt := prompt
-			ret, err := l.Complete(localPrompt)
-			if err != nil {
-				return err
-			}
+    for _, prompt := range prompts {
+        p.Go(func() error {
+            localPrompt := prompt
+            ret, err := l.Complete(localPrompt)
+            if err != nil {
+                return err
+            }
 
-			result[localPrompt] = ret
-			return nil
-		})
-	}
+            result.Store(localPrompt, ret)
+            return nil
+        })
+    }
 
-	err := p.Wait()
+    err := p.Wait()
 
-	return result, err
+    finalResult := make(map[string]string)
+    result.Range(func(key, value interface{}) bool {
+        finalResult[key.(string)] = value.(string)
+        return true
+    })
+
+    return finalResult, err
 }
 
 func (l *LLMManager) Complete(prompt string) (string, error) {
