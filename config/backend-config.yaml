@@ -99,5 +99,7 @@ responder:
   cache_expiration_time: 24h
   # How long a completion is allowed to take.
   llm_completion_timeout: 60s
+  # How many concurrent requests to send to the LLM API
+  llm_concurrent_requests: 5
   # Maximum string length of the prompt input.
   max_input_characters: 4096

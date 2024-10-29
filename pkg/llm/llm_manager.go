@@ -21,7 +21,10 @@ import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/util"
+	"sync"
 	"time"
+
+	"github.com/sourcegraph/conc/pool"
 )
 
 // LLMManager wraps an LLMClient and caches the prompts and responses.
@@ -30,15 +33,46 @@ type LLMManager struct {
 	pCache            *util.StringMapCache[string]
 	metrics           *LLMMetrics
 	completionTimeout time.Duration
+	multiplePoolSize  int
 }
 
-func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metrics *LLMMetrics, completionTimeout time.Duration) *LLMManager {
+func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metrics *LLMMetrics, completionTimeout time.Duration, poolSize int) *LLMManager {
 	return &LLMManager{
 		client:            client,
 		pCache:            pCache,
 		metrics:           metrics,
 		completionTimeout: completionTimeout,
+		multiplePoolSize:  poolSize,
 	}
+}
+
+// CompleteMultiple completes multiple prompts in parallel. It will return a map
+func (l *LLMManager) CompleteMultiple(prompts []string) (map[string]string, error) {
+	var result sync.Map
+	p := pool.New().WithErrors().WithMaxGoroutines(l.multiplePoolSize)
+
+	for _, prompt := range prompts {
+		p.Go(func() error {
+			localPrompt := prompt
+			ret, err := l.Complete(localPrompt)
+			if err != nil {
+				return err
+			}
+
+			result.Store(localPrompt, ret)
+			return nil
+		})
+	}
+
+	err := p.Wait()
+
+	finalResult := make(map[string]string)
+	result.Range(func(key, value interface{}) bool {
+		finalResult[key.(string)] = value.(string)
+		return true
+	})
+
+	return finalResult, err
 }
 
 func (l *LLMManager) Complete(prompt string) (string, error) {
@@ -54,7 +88,7 @@ func (l *LLMManager) Complete(prompt string) (string, error) {
 	retStr, err := l.client.Complete(ctx, prompt)
 
 	if err != nil {
-		slog.Error("Error completing prompt", slog.String("prompt", prompt), slog.String("error", err.Error()))
+		slog.Error("error completing prompt", slog.String("prompt", prompt), slog.String("error", err.Error()))
 		l.metrics.llmErrorCount.Inc()
 		return "", fmt.Errorf("error completing prompt: %w", err)
 	}

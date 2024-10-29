@@ -39,15 +39,29 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 	switch resType {
 	case constants.ResponderTypeCommandInjection:
 		basePrompt = commandInjectionPrompt
-		for _, pInput := range util.SplitCommandsOnSemi(promptInput) {
-			finalPrompt := fmt.Sprintf(basePrompt, pInput)
-			tmpRes, err := l.llmManager.Complete(finalPrompt)
-			if err != nil {
-				slog.Error("could not complete LLM request", slog.String("error", err.Error()))
-				return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
-			}
 
-			res += tmpRes
+		commands := util.SplitCommandsOnSemi(promptInput)
+		if len(commands) == 0 {
+			slog.Debug("no commands found", slog.String("input", promptInput))
+			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), nil
+		}
+
+		promptInputs := []string{}
+		for _, cmd := range commands {
+			promptInputs = append(promptInputs, fmt.Sprintf(basePrompt, cmd))
+		}
+
+		resMap, err := l.llmManager.CompleteMultiple(promptInputs)
+		if err != nil {
+			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
+			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
+		}
+
+		for _, prompt := range promptInputs {
+			val, ok := resMap[prompt]
+			if ok {
+				res += val
+			}
 		}
 
 	case constants.ResponderTypeSourceCodeExecution:
