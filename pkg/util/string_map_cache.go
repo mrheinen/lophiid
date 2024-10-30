@@ -30,7 +30,7 @@ type CacheEntry[T comparable] struct {
 }
 
 type StringMapCache[T comparable] struct {
-	mu        sync.Mutex
+	mu        sync.RWMutex
 	entries   map[string]CacheEntry[T]
 	timeout   time.Duration
 	bgChan    chan bool
@@ -91,8 +91,8 @@ func (r *StringMapCache[T]) Replace(key string, data T) error {
 }
 
 func (r *StringMapCache[T]) Get(key string) (*T, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	ce, ok := r.entries[key]
 
 	if !ok {
@@ -102,8 +102,8 @@ func (r *StringMapCache[T]) Get(key string) (*T, error) {
 }
 
 func (r *StringMapCache[T]) GetDurationStored(key string) (time.Duration, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	ce, ok := r.entries[key]
 
 	if !ok {
@@ -117,8 +117,8 @@ func (r *StringMapCache[T]) GetDurationStored(key string) (time.Duration, error)
 // copied data is still correct and in sync with the cache after calling
 // this method. Only use this when that doesn't matter.
 func (r *StringMapCache[T]) GetAsMap() map[string]T {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	ret := make(map[string]T)
 	for k, v := range r.entries {
@@ -169,20 +169,19 @@ func (r *StringMapCache[T]) Start() {
 }
 
 func (r *StringMapCache[T]) StartWithCallback(callback func(T) bool) {
-  ticker := time.NewTicker(time.Minute * 1)
-  go func() {
-    for {
-      select {
-      case <-r.bgChan:
-        ticker.Stop()
-        return
-      case <-ticker.C:
-        r.CleanExpiredWithCallback(callback)
-      }
-    }
-  }()
+	ticker := time.NewTicker(time.Minute * 1)
+	go func() {
+		for {
+			select {
+			case <-r.bgChan:
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				r.CleanExpiredWithCallback(callback)
+			}
+		}
+	}()
 }
-
 
 func (r *StringMapCache[T]) Stop() {
 	slog.Info("stopping cache", slog.String("name", r.cacheName))
