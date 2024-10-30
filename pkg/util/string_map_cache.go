@@ -30,7 +30,7 @@ type CacheEntry[T any] struct {
 }
 
 
-type StringMapCache[T comparable] struct {
+type StringMapCache[T any] struct {
 	mu        sync.RWMutex
 	entries   map[string]CacheEntry[T]
 	timeout   time.Duration
