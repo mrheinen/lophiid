@@ -417,7 +417,6 @@ type DatabaseClient interface {
 	SearchTagPerRequest(offset int64, limit int64, query string) ([]TagPerRequest, error)
 	GetTagPerRequestFullForRequest(id int64) ([]TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]TagPerRequest, error)
-	GetRequestsDistinctComboLastMonth() ([]Request, error)
 	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 }
 
@@ -959,12 +958,6 @@ func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 	return md, err
 }
 
-func (d *KSQLClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
-	var rs []Request
-	err := d.db.Query(d.ctx, &rs, "SELECT DISTINCT source_ip, content_id, rule_id FROM request WHERE content_id > 0 AND time_received >= date_trunc('month', current_date - interval '1'month);")
-	return rs, err
-}
-
 func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
 	ct := Content{}
 	err := d.db.QueryOne(d.ctx, &ct, "FROM content WHERE id = $1", id)
@@ -1040,10 +1033,6 @@ func (f *FakeDatabaseClient) Update(dm DataModel) error {
 }
 func (f *FakeDatabaseClient) Delete(dm DataModel) error {
 	return f.ErrorToReturn
-}
-
-func (f *FakeDatabaseClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
-	return f.RequestsToReturn, nil
 }
 func (f *FakeDatabaseClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error) {
 	return []RequestMetadata{}, f.ErrorToReturn
