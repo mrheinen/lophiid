@@ -50,10 +50,11 @@ type Config struct {
 		Advanced struct {
 			ContentCacheDuration       time.Duration `fig:"content_cache_duration" default:"30m"`
 			DownloadCacheDuration      time.Duration `fig:"download_cache_duration" default:"5m"`
-			AttackTrackingDuration     time.Duration `fig:"attack_tracking_duration" default:"7d"`
 			QueriesRunnerInterval      time.Duration `fig:"stored_queries_run_interval" default:"1h"`
 			RequestsQueueSize          int           `fig:"requests_queue_size" default:"500"`
 			MaintenanceRoutineInterval time.Duration `fig:"maintenance_routine_interval" default:"1m"`
+			// After how long of no communication a session times out.
+			SessionTrackingTimeout     time.Duration `fig:"session_tracking_timeout" default:"1h"`
 		} `fig:"advanced"`
 	} `fig:"backend"`
 	Analysis struct {

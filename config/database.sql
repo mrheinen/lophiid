@@ -146,6 +146,17 @@ CREATE TABLE app (
   cves            VARCHAR(15) ARRAY
 );
 
+CREATE TABLE session (
+  id              SERIAL PRIMARY KEY,
+  active          BOOL DEFAULT FALSE,
+  ip              VARCHAR(52) NOT NULL,
+  started_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  ended_at        TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+);
+
+
 
 CREATE TABLE downloads (
   id              SERIAL PRIMARY KEY,
@@ -321,6 +332,14 @@ GRANT ALL PRIVILEGES ON p0f_result TO lo;
 GRANT ALL PRIVILEGES ON p0f_result_id_seq TO lo;
 GRANT ALL PRIVILEGES ON ip_event TO lo;
 GRANT ALL PRIVILEGES ON ip_event_id_seq TO lo;
+GRANT ALL PRIVILEGES ON session TO lo;
+GRANT ALL PRIVILEGES ON session_id_seq TO lo;
+
+CREATE INDEX session_ip ON session (
+  started_at desc,
+  active,
+  ip
+);
 
 CREATE INDEX requests_idx ON request ( time_received desc );
 CREATE INDEX requests_port_idx ON request (

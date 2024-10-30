@@ -28,6 +28,7 @@ import (
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/backend/responder"
+	"lophiid/pkg/backend/session"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util/constants"
@@ -50,7 +51,6 @@ func GetDefaultBackendConfig() Config {
 	cfg := Config{}
 	cfg.Backend.Advanced.ContentCacheDuration = time.Minute * 5
 	cfg.Backend.Advanced.DownloadCacheDuration = time.Minute * 5
-	cfg.Backend.Advanced.AttackTrackingDuration = time.Minute * 5
 	cfg.Backend.Advanced.RequestsQueueSize = 100
 	return cfg
 }
@@ -197,9 +197,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 				ErrorToReturn: nil,
 			}
 
+			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
 			fIpMgr := analysis.FakeIpEventManager{}
 			fakeRes := &responder.FakeResponder{}
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
 			if (err != nil) != test.errorExpected {
@@ -235,9 +236,10 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
 		Uri:  "/aa",
@@ -290,7 +292,8 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
 		Request: &backend_service.HttpRequest{
@@ -382,7 +385,8 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 			}
 			fIpMgr := analysis.FakeIpEventManager{}
 			fakeRes := &responder.FakeResponder{}
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 			if b.MaybeExtractLinksFromPayload(test.content, test.dInfo) != test.expectedReturn {
 				t.Errorf("expected return %t but got %t", test.expectedReturn, !test.expectedReturn)
@@ -394,9 +398,7 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 			}
 
 		})
-
 	}
-
 }
 
 // Test ScheduleDownloadOfPayload
@@ -417,7 +419,8 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 	ret := b.ScheduleDownloadOfPayload("1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
 	if ret != true {
@@ -536,7 +539,8 @@ func TestHandleProbe(t *testing.T) {
 
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -626,7 +630,6 @@ func TestHandleProbe(t *testing.T) {
 	if fIpMgr.Events[0].Type != constants.IpEventRateLimited {
 		t.Fatalf("expected rate limited event, got %s", fIpMgr.Events[0].Type)
 	}
-
 }
 
 func TestProcessQueue(t *testing.T) {
@@ -672,7 +675,8 @@ func TestProcessQueue(t *testing.T) {
 		}
 		fIpMgr := analysis.FakeIpEventManager{}
 		fakeRes := &responder.FakeResponder{}
-		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+		fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 		req := database.Request{
 			ID:   42,
 			Uri:  "/aaaaa",
@@ -788,8 +792,6 @@ func TestSendStatus(t *testing.T) {
 		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
-			fmt.Printf("Running: %s\n", test.description)
-
 			fdbc := &database.FakeDatabaseClient{
 				HoneypotToReturn:      test.getHoneypotRet,
 				HoneypotErrorToReturn: test.getHoneypotError,
@@ -812,7 +814,8 @@ func TestSendStatus(t *testing.T) {
 			}
 			fIpMgr := analysis.FakeIpEventManager{}
 			fakeRes := &responder.FakeResponder{}
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 			_, err := b.SendStatus(context.Background(), test.request)
 			if err == nil && test.expectedErrorString != "" {
@@ -873,7 +876,9 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 	statusRequest := backend_service.StatusRequest{
 		Ip:      testHoneypotIP,
@@ -927,7 +932,8 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 	uploadRequest := backend_service.UploadFileRequest{
 		RequestId: 42,
@@ -980,7 +986,8 @@ func TestHandleP0fResult(t *testing.T) {
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, GetDefaultBackendConfig())
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 	// Insert a generic one. Should succeed
 	fdbc.P0fErrorToReturn = ksql.ErrRecordNotFound
@@ -1030,6 +1037,7 @@ func TestGetResponderDataCases(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 	fIpMgr := analysis.FakeIpEventManager{}
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
 
 	for _, test := range []struct {
 		description      string
@@ -1124,7 +1132,7 @@ func TestGetResponderDataCases(t *testing.T) {
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, test.responder, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, test.responder, fSessionMgr, GetDefaultBackendConfig())
 			ret := b.getResponderData(&test.request, &test.rule, &test.content)
 
 			if ret != test.expectedReturn {

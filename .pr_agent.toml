@@ -1,2 +1,9 @@
 [config]
 model="claude-3-5-sonnet"
+
+[pr_custom_prompt]
+prompt="""\
+The code suggestions should focus only on code style and efficiency. To do this make sure that you use the Golang style guide at https://golang.org/doc/effective_go.html .
+
+Additionally the suggestions should make use of the Google style best practises at https://google.github.io/styleguide/go/best-practices and the Google style decisions at https://google.github.io/styleguide/go/decisions.
+"""

@@ -47,6 +47,7 @@ var TagPerRequestTable = ksql.NewTable("tag_per_request")
 var TagPerQueryTable = ksql.NewTable("tag_per_query")
 var P0fResultTable = ksql.NewTable("p0f_result")
 var IpEventTable = ksql.NewTable("ip_event")
+var SessionTable = ksql.NewTable("session")
 
 type DataModel interface {
 	ModelID() int64
@@ -200,12 +201,6 @@ type RequestMetadata struct {
 }
 
 func (c *RequestMetadata) ModelID() int64 { return c.ID }
-
-// TODO: delete ?
-type RequestSourceContent struct {
-	SourceIP  string
-	ContentID int64
-}
 
 type Honeypot struct {
 	ID                   int64                   `ksql:"id,skipInserts" json:"id" doc:"The ID of the honeypot"`
@@ -382,6 +377,20 @@ type TagPerRequestFull struct {
 	Tag           Tag           `tablename:"tag" json:"tag"`
 }
 
+type Session struct {
+	ID             int64  `ksql:"id,skipInserts" json:"id" doc:"Database ID for the session"`
+	Active         bool   `ksql:"active" json:"active" doc:"Is the session active"`
+	IP             string `ksql:"ip" json:"ip" doc:"IP of the client"`
+	LastRuleServed ContentRule
+	RuleIDsServed  map[int64]int64
+	CreatedAt      time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the session in the database (not session start!)"`
+	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
+	StartedAt      time.Time `ksql:"started_at" json:"started_at" doc:"Start time of the session"`
+	EndedAt        time.Time `ksql:"ended_at" json:"ended_at" doc:"End time of the session"`
+}
+
+func (c *Session) ModelID() int64 { return c.ID }
+
 type DatabaseClient interface {
 	Close()
 	Insert(dm DataModel) (DataModel, error)
@@ -403,13 +412,13 @@ type DatabaseClient interface {
 	SearchContent(offset int64, limit int64, query string) ([]Content, error)
 	SearchDownloads(offset int64, limit int64, query string) ([]Download, error)
 	SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error)
+	SearchSession(offset int64, limit int64, query string) ([]Session, error)
 	SearchStoredQuery(offset int64, limit int64, query string) ([]StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]TagPerQuery, error)
 	SearchTagPerRequest(offset int64, limit int64, query string) ([]TagPerRequest, error)
 	GetTagPerRequestFullForRequest(id int64) ([]TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]TagPerRequest, error)
-	GetRequestsDistinctComboLastMonth() ([]Request, error)
 	GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 }
 
@@ -536,6 +545,8 @@ func (d *KSQLClient) getTableForModel(dm DataModel) *ksql.Table {
 		return &P0fResultTable
 	case "IpEvent":
 		return &IpEventTable
+	case "Session":
+		return &SessionTable
 
 	default:
 		fmt.Printf("Don't know %s datamodel\n", name)
@@ -715,6 +726,25 @@ func (d *KSQLClient) SearchEvents(offset int64, limit int64, query string) ([]Ip
 	}
 
 	query, values, err := buildComposedQuery(params, "FROM ip_event", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) SearchSession(offset int64, limit int64, query string) ([]Session, error) {
+	var rs []Session
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(Session{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildComposedQuery(params, "FROM session", fmt.Sprintf("ORDER BY started_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -930,12 +960,6 @@ func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 	return md, err
 }
 
-func (d *KSQLClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
-	var rs []Request
-	err := d.db.Query(d.ctx, &rs, "SELECT DISTINCT source_ip, content_id, rule_id FROM request WHERE content_id > 0 AND time_received >= date_trunc('month', current_date - interval '1'month);")
-	return rs, err
-}
-
 func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
 	ct := Content{}
 	err := d.db.QueryOne(d.ctx, &ct, "FROM content WHERE id = $1", id)
@@ -983,6 +1007,7 @@ type FakeDatabaseClient struct {
 	P0fErrorToReturn          error
 	IpEventToReturn           IpEvent
 	DataModelToReturn         DataModel
+	SessionToReturn           Session
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -1011,10 +1036,6 @@ func (f *FakeDatabaseClient) Update(dm DataModel) error {
 func (f *FakeDatabaseClient) Delete(dm DataModel) error {
 	return f.ErrorToReturn
 }
-
-func (f *FakeDatabaseClient) GetRequestsDistinctComboLastMonth() ([]Request, error) {
-	return f.RequestsToReturn, nil
-}
 func (f *FakeDatabaseClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error) {
 	return []RequestMetadata{}, f.ErrorToReturn
 }
@@ -1026,6 +1047,9 @@ func (f *FakeDatabaseClient) SearchEvents(offset int64, limit int64, query strin
 }
 func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
 	return f.ContentRulesToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchSession(offset int64, limit int64, query string) ([]Session, error) {
+	return []Session{f.SessionToReturn}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
 	var ret []Content

@@ -33,6 +33,7 @@ import (
 	"lophiid/pkg/backend/auth"
 	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/backend/responder"
+	"lophiid/pkg/backend/session"
 	"lophiid/pkg/database"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/llm"
@@ -195,8 +196,27 @@ func main() {
 	}
 
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
+	sessionMgr := session.NewDatabaseSessionManager(dbc, cfg.Backend.Advanced.SessionTrackingTimeout)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, cfg)
+	slog.Info("Cleaning up any stale sessions")
+	totalSessionsCleaned := 0
+
+	for {
+		cnt, err := sessionMgr.CleanupStaleSessions(50)
+		if err != nil {
+			slog.Error("Error cleaning up sessions: %s", err)
+			return
+		}
+
+		totalSessionsCleaned += cnt
+		if cnt < 50 {
+			break
+		}
+	}
+
+	slog.Info("Cleaned up %d stale sessions", totalSessionsCleaned)
+
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}
