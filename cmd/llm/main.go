@@ -47,13 +47,17 @@ func main() {
 
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Second*time.Duration(*timeoutSec))
+	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Second*time.Duration(*timeoutSec), 5)
 	llmResponder := responder.NewLLMResponder(llmManager, *maxInputLength)
+	startTime := time.Now()
+
 	res, err := llmResponder.Respond(*responderType, *query, responder.LLMReplacementTag)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	fmt.Printf("Output: \n\n%s\n", res)
+	fmt.Printf("Time elapsed: %d\n", int(time.Since(startTime).Seconds()))
+
+	fmt.Printf("Output: \n%s\n", res)
 }

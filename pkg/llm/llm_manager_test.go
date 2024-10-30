@@ -34,7 +34,7 @@ func TestComplete(t *testing.T) {
 
 	metrics := CreateLLMMetrics(pReg)
 
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour)
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
 	res, err := lm.Complete("aaaa")
 
 	if err != nil {
@@ -54,7 +54,7 @@ func TestCompleteErrorCounted(t *testing.T) {
 
 	metrics := CreateLLMMetrics(pReg)
 
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour)
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
 	_, err := lm.Complete("aaaa")
 
 	if err == nil {
@@ -64,5 +64,32 @@ func TestCompleteErrorCounted(t *testing.T) {
 	count := testutil.ToFloat64(metrics.llmErrorCount)
 	if count != 1 {
 		t.Errorf("expected 1 error, got %f", count)
+	}
+}
+
+func TestCompleteMultiple(t *testing.T) {
+	testCompletionString := "completion"
+	client := MockLLMClient{CompletionToReturn: testCompletionString, ErrorToReturn: nil}
+	pCache := util.NewStringMapCache[string]("", time.Second)
+	pReg := prometheus.NewRegistry()
+
+	metrics := CreateLLMMetrics(pReg)
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
+
+	prompts := []string{"aaaa", "bbbb"}
+	resMap, err := lm.CompleteMultiple(prompts)
+
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if len(resMap) != 2 {
+		t.Errorf("expected 2 results, got %d", len(resMap))
+	}
+
+	for _, p := range prompts {
+		if resMap[p] != testCompletionString {
+			t.Errorf("expected %s, got %s", testCompletionString, resMap[p])
+		}
 	}
 }

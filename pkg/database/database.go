@@ -203,15 +203,17 @@ type RequestMetadata struct {
 func (c *RequestMetadata) ModelID() int64 { return c.ID }
 
 type Honeypot struct {
-	ID                   int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the honeypot"`
-	IP                   string    `ksql:"ip" json:"ip" doc:"The IP of the honeypot (v4 or v6)"`
-	Version              string    `ksql:"version" json:"version" doc:"The honeypot version"`
-	AuthToken            string    `ksql:"auth_token" json:"auth_token" doc:"The authentication token"`
-	CreatedAt            time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
-	UpdatedAt            time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
-	LastCheckin          time.Time `ksql:"last_checkin,skipInserts,skipUpdates" json:"last_checkin" doc:"Date and time of last seen"`
-	DefaultContentID     int64     `ksql:"default_content_id" json:"default_content_id" doc:"The Content ID that is served by default"`
-	RequestsCountLastDay int64     `json:"request_count_last_day"`
+	ID                   int64                   `ksql:"id,skipInserts" json:"id" doc:"The ID of the honeypot"`
+	IP                   string                  `ksql:"ip" json:"ip" doc:"The IP of the honeypot (v4 or v6)"`
+	Version              string                  `ksql:"version" json:"version" doc:"The honeypot version"`
+	AuthToken            string                  `ksql:"auth_token" json:"auth_token" doc:"The authentication token"`
+	CreatedAt            time.Time               `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
+	UpdatedAt            time.Time               `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
+	LastCheckin          time.Time               `ksql:"last_checkin,skipInserts,skipUpdates" json:"last_checkin" doc:"Date and time of last seen"`
+	DefaultContentID     int64                   `ksql:"default_content_id" json:"default_content_id" doc:"The Content ID that is served by default"`
+	RequestsCountLastDay int64                   `json:"request_count_last_day"`
+	Ports                pgtype.FlatArray[int64] `ksql:"ports" json:"ports" doc:"HTTP ports that the honeypot listens on"`
+	SSLPorts             pgtype.FlatArray[int64] `ksql:"ssl_ports" json:"ssl_ports" doc:"HTTPS ports that the honeypot listens on"`
 }
 
 func (c *Honeypot) ModelID() int64 { return c.ID }

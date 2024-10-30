@@ -23,11 +23,12 @@ import (
 	"time"
 )
 
-type CacheEntry[T comparable] struct {
+type CacheEntry[T any] struct {
 	Data          T
 	LastStoreTime time.Time
 	CreationTime  time.Time
 }
+
 
 type StringMapCache[T comparable] struct {
 	mu        sync.RWMutex
@@ -37,7 +38,7 @@ type StringMapCache[T comparable] struct {
 	cacheName string
 }
 
-func NewStringMapCache[T comparable](name string, timeout time.Duration) *StringMapCache[T] {
+func NewStringMapCache[T any](name string, timeout time.Duration) *StringMapCache[T] {
 	return &StringMapCache[T]{
 		timeout:   timeout,
 		cacheName: name,

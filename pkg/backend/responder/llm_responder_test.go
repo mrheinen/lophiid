@@ -17,8 +17,13 @@
 package responder
 
 import (
+	"lophiid/pkg/llm"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"testing"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestInputLength(t *testing.T) {
@@ -45,5 +50,55 @@ func TestUnknownResponder(t *testing.T) {
 
 	if err.Error() != "invalid responder type: FOO" {
 		t.Errorf("unexpected error: %s", err.Error())
+	}
+}
+
+func TestCommandInjection(t *testing.T) {
+
+	for _, test := range []struct {
+		description         string
+		template            string
+		completionToReturn  string
+		expectedReturnValue string
+		commandPrompt       string
+	}{
+		{
+			description:         "works with single completion",
+			completionToReturn:  "patrick",
+			template:            "this is",
+			expectedReturnValue: "this is\npatrick",
+			commandPrompt:       "foo",
+		},
+		{
+			description:         "works with single completion",
+			completionToReturn:  "patrick",
+			template:            "this is",
+			expectedReturnValue: "this is\npatrickpatrick",
+			commandPrompt:       "foo;bar",
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			lmClient := llm.MockLLMClient{
+				CompletionToReturn: test.completionToReturn,
+				ErrorToReturn:      nil,
+			}
+
+			reg := prometheus.NewRegistry()
+			metrics := llm.CreateLLMMetrics(reg)
+			cache := util.NewStringMapCache[string]("foo", time.Minute)
+			lm := llm.NewLLMManager(&lmClient, cache, metrics, time.Minute, 5)
+
+			responder := NewLLMResponder(lm, 50)
+			ret, err := responder.Respond(constants.ResponderTypeCommandInjection, test.commandPrompt, test.template)
+
+			if err != nil {
+				t.Errorf("unexpected error: %s", err.Error())
+			}
+
+			if ret != test.expectedReturnValue {
+				t.Errorf("unexpected result: %+#v", ret)
+			}
+		})
 	}
 }

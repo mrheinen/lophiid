@@ -14,16 +14,50 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package responder
+package util
 
-var commandInjectionPrompt = `
-You are a computer terminal and receive a command-line command to execute. If you know the command-line command, which is written below, then provide an example output. If the command is not known just provide an empty reply. Do not provide any analysis, breakdown or description.
+import "strings"
 
-%s
+func SplitCommandsOnSemi(commands string) []string {
 
-`
-var sourceCodeExecutionPrompt = `
-You are a computer that is given source code. Tell me what output this source code produces. Just give the output and do not provide any analysis. If there is no output than simply give an empty reply.
+	ret := []string{}
+	stringStart := 0
+	inQuote := false
+	var inQuoteType byte
+	for idx := 0; idx < len(commands); idx += 1 {
+		chr := commands[idx]
 
-%s
-`
+		if chr == '\\' {
+			idx += 1
+			continue
+		}
+
+		if chr == '\'' || chr == '"' {
+			if !inQuote {
+				inQuoteType = chr
+				inQuote = true
+			} else if chr == inQuoteType {
+				inQuote = false
+			}
+			continue
+		}
+
+		if inQuote {
+			continue
+		}
+
+		if chr == ';' {
+			cmd := strings.TrimSpace(commands[stringStart:idx])
+			if cmd != "" {
+				ret = append(ret, cmd)
+			}
+			stringStart = idx + 1
+		}
+	}
+
+	cmd := strings.TrimSpace(commands[stringStart:])
+	if cmd != "" {
+		ret = append(ret, cmd)
+	}
+	return ret
+}

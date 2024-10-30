@@ -34,23 +34,48 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 	}
 
 	var basePrompt string
+	res := ""
+	var err error
 	switch resType {
 	case constants.ResponderTypeCommandInjection:
 		basePrompt = commandInjectionPrompt
+
+		commands := util.SplitCommandsOnSemi(promptInput)
+		if len(commands) == 0 {
+			slog.Debug("no commands found", slog.String("input", promptInput))
+			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), nil
+		}
+
+		promptInputs := []string{}
+		for _, cmd := range commands {
+			promptInputs = append(promptInputs, fmt.Sprintf(basePrompt, cmd))
+		}
+
+		resMap, err := l.llmManager.CompleteMultiple(promptInputs)
+		if err != nil {
+			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
+			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
+		}
+
+		for _, prompt := range promptInputs {
+			val, ok := resMap[prompt]
+			if ok {
+				res += val
+			}
+		}
+
 	case constants.ResponderTypeSourceCodeExecution:
 		basePrompt = sourceCodeExecutionPrompt
+		finalPrompt := fmt.Sprintf(basePrompt, promptInput)
+		res, err = l.llmManager.Complete(finalPrompt)
+		if err != nil {
+			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
+			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
+		}
 
 	default:
 		slog.Error("invalid responder type", slog.String("type", resType))
 		return "", fmt.Errorf("invalid responder type: %s", resType)
-	}
-
-	deli := util.GenerateRandomAlphaNumericString(20)
-	finalPrompt := fmt.Sprintf(basePrompt, deli, deli, promptInput)
-	res, err := l.llmManager.Complete(finalPrompt)
-	if err != nil {
-		slog.Error("could not complete LLM request", slog.String("error", err.Error()))
-		return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
 	}
 
 	return strings.Replace(template, LLMReplacementTag, res, 1), nil

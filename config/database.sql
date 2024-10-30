@@ -127,6 +127,9 @@ CREATE TABLE honeypot (
   auth_token         VARCHAR(64) NOT NULL DEFAULT '',
   last_checkin       TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   default_content_id INT NOT NULL DEFAULT 0
+  ports              INT ARRAY,
+  ssl_ports          INT ARRAY,
+  cves            VARCHAR(15) ARRAY
 );
 
 CREATE TABLE app (

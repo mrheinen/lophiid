@@ -327,11 +327,17 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		return &backend_service.StatusResponse{}, status.Errorf(codes.NotFound, "error doing lookup")
 	}
 	if len(dms) == 0 {
-		_, err := s.dbClient.Insert(&database.Honeypot{
+
+		hp := &database.Honeypot{
 			IP:          req.GetIp(),
 			Version:     req.GetVersion(),
 			LastCheckin: time.Now(),
-		})
+		}
+
+		hp.Ports = append(hp.Ports, req.GetListenPort()...)
+		hp.SSLPorts = append(hp.Ports, req.GetListenPortSsl()...)
+
+		_, err := s.dbClient.Insert(hp)
 
 		if err != nil {
 			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error inserting honeypot: %s", err)
@@ -340,6 +346,10 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	} else {
 		dms[0].LastCheckin = time.Now()
 		dms[0].Version = req.GetVersion()
+
+		dms[0].Ports = req.GetListenPort()
+		dms[0].SSLPorts = req.GetListenPortSsl()
+
 		if err := s.dbClient.Update(&dms[0]); err != nil {
 			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error updating honeypot: %s", err)
 		}
