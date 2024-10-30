@@ -53,6 +53,8 @@ type Config struct {
 			QueriesRunnerInterval      time.Duration `fig:"stored_queries_run_interval" default:"1h"`
 			RequestsQueueSize          int           `fig:"requests_queue_size" default:"500"`
 			MaintenanceRoutineInterval time.Duration `fig:"maintenance_routine_interval" default:"1m"`
+			// After how long of no communication a session times out.
+			SessionTrackingTimeout     time.Duration `fig:"session_tracking_timeout" default:"1h"`
 		} `fig:"advanced"`
 	} `fig:"backend"`
 	Analysis struct {
