@@ -119,6 +119,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		rateLimiter:     rateLimiter,
 		ipEventManager:  ipEventManager,
 		llmResponder:    llmResponder,
+		sessionMgr:      sessionMgr,
 	}
 }
 
@@ -261,9 +262,10 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 	session, err := s.sessionMgr.GetCachedSession(req.SourceIP)
 	if err != nil || session == nil {
 		session, err = s.sessionMgr.StartSession(req.SourceIP)
-		session.LastRuleServed.AppID = -1
 		if err != nil {
 			slog.Error("error starting session", slog.String("ip", req.SourceIP), slog.String("error", err.Error()))
+		} else {
+			session.LastRuleServed.AppID = -1
 		}
 	}
 

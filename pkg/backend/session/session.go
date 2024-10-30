@@ -125,6 +125,7 @@ func (d *DatabaseSessionManager) StartSession(ip string) (*database.Session, err
 		Active:    true,
 		StartedAt: time.Now().UTC(),
 		IP:        ip,
+		RuleIDsServed: make(map[int64]int64),
 	}
 
 	dm, err := d.dbClient.Insert(newSession)
