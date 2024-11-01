@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "links_fetcher_lib",
+    srcs = ["main.go"],
+    importpath = "lophiid/cmd/links_fetcher",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/html"],
+)
+
+go_binary(
+    name = "links_fetcher",
+    embed = [":links_fetcher_lib"],
+    visibility = ["//visibility:public"],
+)
