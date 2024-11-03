@@ -935,6 +935,7 @@ type AppExport struct {
 type AppYamlExport struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
+	Vendor  string `json:"vendor"`
 	Yaml    string `json:"yaml"`
 }
 
@@ -1015,6 +1016,7 @@ func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http
 		Yaml:    string(yamlData),
 		Name:    ret.App.Name,
 		Version: ret.App.Version,
+		Vendor:  ret.App.Vendor,
 	})
 }
 

@@ -299,7 +299,7 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error("Could not export app");
           } else {
-            var filename = response.data['name'] + '-' + response.data['version'] + '.yaml';
+            var filename = response.data['vendor'] + '-' + response.data['name'] + '-' + response.data['version'] + '.yaml';
             const blob = new Blob([response.data['yaml']], { type: 'application/yaml' })
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
