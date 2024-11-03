@@ -14,6 +14,12 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+//
+// This is a helper utility that can be used to extract all resource links from
+// a target web page. This is particularly useful when creating a new app and
+// content from an existing web page. In that case you point this tool to the
+// page you want to serve in the honeypot. The tool will list all resource links
+// which you can use with the api client to import those resources.
 package main
 
 import (
