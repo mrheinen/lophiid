@@ -4,6 +4,7 @@ go_library(
     name = "util",
     srcs = [
         "command.go",
+        "compare.go",
         "contains.go",
         "general.go",
         "logging.go",
@@ -14,7 +15,11 @@ go_library(
     ],
     importpath = "lophiid/pkg/util",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_blang_semver_v4//:semver"],
+    deps = [
+        "@com_github_blang_semver_v4//:semver",
+        "@com_github_google_go_cmp//cmp",
+        "@com_github_google_go_cmp//cmp/cmpopts",
+    ],
 )
 
 go_test(

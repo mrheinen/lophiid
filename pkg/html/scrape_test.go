@@ -17,7 +17,7 @@
 package html
 
 import (
-	"reflect"
+	"lophiid/pkg/util"
 	"strings"
 	"testing"
 )
@@ -46,7 +46,7 @@ func TestExtractResourceLink(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			urls := ExtractResourceLinks(test.baseUrl, test.html)
 
-			if !reflect.DeepEqual(urls, test.expectedUrls) {
+			if !util.AreSlicesEqual(urls, test.expectedUrls) {
 				t.Errorf("expected %+v, got %+v", test.expectedUrls, urls)
 			}
 		})

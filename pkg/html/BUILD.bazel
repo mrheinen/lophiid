@@ -12,4 +12,5 @@ go_test(
     name = "html_test",
     srcs = ["scrape_test.go"],
     embed = [":html"],
+    deps = ["//pkg/util"],
 )
