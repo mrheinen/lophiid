@@ -37,6 +37,7 @@ import (
 
 var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 var targetURL = flag.String("url", "", "The URL to download")
+var timeout = flag.Duration("timeout", 2*time.Minute, "HTTP request timeout")
 
 func main() {
 	flag.Parse()
@@ -63,7 +64,7 @@ func main() {
 	}
 	httpClient := http.Client{
 		Transport: insecureHttpTransport,
-		Timeout:   time.Minute * 2,
+		Timeout:   *timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
