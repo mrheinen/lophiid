@@ -5,11 +5,13 @@
 
       <table class="table is-hoverable" v-if="queries.length > 0">
         <thead>
-          <th>ID</th>
-          <th>Created at</th>
-          <th>Last ran</th>
-          <th>Count</th>
-          <th>Query</th>
+            <tr>
+            <th>ID</th>
+            <th>Created at</th>
+            <th>Last ran</th>
+            <th>Count</th>
+            <th>Query</th>
+          </tr>
         </thead>
         <tbody>
           <tr

@@ -5,12 +5,14 @@
 
       <table class="table is-hoverable" v-if="requests.length > 0">
         <thead>
-          <th>Date</th>
-          <th>Honeypot</th>
-          <th>Method</th>
-          <th>Uri</th>
-          <th>Src IP</th>
-          <th>Actions</th>
+          <tr>
+            <th>Date</th>
+            <th>Honeypot</th>
+            <th>Method</th>
+            <th>Uri</th>
+            <th>Src IP</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
           <tr

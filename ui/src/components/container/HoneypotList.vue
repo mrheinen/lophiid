@@ -5,13 +5,15 @@
 
       <table class="table is-hoverable" v-if="honeypots.length > 0">
         <thead>
-          <th>ID</th>
-          <th>IP</th>
-          <th>Version</th>
-          <th>First seen</th>
-          <th>Last checkin</th>
-          <th>Default content</th>
-          <th># 24 hours</th>
+          <tr>
+            <th>ID</th>
+            <th>IP</th>
+            <th>Version</th>
+            <th>First seen</th>
+            <th>Last checkin</th>
+            <th>Default content</th>
+            <th># 24 hours</th>
+          </tr>
         </thead>
         <tbody>
           <tr

@@ -21,14 +21,16 @@
       <div>
         <table class="table is-hoverable" v-if="rules.length > 0">
           <thead>
-            <th>App</th>
-            <th>App version</th>
-            <th>ID</th>
-            <th>Method</th>
-            <th>URI / Body</th>
-            <th>Port</th>
-            <th>Content ID</th>
-            <th>Actions</th>
+            <tr>
+              <th>App</th>
+              <th>App version</th>
+              <th>ID</th>
+              <th>Method</th>
+              <th>URI / Body</th>
+              <th>Port</th>
+              <th>Content ID</th>
+              <th>Actions</th>
+            </tr>
           </thead>
           <tbody>
             <tr
