@@ -5,14 +5,16 @@
 
       <table class="table is-hoverable" v-if="downloads.length > 0">
         <thead>
-          <th>ID</th>
-          <th title="ID of the first request">First RID</th>
-          <th title="ID of the last request">Last RID</th>
-          <th>Orig URL</th>
-          <th>Content Type</th>
-          <th>Times Seen</th>
-          <th>Last seen</th>
-          <th>Actions</th>
+          <tr>
+            <th>ID</th>
+            <th title="ID of the first request">First RID</th>
+            <th title="ID of the last request">Last RID</th>
+            <th>Orig URL</th>
+            <th>Content Type</th>
+            <th>Times Seen</th>
+            <th>Last seen</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
           <tr

@@ -5,10 +5,12 @@
 
       <table class="table is-hoverable" v-if="tags.length > 0">
         <thead>
-          <th>ID</th>
-          <th>Name</th>
-          <th>HTML Color</th>
-          <th>Description</th>
+            <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>HTML Color</th>
+            <th>Description</th>
+          </tr>
         </thead>
         <tbody>
           <tr

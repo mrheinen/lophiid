@@ -11,6 +11,7 @@
     "@codemirror/autocomplete": "^6.12.0",
     "@codemirror/lang-javascript": "^6.2.1",
     "@highlightjs/vue-plugin": "^2.1.0",
+    "@primevue/themes": "^4.2.1",
     "@vue/compiler-sfc": "^3.3.9",
     "bulma": "^0.9.4",
     "codemirror": "^6.0.1",

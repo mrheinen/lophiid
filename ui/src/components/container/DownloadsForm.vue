@@ -32,13 +32,11 @@
               </td>
             </tr>
             <tr>
-              <input
-                :value="localDownload.sha256sum"
-                ref="sha256sum"
-                type="hidden"
-              />
+
               <th>SHA 256</th>
               <td>
+                <input :value="localDownload.sha256sum" ref="sha256sum" type="hidden" />
+
                 {{ localDownload.parsed.sha256sum }}
                 <i
                   @click="copyToClipboard()"

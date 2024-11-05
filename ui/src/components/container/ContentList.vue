@@ -5,12 +5,14 @@
 
       <table class="table is-hoverable" v-if="contents.length > 0">
         <thead>
-          <th>ID</th>
-          <th>Description</th>
-          <th>Content type</th>
-          <th>Server</th>
-          <th>Date updated</th>
-          <th>Actions</th>
+          <tr>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Content type</th>
+            <th>Server</th>
+            <th>Date updated</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
           <tr

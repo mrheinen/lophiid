@@ -5,17 +5,19 @@
 
       <table class="table is-hoverable" v-if="events.length > 0">
         <thead>
-          <th>ID</th>
-          <th>First Seen</th>
-          <th>Type</th>
-          <th>IP</th>
-          <th>Request ID</th>
-          <th>Domain</th>
-          <th>Details</th>
-          <th>Source</th>
-          <th>Source Ref</th>
-          <th>Count</th>
-          <th>Actions</th>
+          <tr>
+            <th>ID</th>
+            <th>First Seen</th>
+            <th>Type</th>
+            <th>IP</th>
+            <th>Request ID</th>
+            <th>Domain</th>
+            <th>Details</th>
+            <th>Source</th>
+            <th>Source Ref</th>
+            <th>Count</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
           <tr
