@@ -408,6 +408,13 @@ func (c *Session) ServedRuleWithContent(ruleID int64, contentID int64) {
 	c.RuleIDsServed[ruleID] = contentID
 }
 
+// NewSession creates a new session.
+func NewSession() *Session {
+	return &Session{
+		RuleIDsServed: make(map[int64]int64),
+	}
+}
+
 type DatabaseClient interface {
 	Close()
 	Insert(dm DataModel) (DataModel, error)

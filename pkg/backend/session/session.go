@@ -121,12 +121,10 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *database.Session) b
 // StartNewSession starts a new session for the given IP and stores the session
 // in the cache.
 func (d *DatabaseSessionManager) StartSession(ip string) (*database.Session, error) {
-	newSession := &database.Session{
-		Active:    true,
-		StartedAt: time.Now().UTC(),
-		IP:        ip,
-		RuleIDsServed: make(map[int64]int64),
-	}
+	newSession := database.NewSession()
+	newSession.Active = true
+	newSession.StartedAt = time.Now().UTC()
+	newSession.IP = ip
 
 	dm, err := d.dbClient.Insert(newSession)
 	if err != nil {
