@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"lophiid/pkg/util"
@@ -387,9 +388,25 @@ type Session struct {
 	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
 	StartedAt      time.Time `ksql:"started_at" json:"started_at" doc:"Start time of the session"`
 	EndedAt        time.Time `ksql:"ended_at" json:"ended_at" doc:"End time of the session"`
+	Mu             sync.RWMutex
 }
 
 func (c *Session) ModelID() int64 { return c.ID }
+
+// HasServedRule checks if the session has served the given rule.
+func (c *Session) HasServedRule(ruleID int64) bool {
+	c.Mu.RLock()
+	defer c.Mu.RUnlock()
+	_, ok := c.RuleIDsServed[ruleID]
+	return ok
+}
+
+// ServedRuleWithContent updates the session with the given rule and content ID.
+func (c *Session) ServedRuleWithContent(ruleID int64, contentID int64) {
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
+	c.RuleIDsServed[ruleID] = contentID
+}
 
 type DatabaseClient interface {
 	Close()

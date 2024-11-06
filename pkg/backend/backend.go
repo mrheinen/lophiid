@@ -278,7 +278,7 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 	// Find out what rules match but haven't been served.
 	for _, r := range matchedRules {
 
-		if _, ok := session.RuleIDsServed[r.ID]; !ok {
+		if !session.HasServedRule(r.ID) {
 			unservedRules = append(unservedRules, r)
 
 			// A rule matching the same app id is prefered.
@@ -305,7 +305,7 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 
 func (s *BackendServer) UpdateSessionWithRule(ip string, session *database.Session, rule *database.ContentRule) {
 	session.LastRuleServed = *rule
-	session.RuleIDsServed[rule.ID] = rule.ContentID
+	session.ServedRuleWithContent(rule.ID, rule.ContentID)
 	if err := s.sessionMgr.UpdateCachedSession(ip, session); err != nil {
 		slog.Error("error updating session", slog.String("ip", ip), slog.String("error", err.Error()))
 	}
