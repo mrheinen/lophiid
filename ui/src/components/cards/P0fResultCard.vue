@@ -1,6 +1,6 @@
 <template>
-    <div class="card">
-      <FieldSet :legend="label" :toggleable="true">
+    <div>
+      <FieldSet :legend="label" :toggleable="false">
 
       <table>
         <tbody>
