@@ -1,78 +1,8 @@
 <template>
-  <div class="card">
+  <div class="">
     <div>
       <FieldSet legend="Request details" :toggleable="false">
-        <table>
-          <tbody>
-            <tr>
-              <th>Request ID</th>
-              <td>
-                {{ localRequest.id }}
-              </td>
-            </tr>
-
-            <tr>
-              <th>Content ID</th>
-              <td>
-                <a :href="'/content?q=id:' + localRequest.content_id">
-                  {{ localRequest.content_id }}
-                </a>
-              </td>
-            </tr>
-
-            <tr>
-              <th>Rule ID</th>
-              <td>
-                <a :href="'/rules?q=id:' + localRequest.rule_id">
-                  {{ localRequest.rule_id }}
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <th>Honeypot IP</th>
-              <td>
-                <a
-                  :href="'/requests?q=honeypot_ip:' + localRequest.honeypot_ip"
-                >
-                  {{ localRequest.honeypot_ip }}
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <th>Honeypot port</th>
-              <td>
-                <a :href="'/requests?q=port:' + localRequest.port">
-                  {{ localRequest.port }}
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <th>Base Hash</th>
-              <td>
-                {{ localRequest.base_hash }}
-                <a :href="'/requests?q=base_hash:' + localRequest.base_hash">
-                  <i class="pi pi-search" title="find similar requests"></i>
-                </a>
-              </td>
-            </tr>
-            <tr v-if="localRequest.tags">
-              <th>Labels</th>
-              <td>
-                <div
-                  v-for="tag in localRequest.tags"
-                  :key="tag.tag.id"
-                  :title="tag.tag.description"
-                  class="mytag"
-                  :style="'background-color: #' + tag.tag.color_html"
-                >
-                  <a :href="'/requests?q=label:' + tag.tag.name">
-                    {{ tag.tag.name }}&nbsp;
-                  </a>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <RequestTable :request="localRequest"></RequestTable>
       </FieldSet>
     </div>
     <RawHttpCard
@@ -80,11 +10,6 @@
       label="HTTP request"
       :data="localRequest.raw"
     ></RawHttpCard>
-    <P0fResultCard
-      v-if="localRequest.p0f_result"
-      label="p0f result"
-      :p0f="localRequest.p0f_result"
-    ></P0fResultCard>
     <RawHttpCard
       v-if="localRequest.raw_response"
       label="Raw response"
@@ -161,9 +86,9 @@
 
 <script>
 import RawHttpCard from "../cards/RawHttpCard.vue";
-import P0fResultCard from "../cards/P0fResultCard.vue";
+import RequestTable from "../cards/RequestDetailsTable.vue";
 export default {
-  components: { RawHttpCard, P0fResultCard },
+  components: { RawHttpCard, RequestTable },
   props: ["request", "metadata", "whois"],
   inject: ["config"],
   data() {

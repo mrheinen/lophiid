@@ -150,6 +150,11 @@
               class="pi pi-arrow-left pi-style"
             ></i>
             <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+
+            <i
               v-if="requests.length == limit"
               @click="loadNextRequests()"
               class="pi pi-arrow-right pi-style pi-style-right"
@@ -522,6 +527,11 @@ span.search-info-icon:hover {
 i.pi-style {
   font-size: 2rem;
   color: #00d1b2;
+}
+
+i.pi-style-disabled {
+  font-size: 2rem;
+  color: #616060;
 }
 
 i.pi-style-right {
