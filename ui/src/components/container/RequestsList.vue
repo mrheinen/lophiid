@@ -1,67 +1,121 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="request"></DataSearchBar>
-
-      <table class="table is-hoverable" v-if="requests.length > 0">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Honeypot</th>
-            <th>Method</th>
-            <th>Uri</th>
-            <th>Src IP</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="req in requests"
-            @click="setSelectedReq(req.id)"
-            :key="req.id"
-            :class="isSelectedId == req.id ? 'is-selected' : ''"
+      <div class="card">
+        <DataTable
+          :value="requests"
+          tableStyle="min-width: 50rem"
+          :metaKeySelection="true"
+          dataKey="id"
+          showGridlines
+          compareSelectionBy="equals"
+          v-model:selection="selectedRequest"
+          selectionMode="single"
+        >
+          <template #header>
+            <DataSearchBar
+              ref="searchBar"
+              :isloading="isLoading"
+              @search="performNewSearch"
+              modelname="request"
+            ></DataSearchBar>
+          </template>
+          <template #empty>No data matched. </template>
+          <template #loading>Loading request data. Please wait. </template>
+          <DataColumn
+            field="parsed.received_at"
+            header="Date"
+            style="width: 15%"
           >
-            <td class="date">{{ req.parsed.received_at }}</td>
-            <td class="honeypot">{{ req.honeypot_ip }}:{{ req.port }}</td>
-            <td class="method" v-if="req.method == 'POST'">
-              {{ req.method }} ({{ req.content_length }})
-            </td>
-            <td class="method" v-else>{{ req.method }}</td>
-            <td class="uri">
-              <div>
-                <div style="float: left">
-                  {{ req.parsed.uri }}
-                </div>
-                <div style="float: left">
-                  <div>
-                    <div
-                      v-for="t in req.tags"
-                      :key="t.tag.id"
-                      :title="t.tag.description"
-                      class="mytag"
-                    >
-                      <a :href="'/requests?q=label:' + t.tag.name">{{
-                        t.tag.name
-                      }}</a>
-                    </div>
-                  </div>
-                </div>
+            <template #loading>
+              <div
+                class="flex items-center"
+                :style="{
+                  height: '17px',
+                  'flex-grow': '1',
+                  overflow: 'hidden',
+                }"
+              >
+                <DataSkeleton width="60%" height="1rem" />
               </div>
-            </td>
-            <td class="sourceip">
+            </template>
+          </DataColumn>
+
+          <DataColumn field="honeypot_ip" header="Honeypot" style="width: 10%">
+            <template #loading>
+              <div
+                class="flex items-center"
+                :style="{
+                  height: '17px',
+                  'flex-grow': '1',
+                  overflow: 'hidden',
+                }"
+              >
+                <DataSkeleton width="60%" height="1rem" />
+              </div>
+            </template>
+          </DataColumn>
+          <DataColumn field="method" header="Method" style="width: 5%">
+            <template #loading>
+              <div
+                class="flex items-center"
+                :style="{
+                  height: '17px',
+                  'flex-grow': '1',
+                  overflow: 'hidden',
+                }"
+              >
+                <DataSkeleton width="60%" height="1rem" />
+              </div>
+            </template>
+          </DataColumn>
+          <DataColumn field="parsed.uri" header="URI" style="width: 40%">
+            <template #loading>
+              <div
+                class="flex items-center"
+                :style="{
+                  height: '17px',
+                  'flex-grow': '1',
+                  overflow: 'hidden',
+                }"
+              >
+                <DataSkeleton width="60%" height="1rem" />
+              </div>
+            </template>
+          </DataColumn>
+          <DataColumn field="source_ip" header="Source" style="width: 10%">
+            <template #body="slotProps">
               <a
-                :href="getFreshRequestLink() + '?q=source_ip:' + req.source_ip"
+                :href="
+                  getFreshRequestLink() +
+                  '?q=source_ip:' +
+                  slotProps.data.source_ip
+                "
               >
-                {{ req.source_ip }}</a
+                {{ slotProps.data.source_ip }}</a
               >
-            </td>
-            <td>
+            </template>
+            <template #loading>
+              <div
+                class="flex items-center"
+                :style="{
+                  height: '17px',
+                  'flex-grow': '1',
+                  overflow: 'hidden',
+                }"
+              >
+                <DataSkeleton width="60%" height="1rem" />
+              </div>
+            </template>
+          </DataColumn>
+          <DataColumn header="Actions" style="width: 5%">
+            <template #body="slotProps">
               <a
                 :href="
                   '/rules?uri=' +
-                  encodeURIComponent(req.uri) +
+                  encodeURIComponent(slotProps.data.uri) +
                   '&method=' +
-                  req.method
+                  slotProps.data.method
                 "
               >
                 <i
@@ -71,29 +125,57 @@
               </a>
               &nbsp;
               <i
-                @click="toggleStarred(req.id)"
-                :class="req.starred ? 'starred' : ''"
+                @click="toggleStarred(slotProps.data.id)"
+                :class="slotProps.data.starred ? 'starred' : ''"
                 title="Star this request"
                 class="pi pi-star pointer"
               ></i>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </template>
+            <template #loading>
+              <div
+                class="flex items-center"
+                :style="{
+                  height: '17px',
+                  'flex-grow': '1',
+                  overflow: 'hidden',
+                }"
+              >
+                <DataSkeleton width="60%" height="1rem" />
+              </div>
+            </template>
+          </DataColumn>
+          <template #footer>
 
-      <i
-        v-if="offset > 0"
-        @click="loadPrevRequests()"
-        class="pi pi-arrow-left pi-style"
-      ></i>
-      <i
-        v-if="requests.length == limit"
-        @click="loadNextRequests()"
-        class="pi pi-arrow-right pi-style pi-style-right"
-      ></i>
+            <div class="flex justify-between items-center">
+            <div>
+            <i
+              v-if="offset > 0"
+              @click="loadPrevRequests()"
+              class="pi pi-arrow-left pi-style"
+            ></i>
+            <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+            </div>
+            <div>
+
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
+            <i
+              v-if="requests.length == limit"
+              @click="loadNextRequests()"
+              class="pi pi-arrow-right pi-style pi-style-right"
+            ></i>
+            </div>
+            </div>
+          </template>
+        </DataTable>
+      </div>
     </div>
     <div class="column restricted-width mright">
-      <request-view
+      <request-view v-if="selectedRequest"
         :request="selectedRequest"
         :metadata="selectedMetadata"
         :whois="selectedWhois"
@@ -104,8 +186,16 @@
 
 <script>
 function dateToString(inDate) {
+  var options = {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  };
   const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleString();
+  return nd.toLocaleDateString("en-US", options);
 }
 import RequestView from "./RequestView.vue";
 import DataSearchBar from "../DataSearchBar.vue";
@@ -120,14 +210,17 @@ export default {
     return {
       searchIsFocused: false,
       requests: [],
+      limit: 21,
       selectedRequest: null,
       selectedMetadata: [],
       selectedWhois: null,
+      displayRequest: {},
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       query: null,
       isSelectedElement: null,
       isSelectedId: 0,
       isLoading: false,
-      limit: 25,
       offset: 0,
     };
   },
@@ -199,9 +292,22 @@ export default {
     getFreshRequestLink() {
       return this.config.requestsLink + "/0/" + this.limit;
     },
+    lazyLoad(event) {
+      console.log(event);
+
+      if (event.last == 0) {
+        event.last = 40;
+      }
+
+      this.offset = event.first;
+      this.limit = event.last;
+      this.loadNextRequests();
+    },
     loadNextRequests() {
-      this.offset += this.limit;
-      this.$router.push(this.getRequestLink());
+      if (this.requests.length > 0) {
+        this.offset += this.limit;
+      }
+      this.$router.replace(this.getRequestLink());
       this.loadRequests(true);
     },
     loadPrevRequests() {
@@ -210,32 +316,6 @@ export default {
         this.$router.push(this.getRequestLink());
         this.loadRequests(false);
       }
-    },
-    setNextSelectedElement() {
-      for (var i = 0; i < this.requests.length; i++) {
-        if (this.requests[i].id == this.isSelectedId) {
-          if (i + 1 < this.requests.length) {
-            this.setSelectedReq(this.requests[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.requests.length - 1; i >= 0; i--) {
-        if (this.requests[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelectedReq(this.requests[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
     },
     setSelectedReq(id) {
       var selected = null;
@@ -362,8 +442,10 @@ export default {
               newReq.parsed.created_at = dateToString(newReq.created_at);
               newReq.parsed.updated_at = dateToString(newReq.updated_at);
               newReq.parsed.received_at = dateToString(newReq.time_received);
-              if (newReq.uri.length > 50) {
-                newReq.parsed.uri = newReq.uri.substring(0, 50) + "...";
+              var maxUriLength = 75;
+              if (newReq.uri.length > maxUriLength) {
+                newReq.parsed.uri =
+                  newReq.uri.substring(0, maxUriLength) + "...";
               } else {
                 newReq.parsed.uri = newReq.uri;
               }
@@ -380,6 +462,12 @@ export default {
         });
     },
   },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadRequests(true);
+    }
+  },
   created() {
     if (this.$route.params.limit) {
       this.limit = parseInt(this.$route.params.limit);
@@ -388,6 +476,8 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
+
+    this.selectedLimit = this.limit;
   },
   mounted() {
     if (this.$route.query.q) {
@@ -399,15 +489,7 @@ export default {
 };
 </script>
 
-<style scoped>
-.table tr.is-selected {
-  background-color: #4e726d;
-}
-
-table th {
-  color: #616060 !important;
-}
-
+<style>
 .mytag {
   font-size: 0.65rem;
   display: inline-block;
@@ -446,8 +528,14 @@ table {
   width: 100%;
 }
 
-td {
-  font-size: 13px;
+.p-datatable-tbody > tr > td {
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  padding-left: 13px !important;
+  padding-right: 13px !important;
+}
+tr {
+  font-size: 12px;
 }
 span.search-info-icon {
   color: black;
@@ -461,6 +549,11 @@ span.search-info-icon:hover {
 i.pi-style {
   font-size: 2rem;
   color: #00d1b2;
+}
+
+i.pi-style-disabled {
+  font-size: 2rem;
+  color: #616060;
 }
 
 i.pi-style-right {
@@ -477,5 +570,19 @@ i.pi-style-right {
 
 .starred {
   color: red;
+}
+
+input.p-select-label {
+  width: 40px;
+}
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+.flex {
+  display: flex;
 }
 </style>

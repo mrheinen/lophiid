@@ -22,7 +22,6 @@ import CodeMirror from './../node_modules/vue-codemirror';
 //import javascript from './../node_modules/@codemirror/lang-javascript';
 
 import './../node_modules/bulma/css/bulma.css';
-import './../node_modules/primevue/resources/themes/lara-light-blue/theme.css'
 import './../node_modules/primeicons/primeicons.css';
 import './../node_modules/highlight.js/styles/stackoverflow-light.css'
 import './../node_modules/highlight.js/lib/common';
@@ -59,7 +58,7 @@ import AutoComplete from './../node_modules/primevue/autocomplete';
 import Textarea from './../node_modules/primevue/textarea';
 import InputText from './../node_modules/primevue/inputtext';
 import InputNumber from './../node_modules/primevue/inputnumber';
-import DropDown from './../node_modules/primevue/dropdown';
+import Select from './../node_modules/primevue/select';
 import ListBox from './../node_modules/primevue/listbox';
 import FieldSet from './../node_modules/primevue/fieldset';
 import Button from './../node_modules/primevue/button';
@@ -69,23 +68,35 @@ import CheckBox from './../node_modules/primevue/checkbox';
 import MenuBar from './../node_modules/primevue/menubar';
 import MultiSelect from './../node_modules/primevue/multiselect';
 import ColorPicker from './../node_modules/primevue/colorpicker';
-import OverlayPanel from './../node_modules/primevue/overlaypanel';
+import PopOver from './../node_modules/primevue/popover';
 import IconField from './../node_modules/primevue/iconfield';
 import InputIcon from './../node_modules/primevue/inputicon';
-
+import DataTable from './../node_modules/primevue/datatable';
+import Column from './../node_modules/primevue/column';
+import Skeleton from './../node_modules/primevue/skeleton';
+import Tabs from './../node_modules/primevue/tabs';
+import TabList from './../node_modules/primevue/tablist';
+import Tab from './../node_modules/primevue/tab';
+import TabPanels from './../node_modules/primevue/tabpanels';
+import TabPanel from './../node_modules/primevue/tabpanel';
 import ConfirmationService from './../node_modules/primevue/confirmationservice';
 
 
-
+import Material from '@primevue/themes/material';
 
 
 const app = createApp(App);
 
+app.component('PrimeTabs', Tabs);
+app.component('PrimeTab', Tab);
+app.component('TabList', TabList);
+app.component('TabPanels', TabPanels);
+app.component('TabPanel', TabPanel);
 app.component('AutoComplete', AutoComplete);
 app.component('TextArea', Textarea);
 app.component('InputText', InputText);
 app.component('InputNumber', InputNumber);
-app.component('DropDown', DropDown);
+app.component('FormSelect', Select);
 app.component('ListBox', ListBox);
 app.component('FieldSet', FieldSet);
 app.component('ConfirmPopup', ConfirmPopup);
@@ -95,13 +106,20 @@ app.component('CheckBox', CheckBox);
 app.component('MultiSelect', MultiSelect);
 app.component('MenuBar', MenuBar);
 app.component('ColorPicker', ColorPicker);
-app.component('OverlayPanel', OverlayPanel);
+app.component('DataTable', DataTable);
+app.component('DataColumn', Column);
+app.component('DataSkeleton', Skeleton);
 app.component('IconField', IconField);
 app.component('InputIcon', InputIcon);
+app.component('PopOver', PopOver);
 app.use(hljsVuePlugin);
 app.use(router);
 app.use(store);
-app.use(PrimeVue);
+app.use(PrimeVue, {
+    theme: {
+        preset: Material
+    }
+});
 app.use(ToastPlugin);
 app.use(ConfirmationService);
 app.use(CodeMirror, {

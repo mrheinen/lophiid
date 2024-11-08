@@ -1,38 +1,33 @@
 <template>
-    <div class="card">
-      <FieldSet :legend="label" :toggleable="true">
-
-      <table>
-        <tbody>
-          <tr>
-            <th>Operating system</th>
-            <td>{{ p0f.os_name }} </td>
-          </tr>
-          <tr>
-            <th>Operating version</th>
-            <td>{{ p0f.os_version }} </td>
-          </tr>
-          <tr>
-            <th>OS matching quality</th>
-            <td>{{ osMatchQuality }} </td>
-          </tr>
-          <tr>
-            <th>Distance</th>
-            <td>{{ p0f.distance }} </td>
-          </tr>
-          <tr>
-            <th>Link type</th>
-            <td>{{ p0f.link_type }} </td>
-          </tr>
-          <tr v-if="this.calculatedUptimeDays > 0 ||
-            this.calculatedUptimeAndHours > 0">
-            <th>Uptime</th>
-            <td>{{ calculatedUptimeDays }} days and {{ calculatedUptimeAndHours }} hours</td>
-          </tr>
-        </tbody>
-      </table>
-      </FieldSet>
-    </div>
+  <table>
+    <tbody>
+      <tr>
+        <th>Operating system</th>
+        <td>{{ p0f.os_name }} </td>
+      </tr>
+      <tr>
+        <th>Operating version</th>
+        <td>{{ p0f.os_version }} </td>
+      </tr>
+      <tr>
+        <th>OS matching quality</th>
+        <td>{{ osMatchQuality }} </td>
+      </tr>
+      <tr>
+        <th>Distance</th>
+        <td>{{ p0f.distance }} </td>
+      </tr>
+      <tr>
+        <th>Link type</th>
+        <td>{{ p0f.link_type }} </td>
+      </tr>
+      <tr v-if="this.calculatedUptimeDays > 0 ||
+        this.calculatedUptimeAndHours > 0">
+        <th>Uptime</th>
+        <td>{{ calculatedUptimeDays }} days and {{ calculatedUptimeAndHours }} hours</td>
+      </tr>
+    </tbody>
+  </table>
 </template>
 
 <script>

@@ -8,20 +8,24 @@
             <div>
               <label class="label">URI match string</label>
               <InputText
-              id="title"
-              type="text"
-              placeholder=""
-              v-model="localRule.uri"
+                id="title"
+                type="text"
+                placeholder=""
+                v-model="localRule.uri"
               />
             </div>
           </div>
           <div class="column">
             <div class="field">
               <label class="label">URI matching method</label>
-              <DropDown v-model="localRule.uri_matching"
-              :options="config.backendMatchingMethods" placeholder="Select a
+              <FormSelect
+                v-model="localRule.uri_matching"
+                :options="config.backendMatchingMethods"
+                placeholder="Select a
               method"
-              checkmark :highlightOnSelect="true" />
+                checkmark
+                :highlightOnSelect="true"
+              />
             </div>
           </div>
         </div>
@@ -31,21 +35,24 @@
             <div>
               <label class="label">Request body match string</label>
               <InputText
-              id="title"
-              type="text"
-              placeholder=""
-              v-model="localRule.body"
+                id="title"
+                type="text"
+                placeholder=""
+                v-model="localRule.body"
               />
             </div>
           </div>
           <div class="column">
-
             <div class="field">
               <label class="label">Body matching method</label>
-              <DropDown v-model="localRule.body_matching"
-              :options="config.backendMatchingMethods" placeholder="Select a
+              <FormSelect
+                v-model="localRule.body_matching"
+                :options="config.backendMatchingMethods"
+                placeholder="Select a
               method"
-              checkmark :highlightOnSelect="true" />
+                checkmark
+                :highlightOnSelect="true"
+              />
             </div>
           </div>
         </div>
@@ -55,14 +62,17 @@
             <div>
               <label class="label">Content ID</label>
               <InputNumber
-              v-model="localRule.content_id"
-              inputId="minmax"
-              :useGrouping="false"
-              :min="0"
-              :max="65535"
+                v-model="localRule.content_id"
+                inputId="minmax"
+                :useGrouping="false"
+                :min="0"
+                :max="65535"
               />
               &nbsp;
-              <i @click="onContentFormOpen()" class="pi pi-plus-circle pointer"></i>
+              <i
+                @click="onContentFormOpen()"
+                class="pi pi-plus-circle pointer"
+              ></i>
               &nbsp;
               <a :href="'/content?q=id:' + localRule.content_id">
                 <i class="pi pi-external-link pointer"></i>
@@ -72,13 +82,13 @@
           <div class="column">
             <div>
               <label class="label">App ID</label>
-              <DropDown
-              v-model="localRule.app_id"
-              :options="appValues"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select app"
-              class="w-full md:w-14rem"
+              <FormSelect
+                v-model="localRule.app_id"
+                :options="appValues"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select app"
+                class="w-full md:w-14rem"
               />
 
               &nbsp;
@@ -87,30 +97,31 @@
           </div>
         </div>
 
-
         <div class="columns">
           <div class="column">
             <div>
               <label class="label">Port</label>
               <InputNumber
-              v-model="localRule.port"
-              inputId="minmax"
-              :useGrouping="false"
-              :min="0"
-              :max="65535"
+                v-model="localRule.port"
+                inputId="minmax"
+                :useGrouping="false"
+                :min="0"
+                :max="65535"
               />
             </div>
           </div>
           <div class="column">
-
             <div class="field">
               <label class="label">Request purpose</label>
-              <DropDown v-model="localRule.request_purpose"
-              :options="config.contentRuleRequestPurposes" placeholder="Select a
+              <FormSelect
+                v-model="localRule.request_purpose"
+                :options="config.contentRuleRequestPurposes"
+                placeholder="Select a
               method"
-              checkmark :highlightOnSelect="true" />
+                checkmark
+                :highlightOnSelect="true"
+              />
             </div>
-
           </div>
         </div>
 
@@ -118,20 +129,24 @@
           <div class="column">
             <div>
               <label class="label">HTTP method</label>
-              <DropDown v-model="localRule.method"
-              :options="config.contentRuleHTTPMethods" placeholder="Select HTTP method"
-              checkmark :highlightOnSelect="true" />
+              <FormSelect
+                v-model="localRule.method"
+                :options="config.contentRuleHTTPMethods"
+                placeholder="Select HTTP method"
+                checkmark
+                :highlightOnSelect="true"
+              />
             </div>
           </div>
           <div class="column">
             <div>
               <label class="label">UUID</label>
               <InputText
-              id="uuid"
-              type="text"
-              disabled
-              placeholder="The UUID of the rule"
-              v-model="localRule.ext_uuid"
+                id="uuid"
+                type="text"
+                disabled
+                placeholder="The UUID of the rule"
+                v-model="localRule.ext_uuid"
               />
             </div>
           </div>
@@ -141,89 +156,104 @@
           <div class="column">
             <div>
               <label class="label">Responder (optional)</label>
-              <DropDown v-model="localRule.responder"
-              :options="config.ruleResponderTypes" placeholder="Responder type"
-              checkmark :highlightOnSelect="true" />
+              <FormSelect
+                v-model="localRule.responder"
+                :options="config.ruleResponderTypes"
+                placeholder="Responder type"
+                checkmark
+                :highlightOnSelect="true"
+              />
             </div>
           </div>
           <div class="column">
             <div>
               <label class="label">Responder regex</label>
               <InputText
-              id="responder_regex"
-              type="text"
-              placeholder="Responder regex"
-              v-model="localRule.responder_regex"
+                id="responder_regex"
+                type="text"
+                placeholder="Responder regex"
+                v-model="localRule.responder_regex"
               />
             </div>
           </div>
         </div>
 
-
         <div class="columns">
           <div class="column">
             <div>
               <label class="label">Responder decoder</label>
-              <DropDown v-model="localRule.responder_decoder"
-              :options="config.ruleResponderDecoders" placeholder="Responder decoder"
-              checkmark :highlightOnSelect="true" />
+              <FormSelect
+                v-model="localRule.responder_decoder"
+                :options="config.ruleResponderDecoders"
+                placeholder="Responder decoder"
+                checkmark
+                :highlightOnSelect="true"
+              />
             </div>
           </div>
           <div class="column">
             <label class="label">Misc options</label>
             <div>
-              <CheckBox inputId="alert" v-model="localRule.alert" :binary="true" />
+              <CheckBox
+                inputId="alert"
+                v-model="localRule.alert"
+                :binary="true"
+              />
               <label for="alert">Alert</label>
             </div>
 
             <div>
-              <CheckBox inputId="enabled" v-model="localRule.enabled" :binary="true" />
+              <CheckBox
+                inputId="enabled"
+                v-model="localRule.enabled"
+                :binary="true"
+              />
               <label for="enabled">Enable</label>
             </div>
           </div>
         </div>
         <br />
         <PrimeButton
-        :label="localRule.id > 0 ? 'Submit' : 'Add'"
-        @click="submitForm()"
+          :label="localRule.id > 0 ? 'Submit' : 'Add'"
+          @click="submitForm()"
         >
         </PrimeButton>
         &nbsp;
         <PrimeButton
-        severity="secondary"
-        label="New"
-        @click="resetForm()"
+          severity="secondary"
+          label="New"
+          @click="resetForm()"
         ></PrimeButton>
         &nbsp;
         <PrimeButton
-        severity="danger"
-        @click="requireConfirmation($event)"
-        label="Delete"
+          severity="danger"
+          @click="requireConfirmation($event)"
+          label="Delete"
         ></PrimeButton>
       </FieldSet>
     </div>
 
     <ConfirmPopup group="headless">
-    <template #container="{ message, acceptCallback, rejectCallback }">
-      <div class="bg-gray-900 text-white border-round p-3">
-        <span>{{ message.message }}</span>
-        <div class="flex align-items-center gap-2 mt-3">
-          <PrimeButton
-          icon="pi pi-check"
-          label="Save"
-          @click="acceptCallback"
-          class="p-button-sm p-button-outlined"
-          ></PrimeButton>
-          <PrimeButton
-          label="Cancel"
-          severity="secondary"
-          outlined
-          @click="rejectCallback"
-          class="p-button-sm p-button-text"
-          ></PrimeButton>
+      <template #container="{ message, acceptCallback, rejectCallback }">
+        <div class="bg-gray-900 text-white border-round p-3">
+          <span>{{ message.message }}</span>
+          <div class="flex align-items-center gap-2 mt-3">
+            <PrimeButton
+              icon="pi pi-check"
+              label="Save"
+              @click="acceptCallback"
+              class="p-button-sm p-button-outlined"
+            ></PrimeButton>
+            <PrimeButton
+              label="Cancel"
+              severity="secondary"
+              outlined
+              @click="rejectCallback"
+              class="p-button-sm p-button-text"
+            ></PrimeButton>
+          </div>
         </div>
-      </div>
-    </template>
+      </template>
     </ConfirmPopup>
   </div>
 </template>
@@ -231,7 +261,13 @@
 <script>
 export default {
   props: ["rule", "contentid", "appid"],
-  emits: ["require-auth", "update-rule", "delete-rule", "content-form-open", "app-form-open"],
+  emits: [
+    "require-auth",
+    "update-rule",
+    "delete-rule",
+    "content-form-open",
+    "app-form-open",
+  ],
   inject: ["config"],
   data() {
     return {
@@ -285,9 +321,9 @@ export default {
       })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
@@ -310,9 +346,9 @@ export default {
       })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {
@@ -326,15 +362,18 @@ export default {
         });
     },
     loadApps(callback) {
-      const url = this.config.backendAddress + "/app/segment?q=&limit=1000&offset=0";
-      fetch(url, { headers: {
-        'API-Key': this.$store.getters.apiToken,
-      }})
+      const url =
+        this.config.backendAddress + "/app/segment?q=&limit=1000&offset=0";
+      fetch(url, {
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+        },
+      })
         .then((response) => {
           if (response.status == 403) {
-            this.$emit('require-auth');
+            this.$emit("require-auth");
           } else {
-            return response.json()
+            return response.json();
           }
         })
         .then((response) => {

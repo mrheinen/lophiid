@@ -29,7 +29,7 @@
     <div class="column is-full">
       <!-- use key below to let the page re-render when the API key changes -->
       <router-view
-        :key="apiKey + $route.fullPath"
+        :key="apiKey + $route.path"
         @require-auth="requireAuth"
       ></router-view>
     </div>
@@ -85,12 +85,20 @@ export default {
   margin-right: 10px;
 }
 
-.card {
-  padding-bottom: 10px;
-}
-
 th {
   color: #616060 !important;
+}
+
+tr {
+  font-size: 13px;
+}
+
+.myMard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  padding: 2rem;
 }
 
 label {
