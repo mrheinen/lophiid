@@ -24,7 +24,7 @@
             :data="request.raw"
           ></RawHttpCard>
         </TabPanel>
-        <TabPanel value="1" v-if="request.raw_response == true">
+        <TabPanel value="1" v-if="request.raw_response">
           <RawHttpCard
             v-if="request.raw_response"
             label="Raw response"
