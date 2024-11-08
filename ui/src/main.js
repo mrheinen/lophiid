@@ -74,7 +74,11 @@ import InputIcon from './../node_modules/primevue/inputicon';
 import DataTable from './../node_modules/primevue/datatable';
 import Column from './../node_modules/primevue/column';
 import Skeleton from './../node_modules/primevue/skeleton';
-
+import Tabs from './../node_modules/primevue/tabs';
+import TabList from './../node_modules/primevue/tablist';
+import Tab from './../node_modules/primevue/tab';
+import TabPanels from './../node_modules/primevue/tabpanels';
+import TabPanel from './../node_modules/primevue/tabpanel';
 import ConfirmationService from './../node_modules/primevue/confirmationservice';
 
 
@@ -83,6 +87,11 @@ import Material from '@primevue/themes/material';
 
 const app = createApp(App);
 
+app.component('PrimeTabs', Tabs);
+app.component('PrimeTab', Tab);
+app.component('TabList', TabList);
+app.component('TabPanels', TabPanels);
+app.component('TabPanel', TabPanel);
 app.component('AutoComplete', AutoComplete);
 app.component('TextArea', Textarea);
 app.component('InputText', InputText);

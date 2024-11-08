@@ -5,9 +5,10 @@
         <DataTable
           :value="requests"
           tableStyle="min-width: 50rem"
-          :metaKeySelection="false"
+          :metaKeySelection="true"
           dataKey="id"
           showGridlines
+          compareSelectionBy="equals"
           v-model:selection="selectedRequest"
           selectionMode="single"
         >
@@ -164,7 +165,7 @@
       </div>
     </div>
     <div class="column restricted-width mright">
-      <request-view
+      <request-view v-if="selectedRequest"
         :request="selectedRequest"
         :metadata="selectedMetadata"
         :whois="selectedWhois"
@@ -202,6 +203,7 @@ export default {
       selectedRequest: null,
       selectedMetadata: [],
       selectedWhois: null,
+      displayRequest: {},
       query: null,
       isSelectedElement: null,
       isSelectedId: 0,
@@ -447,6 +449,12 @@ export default {
           this.isLoading = false;
         });
     },
+  },
+  watch: {
+    selectedRequest() {
+      console.log(this.selectedRequest);
+      this.viewRequest = Object.assign({}, this.selectedRequest);
+    }
   },
   created() {
     if (this.$route.params.limit) {

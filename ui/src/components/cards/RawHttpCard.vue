@@ -1,30 +1,27 @@
 <template>
   <div>
-    <FieldSet :legend="label" :toggleable="false">
-      <pre v-on:focus="$event.target.select()" ref="rawhttp" class="rawhttp">{{
-        data
-      }}</pre>
-      <br />
-      <div style="float: right">
-        <i
-          @click="copyToClipboard()"
-          title="copy to clipboard"
-          class="pi pi-copy pointer"
-        ></i>
-        &nbsp;
-        <i
-          @click="decodeUri()"
-          title="decode uri"
-          class="pi pi-percentage pointer"
-        ></i>
-        &nbsp;
-        <i
-          @click="decodeUnicode()"
-          title="decode unicode"
-          class="pi pi-code pointer"
-        ></i>
-      </div>
-    </FieldSet>
+    <pre v-on:focus="$event.target.select()" ref="rawhttp" class="rawhttp">{{ data }}
+    </pre>
+    <br />
+    <div style="float: right">
+      <i
+        @click="copyToClipboard()"
+        title="copy to clipboard"
+        class="pi pi-copy pointer"
+      ></i>
+      &nbsp;
+      <i
+        @click="decodeUri()"
+        title="decode uri"
+        class="pi pi-percentage pointer"
+      ></i>
+      &nbsp;
+      <i
+        @click="decodeUnicode()"
+        title="decode unicode"
+        class="pi pi-code pointer"
+      ></i>
+    </div>
   </div>
 </template>
 
@@ -54,7 +51,7 @@ export default {
 <style scoped>
 pre.rawhttp {
   max-height: 400px;
-  max-width: 700px;
+  max-width: 675px;
   overflow: auto;
   background-color: #eeeeee;
   word-break: normal !important;

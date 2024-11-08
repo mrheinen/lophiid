@@ -2,85 +2,102 @@
   <div class="">
     <div>
       <FieldSet legend="Request details" :toggleable="false">
-        <RequestTable :request="localRequest"></RequestTable>
+        <RequestTable :request="request"></RequestTable>
       </FieldSet>
     </div>
-    <RawHttpCard
-      v-if="localRequest.raw"
-      label="HTTP request"
-      :data="localRequest.raw"
-    ></RawHttpCard>
-    <RawHttpCard
-      v-if="localRequest.raw_response"
-      label="Raw response"
-      :data="localRequest.raw_response"
-    ></RawHttpCard>
 
-    <div v-if="metadata.length">
-      <FieldSet legend="Metadata" :toggleable="false">
-        <div v-if="localUnicodeMetadata.length">
-          <div style="width: 700px">
-            <label class="label">Decoded unicode strings</label>
-            <div v-for="meta in localUnicodeMetadata" :key="meta.id">
+    <FieldSet legend="Context" :toggleable="false">
+    <PrimeTabs value="0">
+    <TabList>
+        <PrimeTab value="0">HTTP Request</PrimeTab>
+        <PrimeTab value="1" v-if="request.raw_response">HTTP Response</PrimeTab>
+        <PrimeTab value="2" v-if="metadata.length">Metadata</PrimeTab>
+        <PrimeTab value="3" v-if="localWhois">Whois</PrimeTab>
+        <PrimeTab value="4" v-if="request.content_dynamic == true">Debug</PrimeTab>
+    </TabList>
+
+        <TabPanels>
+        <TabPanel value="0">
+          <RawHttpCard
+            v-if="request.raw"
+            label="HTTP request"
+            :data="request.raw"
+          ></RawHttpCard>
+        </TabPanel>
+        <TabPanel value="1" v-if="request.raw_response == true">
+          <RawHttpCard
+            v-if="request.raw_response"
+            label="Raw response"
+            :data="request.raw_response"
+          ></RawHttpCard>
+
+        </TabPanel>
+        <TabPanel v-if="metadata.length" value="2">
+          <div v-if="localUnicodeMetadata.length">
+            <div style="width: 700px">
+              <label class="label">Decoded unicode strings</label>
+              <div v-for="meta in localUnicodeMetadata" :key="meta.id">
+                <highlightjs autodetect :code="meta.data" />
+              </div>
+            </div>
+          </div>
+
+          <div v-for="meta in localBase64Metadata" :key="meta.id">
+            <div style="width: 700px">
+              <label class="label">Decoded base64 string</label>
               <highlightjs autodetect :code="meta.data" />
             </div>
           </div>
-        </div>
 
-        <div v-for="meta in localBase64Metadata" :key="meta.id">
-          <div style="width: 700px">
-            <label class="label">Decoded base64 string</label>
-            <highlightjs autodetect :code="meta.data" />
+          <div v-if="localLinkMetadata.length">
+            <label class="label">Extracted URLs</label>
+            <div v-for="meta in localLinkMetadata" :key="meta.id">
+              <p>{{ meta.data }}</p>
+            </div>
           </div>
-        </div>
 
-        <div v-if="localLinkMetadata.length">
-          <label class="label">Extracted URLs</label>
-          <div v-for="meta in localLinkMetadata" :key="meta.id">
-            <p>{{ meta.data }}</p>
+          <div v-if="localTCPMetadata.length">
+            <label class="label">Extracted TCP links</label>
+            <div v-for="meta in localTCPMetadata" :key="meta.id">
+              <p>{{ meta.data }}</p>
+            </div>
           </div>
-        </div>
-
-        <div v-if="localTCPMetadata.length">
-          <label class="label">Extracted TCP links</label>
-          <div v-for="meta in localTCPMetadata" :key="meta.id">
-            <p>{{ meta.data }}</p>
+          <div v-if="localNetcatMetadata.length">
+            <label class="label">Extracted netcat links</label>
+            <div v-for="meta in localNetcatMetadata" :key="meta.id">
+              <p>{{ meta.data }}</p>
+            </div>
           </div>
-        </div>
-        <div v-if="localNetcatMetadata.length">
-          <label class="label">Extracted netcat links</label>
-          <div v-for="meta in localNetcatMetadata" :key="meta.id">
-            <p>{{ meta.data }}</p>
+        </TabPanel>
+
+        <TabPanel value="3" v-if="localWhois">
+          <table v-if="localWhois.country">
+            <tbody>
+              <tr>
+                <th>Country</th>
+                <td>
+                  {{ localWhois.country }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <br />
+
+          <pre v-if="localWhois.data" class="whois">{{ localWhois.data }}</pre>
+          <pre v-if="localWhois.rdap_string" class="whois">{{
+            localWhois.rdap_string
+          }}</pre>
+        </TabPanel>
+        <TabPanel value="4" v-if="request.content_dynamic == true">
+          <div v-if="request.content_dynamic == true">
+              <pre class="rawrequest">{{ request.raw_response }}</pre>
           </div>
-        </div>
-      </FieldSet>
-    </div>
-    <div v-if="localRequest.content_dynamic == true">
-      <FieldSet legend="Customized response" :toggleable="false">
-        <pre class="rawrequest">{{ localRequest.raw_response }}</pre>
-      </FieldSet>
-    </div>
+        </TabPanel>
+    </TabPanels>
+    </PrimeTabs>
 
-    <div v-if="localWhois">
-      <FieldSet legend="WHOIS record" :toggleable="false">
-        <table v-if="localWhois.country">
-          <tbody>
-            <tr>
-              <th>Country</th>
-              <td>
-                {{ localWhois.country }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <br />
+    </FieldSet>
 
-        <pre v-if="localWhois.data" class="whois">{{ localWhois.data }}</pre>
-        <pre v-if="localWhois.rdap_string" class="whois">{{
-          localWhois.rdap_string
-        }}</pre>
-      </FieldSet>
-    </div>
   </div>
 </template>
 
@@ -93,9 +110,6 @@ export default {
   inject: ["config"],
   data() {
     return {
-      localRequest: {
-        parsed: {},
-      },
       localWhois: null,
       localMetadata: [],
       localBase64Metadata: [],
@@ -107,10 +121,6 @@ export default {
   },
   methods: {},
   watch: {
-    request() {
-      this.localRequest = Object.assign({}, this.request);
-    },
-
     whois() {
       if (this.whois == null) {
         this.localWhois = null;
