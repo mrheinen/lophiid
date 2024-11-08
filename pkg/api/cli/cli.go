@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/api"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"net/http"
 	"net/url"
@@ -33,12 +34,12 @@ var UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like
 
 type ApiCLI struct {
 	httpClient     *http.Client
-	contentAPI     api.ApiClient[database.Content]
+	contentAPI     api.ApiClient[models.Content]
 	appAPI         api.ApiClient[database.Application]
-	contentRuleAPI api.ApiClient[database.ContentRule]
+	contentRuleAPI api.ApiClient[models.ContentRule]
 }
 
-func NewApiCLI(httpClient *http.Client, contentAPI *api.GenericApiClient[database.Content], appAPI *api.GenericApiClient[database.Application], contentRuleAPI *api.GenericApiClient[database.ContentRule]) *ApiCLI {
+func NewApiCLI(httpClient *http.Client, contentAPI *api.GenericApiClient[models.Content], appAPI *api.GenericApiClient[database.Application], contentRuleAPI *api.GenericApiClient[models.ContentRule]) *ApiCLI {
 	return &ApiCLI{
 		httpClient:     httpClient,
 		appAPI:         appAPI,
@@ -91,7 +92,7 @@ func (a *ApiCLI) FetchUrlAndCreateContentAndRule(appID int64, ports []int64, tar
 
 // CreateContentAndRule will store the Content and a newly created ContentRule
 // in the database.
-func (a *ApiCLI) CreateContentAndRule(app *database.Application, ports []int64, content *database.Content, targetUrl string) error {
+func (a *ApiCLI) CreateContentAndRule(app *database.Application, ports []int64, content *models.Content, targetUrl string) error {
 	addedContent, err := a.contentAPI.UpsertDataModel(*content)
 	if err != nil {
 		return fmt.Errorf("error storing content: %w", err)
@@ -110,7 +111,7 @@ func (a *ApiCLI) CreateContentAndRule(app *database.Application, ports []int64, 
 
 	for _, port := range ports {
 		// Store the content rule.
-		newContentRule := database.ContentRule{
+		newContentRule := models.ContentRule{
 			ContentID:        addedContent.ID,
 			Method:           http.MethodGet,
 			Uri:              pathQuery,
@@ -137,7 +138,7 @@ func (a *ApiCLI) CreateContentAndRule(app *database.Application, ports []int64, 
 // FetchUrlToContent will fetch a URL and will save the data as a Content in
 // lophiid. It will preserve important headers so that, when the content is
 // served by a honeypot, it will look like the real deal.
-func (a *ApiCLI) FetchUrlToContent(namePrefix string, targetUrl string) (database.Content, error) {
+func (a *ApiCLI) FetchUrlToContent(namePrefix string, targetUrl string) (models.Content, error) {
 
 	// These headers contain values that are likely expired when serving them in
 	// the future. We therefore ignore them.
@@ -146,7 +147,7 @@ func (a *ApiCLI) FetchUrlToContent(namePrefix string, targetUrl string) (databas
 		"date":    true,
 	}
 
-	retContent := database.Content{}
+	retContent := models.Content{}
 
 	slog.Info("fetching url", slog.String("url", targetUrl))
 	req, _ := http.NewRequest(http.MethodGet, targetUrl, nil)

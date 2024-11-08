@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "models",
+    srcs = [
+        "content.go",
+        "content_rule.go",
+        "yammablebytes.go",
+    ],
+    importpath = "lophiid/pkg/database/models",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_jackc_pgx_v5//pgtype",
+        "@in_gopkg_yaml_v3//:yaml_v3",
+    ],
+)

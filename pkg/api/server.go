@@ -25,6 +25,7 @@ import (
 	"lophiid/backend_service"
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util"
 	"net/http"
@@ -53,14 +54,14 @@ type HttpResult struct {
 type HttpContentResult struct {
 	Status  string             `json:"status"`
 	Message string             `json:"message"`
-	Data    []database.Content `json:"data"`
+	Data    []models.Content `json:"data"`
 }
 
 // For testing
 type HttpContentRuleResult struct {
 	Status  string                 `json:"status"`
 	Message string                 `json:"message"`
-	Data    []database.ContentRule `json:"data"`
+	Data    []models.ContentRule `json:"data"`
 }
 
 const ResultSuccess = "OK"
@@ -121,7 +122,7 @@ func (a *ApiServer) sendStatus(w http.ResponseWriter, msg string, result string,
 }
 
 func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *http.Request) {
-	var rb database.ContentRule
+	var rb models.ContentRule
 	rb.ID = 0
 
 	d := json.NewDecoder(req.Body)
@@ -205,7 +206,7 @@ func (a *ApiServer) HandleGetSingleContentRule(w http.ResponseWriter, req *http.
 		return
 	}
 
-	a.sendStatus(w, "", ResultSuccess, []database.ContentRule{cr})
+	a.sendStatus(w, "", ResultSuccess, []models.ContentRule{cr})
 }
 
 func (a *ApiServer) HandleDeleteContentRule(w http.ResponseWriter, req *http.Request) {
@@ -221,7 +222,7 @@ func (a *ApiServer) HandleDeleteContentRule(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	err = a.dbc.Delete(&database.ContentRule{ID: intID})
+	err = a.dbc.Delete(&models.ContentRule{ID: intID})
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
@@ -231,7 +232,7 @@ func (a *ApiServer) HandleDeleteContentRule(w http.ResponseWriter, req *http.Req
 }
 
 func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.Request) {
-	var rb database.Content
+	var rb models.Content
 	rb.ID = 0
 
 	d := json.NewDecoder(req.Body)
@@ -333,7 +334,7 @@ func (a *ApiServer) HandleGetSingleContent(w http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	a.sendStatus(w, "", ResultSuccess, []database.Content{cts})
+	a.sendStatus(w, "", ResultSuccess, []models.Content{cts})
 }
 
 func (a *ApiServer) HandleDeleteContent(w http.ResponseWriter, req *http.Request) {
@@ -349,7 +350,7 @@ func (a *ApiServer) HandleDeleteContent(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	err = a.dbc.Delete(&database.Content{ID: intID})
+	err = a.dbc.Delete(&models.Content{ID: intID})
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
@@ -674,7 +675,7 @@ func (a *ApiServer) HandleSearchContentRules(w http.ResponseWriter, req *http.Re
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var rls []database.ContentRule
+	var rls []models.ContentRule
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchContentRules(iOffset, iLimit, query)
 
@@ -699,7 +700,7 @@ func (a *ApiServer) HandleSearchContent(w http.ResponseWriter, req *http.Request
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var rls []database.Content
+	var rls []models.Content
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchContent(iOffset, iLimit, query)
 
@@ -928,8 +929,8 @@ func (a *ApiServer) HandleGetTagsForRequestFull(w http.ResponseWriter, req *http
 
 type AppExport struct {
 	App      *database.Application  `json:"app"`
-	Rules    []database.ContentRule `json:"rules"`
-	Contents []database.Content     `json:"contents"`
+	Rules    []models.ContentRule `json:"rules"`
+	Contents []models.Content     `json:"contents"`
 }
 
 type AppYamlExport struct {
@@ -1058,7 +1059,7 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		return
 	}
 
-	existingContent := []database.Content{}
+	existingContent := []models.Content{}
 	for _, rule := range existingRules {
 
 		if !util.IsValidUUID(rule.ContentUuid) {
@@ -1088,7 +1089,7 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		return
 	}
 
-	cm := make(map[string]database.Content)
+	cm := make(map[string]models.Content)
 	for _, cnt := range ae.Contents {
 		cm[cnt.ExtUuid] = cnt
 	}
@@ -1123,7 +1124,7 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		rule.ContentID = contentModel.ModelID()
 		rule.AppID = appModel.ModelID()
 		rule.AppUuid = appModel.(*database.Application).ExtUuid
-		rule.ContentUuid = contentModel.(*database.Content).ExtUuid
+		rule.ContentUuid = contentModel.(*models.Content).ExtUuid
 		_, err = a.dbc.Insert(&rule)
 		if err != nil {
 			a.sendStatus(w, err.Error(), ResultError, nil)
@@ -1157,11 +1158,11 @@ func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Reques
 	var retval map[string]database.FieldDocEntry
 	switch modelName {
 	case "content":
-		retval = database.GetDatamodelDocumentationMap(database.Content{})
+		retval = database.GetDatamodelDocumentationMap(models.Content{})
 	case "request":
 		retval = database.GetDatamodelDocumentationMap(database.Request{})
 	case "contentrule":
-		retval = database.GetDatamodelDocumentationMap(database.ContentRule{})
+		retval = database.GetDatamodelDocumentationMap(models.ContentRule{})
 	case "application":
 		retval = database.GetDatamodelDocumentationMap(database.Application{})
 	case "honeypot":

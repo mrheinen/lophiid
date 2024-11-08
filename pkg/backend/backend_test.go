@@ -30,6 +30,7 @@ import (
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/backend/session"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/vt"
@@ -56,7 +57,7 @@ func GetDefaultBackendConfig() Config {
 }
 
 func TestGetMatchedRuleBasic(t *testing.T) {
-	bunchOfRules := []database.ContentRule{
+	bunchOfRules := []models.ContentRule{
 		{ID: 1, AppID: 1, Port: 80, Uri: "/42", UriMatching: "exact", ContentID: 42},
 		{ID: 3, AppID: 2, Port: 80, Uri: "/prefix", UriMatching: "prefix", ContentID: 43},
 		{ID: 4, AppID: 3, Port: 80, Uri: "contains", UriMatching: "contains", ContentID: 44},
@@ -72,7 +73,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 	for _, test := range []struct {
 		description           string
 		requestInput          database.Request
-		contentRulesInput     []database.ContentRule
+		contentRulesInput     []models.ContentRule
 		contentRuleIDExpected int64
 		errorExpected         bool
 	}{
@@ -215,7 +216,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 }
 
 func TestGetMatchedRuleSameApp(t *testing.T) {
-	bunchOfRules := []database.ContentRule{
+	bunchOfRules := []models.ContentRule{
 		{ID: 1, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
 		{ID: 2, AppID: 1, Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
 		{ID: 3, AppID: 2, Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
@@ -494,7 +495,7 @@ func TestHasParseableContent(t *testing.T) {
 func TestHandleProbe(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
 		RequestsToReturn: []database.Request{},
-		ContentsToReturn: map[int64]database.Content{
+		ContentsToReturn: map[int64]models.Content{
 			42: {
 				ID:   42,
 				Data: []byte("content data"),
@@ -514,7 +515,7 @@ func TestHandleProbe(t *testing.T) {
 				Headers: pgtype.FlatArray[string]{"X-IP: 1.1.1.1"},
 			},
 		},
-		ContentRulesToReturn: []database.ContentRule{
+		ContentRulesToReturn: []models.ContentRule{
 			{ID: 1, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
 			{ID: 2, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
 			{ID: 3, AppID: 1, Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
@@ -602,7 +603,7 @@ func TestHandleProbe(t *testing.T) {
 	}
 
 	// Now we simulate a database error. Should never occur ;p
-	fdbc.ContentsToReturn = map[int64]database.Content{}
+	fdbc.ContentsToReturn = map[int64]models.Content{}
 	res, err = b.HandleProbe(ctx, &probeReq)
 	if res != nil || err == nil {
 		t.Errorf("Expected error but got none: %v %s", res, err)
@@ -641,19 +642,19 @@ func TestProcessQueue(t *testing.T) {
 	}{
 		{
 			description:       "Runs ok, marked attack",
-			requestPurpose:    database.RuleRequestPurposeAttack,
+			requestPurpose:    models.RuleRequestPurposeAttack,
 			expectedEventType: constants.IpEventAttacked,
 			ruleID:            42,
 		},
 		{
 			description:       "Runs ok, marked crawl",
-			requestPurpose:    database.RuleRequestPurposeCrawl,
+			requestPurpose:    models.RuleRequestPurposeCrawl,
 			expectedEventType: constants.IpEventCrawl,
 			ruleID:            43,
 		},
 		{
 			description:       "Runs ok, marked recon",
-			requestPurpose:    database.RuleRequestPurposeRecon,
+			requestPurpose:    models.RuleRequestPurposeRecon,
 			expectedEventType: constants.IpEventRecon,
 			ruleID:            44,
 		},
@@ -687,7 +688,7 @@ func TestProcessQueue(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 
 			eCol := extractors.NewExtractorCollection(true)
-			err := b.ProcessRequest(&req, database.ContentRule{
+			err := b.ProcessRequest(&req, models.ContentRule{
 				ID:             int64(test.ruleID),
 				RequestPurpose: test.requestPurpose,
 			}, eCol)
@@ -1041,9 +1042,9 @@ func TestGetResponderDataCases(t *testing.T) {
 
 	for _, test := range []struct {
 		description      string
-		rule             database.ContentRule
+		rule             models.ContentRule
 		request          database.Request
-		content          database.Content
+		content          models.Content
 		responder        *responder.FakeResponder
 		lastPromptInput  string
 		templateToReturn string
@@ -1051,7 +1052,7 @@ func TestGetResponderDataCases(t *testing.T) {
 	}{
 		{
 			description: "work ok, NONE decoder",
-			rule: database.ContentRule{
+			rule: models.ContentRule{
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "([0-9]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeNone,
@@ -1059,7 +1060,7 @@ func TestGetResponderDataCases(t *testing.T) {
 			request: database.Request{
 				Raw: "aa 898989",
 			},
-			content: database.Content{
+			content: models.Content{
 				Data: []byte("not relevant"),
 			},
 			responder: &responder.FakeResponder{
@@ -1071,7 +1072,7 @@ func TestGetResponderDataCases(t *testing.T) {
 		},
 		{
 			description: "work ok, unknown decoder",
-			rule: database.ContentRule{
+			rule: models.ContentRule{
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "([0-9]+)",
 				ResponderDecoder: "DOESNOTEXIST",
@@ -1079,7 +1080,7 @@ func TestGetResponderDataCases(t *testing.T) {
 			request: database.Request{
 				Raw: "aa 898989",
 			},
-			content: database.Content{
+			content: models.Content{
 				Data: []byte("this should be returned"),
 			},
 			responder: &responder.FakeResponder{
@@ -1091,7 +1092,7 @@ func TestGetResponderDataCases(t *testing.T) {
 		},
 		{
 			description: "work ok, URI decoder",
-			rule: database.ContentRule{
+			rule: models.ContentRule{
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "foo=([0-9a-f%]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeUri,
@@ -1099,7 +1100,7 @@ func TestGetResponderDataCases(t *testing.T) {
 			request: database.Request{
 				Raw: "foo=%2e%2e%2e%41%41",
 			},
-			content: database.Content{
+			content: models.Content{
 				Data: []byte("not relevant"),
 			},
 			responder: &responder.FakeResponder{
@@ -1111,7 +1112,7 @@ func TestGetResponderDataCases(t *testing.T) {
 		},
 		{
 			description: "work ok, HTML decoder",
-			rule: database.ContentRule{
+			rule: models.ContentRule{
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "foo=([&a-z;]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeHtml,
@@ -1119,7 +1120,7 @@ func TestGetResponderDataCases(t *testing.T) {
 			request: database.Request{
 				Raw: "foo=&gt;&lt;",
 			},
-			content: database.Content{
+			content: models.Content{
 				Data: []byte("not relevant"),
 			},
 			responder: &responder.FakeResponder{

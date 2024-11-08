@@ -18,7 +18,6 @@ package database
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -26,12 +25,12 @@ import (
 	"sync"
 	"time"
 
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/vingarcia/ksql"
-	"gopkg.in/yaml.v3"
 )
 
 var ContentTable = ksql.NewTable("content")
@@ -61,95 +60,6 @@ type ExternalDataModel interface {
 	SetExternalUuid(uuid string)
 	SetModelID(id int64)
 }
-
-// YammableBytes is a type that can be marshalled into a YAML node. While doing
-// so the content is base64 encoded as a string.
-type YammableBytes []byte
-
-func (yb YammableBytes) MarshalYAML() (interface{}, error) {
-	return base64.StdEncoding.EncodeToString(yb), nil
-}
-
-func (yb *YammableBytes) UnmarshalYAML(node *yaml.Node) error {
-	value := node.Value
-	ba, err := base64.StdEncoding.DecodeString(value)
-	if err != nil {
-		return err
-	}
-	*yb = ba
-	return nil
-}
-
-type Content struct {
-	ID          int64                    `ksql:"id,skipInserts" json:"id"           doc:"The ID of the content"`
-	Data        YammableBytes            `ksql:"data"           json:"data"         yaml:"data,omitempty" doc:"The content data itself"`
-	Name        string                   `ksql:"name"           json:"name"         doc:"The content name"`
-	Description string                   `ksql:"description"    json:"description"  doc:"The content description"`
-	ContentType string                   `ksql:"content_type"   json:"content_type" yaml:"content_type" doc:"The HTTP content-type"`
-	Server      string                   `ksql:"server"         json:"server"       doc:"The HTTP server with which the content is served"`
-	StatusCode  string                   `ksql:"status_code"    json:"status_code"  yaml:"status_code" doc:"The HTTP status code"`
-	Script      string                   `ksql:"script"         json:"script"       yaml:"script,omitempty" doc:"The content script"`
-	Headers     pgtype.FlatArray[string] `ksql:"headers"        json:"headers"      yaml:"headers,omitempty" doc:"The content HTTP headers"`
-	CreatedAt   time.Time                `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"time.Time of creation"`
-	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              yaml:"updated_at" json:"updated_at" doc:"time.Time of last update"`
-	ExtVersion  int64                    `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the content"`
-	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the content"`
-}
-
-// The request purpose for the ContentRule needs to be kept in sync with the
-// database REQUEST_PURPOSE type.
-const (
-	RuleRequestPurposeUnknown = "UNKNOWN"
-	RuleRequestPurposeAttack  = "ATTACK"
-	RuleRequestPurposeRecon   = "RECON"
-	RuleRequestPurposeCrawl   = "CRAWL"
-)
-
-func (c *Content) ModelID() int64              { return c.ID }
-func (c *Content) ExternalVersion() int64      { return c.ExtVersion }
-func (c *Content) ExternalUuid() string        { return c.ExtUuid }
-func (c *Content) SetExternalUuid(uuid string) { c.ExtUuid = uuid }
-
-func (c *Content) SetModelID(id int64) { c.ID = id }
-
-type ContentRule struct {
-	ID           int64  `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
-	Uri          string `ksql:"uri" json:"uri"           doc:"The URI matching string"`
-	Body         string `ksql:"body" json:"body"         doc:"The body matching string"`
-	Method       string `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
-	Port         int64  `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
-	UriMatching  string `ksql:"uri_matching" json:"uri_matching" yaml:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
-	BodyMatching string `ksql:"body_matching" json:"body_matching" yaml:"body_matching" doc:"The body matching method"`
-	ContentID    int64  `ksql:"content_id" json:"content_id" yaml:"content_id" doc:"The ID of the Content this rule serves"`
-	AppID        int64  `ksql:"app_id" json:"app_id"         yaml:"app_id" doc:"The ID of the application for which this rule is"`
-	// The content and app UUID are only set on imported rules.
-	AppUuid     string    `ksql:"app_uuid" json:"app_uuid" yaml:"app_uuid" doc:"The external UUID of the related app"`
-	ContentUuid string    `ksql:"content_uuid" json:"content_uuid" yaml:"content_uuid" doc:"The external UUID of the related content"`
-	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Creation date of the rule"`
-	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Last update date of the rule"`
-	Alert       bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
-	Enabled     bool      `ksql:"enabled" json:"enabled" doc:"A bool (0 or 1) indicating if the rule is enabled"`
-	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
-	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
-	// The request purpose should indicate what the request is intended to do. It
-	// is used, amongst other things, to determine whether a request is malicious
-	// or not.
-	// Valid values are:
-	//   - UNKNOWN : the purpose is unknown
-	//   - RECON : the purpose is reconnaissance
-	//   - CRAWL : the request is part of regular crawling
-	//   - ATTACK : the request is an attack (e.g. an RCE)
-	RequestPurpose   string `ksql:"request_purpose" json:"request_purpose" yaml:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
-	Responder        string `ksql:"responder" json:"responder" doc:"The responder type for this rule (e.g. COMMAND_INJECTION)"`
-	ResponderRegex   string `ksql:"responder_regex" json:"responder_regex" yaml:"responder_regex" doc:"The responder regex to grab the relevant bits"`
-	ResponderDecoder string `ksql:"responder_decoder" json:"responder_decoder" yaml:"responder_decoder" doc:"The responder decoder to use (e.g. NONE, URI, HTML)"`
-}
-
-func (c *ContentRule) ModelID() int64              { return c.ID }
-func (c *ContentRule) ExternalVersion() int64      { return c.ExtVersion }
-func (c *ContentRule) ExternalUuid() string        { return c.ExtUuid }
-func (c *ContentRule) SetExternalUuid(uuid string) { c.ExtUuid = uuid }
-func (c *ContentRule) SetModelID(id int64)         { c.ID = id }
 
 type Request struct {
 	ID             int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the request"`
@@ -382,7 +292,7 @@ type Session struct {
 	ID             int64  `ksql:"id,skipInserts" json:"id" doc:"Database ID for the session"`
 	Active         bool   `ksql:"active" json:"active" doc:"Is the session active"`
 	IP             string `ksql:"ip" json:"ip" doc:"IP of the client"`
-	LastRuleServed ContentRule
+	LastRuleServed models.ContentRule
 	RuleIDsServed  map[int64]int64
 	CreatedAt      time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the session in the database (not session start!)"`
 	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
@@ -425,15 +335,15 @@ type DatabaseClient interface {
 
 	GetAppByID(id int64) (Application, error)
 	SearchApps(offset int64, limit int64, query string) ([]Application, error)
-	GetContentByID(id int64) (Content, error)
-	GetContentRuleByID(id int64) (ContentRule, error)
+	GetContentByID(id int64) (models.Content, error)
+	GetContentRuleByID(id int64) (models.ContentRule, error)
 	GetP0fResultByIP(ip string, querySuffix string) (P0fResult, error)
 	GetRequestByID(id int64) (Request, error)
 	SearchEvents(offset int64, limit int64, query string) ([]IpEvent, error)
 	SearchRequests(offset int64, limit int64, query string) ([]Request, error)
 	SearchWhois(offset int64, limit int64, query string) ([]Whois, error)
-	SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error)
-	SearchContent(offset int64, limit int64, query string) ([]Content, error)
+	SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error)
+	SearchContent(offset int64, limit int64, query string) ([]models.Content, error)
 	SearchDownloads(offset int64, limit int64, query string) ([]Download, error)
 	SearchHoneypots(offset int64, limit int64, query string) ([]Honeypot, error)
 	SearchSession(offset int64, limit int64, query string) ([]Session, error)
@@ -701,10 +611,10 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 	return ret, err
 }
 
-func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
-	var rs []Content
+func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]models.Content, error) {
+	var rs []models.Content
 
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(Content{}))
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Content{}))
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
@@ -721,10 +631,10 @@ func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]C
 	return rs, err
 }
 
-func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
-	var rs []ContentRule
+func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error) {
+	var rs []models.ContentRule
 
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(ContentRule{}))
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.ContentRule{}))
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
@@ -984,8 +894,8 @@ func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]RequestMetadata, error)
 	return md, err
 }
 
-func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
-	ct := Content{}
+func (d *KSQLClient) GetContentByID(id int64) (models.Content, error) {
+	ct := models.Content{}
 	err := d.db.QueryOne(d.ctx, &ct, "FROM content WHERE id = $1", id)
 	// TODO: it should be safe to remove the next condition because QueryOne
 	// returns an error ErrRecordNotFound when no records are found.
@@ -995,8 +905,8 @@ func (d *KSQLClient) GetContentByID(id int64) (Content, error) {
 	return ct, err
 }
 
-func (d *KSQLClient) GetContentRuleByID(id int64) (ContentRule, error) {
-	cr := ContentRule{}
+func (d *KSQLClient) GetContentRuleByID(id int64) (models.ContentRule, error) {
+	cr := models.ContentRule{}
 	err := d.db.QueryOne(d.ctx, &cr, "FROM content_rule WHERE id = $1", id)
 	return cr, err
 }
@@ -1009,10 +919,10 @@ func (d *KSQLClient) DeleteContentRule(id int64) error {
 // DatabaseClient interface
 type FakeDatabaseClient struct {
 	ContentIDToReturn         int64
-	ContentsToReturn          map[int64]Content
+	ContentsToReturn          map[int64]models.Content
 	ErrorToReturn             error
 	ContentRuleIDToReturn     int64
-	ContentRulesToReturn      []ContentRule
+	ContentRulesToReturn      []models.ContentRule
 	RequestsToReturn          []Request
 	RequestToReturn           Request
 	DownloadsToReturn         []Download
@@ -1035,10 +945,10 @@ type FakeDatabaseClient struct {
 }
 
 func (f *FakeDatabaseClient) Close() {}
-func (f *FakeDatabaseClient) GetContentRuleByID(id int64) (ContentRule, error) {
+func (f *FakeDatabaseClient) GetContentRuleByID(id int64) (models.ContentRule, error) {
 	return f.ContentRulesToReturn[0], f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) GetContentByID(id int64) (Content, error) {
+func (f *FakeDatabaseClient) GetContentByID(id int64) (models.Content, error) {
 	ct, ok := f.ContentsToReturn[id]
 	if !ok {
 		return ct, fmt.Errorf("not found")
@@ -1069,14 +979,14 @@ func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, query str
 func (f *FakeDatabaseClient) SearchEvents(offset int64, limit int64, query string) ([]IpEvent, error) {
 	return []IpEvent{f.IpEventToReturn}, f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]ContentRule, error) {
+func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error) {
 	return f.ContentRulesToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchSession(offset int64, limit int64, query string) ([]Session, error) {
 	return []Session{f.SessionToReturn}, f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) SearchContent(offset int64, limit int64, query string) ([]Content, error) {
-	var ret []Content
+func (f *FakeDatabaseClient) SearchContent(offset int64, limit int64, query string) ([]models.Content, error) {
+	var ret []models.Content
 	for _, v := range f.ContentsToReturn {
 		ret = append(ret, v)
 	}

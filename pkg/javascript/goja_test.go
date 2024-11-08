@@ -22,6 +22,7 @@ import (
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"testing"
 	"time"
@@ -330,7 +331,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 		description string
 		script      string
 		request     database.Request
-		content     database.Content
+		content     models.Content
 		expectError bool
 	}{
 		{
@@ -352,7 +353,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 				SourceIP:   "1.1.1.1",
 				HoneypotIP: "2.2.2.2",
 			},
-			content: database.Content{
+			content: models.Content{
 				ID:   42,
 				Data: []byte("test"),
 			},
@@ -377,7 +378,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 				SourceIP:   "1.1.1.1",
 				HoneypotIP: "2.2.2.2",
 			},
-			content: database.Content{
+			content: models.Content{
 				ID:   42,
 				Data: []byte("test"),
 			},
@@ -393,7 +394,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 			metrics := CreateGoJaMetrics(reg)
 
 			fdb := database.FakeDatabaseClient{
-				ContentsToReturn: map[int64]database.Content{
+				ContentsToReturn: map[int64]models.Content{
 					42: test.content,
 				},
 			}
@@ -423,7 +424,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 		description string
 		script      string
 		request     database.Request
-		content     database.Content
+		content     models.Content
 		allowedCmds []string
 		cmdTimeout  time.Duration
 		expectError bool
@@ -448,7 +449,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 			},
 			allowedCmds: []string{"/bin/echo"},
 			cmdTimeout:  time.Minute,
-			content: database.Content{
+			content: models.Content{
 				ID:   42,
 				Data: []byte("test"),
 			},
@@ -474,7 +475,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 			},
 			allowedCmds: []string{"/bin/false"},
 			cmdTimeout:  time.Minute,
-			content: database.Content{
+			content: models.Content{
 				ID:   42,
 				Data: []byte("test"),
 			},
@@ -500,7 +501,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 			},
 			allowedCmds: []string{"/usr/bin/sleep"},
 			cmdTimeout:  time.Millisecond,
-			content: database.Content{
+			content: models.Content{
 				ID:   42,
 				Data: []byte("test"),
 			},
@@ -542,7 +543,7 @@ func TestRunScriptHasContext(t *testing.T) {
 		description string
 		script      string
 		request     database.Request
-		content     database.Content
+		content     models.Content
 		expectError bool
 	}{
 		{

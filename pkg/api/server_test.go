@@ -22,6 +22,7 @@ import (
 	"errors"
 	"io"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +37,7 @@ import (
 func TestUpsertSingleContent(t *testing.T) {
 	for _, test := range []struct {
 		description       string
-		content           database.Content
+		content           models.Content
 		status            string
 		statusMsgContains string
 		statusCode        int
@@ -45,7 +46,7 @@ func TestUpsertSingleContent(t *testing.T) {
 	}{
 		{
 			description: "Insert OK",
-			content: database.Content{
+			content: models.Content{
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
@@ -59,7 +60,7 @@ func TestUpsertSingleContent(t *testing.T) {
 		},
 		{
 			description: "Insert fails on header",
-			content: database.Content{
+			content: models.Content{
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
@@ -73,7 +74,7 @@ func TestUpsertSingleContent(t *testing.T) {
 		},
 		{
 			description: "Insert fails on header name",
-			content: database.Content{
+			content: models.Content{
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
@@ -88,7 +89,7 @@ func TestUpsertSingleContent(t *testing.T) {
 
 		{
 			description: "Insert OK script",
-			content: database.Content{
+			content: models.Content{
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
@@ -102,7 +103,7 @@ func TestUpsertSingleContent(t *testing.T) {
 		},
 		{
 			description: "Insert OK, script not",
-			content: database.Content{
+			content: models.Content{
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
@@ -116,7 +117,7 @@ func TestUpsertSingleContent(t *testing.T) {
 		},
 		{
 			description: "Insert fail",
-			content: database.Content{
+			content: models.Content{
 				Name:        "Foo",
 				ContentType: "text/html",
 				Server:      "Apache",
@@ -129,7 +130,7 @@ func TestUpsertSingleContent(t *testing.T) {
 		},
 		{
 			description: "Updated OK",
-			content: database.Content{
+			content: models.Content{
 				ID:          42,
 				Name:        "Foo",
 				ContentType: "text/html",
@@ -143,7 +144,7 @@ func TestUpsertSingleContent(t *testing.T) {
 		},
 		{
 			description: "Updated fail",
-			content: database.Content{
+			content: models.Content{
 				ID:          42,
 				Name:        "Foo",
 				ContentType: "text/html",
@@ -239,8 +240,8 @@ func TestGetSingleContent(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 
 			fd := database.FakeDatabaseClient{
-				ContentsToReturn: map[int64]database.Content{
-					42: database.Content{
+				ContentsToReturn: map[int64]models.Content{
+					42: models.Content{
 						Data: test.expectedData,
 					},
 				},
@@ -328,7 +329,7 @@ func TestGetSingleContentRule(t *testing.T) {
 
 		t.Run(test.description, func(t *testing.T) {
 			fd := database.FakeDatabaseClient{
-				ContentRulesToReturn: []database.ContentRule{
+				ContentRulesToReturn: []models.ContentRule{
 					{
 						Uri:       test.uri,
 						ContentID: test.contentId,
@@ -380,8 +381,8 @@ func TestExportApp(t *testing.T) {
 		description        string
 		appID              int
 		app                database.Application
-		contentRules       []database.ContentRule
-		contents           map[int64]database.Content
+		contentRules       []models.ContentRule
+		contents           map[int64]models.Content
 		expectedStatus     string
 		expectedNrApps     int
 		expectedNrRules    int
@@ -393,11 +394,11 @@ func TestExportApp(t *testing.T) {
 			app: database.Application{
 				ID: 42,
 			},
-			contentRules: []database.ContentRule{
+			contentRules: []models.ContentRule{
 				{ContentID: 60},
 				{ContentID: 61},
 			},
-			contents: map[int64]database.Content{
+			contents: map[int64]models.Content{
 				60: {ID: 60},
 				61: {ID: 61},
 			},
@@ -412,12 +413,12 @@ func TestExportApp(t *testing.T) {
 			app: database.Application{
 				ID: 42,
 			},
-			contentRules: []database.ContentRule{
+			contentRules: []models.ContentRule{
 				{ContentID: 60},
 				{ContentID: 61},
 				{ContentID: 61},
 			},
-			contents: map[int64]database.Content{
+			contents: map[int64]models.Content{
 				60: {ID: 60},
 				61: {ID: 61},
 			},
@@ -432,8 +433,8 @@ func TestExportApp(t *testing.T) {
 			app: database.Application{
 				ID: 42,
 			},
-			contentRules:       []database.ContentRule{},
-			contents:           map[int64]database.Content{},
+			contentRules:       []models.ContentRule{},
+			contents:           map[int64]models.Content{},
 			expectedStatus:     ResultSuccess,
 			expectedNrApps:     0,
 			expectedNrRules:    0,
@@ -445,11 +446,11 @@ func TestExportApp(t *testing.T) {
 			app: database.Application{
 				ID: 42,
 			},
-			contentRules: []database.ContentRule{
+			contentRules: []models.ContentRule{
 				{ContentID: 60},
 				{ContentID: 61},
 			},
-			contents:           map[int64]database.Content{},
+			contents:           map[int64]models.Content{},
 			expectedStatus:     ResultError,
 			expectedNrApps:     0,
 			expectedNrRules:    0,
@@ -527,13 +528,13 @@ func TestImportAppOk(t *testing.T) {
 					ID:      42,
 					ExtUuid: "de71fafb-12e1-489e-aff7-b50ef7d1b7ef",
 				},
-				Rules: []database.ContentRule{
+				Rules: []models.ContentRule{
 					{
 						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
 						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
 					},
 				},
-				Contents: []database.Content{
+				Contents: []models.Content{
 					{
 						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
 						ID:      55,
@@ -549,13 +550,13 @@ func TestImportAppOk(t *testing.T) {
 					ID:      42,
 					ExtUuid: "OOOOOOOHLALA",
 				},
-				Rules: []database.ContentRule{
+				Rules: []models.ContentRule{
 					{
 						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
 						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
 					},
 				},
-				Contents: []database.Content{
+				Contents: []models.Content{
 					{
 						ID:      55,
 						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
@@ -571,13 +572,13 @@ func TestImportAppOk(t *testing.T) {
 					ID:      42,
 					ExtUuid: "94f65acf-2679-4cad-bfc3-10c628ee6a71",
 				},
-				Rules: []database.ContentRule{
+				Rules: []models.ContentRule{
 					{
 						ExtUuid:     "FAIL",
 						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
 					},
 				},
-				Contents: []database.Content{
+				Contents: []models.Content{
 					{
 						ID:      55,
 						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
@@ -593,13 +594,13 @@ func TestImportAppOk(t *testing.T) {
 					ID:      42,
 					ExtUuid: "94f65acf-2679-4cad-bfc3-10c628ee6a71",
 				},
-				Rules: []database.ContentRule{
+				Rules: []models.ContentRule{
 					{
 						ExtUuid:     "73fe055f-203c-4ff3-b87b-f372f58c70cf",
 						ContentUuid: "POOOOL",
 					},
 				},
-				Contents: []database.Content{
+				Contents: []models.Content{
 					{
 						ID:      55,
 						ExtUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
@@ -615,20 +616,20 @@ func TestImportAppOk(t *testing.T) {
 					ID:      42,
 					ExtUuid: "de71fafb-12e1-489e-aff7-b50ef7d1b7ef",
 				},
-				Rules: []database.ContentRule{
+				Rules: []models.ContentRule{
 					{
 						ExtUuid:     "94f65acf-2679-4cad-bfc3-10c628ee6a71",
 						ContentUuid: "73fe055f-203c-4ff3-b87b-f372f58c70cf",
 					},
 				},
-				Contents: []database.Content{},
+				Contents: []models.Content{},
 			},
 		},
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
 			fd := database.FakeDatabaseClient{
-				ContentsToReturn: map[int64]database.Content{},
+				ContentsToReturn: map[int64]models.Content{},
 			}
 
 			for _, ct := range test.appExport.Contents {

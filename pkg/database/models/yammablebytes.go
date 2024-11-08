@@ -14,28 +14,28 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package backend
+package models
 
 import (
-	"sync"
+	"encoding/base64"
 
-	"lophiid/pkg/database/models"
+	"gopkg.in/yaml.v3"
 )
 
-type SafeRules struct {
-	mu    sync.Mutex
-	rules []models.ContentRule
+// YammableBytes is a type that can be marshalled into a YAML node. While doing
+// so the content is base64 encoded as a string.
+type YammableBytes []byte
+
+func (yb YammableBytes) MarshalYAML() (interface{}, error) {
+	return base64.StdEncoding.EncodeToString(yb), nil
 }
 
-// GetRules returns a copy of the content rules.
-func (s *SafeRules) Get() []models.ContentRule {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return append([]models.ContentRule{}, s.rules...)
-}
-
-func (s *SafeRules) Set(rules []models.ContentRule) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.rules = rules
+func (yb *YammableBytes) UnmarshalYAML(node *yaml.Node) error {
+	value := node.Value
+	ba, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return err
+	}
+	*yb = ba
+	return nil
 }

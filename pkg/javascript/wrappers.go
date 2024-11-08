@@ -7,6 +7,7 @@ import (
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 )
 
@@ -54,9 +55,9 @@ func (r *ResponseWrapper) BodyString() string {
 	return string(r.response.Body)
 }
 
-// ContentWrapper wraps the database.Content
+// ContentWrapper wraps the models.Content
 type ContentWrapper struct {
-	Content database.Content
+	Content models.Content
 }
 
 func (c *ContentWrapper) GetData() string {

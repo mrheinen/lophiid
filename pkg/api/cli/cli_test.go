@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package cli
 
 import (
@@ -22,6 +21,7 @@ import (
 	"io"
 	"lophiid/pkg/api"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"net/http"
 	"testing"
 )
@@ -90,13 +90,13 @@ func TestFetchUrlToContent(t *testing.T) {
 }
 
 func TestFetchUrlAndCreateContentAndRule(t *testing.T) {
-	fakeContentAPI := api.FakeApiClient[database.Content]{
+	fakeContentAPI := api.FakeApiClient[models.Content]{
 		ErrorToReturn:     nil,
-		DataModelToReturn: database.Content{ID: 42},
+		DataModelToReturn: models.Content{ID: 42},
 	}
-	fakeContentRuleAPI := api.FakeApiClient[database.ContentRule]{
+	fakeContentRuleAPI := api.FakeApiClient[models.ContentRule]{
 		ErrorToReturn:     nil,
-		DataModelToReturn: database.ContentRule{},
+		DataModelToReturn: models.ContentRule{},
 	}
 
 	apiCli := ApiCLI{
@@ -104,7 +104,7 @@ func TestFetchUrlAndCreateContentAndRule(t *testing.T) {
 		contentRuleAPI: &fakeContentRuleAPI,
 	}
 
-	err := apiCli.CreateContentAndRule(&database.Application{ID: 1}, []int64{80}, &database.Content{}, "http://example.org/?aa=bb")
+	err := apiCli.CreateContentAndRule(&database.Application{ID: 1}, []int64{80}, &models.Content{}, "http://example.org/?aa=bb")
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}

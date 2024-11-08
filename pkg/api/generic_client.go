@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"net/http"
 	"net/url"
 	"strings"
@@ -79,8 +80,8 @@ func NewApplicationApiClient(httpClient *http.Client, apiLocation string, apiKey
 }
 
 // NewContentApiClient creates a content api client
-func NewContentApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.Content] {
-	return &GenericApiClient[database.Content]{
+func NewContentApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[models.Content] {
+	return &GenericApiClient[models.Content]{
 		httpClient:  httpClient,
 		apiLocation: apiLocation,
 		apiKey:      apiKey,
@@ -88,8 +89,8 @@ func NewContentApiClient(httpClient *http.Client, apiLocation string, apiKey str
 }
 
 // NewContentRuleApiClient creates a content rule api client
-func NewContentRuleApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.ContentRule] {
-	return &GenericApiClient[database.ContentRule]{
+func NewContentRuleApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[models.ContentRule] {
+	return &GenericApiClient[models.ContentRule]{
 		httpClient:  httpClient,
 		apiLocation: apiLocation,
 		apiKey:      apiKey,
