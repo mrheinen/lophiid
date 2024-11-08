@@ -476,6 +476,8 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
+
+    this.selectedLimit = this.limit;
   },
   mounted() {
     if (this.$route.query.q) {
