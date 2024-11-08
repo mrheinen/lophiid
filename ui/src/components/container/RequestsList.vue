@@ -145,6 +145,9 @@
             </template>
           </DataColumn>
           <template #footer>
+
+            <div class="flex justify-between items-center">
+            <div>
             <i
               v-if="offset > 0"
               @click="loadPrevRequests()"
@@ -154,12 +157,19 @@
               v-if="offset == 0"
               class="pi pi-arrow-left pi-style-disabled"
             ></i>
+            </div>
+            <div>
 
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
             <i
               v-if="requests.length == limit"
               @click="loadNextRequests()"
               class="pi pi-arrow-right pi-style pi-style-right"
             ></i>
+            </div>
+            </div>
           </template>
         </DataTable>
       </div>
@@ -200,15 +210,17 @@ export default {
     return {
       searchIsFocused: false,
       requests: [],
+      limit: 21,
       selectedRequest: null,
       selectedMetadata: [],
       selectedWhois: null,
       displayRequest: {},
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       query: null,
       isSelectedElement: null,
       isSelectedId: 0,
       isLoading: false,
-      limit: 21,
       offset: 0,
     };
   },
@@ -451,9 +463,9 @@ export default {
     },
   },
   watch: {
-    selectedRequest() {
-      console.log(this.selectedRequest);
-      this.viewRequest = Object.assign({}, this.selectedRequest);
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadRequests(true);
     }
   },
   created() {
@@ -556,5 +568,19 @@ i.pi-style-right {
 
 .starred {
   color: red;
+}
+
+input.p-select-label {
+  width: 40px;
+}
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+.flex {
+  display: flex;
 }
 </style>
