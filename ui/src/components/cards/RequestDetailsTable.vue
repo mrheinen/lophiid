@@ -114,3 +114,10 @@ export default {
   },
 }
 </script>
+
+<style scoped>
+
+tr {
+  font-size: 13px;
+}
+</style>
