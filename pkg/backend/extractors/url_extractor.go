@@ -17,7 +17,7 @@
 package extractors
 
 import (
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
 	"regexp"
@@ -78,7 +78,7 @@ func (u *URLExtractor) MetaType() string {
 	return u.metaType
 }
 
-func (u *URLExtractor) ParseRequest(req *database.Request) {
+func (u *URLExtractor) ParseRequest(req *models.Request) {
 	var member struct{}
 	for _, s := range decoding.StringsFromRequest(req) {
 		for _, url := range ExtractUrls(s) {
@@ -97,10 +97,10 @@ func (u *URLExtractor) ParseString(s string) {
 	}
 }
 
-func (u *URLExtractor) GetMetadatas(requestID int64) []database.RequestMetadata {
-	mds := []database.RequestMetadata{}
+func (u *URLExtractor) GetMetadatas(requestID int64) []models.RequestMetadata {
+	mds := []models.RequestMetadata{}
 	for result := range u.result {
-		mds = append(mds, database.RequestMetadata{
+		mds = append(mds, models.RequestMetadata{
 			Type:      u.MetaType(),
 			Data:      result,
 			RequestID: requestID,

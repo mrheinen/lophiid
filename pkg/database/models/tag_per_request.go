@@ -14,30 +14,13 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package backend
+package models
 
-import (
-	"lophiid/pkg/database/models"
-	"testing"
-)
-
-func TestRequestQueue(t *testing.T) {
-	req := models.Request{}
-	q := RequestQueue{}
-
-	if q.Pop() != nil {
-		t.Error("Popping an empty queue did not yield nil")
-	}
-
-	q.Push(&req)
-	if q.Length() != 1 {
-		t.Errorf("expected length 1 but got %d", q.Length())
-	}
-
-	if q.Pop() != &req {
-		t.Error("Queued request is different")
-	}
-	if q.Length() != 0 {
-		t.Errorf("expected length 0 but got %d", q.Length())
-	}
+type TagPerRequest struct {
+	ID            int64 `ksql:"id,skipInserts" json:"id"`
+	TagID         int64 `ksql:"tag_id" json:"tag_id"`
+	RequestID     int64 `ksql:"request_id" json:"request_id"`
+	TagPerQueryID int64 `ksql:"tag_per_query_id" json:"tag_per_query_id"`
 }
+
+func (c *TagPerRequest) ModelID() int64 { return c.ID }

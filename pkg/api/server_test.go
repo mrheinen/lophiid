@@ -380,7 +380,7 @@ func TestExportApp(t *testing.T) {
 	for _, test := range []struct {
 		description        string
 		appID              int
-		app                database.Application
+		app                models.Application
 		contentRules       []models.ContentRule
 		contents           map[int64]models.Content
 		expectedStatus     string
@@ -391,7 +391,7 @@ func TestExportApp(t *testing.T) {
 		{
 			description: "exports OK",
 			appID:       42,
-			app: database.Application{
+			app: models.Application{
 				ID: 42,
 			},
 			contentRules: []models.ContentRule{
@@ -410,7 +410,7 @@ func TestExportApp(t *testing.T) {
 		{
 			description: "exports OK, duplicate rule",
 			appID:       42,
-			app: database.Application{
+			app: models.Application{
 				ID: 42,
 			},
 			contentRules: []models.ContentRule{
@@ -430,7 +430,7 @@ func TestExportApp(t *testing.T) {
 		{
 			description: "misses content rule, is fine",
 			appID:       42,
-			app: database.Application{
+			app: models.Application{
 				ID: 42,
 			},
 			contentRules:       []models.ContentRule{},
@@ -443,7 +443,7 @@ func TestExportApp(t *testing.T) {
 		{
 			description: "misses content, not happy",
 			appID:       42,
-			app: database.Application{
+			app: models.Application{
 				ID: 42,
 			},
 			contentRules: []models.ContentRule{
@@ -524,7 +524,7 @@ func TestImportAppOk(t *testing.T) {
 			description:    "exports OK",
 			expectedStatus: ResultSuccess,
 			appExport: AppExport{
-				App: &database.Application{
+				App: &models.Application{
 					ID:      42,
 					ExtUuid: "de71fafb-12e1-489e-aff7-b50ef7d1b7ef",
 				},
@@ -546,7 +546,7 @@ func TestImportAppOk(t *testing.T) {
 			description:    "invalid App UUID",
 			expectedStatus: ResultError,
 			appExport: AppExport{
-				App: &database.Application{
+				App: &models.Application{
 					ID:      42,
 					ExtUuid: "OOOOOOOHLALA",
 				},
@@ -568,7 +568,7 @@ func TestImportAppOk(t *testing.T) {
 			description:    "invalid Rule UUID",
 			expectedStatus: ResultError,
 			appExport: AppExport{
-				App: &database.Application{
+				App: &models.Application{
 					ID:      42,
 					ExtUuid: "94f65acf-2679-4cad-bfc3-10c628ee6a71",
 				},
@@ -590,7 +590,7 @@ func TestImportAppOk(t *testing.T) {
 			description:    "invalid Rule ContentUUID",
 			expectedStatus: ResultError,
 			appExport: AppExport{
-				App: &database.Application{
+				App: &models.Application{
 					ID:      42,
 					ExtUuid: "94f65acf-2679-4cad-bfc3-10c628ee6a71",
 				},
@@ -612,7 +612,7 @@ func TestImportAppOk(t *testing.T) {
 			description:    "exports misses content",
 			expectedStatus: ResultError,
 			appExport: AppExport{
-				App: &database.Application{
+				App: &models.Application{
 					ID:      42,
 					ExtUuid: "de71fafb-12e1-489e-aff7-b50ef7d1b7ef",
 				},

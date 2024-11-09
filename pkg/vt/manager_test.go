@@ -19,6 +19,7 @@ package vt
 import (
 	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"testing"
 
@@ -51,14 +52,14 @@ func TestProcessURLQueue(t *testing.T) {
 	for _, test := range []struct {
 		description             string
 		submitResponse          SubmitURLResponse
-		searchDownloadsResponse []database.Download
+		searchDownloadsResponse []models.Download
 		errorToReturn           error
 		expectedQueueLenAfter   int
 	}{
 		{
 			description:    "runs OK for new download",
 			submitResponse: SubmitURLResponse{},
-			searchDownloadsResponse: []database.Download{
+			searchDownloadsResponse: []models.Download{
 				{
 					ID: 42,
 				},
@@ -175,7 +176,7 @@ func TestManagerGetFileAnalysis(t *testing.T) {
 
 		t.Run(test.description, func(t *testing.T) {
 			fakeDBClient := database.FakeDatabaseClient{
-				DownloadsToReturn: []database.Download{
+				DownloadsToReturn: []models.Download{
 					{
 						ID:                 42,
 						VTFileAnalysisDone: false,
@@ -207,20 +208,20 @@ func TestManagerGetFileAnalysis(t *testing.T) {
 func TestGetEventsForDownload(t *testing.T) {
 	for _, test := range []struct {
 		description    string
-		download       database.Download
-		request        database.Request
+		download       models.Download
+		request        models.Request
 		expectedEvents int
 		expectedIP     string
 		expectedDomain string
 	}{
 		{
 			description: "returns events OK",
-			download: database.Download{
+			download: models.Download{
 				RequestID: 42,
 				IP:        "1.1.1.1",
 				Host:      "1.1.1.1",
 			},
-			request: database.Request{
+			request: models.Request{
 				ID:       22,
 				SourceIP: "1.1.1.1",
 			},
@@ -230,12 +231,12 @@ func TestGetEventsForDownload(t *testing.T) {
 		},
 		{
 			description: "returns events with domain port",
-			download: database.Download{
+			download: models.Download{
 				RequestID: 42,
 				IP:        "1.1.1.1",
 				Host:      "example.org:888",
 			},
-			request: database.Request{
+			request: models.Request{
 				ID:       22,
 				SourceIP: "1.1.1.1",
 			},
@@ -245,12 +246,12 @@ func TestGetEventsForDownload(t *testing.T) {
 		},
 		{
 			description: "returns events with domain",
-			download: database.Download{
+			download: models.Download{
 				RequestID: 42,
 				IP:        "1.1.1.1",
 				Host:      "example.org",
 			},
-			request: database.Request{
+			request: models.Request{
 				ID:       22,
 				SourceIP: "1.1.1.1",
 			},

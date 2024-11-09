@@ -20,7 +20,7 @@ import (
 	"encoding/hex"
 	"html"
 	"log/slog"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"net/url"
 	"regexp"
 	"strings"
@@ -30,7 +30,7 @@ import (
 // from varies HTTP fields. It will also decode and parse data where necessary
 // so that only strings of interest for finding metadata are returned. E.g.
 // strings in a value of a parameter and not the parameter name itself.
-func StringsFromRequest(req *database.Request) []string {
+func StringsFromRequest(req *models.Request) []string {
 	var res []string
 	// TODO: Make this cleaner and access the actual
 	// header instead of grepping the entire request.

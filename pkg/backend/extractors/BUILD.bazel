@@ -14,7 +14,7 @@ go_library(
     importpath = "lophiid/pkg/backend/extractors",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/database",
+        "//pkg/database/models",
         "//pkg/util",
         "//pkg/util/constants",
         "//pkg/util/decoding",
@@ -34,7 +34,7 @@ go_test(
     ],
     embed = [":extractors"],
     deps = [
-        "//pkg/database",
+        "//pkg/database/models",
         "//pkg/util/constants",
     ],
 )

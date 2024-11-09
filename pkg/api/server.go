@@ -67,7 +67,7 @@ type HttpContentRuleResult struct {
 const ResultSuccess = "OK"
 const ResultError = "ERR"
 
-// StoredQueryJSON is a representation of database.StoredQuery but able to be
+// StoredQueryJSON is a representation of models.StoredQuery but able to be
 // JSON marshalled
 type StoredQueryJSON struct {
 	ID          int64     `json:"id"`
@@ -176,7 +176,7 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 			return
 		}
 
-		a.sendStatus(w, fmt.Sprintf("Added new rule (id: %d)", dm.ModelID()), ResultSuccess, []database.DataModel{dm})
+		a.sendStatus(w, fmt.Sprintf("Added new rule (id: %d)", dm.ModelID()), ResultSuccess, []models.DataModel{dm})
 		return
 	} else {
 
@@ -187,7 +187,7 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 			return
 		}
 
-		a.sendStatus(w, "Updated rule", ResultSuccess, []database.DataModel{&rb})
+		a.sendStatus(w, "Updated rule", ResultSuccess, []models.DataModel{&rb})
 		return
 	}
 }
@@ -260,7 +260,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 		// and doesn't produce any errors.
 		modifiedScript := fmt.Sprintf("%s\ncreateResponse();", rb.Script)
 		eCol := extractors.NewExtractorCollection(true)
-		err := a.jRunner.RunScript(modifiedScript, database.Request{
+		err := a.jRunner.RunScript(modifiedScript, models.Request{
 			ID:            42,
 			Port:          80,
 			Uri:           "/foo",
@@ -305,7 +305,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 			return
 		}
 
-		a.sendStatus(w, fmt.Sprintf("Added new content (id: %d)", dm.ModelID()), ResultSuccess, []database.DataModel{dm})
+		a.sendStatus(w, fmt.Sprintf("Added new content (id: %d)", dm.ModelID()), ResultSuccess, []models.DataModel{dm})
 		return
 	} else {
 
@@ -315,7 +315,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 			return
 		}
 
-		a.sendStatus(w, "Updated content", ResultSuccess, []database.DataModel{&rb})
+		a.sendStatus(w, "Updated content", ResultSuccess, []models.DataModel{&rb})
 		return
 	}
 }
@@ -382,7 +382,7 @@ func (a *ApiServer) HandleGetWhoisForIP(w http.ResponseWriter, req *http.Request
 }
 
 func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Request) {
-	var rb database.Application
+	var rb models.Application
 	rb.ID = 0
 
 	d := json.NewDecoder(req.Body)
@@ -406,7 +406,7 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 			return
 		}
 
-		a.sendStatus(w, fmt.Sprintf("Added new app (id: %d)", dm.ModelID()), ResultSuccess, []database.DataModel{dm})
+		a.sendStatus(w, fmt.Sprintf("Added new app (id: %d)", dm.ModelID()), ResultSuccess, []models.DataModel{dm})
 		return
 	} else {
 
@@ -416,7 +416,7 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 			return
 		}
 
-		a.sendStatus(w, "Updated app", ResultSuccess, []database.DataModel{&rb})
+		a.sendStatus(w, "Updated app", ResultSuccess, []models.DataModel{&rb})
 		return
 	}
 }
@@ -434,7 +434,7 @@ func (a *ApiServer) HandleDeleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = a.dbc.Delete(&database.Application{ID: intID})
+	err = a.dbc.Delete(&models.Application{ID: intID})
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
@@ -457,7 +457,7 @@ func (a *ApiServer) HandleDeleteTag(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = a.dbc.Delete(&database.Tag{ID: intID, Name: name})
+	err = a.dbc.Delete(&models.Tag{ID: intID, Name: name})
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
@@ -467,7 +467,7 @@ func (a *ApiServer) HandleDeleteTag(w http.ResponseWriter, req *http.Request) {
 }
 
 func (a *ApiServer) HandleUpdateRequest(w http.ResponseWriter, req *http.Request) {
-	var rb database.Request
+	var rb models.Request
 
 	d := json.NewDecoder(req.Body)
 	d.DisallowUnknownFields()
@@ -487,7 +487,7 @@ func (a *ApiServer) HandleUpdateRequest(w http.ResponseWriter, req *http.Request
 }
 
 func (a *ApiServer) HandleUpdateHoneypot(w http.ResponseWriter, req *http.Request) {
-	var rb database.Honeypot
+	var rb models.Honeypot
 
 	d := json.NewDecoder(req.Body)
 	d.DisallowUnknownFields()
@@ -507,7 +507,7 @@ func (a *ApiServer) HandleUpdateHoneypot(w http.ResponseWriter, req *http.Reques
 }
 
 func (a *ApiServer) HandleUpsertSingleTag(w http.ResponseWriter, req *http.Request) {
-	var rb database.Tag
+	var rb models.Tag
 	rb.ID = 0
 
 	d := json.NewDecoder(req.Body)
@@ -531,7 +531,7 @@ func (a *ApiServer) HandleUpsertSingleTag(w http.ResponseWriter, req *http.Reque
 			return
 		}
 
-		a.sendStatus(w, fmt.Sprintf("Added new tag (id: %d)", dm.ModelID()), ResultSuccess, []database.DataModel{dm})
+		a.sendStatus(w, fmt.Sprintf("Added new tag (id: %d)", dm.ModelID()), ResultSuccess, []models.DataModel{dm})
 		return
 	} else {
 
@@ -559,7 +559,7 @@ func (a *ApiServer) HandleDeleteStoredQuery(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	err = a.dbc.Delete(&database.StoredQuery{ID: intID})
+	err = a.dbc.Delete(&models.StoredQuery{ID: intID})
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
@@ -569,7 +569,7 @@ func (a *ApiServer) HandleDeleteStoredQuery(w http.ResponseWriter, req *http.Req
 }
 
 func (a *ApiServer) HandleUpsertStoredQuery(w http.ResponseWriter, req *http.Request) {
-	var qj database.StoredQuery
+	var qj models.StoredQuery
 
 	d := json.NewDecoder(req.Body)
 	d.DisallowUnknownFields()
@@ -600,7 +600,7 @@ func (a *ApiServer) HandleUpsertStoredQuery(w http.ResponseWriter, req *http.Req
 		return
 	}
 
-	existingTagsMap := make(map[int64]database.TagPerQuery)
+	existingTagsMap := make(map[int64]models.TagPerQuery)
 	submittedTagsMap := make(map[int64]bool)
 	for _, t := range currentTags {
 		existingTagsMap[t.TagID] = t
@@ -611,7 +611,7 @@ func (a *ApiServer) HandleUpsertStoredQuery(w http.ResponseWriter, req *http.Req
 		submittedTagsMap[t.TagID] = true
 		if _, ok := existingTagsMap[t.TagID]; !ok {
 			fmt.Printf("Adding new query tag: %+v\n", t)
-			_, err := a.dbc.Insert(&database.TagPerQuery{
+			_, err := a.dbc.Insert(&models.TagPerQuery{
 				TagID:   t.TagID,
 				QueryID: qj.ID,
 			})
@@ -650,7 +650,7 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var reqs []database.Request
+	var reqs []models.Request
 	query := req.URL.Query().Get("q")
 	reqs, err = a.dbc.SearchRequests(iOffset, iLimit, query)
 
@@ -725,7 +725,7 @@ func (a *ApiServer) HandleSearchEvents(w http.ResponseWriter, req *http.Request)
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var rls []database.IpEvent
+	var rls []models.IpEvent
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchEvents(iOffset, iLimit, query)
 
@@ -750,7 +750,7 @@ func (a *ApiServer) HandleSearchDownloads(w http.ResponseWriter, req *http.Reque
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var rls []database.Download
+	var rls []models.Download
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchDownloads(iOffset, iLimit, query)
 
@@ -775,7 +775,7 @@ func (a *ApiServer) HandleSearchHoneypots(w http.ResponseWriter, req *http.Reque
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var rls []database.Honeypot
+	var rls []models.Honeypot
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchHoneypots(iOffset, iLimit, query)
 
@@ -800,7 +800,7 @@ func (a *ApiServer) HandleSearchStoredQueries(w http.ResponseWriter, req *http.R
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var qs []database.StoredQuery
+	var qs []models.StoredQuery
 	query := req.URL.Query().Get("q")
 	qs, err = a.dbc.SearchStoredQuery(iOffset, iLimit, query)
 	if err != nil {
@@ -825,7 +825,7 @@ func (a *ApiServer) HandleSearchTags(w http.ResponseWriter, req *http.Request) {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var rls []database.Tag
+	var rls []models.Tag
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchTags(iOffset, iLimit, query)
 
@@ -850,7 +850,7 @@ func (a *ApiServer) HandleSearchApps(w http.ResponseWriter, req *http.Request) {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var rls []database.Application
+	var rls []models.Application
 	query := req.URL.Query().Get("q")
 	rls, err = a.dbc.SearchApps(iOffset, iLimit, query)
 
@@ -928,7 +928,7 @@ func (a *ApiServer) HandleGetTagsForRequestFull(w http.ResponseWriter, req *http
 }
 
 type AppExport struct {
-	App      *database.Application  `json:"app"`
+	App      *models.Application  `json:"app"`
 	Rules    []models.ContentRule `json:"rules"`
 	Contents []models.Content     `json:"contents"`
 }
@@ -1123,7 +1123,7 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		rule.ID = 0
 		rule.ContentID = contentModel.ModelID()
 		rule.AppID = appModel.ModelID()
-		rule.AppUuid = appModel.(*database.Application).ExtUuid
+		rule.AppUuid = appModel.(*models.Application).ExtUuid
 		rule.ContentUuid = contentModel.(*models.Content).ExtUuid
 		_, err = a.dbc.Insert(&rule)
 		if err != nil {
@@ -1160,21 +1160,21 @@ func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Reques
 	case "content":
 		retval = database.GetDatamodelDocumentationMap(models.Content{})
 	case "request":
-		retval = database.GetDatamodelDocumentationMap(database.Request{})
+		retval = database.GetDatamodelDocumentationMap(models.Request{})
 	case "contentrule":
 		retval = database.GetDatamodelDocumentationMap(models.ContentRule{})
 	case "application":
-		retval = database.GetDatamodelDocumentationMap(database.Application{})
+		retval = database.GetDatamodelDocumentationMap(models.Application{})
 	case "honeypot":
-		retval = database.GetDatamodelDocumentationMap(database.Honeypot{})
+		retval = database.GetDatamodelDocumentationMap(models.Honeypot{})
 	case "download":
-		retval = database.GetDatamodelDocumentationMap(database.Download{})
+		retval = database.GetDatamodelDocumentationMap(models.Download{})
 	case "tag":
-		retval = database.GetDatamodelDocumentationMap(database.Tag{})
+		retval = database.GetDatamodelDocumentationMap(models.Tag{})
 	case "storedquery":
-		retval = database.GetDatamodelDocumentationMap(database.StoredQuery{})
+		retval = database.GetDatamodelDocumentationMap(models.StoredQuery{})
 	case "ipevent":
-		retval = database.GetDatamodelDocumentationMap(database.IpEvent{})
+		retval = database.GetDatamodelDocumentationMap(models.IpEvent{})
 	default:
 		a.sendStatus(w, "Unknown model", ResultError, nil)
 	}

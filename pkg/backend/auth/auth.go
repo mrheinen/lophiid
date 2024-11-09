@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package auth
 
 import (
@@ -22,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"regexp"
 	"strings"
@@ -37,7 +37,7 @@ import (
 // Authenticator exposes a function for authenticating requests.
 type Authenticator struct {
 	dbClient  database.DatabaseClient
-	authCache *util.StringMapCache[database.Honeypot]
+	authCache *util.StringMapCache[models.Honeypot]
 }
 
 // HoneypotMetadata contains metadata about a honeypot
@@ -54,7 +54,7 @@ var ExactAuthTokenLength = 64
 var TokenHeaderName = "authorization"
 var TokenHeaderPrefix = "Bearer "
 
-func NewAuthenticator(dbClient database.DatabaseClient, authCache *util.StringMapCache[database.Honeypot]) *Authenticator {
+func NewAuthenticator(dbClient database.DatabaseClient, authCache *util.StringMapCache[models.Honeypot]) *Authenticator {
 	return &Authenticator{dbClient: dbClient, authCache: authCache}
 }
 
@@ -150,7 +150,7 @@ func (a *Authenticator) hasValidAuthToken(authValue string) (HoneypotMetadata, e
 		return honeypotMD, status.Error(codes.Unauthenticated, "token does not validate")
 	}
 
-	var hp *database.Honeypot
+	var hp *models.Honeypot
 	var err error
 
 	hp, err = a.authCache.Get(authToken)

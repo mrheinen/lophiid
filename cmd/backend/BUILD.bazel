@@ -15,6 +15,7 @@ go_library(
         "//pkg/backend/responder",
         "//pkg/backend/session",
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/javascript",
         "//pkg/llm",
         "//pkg/util",

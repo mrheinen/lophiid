@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"sync"
 	"time"
@@ -127,7 +128,7 @@ func (c *CachedRdapManager) DoWhoisWork() {
 		rdapPrinter.Print(resNetwork)
 
 		if _, err := c.dbClient.Insert(
-			&database.Whois{
+			&models.Whois{
 				IP:      ip,
 				Data:    "",
 				Rdap:    printerOutput.Bytes(),

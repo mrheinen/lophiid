@@ -2,7 +2,7 @@ package analysis
 
 import (
 	"fmt"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"testing"
 	"time"
@@ -20,7 +20,7 @@ func TestIpEventManagerStoresOnceOk(t *testing.T) {
 	testEvtName := "boof"
 
 	// Store it once
-	im.ProcessNewEvent(&database.IpEvent{
+	im.ProcessNewEvent(&models.IpEvent{
 		Type: testEvtName,
 		IP:   testIp,
 	})
@@ -44,12 +44,12 @@ func TestIpEventManagerStoresTwiceOk(t *testing.T) {
 	testIp := "1.1.1.1"
 	testEvtName := "boof"
 
-	im.ProcessNewEvent(&database.IpEvent{
+	im.ProcessNewEvent(&models.IpEvent{
 		Type: testEvtName,
 		IP:   testIp,
 	})
 
-	im.ProcessNewEvent(&database.IpEvent{
+	im.ProcessNewEvent(&models.IpEvent{
 		Type: testEvtName,
 		IP:   testIp,
 	})
@@ -67,12 +67,12 @@ func TestIpEventManagerStoresTwiceOk(t *testing.T) {
 func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 	for _, test := range []struct {
 		description     string
-		events          []database.IpEvent
+		events          []models.IpEvent
 		expectScanEvent bool
 	}{
 		{
 			description: "no scan event",
-			events: []database.IpEvent{
+			events: []models.IpEvent{
 				{
 					Type: constants.IpEventHostC2,
 					IP:   "1.1.1.1",
@@ -90,7 +90,7 @@ func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 		},
 		{
 			description: "detects scan, same event",
-			events: []database.IpEvent{
+			events: []models.IpEvent{
 				{
 					Type: constants.IpEventAttacked,
 					IP:   "1.1.1.1",
@@ -109,7 +109,7 @@ func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 
 		{
 			description: "detects scan, combined event",
-			events: []database.IpEvent{
+			events: []models.IpEvent{
 				{
 					Type: constants.IpEventRecon,
 					IP:   "1.1.1.1",
@@ -152,17 +152,17 @@ func TestIpEventManagerCreatesNoDuplicateScanEvents(t *testing.T) {
 	metrics := CreateAnalysisMetrics(reg)
 	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
 
-	im.ProcessNewEvent(&database.IpEvent{
+	im.ProcessNewEvent(&models.IpEvent{
 		IP:   "1.1.1.1",
 		Type: constants.IpEventAttacked,
 	})
 
-	im.ProcessNewEvent(&database.IpEvent{
+	im.ProcessNewEvent(&models.IpEvent{
 		IP:   "1.1.1.1",
 		Type: constants.IpEventAttacked,
 	})
 
-	im.ProcessNewEvent(&database.IpEvent{
+	im.ProcessNewEvent(&models.IpEvent{
 		IP:   "1.1.1.1",
 		Type: constants.IpEventAttacked,
 	})

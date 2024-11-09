@@ -14,30 +14,21 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package backend
+package models
 
-import (
-	"lophiid/pkg/database/models"
-	"testing"
-)
+type DataModel interface {
+	ModelID() int64
+}
 
-func TestRequestQueue(t *testing.T) {
-	req := models.Request{}
-	q := RequestQueue{}
+type ExternalDataModel interface {
+	ModelID() int64
+	ExternalVersion() int64
+	ExternalUuid() string
+	SetExternalUuid(uuid string)
+	SetModelID(id int64)
+}
 
-	if q.Pop() != nil {
-		t.Error("Popping an empty queue did not yield nil")
-	}
-
-	q.Push(&req)
-	if q.Length() != 1 {
-		t.Errorf("expected length 1 but got %d", q.Length())
-	}
-
-	if q.Pop() != &req {
-		t.Error("Queued request is different")
-	}
-	if q.Length() != 0 {
-		t.Errorf("expected length 0 but got %d", q.Length())
-	}
+type TagPerRequestFull struct {
+	TagPerRequest TagPerRequest `tablename:"tag_per_request" json:"tag_per_request"`
+	Tag           Tag           `tablename:"tag" json:"tag"`
 }

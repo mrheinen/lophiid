@@ -103,7 +103,7 @@ func TestRunScriptWithoutValidateOk(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 
 			fmt.Printf("Running test: %s\n", test.description)
-			req := database.Request{
+			req := models.Request{
 				ID:   42,
 				Port: 80,
 				Uri:  "/foo",
@@ -190,7 +190,7 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 
 			fmt.Printf("Running test: %s\n", test.description)
-			req := database.Request{
+			req := models.Request{
 				ID:   42,
 				Port: 80,
 				Uri:  "/foo",
@@ -222,8 +222,8 @@ func TestRunScriptUsesCache(t *testing.T) {
 		description string
 		script1     string
 		script2     string
-		request1    database.Request
-		request2    database.Request
+		request1    models.Request
+		request2    models.Request
 		expectError bool
 	}{
 		{
@@ -243,14 +243,14 @@ func TestRunScriptUsesCache(t *testing.T) {
 				return "got: " + ret;
 			}
 			`,
-			request1: database.Request{
+			request1: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
 				SourceIP:   "1.1.1.1",
 				HoneypotIP: "2.2.2.2",
 			},
-			request2: database.Request{
+			request2: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
@@ -276,14 +276,14 @@ func TestRunScriptUsesCache(t *testing.T) {
 				return "got: " + ret;
 			}
 			`,
-			request1: database.Request{
+			request1: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
 				SourceIP:   "1.1.1.1",
 				HoneypotIP: "2.2.2.2",
 			},
-			request2: database.Request{
+			request2: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
@@ -330,7 +330,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 	for _, test := range []struct {
 		description string
 		script      string
-		request     database.Request
+		request     models.Request
 		content     models.Content
 		expectError bool
 	}{
@@ -346,7 +346,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 				return '';
 			}
 			`,
-			request: database.Request{
+			request: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
@@ -371,7 +371,7 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 				return '';
 			}
 			`,
-			request: database.Request{
+			request: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
@@ -423,7 +423,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 	for _, test := range []struct {
 		description string
 		script      string
-		request     database.Request
+		request     models.Request
 		content     models.Content
 		allowedCmds []string
 		cmdTimeout  time.Duration
@@ -440,7 +440,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 				return r.getStderr();
 			}
 			`,
-			request: database.Request{
+			request: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
@@ -466,7 +466,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 				return '';
 			}
 			`,
-			request: database.Request{
+			request: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
@@ -492,7 +492,7 @@ func TestRunScriptRunsCommands(t *testing.T) {
 				return r.getStderr();
 			}
 			`,
-			request: database.Request{
+			request: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",
@@ -542,7 +542,7 @@ func TestRunScriptHasContext(t *testing.T) {
 	for _, test := range []struct {
 		description string
 		script      string
-		request     database.Request
+		request     models.Request
 		content     models.Content
 		expectError bool
 	}{
@@ -560,7 +560,7 @@ func TestRunScriptHasContext(t *testing.T) {
 				return "";
 			}
 			`, constants.ExtractorTypeUnicode),
-			request: database.Request{
+			request: models.Request{
 				ID:         42,
 				Port:       80,
 				Uri:        "/foo",

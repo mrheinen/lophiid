@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/metrics",
         "//pkg/util",
         "@com_github_openrdap_rdap//:rdap",
@@ -23,6 +24,7 @@ go_test(
     embed = [":whois"],
     deps = [
         "//pkg/database",
+        "//pkg/database/models",
         "@com_github_openrdap_rdap//:rdap",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_golang//prometheus/testutil",

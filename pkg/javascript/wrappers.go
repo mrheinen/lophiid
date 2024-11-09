@@ -92,12 +92,12 @@ type RequestContext struct {
 	eCol *extractors.ExtractorCollection
 }
 
-func (r *RequestContext) AllRequestMetadata() []database.RequestMetadata {
+func (r *RequestContext) AllRequestMetadata() []models.RequestMetadata {
 	return r.eCol.AllMetadata(0)
 }
 
-func (r *RequestContext) RequestMetadataByType(metaType string) []database.RequestMetadata {
-	ret := []database.RequestMetadata{}
+func (r *RequestContext) RequestMetadataByType(metaType string) []models.RequestMetadata {
+	ret := []models.RequestMetadata{}
 
 	for _, m := range r.eCol.AllMetadata(0) {
 		if m.Type == metaType {

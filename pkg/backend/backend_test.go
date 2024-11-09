@@ -72,14 +72,14 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 
 	for _, test := range []struct {
 		description           string
-		requestInput          database.Request
+		requestInput          models.Request
 		contentRulesInput     []models.ContentRule
 		contentRuleIDExpected int64
 		errorExpected         bool
 	}{
 		{
 			description: "matched nothing ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/fddfffd",
 				Port: 80,
 			},
@@ -88,7 +88,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		},
 		{
 			description: "matched one rule (exact) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/42",
 				Port: 80,
 			},
@@ -98,7 +98,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		},
 		{
 			description: "matched one rule (prefix) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/prefixdsfsfdf",
 				Port: 80,
 			},
@@ -109,7 +109,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 
 		{
 			description: "matched one rule (contains) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/sddsadcontainsfdfd",
 				Port: 80,
 			},
@@ -119,7 +119,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		},
 		{
 			description: "matched one rule (suffix) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/ttttt?aa=suffix",
 				Port: 80,
 			},
@@ -129,7 +129,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		},
 		{
 			description: "matched one rule (regex) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/a898989898",
 				Port: 80,
 			},
@@ -139,7 +139,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		},
 		{
 			description: "matched one rule (on port) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/eeee",
 				Port: 8888,
 			},
@@ -149,7 +149,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		},
 		{
 			description: "matched on body alone (exact) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/eeee",
 				Port: 80,
 				Body: []byte("woohoo"),
@@ -160,7 +160,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		},
 		{
 			description: "matched on body alone (contains) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/eeee",
 				Port: 80,
 				Body: []byte("asdssad /etc/passwd sdds"),
@@ -171,7 +171,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		},
 		{
 			description: "matched on body and path (contains) ",
-			requestInput: database.Request{
+			requestInput: models.Request{
 				Uri:  "/pppaaattthhh",
 				Port: 80,
 				Body: []byte("asdssad /etc/hosts sdds"),
@@ -242,7 +242,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	fakeRes := &responder.FakeResponder{}
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
-	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &database.Request{
+	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &models.Request{
 		Uri:  "/aa",
 		Port: 80,
 	})
@@ -254,7 +254,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	// The path of the next request matches two rules. We expect rule 2 to be
 	// served though because it shares the app ID of the rule that was already
 	// served.
-	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &database.Request{
+	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &models.Request{
 		Uri:  "/bb",
 		Port: 80,
 	})
@@ -266,7 +266,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	// Again this matches two rules. However one of them is already served once
 	// and this is kept track off. Therefore we expect the rule that was not
 	// served before.
-	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &database.Request{
+	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &models.Request{
 		Uri:  "/bb",
 		Port: 80,
 	})
@@ -331,14 +331,14 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 	for _, test := range []struct {
 		description      string
 		content          []byte
-		dInfo            database.Download
+		dInfo            models.Download
 		expectedReturn   bool
 		expectedSchedule bool
 	}{
 		{
 			description: "does not schedule",
 			content:     []byte("http://example.org"),
-			dInfo: database.Download{
+			dInfo: models.Download{
 				ContentType:         "text/html",
 				DetectedContentType: "text/html",
 			},
@@ -348,7 +348,7 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 		{
 			description: "does schedule",
 			content:     []byte("http://example.org"),
-			dInfo: database.Download{
+			dInfo: models.Download{
 				ContentType:         "text/x-sh",
 				DetectedContentType: "text/html",
 				Host:                "example.org:8000",
@@ -359,7 +359,7 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 		{
 			description: "does not schedule, exceeds limit",
 			content:     []byte("http://example.org/1 http://example.org/2 http://example.org/3 http://example.org/4 http://example.org/5 http://example.org/6 http://example.org/7 http://example.org/8 http://example.org/9 http://example.org/10 http://example.org/11 http://example.org/12 http://example.org/13 http://example.org/14 http://example.org/15 http://example.org/16"),
-			dInfo: database.Download{
+			dInfo: models.Download{
 				ContentType:         "text/x-sh",
 				DetectedContentType: "text/html",
 				Host:                "example.org:8000",
@@ -494,7 +494,7 @@ func TestHasParseableContent(t *testing.T) {
 
 func TestHandleProbe(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
-		RequestsToReturn: []database.Request{},
+		RequestsToReturn: []models.Request{},
 		ContentsToReturn: map[int64]models.Content{
 			42: {
 				ID:   42,
@@ -586,7 +586,7 @@ func TestHandleProbe(t *testing.T) {
 
 	// Now we test the default content fetching. Set the path to something that
 	// doesn't match any rule.
-	fdbc.HoneypotToReturn = database.Honeypot{
+	fdbc.HoneypotToReturn = models.Honeypot{
 		DefaultContentID: 66,
 	}
 	probeReq.RequestUri = "/dffsd"
@@ -678,7 +678,7 @@ func TestProcessQueue(t *testing.T) {
 		fakeRes := &responder.FakeResponder{}
 		fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour)
 		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
-		req := database.Request{
+		req := models.Request{
 			ID:   42,
 			Uri:  "/aaaaa",
 			Body: []byte("body body"),
@@ -720,7 +720,7 @@ func TestSendStatus(t *testing.T) {
 
 	for _, test := range []struct {
 		description         string
-		getHoneypotRet      database.Honeypot
+		getHoneypotRet      models.Honeypot
 		getHoneypotError    error
 		request             *backend_service.StatusRequest
 		expectedErrorString string
@@ -728,7 +728,7 @@ func TestSendStatus(t *testing.T) {
 	}{
 		{
 			description:      "inserts new honeypot",
-			getHoneypotRet:   database.Honeypot{},
+			getHoneypotRet:   models.Honeypot{},
 			getHoneypotError: nil,
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
@@ -741,7 +741,7 @@ func TestSendStatus(t *testing.T) {
 		},
 		{
 			description:      "inserts new honeypot fails on query",
-			getHoneypotRet:   database.Honeypot{},
+			getHoneypotRet:   models.Honeypot{},
 			getHoneypotError: errors.New("boo"),
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
@@ -754,7 +754,7 @@ func TestSendStatus(t *testing.T) {
 		},
 		{
 			description:      "inserts new honeypot fails on db",
-			getHoneypotRet:   database.Honeypot{},
+			getHoneypotRet:   models.Honeypot{},
 			getHoneypotError: nil,
 			dbErrorToReturn:  errors.New("foooo"),
 			request: &backend_service.StatusRequest{
@@ -767,7 +767,7 @@ func TestSendStatus(t *testing.T) {
 		},
 		{
 			description:      "updates honeypot fails on db",
-			getHoneypotRet:   database.Honeypot{},
+			getHoneypotRet:   models.Honeypot{},
 			getHoneypotError: nil,
 			dbErrorToReturn:  errors.New("oh oh"),
 			request: &backend_service.StatusRequest{
@@ -780,7 +780,7 @@ func TestSendStatus(t *testing.T) {
 		},
 		{
 			description:      "updates honeypot success",
-			getHoneypotRet:   database.Honeypot{},
+			getHoneypotRet:   models.Honeypot{},
 			getHoneypotError: nil,
 			dbErrorToReturn:  nil,
 			request: &backend_service.StatusRequest{
@@ -828,7 +828,7 @@ func TestSendStatus(t *testing.T) {
 			}
 
 			if test.dbErrorToReturn != nil {
-				lastDm := fdbc.LastDataModelSeen.(*database.Honeypot)
+				lastDm := fdbc.LastDataModelSeen.(*models.Honeypot)
 
 				if len(lastDm.SSLPorts) != len(test.request.ListenPortSsl) {
 					t.Errorf("expected %d, got %d", len(test.request.ListenPortSsl), len(lastDm.SSLPorts))
@@ -853,7 +853,7 @@ func TestSendStatus(t *testing.T) {
 func TestSendStatusSendsCommands(t *testing.T) {
 
 	fdbc := &database.FakeDatabaseClient{
-		HoneypotToReturn:      database.Honeypot{},
+		HoneypotToReturn:      models.Honeypot{},
 		HoneypotErrorToReturn: nil,
 		ErrorToReturn:         nil,
 	}
@@ -909,7 +909,7 @@ func TestSendStatusSendsCommands(t *testing.T) {
 
 func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
-		DownloadsToReturn: []database.Download{
+		DownloadsToReturn: []models.Download{
 			{
 				ID:                   41,
 				TimesSeen:            1,
@@ -957,7 +957,7 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 		t.Errorf("expected len %d, got %d", 1, len(b.downloadQueue))
 	}
 
-	downloadEntry := fdbc.LastDataModelSeen.(*database.Download)
+	downloadEntry := fdbc.LastDataModelSeen.(*models.Download)
 	if downloadEntry.TimesSeen != 2 {
 		t.Errorf("expected times seen to be %d, got %d", 2, downloadEntry.TimesSeen)
 	}
@@ -969,7 +969,7 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 
 func TestHandleP0fResult(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
-		P0fResultToReturn: database.P0fResult{},
+		P0fResultToReturn: models.P0fResult{},
 		ErrorToReturn:     nil,
 	}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
@@ -1003,7 +1003,7 @@ func TestHandleP0fResult(t *testing.T) {
 
 	// Insert again but let the database return a fresh
 	// result. Therefore the p0f result is no inserted in the database.
-	fdbc.P0fResultToReturn = database.P0fResult{
+	fdbc.P0fResultToReturn = models.P0fResult{
 		CreatedAt: time.Now(),
 	}
 	fdbc.P0fErrorToReturn = nil
@@ -1021,7 +1021,7 @@ func TestHandleP0fResult(t *testing.T) {
 func TestGetResponderDataCases(t *testing.T) {
 
 	fdbc := &database.FakeDatabaseClient{
-		P0fResultToReturn: database.P0fResult{},
+		P0fResultToReturn: models.P0fResult{},
 		ErrorToReturn:     nil,
 	}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
@@ -1043,7 +1043,7 @@ func TestGetResponderDataCases(t *testing.T) {
 	for _, test := range []struct {
 		description      string
 		rule             models.ContentRule
-		request          database.Request
+		request          models.Request
 		content          models.Content
 		responder        *responder.FakeResponder
 		lastPromptInput  string
@@ -1057,7 +1057,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				ResponderRegex:   "([0-9]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeNone,
 			},
-			request: database.Request{
+			request: models.Request{
 				Raw: "aa 898989",
 			},
 			content: models.Content{
@@ -1077,7 +1077,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				ResponderRegex:   "([0-9]+)",
 				ResponderDecoder: "DOESNOTEXIST",
 			},
-			request: database.Request{
+			request: models.Request{
 				Raw: "aa 898989",
 			},
 			content: models.Content{
@@ -1097,7 +1097,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				ResponderRegex:   "foo=([0-9a-f%]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeUri,
 			},
-			request: database.Request{
+			request: models.Request{
 				Raw: "foo=%2e%2e%2e%41%41",
 			},
 			content: models.Content{
@@ -1117,7 +1117,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				ResponderRegex:   "foo=([&a-z;]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeHtml,
 			},
-			request: database.Request{
+			request: models.Request{
 				Raw: "foo=&gt;&lt;",
 			},
 			content: models.Content{

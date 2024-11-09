@@ -21,7 +21,6 @@ import (
 	"io"
 	"log/slog"
 	"lophiid/pkg/api"
-	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"net/http"
@@ -35,11 +34,11 @@ var UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like
 type ApiCLI struct {
 	httpClient     *http.Client
 	contentAPI     api.ApiClient[models.Content]
-	appAPI         api.ApiClient[database.Application]
+	appAPI         api.ApiClient[models.Application]
 	contentRuleAPI api.ApiClient[models.ContentRule]
 }
 
-func NewApiCLI(httpClient *http.Client, contentAPI *api.GenericApiClient[models.Content], appAPI *api.GenericApiClient[database.Application], contentRuleAPI *api.GenericApiClient[models.ContentRule]) *ApiCLI {
+func NewApiCLI(httpClient *http.Client, contentAPI *api.GenericApiClient[models.Content], appAPI *api.GenericApiClient[models.Application], contentRuleAPI *api.GenericApiClient[models.ContentRule]) *ApiCLI {
 	return &ApiCLI{
 		httpClient:     httpClient,
 		appAPI:         appAPI,
@@ -92,7 +91,7 @@ func (a *ApiCLI) FetchUrlAndCreateContentAndRule(appID int64, ports []int64, tar
 
 // CreateContentAndRule will store the Content and a newly created ContentRule
 // in the database.
-func (a *ApiCLI) CreateContentAndRule(app *database.Application, ports []int64, content *models.Content, targetUrl string) error {
+func (a *ApiCLI) CreateContentAndRule(app *models.Application, ports []int64, content *models.Content, targetUrl string) error {
 	addedContent, err := a.contentAPI.UpsertDataModel(*content)
 	if err != nil {
 		return fmt.Errorf("error storing content: %w", err)

@@ -35,6 +35,7 @@ import (
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/backend/session"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/util"
@@ -221,7 +222,7 @@ func main() {
 		slog.Error("Error: %s", err)
 	}
 
-	authCache := util.NewStringMapCache[database.Honeypot]("auth token cache", time.Minute*10)
+	authCache := util.NewStringMapCache[models.Honeypot]("auth token cache", time.Minute*10)
 	authCache.Start()
 	auther := auth.NewAuthenticator(dbc, authCache)
 

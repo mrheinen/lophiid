@@ -17,12 +17,12 @@
 package extractors
 
 import (
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 )
 
 type Extractor interface {
 	MetaType() string
-	ParseRequest(req *database.Request)
+	ParseRequest(req *models.Request)
 	ParseString(s string)
-	GetMetadatas(requestID int64) []database.RequestMetadata
+	GetMetadatas(requestID int64) []models.RequestMetadata
 }

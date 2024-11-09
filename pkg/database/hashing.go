@@ -14,12 +14,12 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package database
 
 import (
 	"crypto/sha256"
 	"fmt"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"sort"
 	"strings"
@@ -28,7 +28,7 @@ import (
 // GetHashFromStaticRequestFields calculates a hash based on HTTP request fields
 // that are considered static. Examples are header, parameter names but not
 // parameter values.
-func GetHashFromStaticRequestFields(req *Request) (string, error) {
+func GetHashFromStaticRequestFields(req *models.Request) (string, error) {
 
 	hash := sha256.New()
 

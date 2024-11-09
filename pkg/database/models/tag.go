@@ -14,30 +14,17 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package backend
+package models
 
-import (
-	"lophiid/pkg/database/models"
-	"testing"
-)
+import "time"
 
-func TestRequestQueue(t *testing.T) {
-	req := models.Request{}
-	q := RequestQueue{}
-
-	if q.Pop() != nil {
-		t.Error("Popping an empty queue did not yield nil")
-	}
-
-	q.Push(&req)
-	if q.Length() != 1 {
-		t.Errorf("expected length 1 but got %d", q.Length())
-	}
-
-	if q.Pop() != &req {
-		t.Error("Queued request is different")
-	}
-	if q.Length() != 0 {
-		t.Errorf("expected length 0 but got %d", q.Length())
-	}
+type Tag struct {
+	ID          int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the tag"`
+	Name        string    `ksql:"name" json:"name" doc:"The name of the tag"`
+	ColorHtml   string    `ksql:"color_html" json:"color_html" doc:"HTML color code"`
+	Description string    `ksql:"description" json:"description" doc:"A description of the tag"`
+	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Date and time of creation"`
+	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
 }
+
+func (c *Tag) ModelID() int64 { return c.ID }

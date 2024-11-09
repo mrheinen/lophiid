@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//pkg/analysis",
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/metrics",
         "//pkg/util",
         "//pkg/util/constants",
@@ -29,6 +30,7 @@ go_test(
     deps = [
         "//pkg/analysis",
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
     ],

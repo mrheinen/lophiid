@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"io"
 	"lophiid/pkg/api"
-	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"net/http"
 	"testing"
@@ -104,7 +103,7 @@ func TestFetchUrlAndCreateContentAndRule(t *testing.T) {
 		contentRuleAPI: &fakeContentRuleAPI,
 	}
 
-	err := apiCli.CreateContentAndRule(&database.Application{ID: 1}, []int64{80}, &models.Content{}, "http://example.org/?aa=bb")
+	err := apiCli.CreateContentAndRule(&models.Application{ID: 1}, []int64{80}, &models.Content{}, "http://example.org/?aa=bb")
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}

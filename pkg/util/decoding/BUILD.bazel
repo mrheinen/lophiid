@@ -5,7 +5,7 @@ go_library(
     srcs = ["decoding.go"],
     importpath = "lophiid/pkg/util/decoding",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/database"],
+    deps = ["//pkg/database/models"],
 )
 
 go_test(

@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"net/http"
 	"net/url"
@@ -71,8 +70,8 @@ func (f *FakeApiClient[T]) Import(data string) error {
 }
 
 // NewApplicationApiClient creates an application api client
-func NewApplicationApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.Application] {
-	return &GenericApiClient[database.Application]{
+func NewApplicationApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[models.Application] {
+	return &GenericApiClient[models.Application]{
 		httpClient:  httpClient,
 		apiLocation: apiLocation,
 		apiKey:      apiKey,
@@ -210,7 +209,7 @@ func (a *GenericApiClient[T]) Import(data string) error {
 	// Right now only the application API allows importing.
 	var check T
 	switch any(check).(type) {
-	case database.Application:
+	case models.Application:
 		slog.Debug("Importing application")
 	default:
 		return fmt.Errorf("api does not support import: %s", a.apiLocation)

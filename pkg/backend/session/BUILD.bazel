@@ -7,6 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/util",
     ],
 )
@@ -15,5 +16,8 @@ go_test(
     name = "session_test",
     srcs = ["session_test.go"],
     embed = [":session"],
-    deps = ["//pkg/database"],
+    deps = [
+        "//pkg/database",
+        "//pkg/database/models",
+    ],
 )

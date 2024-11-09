@@ -14,20 +14,19 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package backend
 
 import (
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"sync"
 )
 
 type RequestQueue struct {
 	mu   sync.Mutex
-	reqs []*database.Request
+	reqs []*models.Request
 }
 
-func (r *RequestQueue) Pop() *database.Request {
+func (r *RequestQueue) Pop() *models.Request {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if len(r.reqs) == 0 {
@@ -43,7 +42,7 @@ func (r *RequestQueue) Length() int {
 	return len(r.reqs)
 }
 
-func (r *RequestQueue) Push(req *database.Request) {
+func (r *RequestQueue) Push(req *models.Request) {
 	r.mu.Lock()
 	r.reqs = append(r.reqs, req)
 	r.mu.Unlock()

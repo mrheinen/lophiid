@@ -18,7 +18,7 @@ package extractors
 
 import (
 	"fmt"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"testing"
 )
@@ -26,12 +26,12 @@ import (
 func TestTCPExtractor(t *testing.T) {
 	for _, test := range []struct {
 		description string
-		request     database.Request
+		request     models.Request
 		tcpsToFind  map[string]int
 	}{
 		{
 			description: "finds tcp address with IP",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads /dev/tcp/1.1.1.1/8080 aa"),
 			},
@@ -39,7 +39,7 @@ func TestTCPExtractor(t *testing.T) {
 		},
 		{
 			description: "finds tcp address with IP (more embedded)",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads+/dev/tcp/1.1.1.1/8080;aa"),
 			},
@@ -47,7 +47,7 @@ func TestTCPExtractor(t *testing.T) {
 		},
 		{
 			description: "finds tcp address with hostname",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads /dev/tcp/example.org/8080 aa"),
 			},
@@ -55,7 +55,7 @@ func TestTCPExtractor(t *testing.T) {
 		},
 		{
 			description: "finds tcp address with IPv6",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads /dev/tcp/2a00:1450:400a:800::200e/8080 aa"),
 			},

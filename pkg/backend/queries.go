@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package backend
 
 import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"time"
 )
 
@@ -105,7 +105,7 @@ func (q *QueryRunnerImpl) Run(UpdateWindow time.Duration) error {
 				}
 
 				if !hasTag {
-					tagToAdd := database.TagPerRequest{
+					tagToAdd := models.TagPerRequest{
 						TagPerQueryID: t.ID,
 						RequestID:     req.ID,
 						TagID:         t.TagID,

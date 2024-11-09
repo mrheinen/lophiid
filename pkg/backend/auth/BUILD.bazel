@@ -7,6 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/util",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go-grpc-middleware",
         "@com_github_grpc_ecosystem_go_grpc_middleware//auth",
@@ -23,6 +24,7 @@ go_test(
     embed = [":auth"],
     deps = [
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/util",
         "@org_golang_google_grpc//metadata",
     ],

