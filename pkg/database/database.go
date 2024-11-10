@@ -318,6 +318,7 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 			pr, err = d.GetP0fResultByIP(req.SourceIP, "LIMIT 1")
 			if err == nil {
 				req.P0fResult = pr
+				uniqueIPs[req.SourceIP] = pr
 			} else {
 				req.P0fResult = models.P0fResult{}
 			}
