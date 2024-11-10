@@ -23,7 +23,7 @@ import (
 	"io/fs"
 	"lophiid/pkg/api"
 	"lophiid/pkg/api/cli"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -178,7 +178,7 @@ func main() {
 		}
 	} else if *appName != "" && *appVersion != "" {
 
-		app := database.Application{
+		app := models.Application{
 			Name:    *appName,
 			Version: *appVersion,
 			Vendor:  *appVendor,

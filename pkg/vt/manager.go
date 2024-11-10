@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"net"
 	"sync"
@@ -28,7 +29,7 @@ import (
 )
 
 type VTManager interface {
-	GetEventsForDownload(dl *database.Download) []database.IpEvent
+	GetEventsForDownload(dl *models.Download) []models.IpEvent
 	ProcessURLQueue() error
 	QueueURL(ip string)
 	SubmitFiles() error
@@ -43,8 +44,8 @@ type FakeVTManager struct {
 func (f *FakeVTManager) ProcessURLQueue() error {
 	return f.ErrorToReturn
 }
-func (f *FakeVTManager) GetEventsForDownload(dl *database.Download) []database.IpEvent {
-	return []database.IpEvent{
+func (f *FakeVTManager) GetEventsForDownload(dl *models.Download) []models.IpEvent {
+	return []models.IpEvent{
 		{
 			Type: constants.IpEventAttacked,
 			IP:   "1.1.1.1",
@@ -177,10 +178,10 @@ func (v *VTBackgroundManager) SubmitFiles() error {
 	return nil
 }
 
-func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []database.IpEvent {
-	ret := []database.IpEvent{}
+func (v *VTBackgroundManager) GetEventsForDownload(dl *models.Download) []models.IpEvent {
+	ret := []models.IpEvent{}
 	// Register the IP hosting the malware.
-	evt := database.IpEvent{
+	evt := models.IpEvent{
 		IP:         dl.IP,
 		Type:       constants.IpEventHostedMalware,
 		RequestID:  dl.LastRequestID,
@@ -205,7 +206,7 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 	if err != nil {
 		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.LastRequestID))
 	} else {
-		ret = append(ret, database.IpEvent{
+		ret = append(ret, models.IpEvent{
 			IP:         r.SourceIP,
 			Type:       constants.IpEventAttacked,
 			RequestID:  dl.LastRequestID,
@@ -214,7 +215,7 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *database.Download) []data
 		})
 	}
 
-	finalRet := []database.IpEvent{}
+	finalRet := []models.IpEvent{}
 	for _, evt := range ret {
 		evt.Source = constants.IpEventSourceVT
 		if dl.VTFileAnalysisID != "" {

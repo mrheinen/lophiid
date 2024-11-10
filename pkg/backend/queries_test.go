@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package backend
 
 import (
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"strings"
 	"testing"
 	"time"
@@ -27,23 +27,23 @@ import (
 func TestRunQueries(t *testing.T) {
 	for _, test := range []struct {
 		description            string
-		queriesToReturn        []database.StoredQuery
+		queriesToReturn        []models.StoredQuery
 		queriesToReturnError   error
-		tagPerQueryReturn      []database.TagPerQuery
+		tagPerQueryReturn      []models.TagPerQuery
 		tagPerQueryReturnError error
 		returnedErrorContains  string
 	}{
 		{
 			description:            "There are no stored queries",
-			queriesToReturn:        []database.StoredQuery{},
+			queriesToReturn:        []models.StoredQuery{},
 			queriesToReturnError:   nil,
 			returnedErrorContains:  "",
-			tagPerQueryReturn:      []database.TagPerQuery{},
+			tagPerQueryReturn:      []models.TagPerQuery{},
 			tagPerQueryReturnError: nil,
 		},
 		{
 			description: "There are stored queries, no query tags though",
-			queriesToReturn: []database.StoredQuery{
+			queriesToReturn: []models.StoredQuery{
 				{
 					ID:    1,
 					Query: "uri:/",
@@ -55,7 +55,7 @@ func TestRunQueries(t *testing.T) {
 			},
 			queriesToReturnError:   nil,
 			returnedErrorContains:  "",
-			tagPerQueryReturn:      []database.TagPerQuery{},
+			tagPerQueryReturn:      []models.TagPerQuery{},
 			tagPerQueryReturnError: nil,
 		},
 	} {

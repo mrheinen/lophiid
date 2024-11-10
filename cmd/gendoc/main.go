@@ -19,6 +19,7 @@ package main
 import (
 	"log/slog"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"os"
 	"sort"
@@ -46,15 +47,15 @@ func main() {
 		return
 	}
 	fo.WriteString(docHeader)
-	WriteModelToFile(fo, database.Request{}, "Requests")
-	WriteModelToFile(fo, database.Content{}, "Content")
-	WriteModelToFile(fo, database.ContentRule{}, "Rules")
-	WriteModelToFile(fo, database.Application{}, "Apps")
-	WriteModelToFile(fo, database.Download{}, "Downloads")
-	WriteModelToFile(fo, database.Honeypot{}, "Honeypots")
-	WriteModelToFile(fo, database.StoredQuery{}, "Manage Queries")
-	WriteModelToFile(fo, database.Tag{}, "Manage tags")
-	WriteModelToFile(fo, database.IpEvent{}, "Manage IP events")
+	WriteModelToFile(fo, models.Request{}, "Requests")
+	WriteModelToFile(fo, models.Content{}, "Content")
+	WriteModelToFile(fo, models.ContentRule{}, "Rules")
+	WriteModelToFile(fo, models.Application{}, "Apps")
+	WriteModelToFile(fo, models.Download{}, "Downloads")
+	WriteModelToFile(fo, models.Honeypot{}, "Honeypots")
+	WriteModelToFile(fo, models.StoredQuery{}, "Manage Queries")
+	WriteModelToFile(fo, models.Tag{}, "Manage tags")
+	WriteModelToFile(fo, models.IpEvent{}, "Manage IP events")
 	defer fo.Close()
 
 }

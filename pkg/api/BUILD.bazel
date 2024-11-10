@@ -12,6 +12,7 @@ go_library(
         "//backend_service",
         "//pkg/backend/extractors",
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/javascript",
         "//pkg/util",
         "@com_github_google_uuid//:uuid",
@@ -28,6 +29,7 @@ go_test(
     embed = [":api"],
     deps = [
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/javascript",
         "@com_github_jackc_pgx_v5//pgtype",
         "@in_gopkg_yaml_v3//:yaml_v3",

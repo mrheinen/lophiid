@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"sync"
 	"time"
 )
@@ -31,7 +31,7 @@ var (
 )
 
 type RateLimiter interface {
-	AllowRequest(req *database.Request) (bool, error)
+	AllowRequest(req *models.Request) (bool, error)
 }
 
 // WindowRateLimiter can be used to limit requests per HoneypotIP, SourceIP and Uri
@@ -121,7 +121,7 @@ func (r *WindowRateLimiter) Tick() {
 // requests in a window or bucket is not exceeded. If a request is not allowed
 // then an error is returned with the reason why.
 // Requires that Start() has been called before usage.
-func (r *WindowRateLimiter) AllowRequest(req *database.Request) (bool, error) {
+func (r *WindowRateLimiter) AllowRequest(req *models.Request) (bool, error) {
 	rKey := fmt.Sprintf("%s-%s-%s", req.HoneypotIP, req.SourceIP, req.Uri)
 
 	r.mu.Lock()
@@ -156,6 +156,6 @@ type FakeRateLimiter struct {
 	ErrorToReturn error
 }
 
-func (f *FakeRateLimiter) AllowRequest(*database.Request) (bool, error) {
+func (f *FakeRateLimiter) AllowRequest(*models.Request) (bool, error) {
 	return f.BoolToReturn, f.ErrorToReturn
 }

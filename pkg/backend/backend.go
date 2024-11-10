@@ -43,6 +43,7 @@ import (
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/backend/session"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
@@ -60,8 +61,8 @@ var userAgent = "Wget/1.13.4 (linux-gnu)"
 var maxUrlsToExtractForDownload = 15
 
 type ReqQueueEntry struct {
-	req        *database.Request
-	rule       database.ContentRule
+	req        *models.Request
+	rule       models.ContentRule
 	eCollector *extractors.ExtractorCollection
 }
 
@@ -78,7 +79,7 @@ type BackendServer struct {
 	maintenanceChan chan bool
 	reqsProcessChan chan bool
 	reqsQueue       chan ReqQueueEntry
-	sessionCache    *util.StringMapCache[database.ContentRule]
+	sessionCache    *util.StringMapCache[models.ContentRule]
 	downloadQueue   map[string][]backend_service.CommandDownloadFile
 	downloadQueueMu sync.Mutex
 	downloadsCache  *util.StringMapCache[time.Time]
@@ -93,7 +94,7 @@ type BackendServer struct {
 // NewBackendServer creates a new instance of the backend server.
 func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, config Config) *BackendServer {
 
-	sCache := util.NewStringMapCache[database.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
+	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
 	// we get a request with the same download (payload URL) within that time
 	// window then we will not download it again.
@@ -148,9 +149,9 @@ func (s *BackendServer) ScheduleDownloadOfPayload(honeypotIP string, originalUrl
 }
 
 // ProbeRequestToDatabaseRequest transforms aHandleProbeRequest to a
-// database.Request.
-func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.HandleProbeRequest) (*database.Request, error) {
-	sReq := database.Request{
+// models.Request.
+func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.HandleProbeRequest) (*models.Request, error) {
+	sReq := models.Request{
 		TimeReceived:  time.Unix(req.GetRequest().GetTimeReceived(), 0),
 		Proto:         req.GetRequest().GetProto(),
 		Method:        req.GetRequest().GetMethod(),
@@ -229,8 +230,8 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 	}
 }
 
-func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *database.Request) (database.ContentRule, error) {
-	var matchedRules []database.ContentRule
+func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request) (models.ContentRule, error) {
+	var matchedRules []models.ContentRule
 	for _, rule := range rules {
 		// Port 0 means any port.
 		if rule.Port != 0 && rule.Port != req.Port {
@@ -256,7 +257,7 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 	}
 
 	if len(matchedRules) == 0 {
-		return database.ContentRule{}, fmt.Errorf("no rule found")
+		return models.ContentRule{}, fmt.Errorf("no rule found")
 	}
 
 	session, err := s.sessionMgr.GetCachedSession(req.SourceIP)
@@ -274,7 +275,7 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 		return matchedRules[0], nil
 	}
 
-	var unservedRules []database.ContentRule
+	var unservedRules []models.ContentRule
 	// Find out what rules match but haven't been served.
 	for _, r := range matchedRules {
 
@@ -289,7 +290,7 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 		}
 	}
 
-	var matchedRule database.ContentRule
+	var matchedRule models.ContentRule
 
 	if len(unservedRules) > 0 {
 		matchedRule = unservedRules[rand.Int()%len(unservedRules)]
@@ -303,7 +304,7 @@ func (s *BackendServer) GetMatchedRule(rules []database.ContentRule, req *databa
 	return matchedRule, nil
 }
 
-func (s *BackendServer) UpdateSessionWithRule(ip string, session *database.Session, rule *database.ContentRule) {
+func (s *BackendServer) UpdateSessionWithRule(ip string, session *models.Session, rule *models.ContentRule) {
 	session.LastRuleServed = *rule
 	session.ServedRuleWithContent(rule.ID, rule.ContentID)
 	if err := s.sessionMgr.UpdateCachedSession(ip, session); err != nil {
@@ -328,7 +329,7 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	}
 	if len(dms) == 0 {
 
-		hp := &database.Honeypot{
+		hp := &models.Honeypot{
 			IP:          req.GetIp(),
 			Version:     req.GetVersion(),
 			LastCheckin: time.Now(),
@@ -402,7 +403,7 @@ func (s *BackendServer) SendSourceContext(ctx context.Context, req *backend_serv
 // 24 hours is already present and inserts it if not. Returns a bool indicating
 // whether the record was added.
 func (s *BackendServer) HandleP0fResult(ip string, res *backend_service.P0FResult) (bool, error) {
-	pr := database.P0fResult{
+	pr := models.P0fResult{
 		IP:               ip,
 		FirstSeen:        time.Unix(int64(res.GetFirstSeen()), 0),
 		LastSeen:         time.Unix(int64(res.GetLastSeen()), 0),
@@ -462,7 +463,7 @@ func HasParseableContent(fileUrl string, mime string) bool {
 		strings.HasSuffix(parsedUrl.Path, ".py")
 }
 
-func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo database.Download) bool {
+func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo models.Download) bool {
 
 	// Check against the reported and detected content type to see if we want to
 	// parse this file for URLs.
@@ -523,7 +524,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 
 	slog.Debug("Got upload from URL", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
 	// Store the download information in the database.
-	dInfo := database.Download{}
+	dInfo := models.Download{}
 	dInfo.SHA256sum = fmt.Sprintf("%x", sha256.Sum256(req.GetInfo().GetData()))
 	dInfo.UsedUrl = req.GetInfo().GetUrl()
 	dInfo.Host = req.GetInfo().GetHostHeader()
@@ -618,7 +619,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	return &backend_service.UploadFileResponse{}, nil
 }
 
-func (s *BackendServer) getResponderData(sReq *database.Request, rule *database.ContentRule, content *database.Content) string {
+func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.ContentRule, content *models.Content) string {
 	reg, err := regexp.Compile(rule.ResponderRegex)
 	if err == nil && reg != nil && s.llmResponder != nil {
 		match := reg.FindStringSubmatch(sReq.Raw)
@@ -675,7 +676,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
 	if !allowRequest {
 
-		s.ipEventManager.AddEvent(&database.IpEvent{
+		s.ipEventManager.AddEvent(&models.IpEvent{
 			IP:         sReq.SourceIP,
 			Type:       constants.IpEventRateLimited,
 			Details:    err.Error(),
@@ -808,7 +809,7 @@ func (s *BackendServer) LoadRules() error {
 	rulesBatchSize := 1000
 	rulesOffset := 0
 	maxBatchesToLoad := 10
-	var allRules []database.ContentRule
+	var allRules []models.ContentRule
 
 	for i := 0; i < maxBatchesToLoad; i += 1 {
 		rules, err := s.dbClient.SearchContentRules(int64(rulesOffset), int64(rulesBatchSize), "enabled:true")
@@ -852,7 +853,7 @@ func (s *BackendServer) ProcessReqsQueue() {
 
 }
 
-func (s *BackendServer) ProcessRequest(req *database.Request, rule database.ContentRule, eCollector *extractors.ExtractorCollection) error {
+func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentRule, eCollector *extractors.ExtractorCollection) error {
 
 	s.whoisMgr.LookupIP(req.SourceIP)
 
@@ -861,10 +862,10 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 		return fmt.Errorf("error saving request: %s", err)
 	}
 
-	if rule.RequestPurpose != database.RuleRequestPurposeUnknown {
+	if rule.RequestPurpose != models.RuleRequestPurposeUnknown {
 		switch rule.RequestPurpose {
-		case database.RuleRequestPurposeAttack:
-			s.ipEventManager.AddEvent(&database.IpEvent{
+		case models.RuleRequestPurposeAttack:
+			s.ipEventManager.AddEvent(&models.IpEvent{
 				IP:         req.SourceIP,
 				Type:       constants.IpEventAttacked,
 				Details:    "rule indicated the IP attacked",
@@ -873,8 +874,8 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 				RequestID:  dm.ModelID(),
 				HoneypotIP: req.HoneypotIP,
 			})
-		case database.RuleRequestPurposeCrawl:
-			s.ipEventManager.AddEvent(&database.IpEvent{
+		case models.RuleRequestPurposeCrawl:
+			s.ipEventManager.AddEvent(&models.IpEvent{
 				IP:         req.SourceIP,
 				Type:       constants.IpEventCrawl,
 				Source:     constants.IpEventSourceRule,
@@ -883,8 +884,8 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 				RequestID:  dm.ModelID(),
 				HoneypotIP: req.HoneypotIP,
 			})
-		case database.RuleRequestPurposeRecon:
-			s.ipEventManager.AddEvent(&database.IpEvent{
+		case models.RuleRequestPurposeRecon:
+			s.ipEventManager.AddEvent(&models.IpEvent{
 				IP:         req.SourceIP,
 				Source:     constants.IpEventSourceRule,
 				SourceRef:  fmt.Sprintf("%d", rule.ID),
@@ -897,7 +898,7 @@ func (s *BackendServer) ProcessRequest(req *database.Request, rule database.Cont
 	}
 
 	downloadsScheduled := 0
-	eCollector.IterateMetadata(dm.ModelID(), func(m *database.RequestMetadata) error {
+	eCollector.IterateMetadata(dm.ModelID(), func(m *models.RequestMetadata) error {
 
 		if m.Type == constants.ExtractorTypeLink {
 			if downloadsScheduled <= maxUrlsToExtractForDownload {

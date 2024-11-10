@@ -20,29 +20,30 @@ import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"time"
 )
 
 type SessionManager interface {
 	CleanupStaleSessions(limit int64) (int, error)
-	GetCachedSession(ip string) (*database.Session, error)
-	UpdateCachedSession(ip string, session *database.Session) error
-	StartSession(ip string) (*database.Session, error)
-	EndSession(session *database.Session) error
+	GetCachedSession(ip string) (*models.Session, error)
+	UpdateCachedSession(ip string, session *models.Session) error
+	StartSession(ip string) (*models.Session, error)
+	EndSession(session *models.Session) error
 }
 
 // DatabaseSessionManager manages the sessions in the database. It does use a
 // cache to minimalize the database calls and only writes to the database upon
 // creation of a session and its expiration.
 type DatabaseSessionManager struct {
-	activeSessions *util.StringMapCache[*database.Session]
+	activeSessions *util.StringMapCache[*models.Session]
 	dbClient       database.DatabaseClient
 }
 
 // NewDatabaseSessionManager returns a new session manager.
 func NewDatabaseSessionManager(dbClient database.DatabaseClient, sessionTimeout time.Duration) *DatabaseSessionManager {
-	cache := util.NewStringMapCache[*database.Session]("session cache", sessionTimeout)
+	cache := util.NewStringMapCache[*models.Session]("session cache", sessionTimeout)
 
 	sm := &DatabaseSessionManager{
 		dbClient:       dbClient,
@@ -81,7 +82,7 @@ func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) 
 
 // EndSession ends the active session and updates the database. The caller
 // is responsible for modifying the cache.
-func (d *DatabaseSessionManager) EndSession(session *database.Session) error {
+func (d *DatabaseSessionManager) EndSession(session *models.Session) error {
 	session.Active = false
 	session.EndedAt = time.Now().UTC()
 
@@ -94,7 +95,7 @@ func (d *DatabaseSessionManager) EndSession(session *database.Session) error {
 
 // GetSessionFromCache returns the active session for the given IP. It
 // returns nil if no session is active.
-func (d *DatabaseSessionManager) GetCachedSession(ip string) (*database.Session, error) {
+func (d *DatabaseSessionManager) GetCachedSession(ip string) (*models.Session, error) {
 	sess, err := d.activeSessions.Get(ip)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching session: %w", err)
@@ -104,13 +105,13 @@ func (d *DatabaseSessionManager) GetCachedSession(ip string) (*database.Session,
 
 // UpdateSessionInCache stores the session in the cache. It also causes the
 // session timeout to be updated so that it will restart.
-func (d *DatabaseSessionManager) UpdateCachedSession(ip string, session *database.Session) error {
+func (d *DatabaseSessionManager) UpdateCachedSession(ip string, session *models.Session) error {
 	return d.activeSessions.Update(ip, session)
 }
 
 // SaveSession is a callback function for the cache and called whenever an item
 // in the cache expires. Saves the session in the database.
-func (d *DatabaseSessionManager) SaveExpiredSession(session *database.Session) bool {
+func (d *DatabaseSessionManager) SaveExpiredSession(session *models.Session) bool {
 	if err := d.EndSession(session); err != nil {
 		slog.Error("error saving session", slog.String("ip", session.IP), slog.String("error", err.Error()))
 		return false
@@ -120,8 +121,8 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *database.Session) b
 
 // StartNewSession starts a new session for the given IP and stores the session
 // in the cache.
-func (d *DatabaseSessionManager) StartSession(ip string) (*database.Session, error) {
-	newSession := database.NewSession()
+func (d *DatabaseSessionManager) StartSession(ip string) (*models.Session, error) {
+	newSession := models.NewSession()
 	newSession.Active = true
 	newSession.StartedAt = time.Now().UTC()
 	newSession.IP = ip
@@ -131,7 +132,7 @@ func (d *DatabaseSessionManager) StartSession(ip string) (*database.Session, err
 		return nil, fmt.Errorf("error inserting session: %w", err)
 	}
 
-	retSession := dm.(*database.Session)
+	retSession := dm.(*models.Session)
 	d.activeSessions.Store(ip, retSession)
 	return retSession, nil
 }

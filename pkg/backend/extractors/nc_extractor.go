@@ -19,7 +19,7 @@ package extractors
 import (
 	"fmt"
 	"log/slog"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/decoding"
 	"regexp"
 	"strconv"
@@ -47,7 +47,7 @@ func (u *NCExtractor) MetaType() string {
 	return u.metaType
 }
 
-func (u *NCExtractor) ParseRequest(req *database.Request) {
+func (u *NCExtractor) ParseRequest(req *models.Request) {
 	for _, s := range decoding.StringsFromRequest(req) {
 		u.ParseString(s)
 	}
@@ -71,10 +71,10 @@ func (u *NCExtractor) ParseString(s string) {
 	}
 }
 
-func (u *NCExtractor) GetMetadatas(requestID int64) []database.RequestMetadata {
-	mds := []database.RequestMetadata{}
+func (u *NCExtractor) GetMetadatas(requestID int64) []models.RequestMetadata {
+	mds := []models.RequestMetadata{}
 	for k, v := range u.result {
-		mds = append(mds, database.RequestMetadata{
+		mds = append(mds, models.RequestMetadata{
 			Type:      u.MetaType(),
 			Data:      fmt.Sprintf("%s %d", k, v),
 			RequestID: requestID,

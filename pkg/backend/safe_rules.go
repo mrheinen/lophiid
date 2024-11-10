@@ -14,28 +14,27 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package backend
 
 import (
 	"sync"
 
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 )
 
 type SafeRules struct {
 	mu    sync.Mutex
-	rules []database.ContentRule
+	rules []models.ContentRule
 }
 
 // GetRules returns a copy of the content rules.
-func (s *SafeRules) Get() []database.ContentRule {
+func (s *SafeRules) Get() []models.ContentRule {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return append([]database.ContentRule{}, s.rules...)
+	return append([]models.ContentRule{}, s.rules...)
 }
 
-func (s *SafeRules) Set(rules []database.ContentRule) {
+func (s *SafeRules) Set(rules []models.ContentRule) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.rules = rules

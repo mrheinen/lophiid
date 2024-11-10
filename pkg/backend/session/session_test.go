@@ -18,6 +18,7 @@ package session
 
 import (
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"testing"
 	"time"
 )
@@ -52,7 +53,7 @@ func TestSessionManagerCache(t *testing.T) {
 
 func TestSessionManagerCleansStaleSessions(t *testing.T) {
 	dbClient := database.FakeDatabaseClient{
-		SessionToReturn: database.Session{},
+		SessionToReturn: models.Session{},
 		ErrorToReturn:   nil,
 	}
 
@@ -73,7 +74,7 @@ func TestSessionManagerEndSession(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 
-	sess := database.Session{
+	sess := models.Session{
 		ID:     42,
 		Active: true,
 	}
@@ -83,7 +84,7 @@ func TestSessionManagerEndSession(t *testing.T) {
 		t.Errorf("error ending session: %s", err.Error())
 	}
 
-	dmSess := dbClient.LastDataModelSeen.(*database.Session)
+	dmSess := dbClient.LastDataModelSeen.(*models.Session)
 	if dmSess.ID != 42 {
 		t.Errorf("expected session to be ended, got %d", dmSess.ID)
 	}

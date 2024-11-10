@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package auth
 
 import (
 	"context"
 	"errors"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"strings"
 	"testing"
@@ -57,7 +57,7 @@ func TestHasValidAuthToken(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 
 			fakeDbClient := database.FakeDatabaseClient{}
-			authCache := util.NewStringMapCache[database.Honeypot]("test", time.Minute)
+			authCache := util.NewStringMapCache[models.Honeypot]("test", time.Minute)
 			auth := NewAuthenticator(&fakeDbClient, authCache)
 
 			md, err := auth.hasValidAuthToken(test.authValue)
@@ -85,13 +85,13 @@ func TestAuthenticateWorksOk(t *testing.T) {
 
 	testHoneypotID := 42
 	fakeDbClient := database.FakeDatabaseClient{
-		HoneypotToReturn: database.Honeypot{
+		HoneypotToReturn: models.Honeypot{
 			ID: int64(testHoneypotID),
 			IP: "127.0.0.1",
 		},
 		ErrorToReturn: nil,
 	}
-	authCache := util.NewStringMapCache[database.Honeypot]("test", time.Minute)
+	authCache := util.NewStringMapCache[models.Honeypot]("test", time.Minute)
 	auth := NewAuthenticator(&fakeDbClient, authCache)
 
 	testContext := context.Background()

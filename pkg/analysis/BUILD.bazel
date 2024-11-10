@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/database",
+        "//pkg/database/models",
         "//pkg/util",
         "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
@@ -21,7 +22,7 @@ go_test(
     srcs = ["ip_test.go"],
     embed = [":analysis"],
     deps = [
-        "//pkg/database",
+        "//pkg/database/models",
         "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
     ],

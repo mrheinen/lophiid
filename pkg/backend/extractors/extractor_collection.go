@@ -2,7 +2,7 @@ package extractors
 
 import (
 	"fmt"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 )
 
 // ExtractorCollection initiates a bunch of extractors, configured them and
@@ -37,7 +37,7 @@ func NewExtractorCollection(asciiOnly bool) *ExtractorCollection {
 	return &ae
 }
 
-func (a *ExtractorCollection) ParseRequest(req *database.Request) {
+func (a *ExtractorCollection) ParseRequest(req *models.Request) {
 	for _, ex := range a.extractors {
 		ex.ParseRequest(req)
 	}
@@ -45,7 +45,7 @@ func (a *ExtractorCollection) ParseRequest(req *database.Request) {
 
 // IterateMetadata iterares over the metadata and calls the callback on each
 // item. If the callback returns an error than the loop is broken.
-func (a *ExtractorCollection) IterateMetadata(reqId int64, cb func(m *database.RequestMetadata) error) error {
+func (a *ExtractorCollection) IterateMetadata(reqId int64, cb func(m *models.RequestMetadata) error) error {
 	for _, ex := range a.extractors {
 		for _, m := range ex.GetMetadatas(reqId) {
 			if err := cb(&m); err != nil {
@@ -58,8 +58,8 @@ func (a *ExtractorCollection) IterateMetadata(reqId int64, cb func(m *database.R
 }
 
 // Get all metadata from all extractors.
-func (a *ExtractorCollection) AllMetadata(reqId int64) []database.RequestMetadata {
-	ret := []database.RequestMetadata{}
+func (a *ExtractorCollection) AllMetadata(reqId int64) []models.RequestMetadata {
+	ret := []models.RequestMetadata{}
 	for _, ex := range a.extractors {
 		ret = append(ret, ex.GetMetadatas(reqId)...)
 	}

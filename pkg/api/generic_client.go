@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"net/http"
 	"net/url"
 	"strings"
@@ -70,8 +70,8 @@ func (f *FakeApiClient[T]) Import(data string) error {
 }
 
 // NewApplicationApiClient creates an application api client
-func NewApplicationApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.Application] {
-	return &GenericApiClient[database.Application]{
+func NewApplicationApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[models.Application] {
+	return &GenericApiClient[models.Application]{
 		httpClient:  httpClient,
 		apiLocation: apiLocation,
 		apiKey:      apiKey,
@@ -79,8 +79,8 @@ func NewApplicationApiClient(httpClient *http.Client, apiLocation string, apiKey
 }
 
 // NewContentApiClient creates a content api client
-func NewContentApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.Content] {
-	return &GenericApiClient[database.Content]{
+func NewContentApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[models.Content] {
+	return &GenericApiClient[models.Content]{
 		httpClient:  httpClient,
 		apiLocation: apiLocation,
 		apiKey:      apiKey,
@@ -88,8 +88,8 @@ func NewContentApiClient(httpClient *http.Client, apiLocation string, apiKey str
 }
 
 // NewContentRuleApiClient creates a content rule api client
-func NewContentRuleApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[database.ContentRule] {
-	return &GenericApiClient[database.ContentRule]{
+func NewContentRuleApiClient(httpClient *http.Client, apiLocation string, apiKey string) *GenericApiClient[models.ContentRule] {
+	return &GenericApiClient[models.ContentRule]{
 		httpClient:  httpClient,
 		apiLocation: apiLocation,
 		apiKey:      apiKey,
@@ -209,7 +209,7 @@ func (a *GenericApiClient[T]) Import(data string) error {
 	// Right now only the application API allows importing.
 	var check T
 	switch any(check).(type) {
-	case database.Application:
+	case models.Application:
 		slog.Debug("Importing application")
 	default:
 		return fmt.Errorf("api does not support import: %s", a.apiLocation)

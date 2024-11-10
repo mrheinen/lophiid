@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "models",
+    srcs = [
+        "application.go",
+        "content.go",
+        "content_rule.go",
+        "download.go",
+        "honeypot.go",
+        "ip_event.go",
+        "models.go",
+        "p0f_result.go",
+        "request.go",
+        "request_metadata.go",
+        "session.go",
+        "stored_query.go",
+        "tag.go",
+        "tag_per_query.go",
+        "tag_per_request.go",
+        "whois.go",
+        "yammablebytes.go",
+    ],
+    importpath = "lophiid/pkg/database/models",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_jackc_pgx_v5//pgtype",
+        "@in_gopkg_yaml_v3//:yaml_v3",
+    ],
+)

@@ -14,24 +14,23 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package extractors
 
 import (
 	"fmt"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"testing"
 )
 
 func TestNCExtractor(t *testing.T) {
 	for _, test := range []struct {
 		description string
-		request     database.Request
+		request     models.Request
 		tcpsToFind  map[string]int
 	}{
 		{
 			description: "finds nc command with IPv4",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads nc 1.1.1.1 8080 aa"),
 			},
@@ -39,7 +38,7 @@ func TestNCExtractor(t *testing.T) {
 		},
 		{
 			description: "finds nc command with IPv4 and flag",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads nc -4 1.1.1.1 8080 aa"),
 			},
@@ -47,7 +46,7 @@ func TestNCExtractor(t *testing.T) {
 		},
 		{
 			description: "finds nc command with IPv6",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads nc 2a00:1450:400a:801::200e 8080 aa"),
 			},
@@ -55,7 +54,7 @@ func TestNCExtractor(t *testing.T) {
 		},
 		{
 			description: "finds nc command with IPv4 and flag",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads nc -6 2a00:1450:400a:801::200e 8080 aa"),
 			},
@@ -63,7 +62,7 @@ func TestNCExtractor(t *testing.T) {
 		},
 		{
 			description: "finds nc command with hostname",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads nc example.org 8080 aa"),
 			},
@@ -71,7 +70,7 @@ func TestNCExtractor(t *testing.T) {
 		},
 		{
 			description: "finds nc command with hostname and flag",
-			request: database.Request{
+			request: models.Request{
 				Uri:  "/",
 				Body: []byte("ssadsads nc -6 example.org 8080 aa"),
 			},

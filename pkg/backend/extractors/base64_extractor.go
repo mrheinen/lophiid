@@ -18,7 +18,7 @@ package extractors
 
 import (
 	"encoding/base64"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
@@ -47,7 +47,7 @@ func (b *Base64Extractor) MetaType() string {
 	return b.metaType
 }
 
-func (b *Base64Extractor) ParseRequest(req *database.Request) {
+func (b *Base64Extractor) ParseRequest(req *models.Request) {
 	for _, v := range decoding.StringsFromRequest(req) {
 		b.FindAndAdd(v)
 	}
@@ -111,10 +111,10 @@ func (b *Base64Extractor) FindAndAdd(data string) int64 {
 	return int64(len(b.result))
 }
 
-func (u *Base64Extractor) GetMetadatas(requestID int64) []database.RequestMetadata {
-	mds := []database.RequestMetadata{}
+func (u *Base64Extractor) GetMetadatas(requestID int64) []models.RequestMetadata {
+	mds := []models.RequestMetadata{}
 	for _, v := range u.result {
-		mds = append(mds, database.RequestMetadata{
+		mds = append(mds, models.RequestMetadata{
 			Type:      u.MetaType(),
 			Data:      string(v),
 			RequestID: requestID,

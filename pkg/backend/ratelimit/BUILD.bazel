@@ -9,7 +9,7 @@ go_library(
     importpath = "lophiid/pkg/backend/ratelimit",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/database",
+        "//pkg/database/models",
         "@com_github_prometheus_client_golang//prometheus",
     ],
 )
@@ -19,7 +19,7 @@ go_test(
     srcs = ["ratelimit_test.go"],
     embed = [":ratelimit"],
     deps = [
-        "//pkg/database",
+        "//pkg/database/models",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_golang//prometheus/testutil",
     ],

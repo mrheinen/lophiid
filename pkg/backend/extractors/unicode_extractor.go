@@ -19,7 +19,7 @@ package extractors
 import (
 	"fmt"
 	"log/slog"
-	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
@@ -49,7 +49,7 @@ func (b *UnicodeExtractor) MetaType() string {
 	return b.metaType
 }
 
-func (b *UnicodeExtractor) ParseRequest(req *database.Request) {
+func (b *UnicodeExtractor) ParseRequest(req *models.Request) {
 	for _, v := range decoding.StringsFromRequest(req) {
 		b.FindAndAdd(v)
 	}
@@ -107,10 +107,10 @@ func (b *UnicodeExtractor) FindAndAdd(data string) int64 {
 	return int64(len(b.result))
 }
 
-func (u *UnicodeExtractor) GetMetadatas(requestID int64) []database.RequestMetadata {
-	mds := []database.RequestMetadata{}
+func (u *UnicodeExtractor) GetMetadatas(requestID int64) []models.RequestMetadata {
+	mds := []models.RequestMetadata{}
 	for _, v := range u.result {
-		mds = append(mds, database.RequestMetadata{
+		mds = append(mds, models.RequestMetadata{
 			Type:      u.MetaType(),
 			Data:      string(v),
 			RequestID: requestID,

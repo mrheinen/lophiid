@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package database
 
 import (
+	"lophiid/pkg/database/models"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -27,12 +27,12 @@ func TestHashRequestOk(t *testing.T) {
 
 	for _, test := range []struct {
 		description  string
-		testRequest  Request
+		testRequest  models.Request
 		expectedHash string
 	}{
 		{
 			description: "simple request hashes ok",
-			testRequest: Request{
+			testRequest: models.Request{
 				Method:  "GET",
 				Path:    "/foo",
 				Headers: pgtype.FlatArray[string]{"X-Foo: bar", "X-Bar: baz"},
@@ -42,7 +42,7 @@ func TestHashRequestOk(t *testing.T) {
 		},
 		{
 			description: "parses weird query OK",
-			testRequest: Request{
+			testRequest: models.Request{
 				Method:  "GET",
 				Path:    "/rssui/public/rssdb_dump.xml",
 				Headers: pgtype.FlatArray[string]{"X-Foo: bar", "X-Bar: baz"},
@@ -52,7 +52,7 @@ func TestHashRequestOk(t *testing.T) {
 		},
 		{
 			description: "simple request hashes ok, different query values, same hash",
-			testRequest: Request{
+			testRequest: models.Request{
 				Method:  "GET",
 				Path:    "/foo",
 				Headers: pgtype.FlatArray[string]{"X-Foo: bar", "X-Bar: baz"},
@@ -62,7 +62,7 @@ func TestHashRequestOk(t *testing.T) {
 		},
 		{
 			description: "POST request hashes ok",
-			testRequest: Request{
+			testRequest: models.Request{
 				Method:      "POST",
 				Path:        "/foo",
 				Headers:     pgtype.FlatArray[string]{"X-Foo: bar", "X-Bar: baz"},
@@ -74,7 +74,7 @@ func TestHashRequestOk(t *testing.T) {
 		},
 		{
 			description: "POST request hashes ok, different body values",
-			testRequest: Request{
+			testRequest: models.Request{
 				Method:      "POST",
 				Path:        "/foo",
 				Headers:     pgtype.FlatArray[string]{"X-Foo: bar", "X-Bar: baz"},
@@ -86,7 +86,7 @@ func TestHashRequestOk(t *testing.T) {
 		},
 		{
 			description: "POST request hashes ok, no query",
-			testRequest: Request{
+			testRequest: models.Request{
 				Method:      "POST",
 				Path:        "/foo",
 				Headers:     pgtype.FlatArray[string]{"X-Foo: bar", "X-Bar: baz"},

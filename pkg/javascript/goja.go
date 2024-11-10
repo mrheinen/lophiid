@@ -23,6 +23,7 @@ import (
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"time"
 
@@ -45,7 +46,7 @@ type Util struct {
 }
 
 type JavascriptRunner interface {
-	RunScript(script string, req database.Request, res *backend_service.HttpResponse, eCol *extractors.ExtractorCollection, validate bool) error
+	RunScript(script string, req models.Request, res *backend_service.HttpResponse, eCol *extractors.ExtractorCollection, validate bool) error
 }
 
 type GojaJavascriptRunner struct {
@@ -75,7 +76,7 @@ func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands [
 
 // The JavascriptRunner will run the given script and makes the given request
 // available as 'request' inside the javascript context.
-func (j *GojaJavascriptRunner) RunScript(script string, req database.Request, res *backend_service.HttpResponse, eCol *extractors.ExtractorCollection, validate bool) error {
+func (j *GojaJavascriptRunner) RunScript(script string, req models.Request, res *backend_service.HttpResponse, eCol *extractors.ExtractorCollection, validate bool) error {
 	startTime := time.Now()
 
 	vm := goja.New()
@@ -163,6 +164,6 @@ type FakeJavascriptRunner struct {
 	ErrorToReturn  error
 }
 
-func (f *FakeJavascriptRunner) RunScript(script string, req database.Request, res *backend_service.HttpResponse, eCol *extractors.ExtractorCollection, validate bool) error {
+func (f *FakeJavascriptRunner) RunScript(script string, req models.Request, res *backend_service.HttpResponse, eCol *extractors.ExtractorCollection, validate bool) error {
 	return f.ErrorToReturn
 }
