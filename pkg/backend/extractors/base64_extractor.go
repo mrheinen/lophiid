@@ -112,7 +112,7 @@ func (b *Base64Extractor) FindAndAdd(data string) int64 {
 }
 
 func (u *Base64Extractor) GetMetadatas(requestID int64) []models.RequestMetadata {
-	mds := []models.RequestMetadata{}
+	mds := make([]models.RequestMetadata, 0, len(u.result))
 	for _, v := range u.result {
 		mds = append(mds, models.RequestMetadata{
 			Type:      u.MetaType(),

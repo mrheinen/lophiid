@@ -57,8 +57,8 @@ import (
 )
 
 // User agent to use for downloading.
-var userAgent = "Wget/1.13.4 (linux-gnu)"
-var maxUrlsToExtractForDownload = 15
+const userAgent = "Wget/1.13.4 (linux-gnu)"
+const maxUrlsToExtractForDownload = 15
 
 type ReqQueueEntry struct {
 	req        *models.Request
@@ -806,9 +806,12 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 // LoadRules loads the content rules from the database.
 func (s *BackendServer) LoadRules() error {
 
-	rulesBatchSize := 1000
+	const (
+		rulesBatchSize   = 1000
+		maxBatchesToLoad = 10
+	)
+
 	rulesOffset := 0
-	maxBatchesToLoad := 10
 	var allRules []models.ContentRule
 
 	for i := 0; i < maxBatchesToLoad; i += 1 {

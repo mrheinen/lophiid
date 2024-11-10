@@ -98,7 +98,7 @@ func (u *URLExtractor) ParseString(s string) {
 }
 
 func (u *URLExtractor) GetMetadatas(requestID int64) []models.RequestMetadata {
-	mds := []models.RequestMetadata{}
+	mds := make([]models.RequestMetadata, 0, len(u.result))
 	for result := range u.result {
 		mds = append(mds, models.RequestMetadata{
 			Type:      u.MetaType(),

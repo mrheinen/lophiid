@@ -75,7 +75,7 @@ func (u *TCPExtractor) ParseString(s string) {
 }
 
 func (u *TCPExtractor) GetMetadatas(requestID int64) []models.RequestMetadata {
-	mds := []models.RequestMetadata{}
+	mds := make([]models.RequestMetadata, 0, len(u.result))
 	for k, v := range u.result {
 		mds = append(mds, models.RequestMetadata{
 			Type:      u.MetaType(),
