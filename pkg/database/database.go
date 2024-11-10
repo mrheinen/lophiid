@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"lophiid/pkg/database/models"
@@ -300,34 +301,55 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 	}
 
 	var ret []models.Request
+
 	uniqueIPs := make(map[string]models.P0fResult)
-	// TODO: make this concurrent
-	for _, req := range rs {
-		tags, err := d.GetTagPerRequestFullForRequest(req.ID)
-		if err != nil {
-			slog.Warn("error getting tags for request", slog.String("error", err.Error()))
-			req.Tags = []models.TagPerRequestFull{}
-		} else {
-			req.Tags = append(req.Tags, tags...)
-		}
+	uniqueIPsMu := sync.RWMutex{}
 
-		// Get the p0f result from the database. If there is none, then create a new
-		// one (empty)
-		pr, ok := uniqueIPs[req.SourceIP]
-		if !ok {
-			pr, err = d.GetP0fResultByIP(req.SourceIP, "LIMIT 1")
-			if err == nil {
-				req.P0fResult = pr
-				uniqueIPs[req.SourceIP] = pr
-			} else {
-				req.P0fResult = models.P0fResult{}
+	concurrentWorkers := int(limit/10) + 1
+	jobs := make(chan models.Request, len(rs))
+	results := make(chan models.Request, len(rs))
+
+	for w := 0; w < concurrentWorkers; w++ {
+		go func() {
+			for req := range jobs {
+				tags, err := d.GetTagPerRequestFullForRequest(req.ID)
+				if err != nil {
+					slog.Warn("error getting tags for request", slog.String("error", err.Error()))
+					req.Tags = []models.TagPerRequestFull{}
+				} else {
+					req.Tags = append(req.Tags, tags...)
+				}
+
+				uniqueIPsMu.RLock()
+				pr, ok := uniqueIPs[req.SourceIP]
+				uniqueIPsMu.RUnlock()
+
+				if !ok {
+					pr, err = d.GetP0fResultByIP(req.SourceIP, "ORDER BY last_seen_time DESC LIMIT 1")
+					if err == nil {
+						req.P0fResult = pr
+						uniqueIPsMu.Lock()
+						uniqueIPs[req.SourceIP] = pr
+						uniqueIPsMu.Unlock()
+					} else {
+						req.P0fResult = models.P0fResult{}
+					}
+				} else {
+					req.P0fResult = pr
+				}
+
+				results <- req
 			}
-		} else {
-			req.P0fResult = pr
-		}
+		}()
+	}
 
+	for _, req := range rs {
+		jobs <- req
+		req := <-results
 		ret = append(ret, req)
 	}
+
+	close(jobs)
 
 	elapsed := time.Since(start)
 	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
