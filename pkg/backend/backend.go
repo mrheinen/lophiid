@@ -238,6 +238,10 @@ func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.R
 			continue
 		}
 
+		if rule.Method != "ANY" && rule.Method != req.Method {
+			continue
+		}
+
 		matchedUri := MatchesString(rule.UriMatching, req.Uri, rule.Uri)
 		matchedBody := MatchesString(rule.BodyMatching, string(req.Body), rule.Body)
 
