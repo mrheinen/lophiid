@@ -58,16 +58,17 @@ func GetDefaultBackendConfig() Config {
 
 func TestGetMatchedRuleBasic(t *testing.T) {
 	bunchOfRules := []models.ContentRule{
-		{ID: 1, AppID: 1, Port: 80, Uri: "/42", UriMatching: "exact", ContentID: 42},
-		{ID: 3, AppID: 2, Port: 80, Uri: "/prefix", UriMatching: "prefix", ContentID: 43},
-		{ID: 4, AppID: 3, Port: 80, Uri: "contains", UriMatching: "contains", ContentID: 44},
-		{ID: 5, AppID: 4, Port: 80, Uri: "suffix", UriMatching: "suffix", ContentID: 45},
-		{ID: 6, AppID: 4, Port: 80, Uri: "^/a[8-9/]*", UriMatching: "regex", ContentID: 46},
-		{ID: 7, AppID: 7, Port: 443, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
-		{ID: 8, AppID: 8, Port: 8888, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
-		{ID: 9, AppID: 9, Port: 80, Body: "woohoo", BodyMatching: "exact", ContentID: 42},
-		{ID: 10, AppID: 9, Port: 80, Body: "/etc/passwd", BodyMatching: "contains", ContentID: 42},
-		{ID: 11, AppID: 9, Port: 80, Uri: "/pppaaattthhh", UriMatching: "exact", Body: "/etc/hosts", BodyMatching: "contains", ContentID: 42},
+		{ID: 1, AppID: 1, Method: "ANY", Port: 80, Uri: "/42", UriMatching: "exact", ContentID: 42},
+		{ID: 3, AppID: 2, Method: "GET", Port: 80, Uri: "/prefix", UriMatching: "prefix", ContentID: 43},
+		{ID: 4, AppID: 3, Method: "GET", Port: 80, Uri: "contains", UriMatching: "contains", ContentID: 44},
+		{ID: 5, AppID: 4, Method: "GET", Port: 80, Uri: "suffix", UriMatching: "suffix", ContentID: 45},
+		{ID: 6, AppID: 4, Method: "GET", Port: 80, Uri: "^/a[8-9/]*", UriMatching: "regex", ContentID: 46},
+		{ID: 7, AppID: 7, Method: "GET", Port: 443, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
+		{ID: 8, AppID: 8, Method: "GET", Port: 8888, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
+		{ID: 9, AppID: 9, Method: "GET", Port: 80, Body: "woohoo", BodyMatching: "exact", ContentID: 42},
+		{ID: 10, AppID: 9, Method: "GET", Port: 80, Body: "/etc/passwd", BodyMatching: "contains", ContentID: 42},
+		{ID: 11, AppID: 9, Method: "GET", Port: 80, Uri: "/pppaaattthhh", UriMatching: "exact", Body: "/etc/hosts", BodyMatching: "contains", ContentID: 42},
+		{ID: 12, AppID: 4, Method: "POST", Port: 80, Uri: "suffix", UriMatching: "suffix", ContentID: 77},
 	}
 
 	for _, test := range []struct {
@@ -80,8 +81,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched nothing ",
 			requestInput: models.Request{
-				Uri:  "/fddfffd",
-				Port: 80,
+				Uri:    "/fddfffd",
+				Port:   80,
+				Method: "GET",
 			},
 			contentRulesInput: bunchOfRules,
 			errorExpected:     true,
@@ -89,8 +91,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (exact) ",
 			requestInput: models.Request{
-				Uri:  "/42",
-				Port: 80,
+				Uri:    "/42",
+				Port:   80,
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 1,
@@ -99,8 +102,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (prefix) ",
 			requestInput: models.Request{
-				Uri:  "/prefixdsfsfdf",
-				Port: 80,
+				Uri:    "/prefixdsfsfdf",
+				Port:   80,
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 3,
@@ -110,8 +114,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (contains) ",
 			requestInput: models.Request{
-				Uri:  "/sddsadcontainsfdfd",
-				Port: 80,
+				Uri:    "/sddsadcontainsfdfd",
+				Port:   80,
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 4,
@@ -120,18 +125,33 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (suffix) ",
 			requestInput: models.Request{
-				Uri:  "/ttttt?aa=suffix",
-				Port: 80,
+				Uri:    "/ttttt?aa=suffix",
+				Port:   80,
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 5,
 			errorExpected:         false,
 		},
 		{
+			description: "matched one rule (suffix) ",
+			requestInput: models.Request{
+				Uri:    "/ttttt?aa=suffix",
+				Port:   80,
+				Method: "POST",
+			},
+			contentRulesInput:     bunchOfRules,
+			contentRuleIDExpected: 12,
+			errorExpected:         false,
+		},
+
+
+		{
 			description: "matched one rule (regex) ",
 			requestInput: models.Request{
-				Uri:  "/a898989898",
-				Port: 80,
+				Uri:    "/a898989898",
+				Port:   80,
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 6,
@@ -140,8 +160,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (on port) ",
 			requestInput: models.Request{
-				Uri:  "/eeee",
-				Port: 8888,
+				Uri:    "/eeee",
+				Port:   8888,
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 8,
@@ -150,9 +171,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body alone (exact) ",
 			requestInput: models.Request{
-				Uri:  "/eeee",
-				Port: 80,
-				Body: []byte("woohoo"),
+				Uri:    "/eeee",
+				Port:   80,
+				Body:   []byte("woohoo"),
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 9,
@@ -161,9 +183,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body alone (contains) ",
 			requestInput: models.Request{
-				Uri:  "/eeee",
-				Port: 80,
-				Body: []byte("asdssad /etc/passwd sdds"),
+				Uri:    "/eeee",
+				Port:   80,
+				Body:   []byte("asdssad /etc/passwd sdds"),
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 10,
@@ -172,9 +195,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body and path (contains) ",
 			requestInput: models.Request{
-				Uri:  "/pppaaattthhh",
-				Port: 80,
-				Body: []byte("asdssad /etc/hosts sdds"),
+				Uri:    "/pppaaattthhh",
+				Port:   80,
+				Body:   []byte("asdssad /etc/hosts sdds"),
+				Method: "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 11,
@@ -217,9 +241,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 
 func TestGetMatchedRuleSameApp(t *testing.T) {
 	bunchOfRules := []models.ContentRule{
-		{ID: 1, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-		{ID: 2, AppID: 1, Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
-		{ID: 3, AppID: 2, Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
+		{ID: 1, AppID: 1, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+		{ID: 2, AppID: 1, Method: "GET", Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
+		{ID: 3, AppID: 2, Method: "GET", Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
 	}
 
 	fdbc := &database.FakeDatabaseClient{}
@@ -244,6 +268,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &models.Request{
 		Uri:  "/aa",
+		Method: "GET",
 		Port: 80,
 	})
 
@@ -256,6 +281,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	// served.
 	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &models.Request{
 		Uri:  "/bb",
+		Method: "GET",
 		Port: 80,
 	})
 
@@ -268,6 +294,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	// served before.
 	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &models.Request{
 		Uri:  "/bb",
+		Method: "GET",
 		Port: 80,
 	})
 
@@ -516,9 +543,9 @@ func TestHandleProbe(t *testing.T) {
 			},
 		},
 		ContentRulesToReturn: []models.ContentRule{
-			{ID: 1, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-			{ID: 2, AppID: 1, Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-			{ID: 3, AppID: 1, Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
+			{ID: 1, AppID: 1, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			{ID: 2, AppID: 1, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			{ID: 3, AppID: 1, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
 		},
 	}
 
@@ -571,6 +598,10 @@ func TestHandleProbe(t *testing.T) {
 	res, err := b.HandleProbe(ctx, &probeReq)
 	if err != nil {
 		t.Errorf("got error: %s", err)
+	}
+
+	if res == nil {
+		t.Errorf("got nil result")
 	}
 
 	if !bytes.Equal(res.Response.Body, fdbc.ContentsToReturn[42].Data) {

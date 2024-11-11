@@ -52,15 +52,15 @@ type HttpResult struct {
 
 // For testing
 type HttpContentResult struct {
-	Status  string             `json:"status"`
-	Message string             `json:"message"`
+	Status  string           `json:"status"`
+	Message string           `json:"message"`
 	Data    []models.Content `json:"data"`
 }
 
 // For testing
 type HttpContentRuleResult struct {
-	Status  string                 `json:"status"`
-	Message string                 `json:"message"`
+	Status  string               `json:"status"`
+	Message string               `json:"message"`
 	Data    []models.ContentRule `json:"data"`
 }
 
@@ -1156,26 +1156,22 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Request) {
 	modelName := strings.ToLower(req.URL.Query().Get("model"))
 	var retval map[string]database.FieldDocEntry
-	switch modelName {
-	case "content":
-		retval = database.GetDatamodelDocumentationMap(models.Content{})
-	case "request":
-		retval = database.GetDatamodelDocumentationMap(models.Request{})
-	case "contentrule":
-		retval = database.GetDatamodelDocumentationMap(models.ContentRule{})
-	case "application":
-		retval = database.GetDatamodelDocumentationMap(models.Application{})
-	case "honeypot":
-		retval = database.GetDatamodelDocumentationMap(models.Honeypot{})
-	case "download":
-		retval = database.GetDatamodelDocumentationMap(models.Download{})
-	case "tag":
-		retval = database.GetDatamodelDocumentationMap(models.Tag{})
-	case "storedquery":
-		retval = database.GetDatamodelDocumentationMap(models.StoredQuery{})
-	case "ipevent":
-		retval = database.GetDatamodelDocumentationMap(models.IpEvent{})
-	default:
+
+	modelMap := map[string]interface{}{
+		"content":     models.Content{},
+		"request":     models.Request{},
+		"contentrule": models.ContentRule{},
+		"application": models.Application{},
+		"honeypot":    models.Honeypot{},
+		"download":    models.Download{},
+		"tag":         models.Tag{},
+		"storedquery": models.StoredQuery{},
+		"ipevent":     models.IpEvent{},
+	}
+
+	if model, ok := modelMap[modelName]; ok {
+		retval = database.GetDatamodelDocumentationMap(model)
+	} else {
 		a.sendStatus(w, "Unknown model", ResultError, nil)
 	}
 
