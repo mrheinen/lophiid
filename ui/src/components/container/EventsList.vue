@@ -1,71 +1,107 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="ipevent"></DataSearchBar>
 
-      <table class="table is-hoverable" v-if="events.length > 0">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>First Seen</th>
-            <th>Type</th>
-            <th>IP</th>
-            <th>Request ID</th>
-            <th>Domain</th>
-            <th>Details</th>
-            <th>Source</th>
-            <th>Source Ref</th>
-            <th>Count</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="evt in events"
-            @click="setSelected(evt.id)"
-            :key="evt.id"
-            :class="isSelectedId == evt.id ? 'is-selected' : ''"
-          >
-            <td>{{ evt.id }}</td>
-            <td>{{ evt.parsed.first_seen_at }}</td>
-            <td>{{ evt.type }}</td>
-            <td><a :href="config.eventLink + '?q=ip:' + evt.ip">{{ evt.ip }}</a></td>
-            <td><a :href="config.requestsLink + '?q=id:' + evt.request_id">{{ evt.request_id }}</a></td>
-            <td>{{ evt.domain }}</td>
-            <td>{{ evt.details }}</td>
-            <td>{{ evt.source }}</td>
-            <td v-if="evt.source == 'RULE'"><a :href="config.rulesLink + '?q=id:' + evt.source_ref">{{ evt.source_ref }}</a></td>
-            <td v-else-if="evt.source == 'VT'"><a :href="config.downloadsLink + '?q=vt_file_analysis_id:' + evt.source_ref">analysis</a></td>
-            <td v-else>{{ evt.source_ref }}</td>
-            <td>{{ evt.count }}</td>
-            <td>
-              <a :href="'/requests?q=source_ip:' + evt.ip">
+
+      <div class="card">
+        <DataTable
+          :value="events"
+          tableStyle="min-width: 50rem"
+          :metaKeySelection="true"
+          dataKey="id"
+          showGridlines
+          compareSelectionBy="equals"
+          v-model:selection="selectedEvent"
+          selectionMode="single"
+        >
+          <template #header>
+            <DataSearchBar
+              ref="searchBar"
+              :isloading="isLoading"
+              @search="performNewSearch"
+              modelname="ipevent"
+            ></DataSearchBar>
+          </template>
+          <template #empty>No data matched. </template>
+          <template #loading>Loading request data. Please wait. </template>
+
+          <DataColumn field="id" header="ID" style="width: 4%">
+          </DataColumn>
+          <DataColumn field="parsed.first_seen_at" header="First Seen" style="width: 12%">
+          </DataColumn>
+          <DataColumn field="type" header="Type" style="width: 5%">
+          </DataColumn>
+
+          <DataColumn header="IP" style="width: 10%">
+            <template #body="slotProps">
+              <a :href="config.eventLink + '?q=ip:' + slotProps.data.ip">{{ slotProps.data.ip }}</a>
+            </template>
+          </DataColumn>
+          <DataColumn header="Req ID" style="width: 5%">
+            <template #body="slotProps">
+              <a :href="config.requestsLink + '?q=id:' + slotProps.data.request_id">{{ slotProps.data.request_id }}</a>
+            </template>
+          </DataColumn>
+          <DataColumn field="details" header="Details" >
+          </DataColumn>
+          <DataColumn field="source" header="Source" style="width: 5%">
+          </DataColumn>
+          <DataColumn header="Source ref" style="width: 7%">
+            <template #body="slotProps">
+              <span v-if="slotProps.data.source == 'RULE'">
+                <a :href="config.rulesLink + '?q=id:' + slotProps.data.source_ref">{{ slotProps.data.source_ref }}</a>
+              </span>
+              <span v-else-if="slotProps.data.source == 'VT'">
+                <a :href="config.downloadsLink + '?q=vt_file_analysis_id:' + slotProps.data.source_ref">analysis</a>
+              </span>
+              <span v-else>{{ slotProps.data.source_ref }}</span>
+            </template>
+          </DataColumn>
+          <DataColumn field="count" header="Count" style="width: 4%">
+          </DataColumn>
+          <DataColumn header="Actions" style="width: 5%">
+            <template #body="slotProps">
+              <a :href="config.requestsLink + '?q=source_ip:' + slotProps.data.ip">
                 <i
                   title="View requests from this IP"
                   class="pi pi-search"
                 ></i>
               </a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </template>
+          </DataColumn>
 
-      <i
-        v-if="offset > 0"
-        @click="loadPrev()"
-        class="pi pi-arrow-left pi-style"
-      ></i>
-      <i
-        v-if="events.length == limit"
-        @click="loadNext()"
-        class="pi pi-arrow-right pi-style pi-style-right"
-      ></i>
+          <template #footer>
+            <div class="flex justify-between items-center">
+            <div>
+            <i
+              v-if="offset > 0"
+              @click="loadPrev()"
+              class="pi pi-arrow-left pi-style"
+            ></i>
+            <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+            </div>
+            <div>
+
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
+            <i
+              v-if="events.length == limit"
+              @click="loadNext()"
+              class="pi pi-arrow-right pi-style pi-style-right"
+            ></i>
+            </div>
+            </div>
+          </template>
+        </DataTable>
+      </div>
     </div>
-    <div
-      class="column mright"
-      @focusin="keyboardDisabled = true"
-      @focusout="keyboardDisabled = false"
-    >
+
+
+    <div class="column mright" >
       <events-form
         @update-query="onUpdateEvent"
         @require-auth="$emit('require-auth')"
@@ -94,9 +130,11 @@ export default {
       isSelectedId: 0,
       query: null,
       isLoading: false,
+      selectedEvent: null,
       limit: 24,
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       offset: 0,
-      keyboardDisabled: false,
       base: {
         id: 0,
       },
@@ -146,41 +184,13 @@ export default {
 
       return link;
     },
-    setNextSelectedElement() {
-      for (var i = 0; i < this.events.length; i++) {
-        if (this.events[i].id == this.isSelectedId) {
-          if (i + 1 < this.events.length) {
-            this.setSelected(this.events[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.events.length - 1; i >= 0; i--) {
-        if (this.events[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelected(this.events[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getEventLink());
       this.loadEvents(true, function () {});
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getEventLink());
         this.loadEvents(false, function () {});
       }
     },
@@ -253,6 +263,14 @@ export default {
 
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
+    }
+
+    this.selectedLimit = this.limit;
+  },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadEvents(true, function () {});
     }
   },
   mounted() {

@@ -1,8 +1,8 @@
 <template>
   <div>
     <input type="hidden" name="id" v-model="localHoneypot.id" />
-    <div class="card">
-    <FieldSet legend="Settings" :toggleable="true">
+    <div>
+    <FieldSet legend="Settings" :toggleable="false">
       <div>
         <label class="label">IP</label>
         <InputText
@@ -36,13 +36,13 @@
       </div>
 
 
-      <div class="field">
+      <div v-if="localPorts" class="field">
         <label class="label">HTTP Ports</label>
 
         {{ localPorts }}
       </div>
 
-      <div class="field">
+      <div v-if="localSSLPorts" class="field">
         <label class="label">HTTPS Ports</label>
 
         {{ localSSLPorts }}
@@ -186,8 +186,12 @@ export default {
     honeypot() {
       this.localHoneypot = Object.assign({}, this.honeypot);
 
-      this.localPorts = this.localHoneypot.ports.join(", ");
-      this.localSSLPorts = this.localHoneypot.ssl_ports.join(", ");
+      if (this.localHoneypot.ports) {
+        this.localPorts = this.localHoneypot.ports.join(", ");
+      }
+      if (this.localHoneypot.ssl_ports) {
+        this.localSSLPorts = this.localHoneypot.ssl_ports.join(", ");
+      }
     },
   },
   created() {

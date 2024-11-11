@@ -1,8 +1,7 @@
 <template>
   <div>
     <input type="hidden" name="id" v-model="localDownload.id" />
-    <div class="card">
-      <FieldSet legend="Download details" :toggleable="true">
+      <FieldSet legend="Download details" :toggleable="false">
         <table>
           <tbody>
             <tr>
@@ -50,8 +49,8 @@
       </FieldSet>
     </div>
     <br />
-    <div v-if="localDownload.vt_file_analysis_submitted" class="card">
-      <FieldSet legend="VirusTotal results" :toggleable="true">
+    <div v-if="localDownload.vt_file_analysis_submitted">
+      <FieldSet legend="VirusTotal results" :toggleable="false">
         <div>
           <label class="label">Virus total results</label>
           <table class="slightlyright">
@@ -102,33 +101,44 @@
     </div>
 
     <br />
-    <RawHttpCard
-      v-if="localDownload.raw_http_response"
-      label="HTTP response headers"
-      :data="localDownload.raw_http_response"
-    ></RawHttpCard>
-    <br />
-    <div v-if="localWhois" class="card">
-      <FieldSet legend="WHOIS record" :toggleable="true">
-        <table v-if="localWhois.country">
-          <tbody>
-            <tr>
-              <th>Country</th>
-              <td>
-                {{ localWhois.country }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <br />
 
-        <pre v-if="localWhois.data" class="whois">{{ localWhois.data }}</pre>
-        <pre v-if="localWhois.rdap_string" class="whois">{{
-          localWhois.rdap_string
-        }}</pre>
-      </FieldSet>
-    </div>
-  </div>
+    <FieldSet legend="Context" :toggleable="false">
+    <PrimeTabs value="0">
+    <TabList>
+        <PrimeTab value="0">HTTP Request</PrimeTab>
+        <PrimeTab value="1" v-if="localWhois">Whois</PrimeTab>
+    </TabList>
+        <TabPanels>
+        <TabPanel value="0">
+          <RawHttpCard
+            v-if="localDownload.raw_http_response"
+            label="HTTP response headers"
+            :data="localDownload.raw_http_response"
+          ></RawHttpCard>
+        </TabPanel>
+        <TabPanel value="1" v-if="localWhois">
+          <table v-if="localWhois.country">
+            <tbody>
+              <tr>
+                <th>Country</th>
+                <td>
+                  {{ localWhois.country }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <br />
+
+          <pre v-if="localWhois.data" class="whois">{{ localWhois.data }}</pre>
+          <pre v-if="localWhois.rdap_string" class="whois">{{
+            localWhois.rdap_string
+          }}</pre>
+        </TabPanel>
+    </TabPanels>
+    </PrimeTabs>
+    </FieldSet>
+
+
 </template>
 
 <script>

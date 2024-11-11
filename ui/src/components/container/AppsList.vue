@@ -29,18 +29,16 @@
           </DataColumn>
           <DataColumn field="name" header="Name" style="width: 15%">
           </DataColumn>
-          <DataColumn field="vendor" header="vendor" style="width: 15%">
+          <DataColumn field="vendor" header="Vendor" style="width: 15%">
           </DataColumn>
           <DataColumn field="version" header="Version" style="width: 15%">
           </DataColumn>
-
-
           <DataColumn field="os" header="OS" style="width: 15%">
           </DataColumn>
           <DataColumn header="Actions" style="width: 5%">
             <template #body="slotProps">
               <a
-                :href="'/rules?app_id:' + slotProps.data.id"
+                :href="config.rulesLink + '?app_id:' + slotProps.data.id"
               >
                 <i
                   title="Create a rule for this"
@@ -78,11 +76,7 @@
         </DataTable>
       </div>
     </div>
-    <div
-      class="column mright"
-      @focusin="keyboardDisabled = true"
-      @focusout="keyboardDisabled = false"
-    >
+    <div class="column mright" >
       <app-form
         @update-app="onUpdateApps"
         @delete-app="onDeleteApp"
@@ -114,7 +108,6 @@ export default {
       offset: 0,
       selectedLimit: 21,
       limitOptions: [10, 20, 30, 40, 50],
-      keyboardDisabled: false,
       isLoading: false,
       baseApp: {
         id: 0,
@@ -169,32 +162,6 @@ export default {
       }
 
       return link;
-    },
-    setNextSelectedElement() {
-      for (var i = 0; i < this.apps.length; i++) {
-        if (this.apps[i].id == this.isSelectedId) {
-          if (i + 1 < this.apps.length) {
-            this.setSelectedApp(this.apps[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.apps.length - 1; i >= 0; i--) {
-        if (this.apps[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelectedApp(this.apps[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
     },
     loadNext() {
       this.offset += this.limit;
@@ -266,6 +233,12 @@ export default {
   beforeCreate() {
     this.selectedApp = this.baseApp;
   },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadApps(true, function () {});
+    }
+  },
   created() {
     if (this.$route.params.limit) {
       this.limit = parseInt(this.$route.params.limit);
@@ -275,6 +248,7 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
+    this.selectedLimit = this.limit;
   },
   mounted() {
     if (this.$route.query.q) {
@@ -282,22 +256,6 @@ export default {
     } else {
       this.loadApps(true, function () {});
     }
-
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrev();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNext();
-        }
-      }
-    });
   },
 };
 </script>

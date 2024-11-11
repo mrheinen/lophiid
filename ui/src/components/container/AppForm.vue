@@ -7,8 +7,8 @@
 
   <div>
     <input type="hidden" name="id" v-model="localApp.id" />
-    <div class="card">
-    <FieldSet legend="Settings" :toggleable="true">
+    <div>
+    <FieldSet legend="Settings" :toggleable="false">
       <div>
         <label class="label">Name</label>
         <InputText

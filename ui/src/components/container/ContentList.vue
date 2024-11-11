@@ -43,7 +43,7 @@
           <DataColumn header="Actions" style="width: 5%">
             <template #body="slotProps">
               <a
-                :href="'/rules?content_id:' + slotProps.data.id"
+                :href="config.rulesLink + '?content_id:' + slotProps.data.id"
               >
                 <i
                   title="Create a rule for this"
@@ -51,7 +51,7 @@
                 ></i>
               </a>
               &nbsp;
-               <a :href="'/requests?q=content_id:' + slotProps.data.id">
+               <a :href="config.requestsLink + '?q=content_id:' + slotProps.data.id">
                   <i
                     title="View requests that got this content"
                     class="pi pi-search"
@@ -90,7 +90,7 @@
         </DataTable>
       </div>
     </div>
-    <div class="column restrict-width mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
+    <div class="column restrict-width mright">
       <content-form
         @update-content="onUpdateContent"
         @deleted-content="onDeleteContent"
@@ -124,7 +124,6 @@ export default {
       offset: 0,
       query: null,
       isLoading: false,
-      keyboardDisabled: false,
       baseContent: {
         id: 0,
         name: "",
@@ -168,33 +167,6 @@ export default {
       }
 
       return link;
-    },
-
-    setNextSelectedElement() {
-      for (var i = 0; i < this.contents.length; i++) {
-        if (this.contents[i].id == this.isSelectedId) {
-          if (i + 1 < this.contents.length) {
-            this.setSelectedContent(this.contents[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.contents.length - 1; i >= 0; i--) {
-        if (this.contents[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelectedContent(this.contents[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
     },
     loadNext() {
       this.offset += this.limit;
@@ -296,6 +268,12 @@ export default {
 
     this.selectedLimit = this.limit;
   },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadContents(true, function(){})
+    }
+  },
   mounted() {
 
     if (this.$route.query.q) {
@@ -303,22 +281,6 @@ export default {
       this.$refs.searchBar.setQuery(this.$route.query.q);
     }
     this.loadContents(true, function(){})
-
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrev();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNext();
-        }
-      }
-    });
   },
 };
 </script>

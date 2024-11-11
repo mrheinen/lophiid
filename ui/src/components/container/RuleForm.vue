@@ -1,8 +1,8 @@
 <template>
   <div>
     <input type="hidden" name="id" v-model="localRule.id" />
-    <div class="card">
-      <FieldSet legend="Settings" :toggleable="true">
+    <div>
+      <FieldSet legend="Settings" :toggleable="false">
         <div class="columns">
           <div class="column">
             <div>
@@ -74,7 +74,7 @@
                 class="pi pi-plus-circle pointer"
               ></i>
               &nbsp;
-              <a :href="'/content?q=id:' + localRule.content_id">
+              <a :href="config.contentLink + '?q=id:' + localRule.content_id">
                 <i class="pi pi-external-link pointer"></i>
               </a>
             </div>
