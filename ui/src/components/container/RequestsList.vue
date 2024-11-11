@@ -359,7 +359,7 @@ export default {
               var maxUriLength = 75;
               if (newReq.uri.length > maxUriLength) {
                 newReq.parsed.uri =
-                  newReq.uri.substring(0, maxUriLength) + "...";
+                  newReq.uri.slice(0, maxUriLength) + "...";
               } else {
                 newReq.parsed.uri = newReq.uri;
               }

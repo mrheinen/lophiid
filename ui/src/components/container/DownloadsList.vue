@@ -266,12 +266,12 @@ export default {
                 );
 
                 newDownload.parsed.sha256sum =
-                  newDownload.sha256sum.substr(0, 16) + "...";
+                  newDownload.sha256sum.slice(0, 16) + "...";
 
 
                 if (newDownload.original_url.length > 70) {
                   newDownload.parsed.original_url =
-                    newDownload.original_url.substr(0, 70) + "...";
+                    newDownload.original_url.slice(0, 70) + "...";
                 } else {
                   newDownload.parsed.original_url = newDownload.original_url;
                 }
