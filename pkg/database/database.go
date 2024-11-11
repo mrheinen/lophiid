@@ -327,17 +327,14 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 				if !ok {
 					pr, err = d.GetP0fResultByIP(req.SourceIP, "ORDER BY last_seen_time DESC LIMIT 1")
 					if err == nil {
-						req.P0fResult = pr
 						uniqueIPsMu.Lock()
 						uniqueIPs[req.SourceIP] = pr
 						uniqueIPsMu.Unlock()
 					} else {
-						req.P0fResult = models.P0fResult{}
+						pr = models.P0fResult{}
 					}
-				} else {
-					req.P0fResult = pr
 				}
-
+				req.P0fResult = pr
 				results <- req
 			}
 		}()
@@ -350,6 +347,7 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 	}
 
 	close(jobs)
+	close(results)
 
 	elapsed := time.Since(start)
 	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
