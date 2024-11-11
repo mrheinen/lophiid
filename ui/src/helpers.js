@@ -31,11 +31,6 @@ export function truncateString(str, maxlen) {
   return str;
 }
 
-export function dateToString(inDate) {
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleString();
-}
-
 // Decodes unicode strings in the given encodesString.
 export function decodeUnicodeString(encodedString) {
   const unicodeRegex = /\\u([0-9a-fA-F]{4})/g;
@@ -44,4 +39,17 @@ export function decodeUnicodeString(encodedString) {
   });
 
   return decodedString;
+}
+
+export function dateToString(inDate) {
+  var options = {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  };
+  const nd = new Date(Date.parse(inDate));
+  return nd.toLocaleDateString("en-US", options);
 }

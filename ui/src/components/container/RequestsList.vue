@@ -185,18 +185,7 @@
 </template>
 
 <script>
-function dateToString(inDate) {
-  var options = {
-    year: "2-digit",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  };
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleDateString("en-US", options);
-}
+import { dateToString } from './../../helpers.js';
 import RequestView from "./RequestView.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
