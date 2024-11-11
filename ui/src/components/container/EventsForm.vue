@@ -1,8 +1,8 @@
 <template>
   <div>
     <input type="hidden" name="id" v-model="localEvent.id" />
-    <div class="card">
-      <FieldSet legend="Event details" :toggleable="true">
+    <div>
+      <FieldSet legend="Event details" :toggleable="false">
         <table>
           <tbody>
             <tr>

@@ -22,66 +22,15 @@
           </template>
           <template #empty>No data matched. </template>
           <template #loading>Loading request data. Please wait. </template>
-          <DataColumn
-            field="parsed.received_at"
-            header="Date"
-            style="width: 15%"
+          <DataColumn field="parsed.received_at" header="Date" style="width: 15%"
           >
-            <template #loading>
-              <div
-                class="flex items-center"
-                :style="{
-                  height: '17px',
-                  'flex-grow': '1',
-                  overflow: 'hidden',
-                }"
-              >
-                <DataSkeleton width="60%" height="1rem" />
-              </div>
-            </template>
           </DataColumn>
 
           <DataColumn field="honeypot_ip" header="Honeypot" style="width: 10%">
-            <template #loading>
-              <div
-                class="flex items-center"
-                :style="{
-                  height: '17px',
-                  'flex-grow': '1',
-                  overflow: 'hidden',
-                }"
-              >
-                <DataSkeleton width="60%" height="1rem" />
-              </div>
-            </template>
           </DataColumn>
           <DataColumn field="method" header="Method" style="width: 5%">
-            <template #loading>
-              <div
-                class="flex items-center"
-                :style="{
-                  height: '17px',
-                  'flex-grow': '1',
-                  overflow: 'hidden',
-                }"
-              >
-                <DataSkeleton width="60%" height="1rem" />
-              </div>
-            </template>
           </DataColumn>
-          <DataColumn field="parsed.uri" header="URI" style="width: 40%">
-            <template #loading>
-              <div
-                class="flex items-center"
-                :style="{
-                  height: '17px',
-                  'flex-grow': '1',
-                  overflow: 'hidden',
-                }"
-              >
-                <DataSkeleton width="60%" height="1rem" />
-              </div>
-            </template>
+          <DataColumn field="parsed.uri" header="URI">
           </DataColumn>
           <DataColumn field="source_ip" header="Source" style="width: 10%">
             <template #body="slotProps">
@@ -95,24 +44,12 @@
                 {{ slotProps.data.source_ip }}</a
               >
             </template>
-            <template #loading>
-              <div
-                class="flex items-center"
-                :style="{
-                  height: '17px',
-                  'flex-grow': '1',
-                  overflow: 'hidden',
-                }"
-              >
-                <DataSkeleton width="60%" height="1rem" />
-              </div>
-            </template>
           </DataColumn>
           <DataColumn header="Actions" style="width: 5%">
             <template #body="slotProps">
               <a
                 :href="
-                  '/rules?uri=' +
+                  config.rulesLink + '?uri=' +
                   encodeURIComponent(slotProps.data.uri) +
                   '&method=' +
                   slotProps.data.method
@@ -130,18 +67,6 @@
                 title="Star this request"
                 class="pi pi-star pointer"
               ></i>
-            </template>
-            <template #loading>
-              <div
-                class="flex items-center"
-                :style="{
-                  height: '17px',
-                  'flex-grow': '1',
-                  overflow: 'hidden',
-                }"
-              >
-                <DataSkeleton width="60%" height="1rem" />
-              </div>
             </template>
           </DataColumn>
           <template #footer>
@@ -185,18 +110,7 @@
 </template>
 
 <script>
-function dateToString(inDate) {
-  var options = {
-    year: "2-digit",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  };
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleDateString("en-US", options);
-}
+import { dateToString } from './../../helpers.js';
 import RequestView from "./RequestView.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
@@ -445,7 +359,7 @@ export default {
               var maxUriLength = 75;
               if (newReq.uri.length > maxUriLength) {
                 newReq.parsed.uri =
-                  newReq.uri.substring(0, maxUriLength) + "...";
+                  newReq.uri.slice(0, maxUriLength) + "...";
               } else {
                 newReq.parsed.uri = newReq.uri;
               }
@@ -534,7 +448,7 @@ table {
   padding-left: 13px !important;
   padding-right: 13px !important;
 }
-tr {
+#p-datatable-table tr {
   font-size: 12px;
 }
 span.search-info-icon {

@@ -1,59 +1,82 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" @search="performNewSearch" :isloading="isLoading" modelname="application"></DataSearchBar>
 
-      <table class="table is-hoverable" v-if="apps.length > 0">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Version</th>
-            <th>Vendor</th>
-            <th>OS</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="app in apps"
-            @click="setSelectedApp(app.id)"
-            :key="app.id"
-            :class="isSelectedId == app.id ? 'is-selected' : ''"
-          >
-            <td>{{ app.id }}</td>
-            <td>{{ app.name }}</td>
-            <td>{{ app.version }}</td>
-            <td>{{ app.vendor }}</td>
-            <td>{{ app.os }}</td>
-            <td>
-              <a :href="'/rules?q=app_id:' + app.id">
+
+      <div class="card">
+        <DataTable
+          :value="apps"
+          tableStyle="min-width: 50rem"
+          :metaKeySelection="true"
+          dataKey="id"
+          showGridlines
+          compareSelectionBy="equals"
+          v-model:selection="selectedApp"
+          selectionMode="single"
+        >
+          <template #header>
+            <DataSearchBar
+              ref="searchBar"
+              :isloading="isLoading"
+              @search="performNewSearch"
+              modelname="application"
+            ></DataSearchBar>
+          </template>
+          <template #empty>No data matched. </template>
+          <template #loading>Loading request data. Please wait. </template>
+
+          <DataColumn field="id" header="ID" style="width: 4%">
+          </DataColumn>
+          <DataColumn field="name" header="Name" style="width: 15%">
+          </DataColumn>
+          <DataColumn field="vendor" header="Vendor" style="width: 15%">
+          </DataColumn>
+          <DataColumn field="version" header="Version" style="width: 15%">
+          </DataColumn>
+          <DataColumn field="os" header="OS" style="width: 15%">
+          </DataColumn>
+          <DataColumn header="Actions" style="width: 5%">
+            <template #body="slotProps">
+              <a
+                :href="config.rulesLink + '?app_id:' + slotProps.data.id"
+              >
                 <i
-                  title="View rules for this app"
+                  title="Create a rule for this"
                   class="pi pi-search"
                 ></i>
               </a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </template>
+          </DataColumn>
+          <template #footer>
+            <div class="flex justify-between items-center">
+            <div>
+            <i
+              v-if="offset > 0"
+              @click="loadPrev()"
+              class="pi pi-arrow-left pi-style"
+            ></i>
+            <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+            </div>
+            <div>
 
-      <i
-        v-if="offset > 0"
-        @click="loadPrev()"
-        class="pi pi-arrow-left pi-style"
-      ></i>
-      <i
-        v-if="apps.length == limit"
-        @click="loadNext()"
-        class="pi pi-arrow-right pi-style pi-style-right"
-      ></i>
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
+            <i
+              v-if="apps.length == limit"
+              @click="loadNext()"
+              class="pi pi-arrow-right pi-style pi-style-right"
+            ></i>
+            </div>
+            </div>
+          </template>
+        </DataTable>
+      </div>
     </div>
-    <div
-      class="column mright"
-      @focusin="keyboardDisabled = true"
-      @focusout="keyboardDisabled = false"
-    >
+    <div class="column mright" >
       <app-form
         @update-app="onUpdateApps"
         @delete-app="onDeleteApp"
@@ -83,7 +106,8 @@ export default {
       query: null,
       limit: 24,
       offset: 0,
-      keyboardDisabled: false,
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       isLoading: false,
       baseApp: {
         id: 0,
@@ -138,32 +162,6 @@ export default {
       }
 
       return link;
-    },
-    setNextSelectedElement() {
-      for (var i = 0; i < this.apps.length; i++) {
-        if (this.apps[i].id == this.isSelectedId) {
-          if (i + 1 < this.apps.length) {
-            this.setSelectedApp(this.apps[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.apps.length - 1; i >= 0; i--) {
-        if (this.apps[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelectedApp(this.apps[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
     },
     loadNext() {
       this.offset += this.limit;
@@ -235,6 +233,12 @@ export default {
   beforeCreate() {
     this.selectedApp = this.baseApp;
   },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadApps(true, function () {});
+    }
+  },
   created() {
     if (this.$route.params.limit) {
       this.limit = parseInt(this.$route.params.limit);
@@ -244,6 +248,7 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
+    this.selectedLimit = this.limit;
   },
   mounted() {
     if (this.$route.query.q) {
@@ -251,22 +256,6 @@ export default {
     } else {
       this.loadApps(true, function () {});
     }
-
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrev();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNext();
-        }
-      }
-    });
   },
 };
 </script>

@@ -1,7 +1,7 @@
 <template>
-  <div class="card">
+  <div>
     <input type="hidden" name="id" v-model="localContent.id" />
-    <FieldSet legend="Required fields" :toggleable="true">
+    <FieldSet legend="Required fields" :toggleable="false">
       <div>
         <label class="label">Title</label>
         <InputText

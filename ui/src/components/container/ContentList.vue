@@ -1,66 +1,96 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px;">
-      <DataSearchBar ref="searchBar" :isLoading="isLoading" @search="performNewSearch" modelname="content"></DataSearchBar>
 
-      <table class="table is-hoverable" v-if="contents.length > 0">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Description</th>
-            <th>Content type</th>
-            <th>Server</th>
-            <th>Date updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="content in contents"
-            @click="setSelectedContent(content.id)"
-            :key="content.id"
-            :class="isSelectedId == content.id ? 'is-selected' : ''"
-          >
-            <td>{{ content.id }}</td>
-            <td><span v-if="content.script.length > 0" class="pi
-                pi-play"></span>{{ content.parsed.name }} <b class="default" v-if="content.is_default">default</b>
+      <div class="card">
+        <DataTable
+          :value="contents"
+          tableStyle="min-width: 50rem"
+          :metaKeySelection="true"
+          dataKey="id"
+          showGridlines
+          compareSelectionBy="equals"
+          v-model:selection="selectedContent"
+          selectionMode="single"
+        >
+          <template #header>
+            <DataSearchBar
+              ref="searchBar"
+              :isloading="isLoading"
+              @search="performNewSearch"
+              modelname="content"
+            ></DataSearchBar>
+          </template>
+          <template #empty>No data matched. </template>
+          <template #loading>Loading request data. Please wait. </template>
 
-            </td>
-            <td>{{ content.content_type }}</td>
-            <td>{{ content.server }}</td>
-            <td>{{ content.parsed.updated_at }}</td>
-            <td>
-              <a :href="'/rules?content_id=' + content.id">
+          <DataColumn field="id" header="ID" style="width: 4%">
+          </DataColumn>
+          <DataColumn field="parsed.name" header="Description" style="width: 35%">
+            <template #body="slotProps">
+              <span v-if="slotProps.data.script.length > 0" class="pi=play">
+              </span>
+              {{ slotProps.data.parsed.name }}
+            </template>
+          </DataColumn>
+          <DataColumn field="content_type" header="Content Type" style="width: 25%">
+          </DataColumn>
+          <DataColumn field="server" header="Server" style="width: 20%">
+          </DataColumn>
+          <DataColumn field="parsed.updated_at" header="Last update" style="width: 25%">
+          </DataColumn>
+
+          <DataColumn header="Actions" style="width: 5%">
+            <template #body="slotProps">
+              <a
+                :href="config.rulesLink + '?content_id:' + slotProps.data.id"
+              >
                 <i
                   title="Create a rule for this"
                   class="pi pi-arrow-circle-right"
                 ></i>
               </a>
               &nbsp;
-              <a :href="'/requests?q=content_id:' + content.id">
+               <a :href="config.requestsLink + '?q=content_id:' + slotProps.data.id">
                   <i
                     title="View requests that got this content"
                     class="pi pi-search"
                   ></i>
                 </a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </template>
+          </DataColumn>
+          <template #footer>
 
-      <i
-        v-if="offset > 0"
-        @click="loadPrev()"
-        class="pi pi-arrow-left pi-style"
-      ></i>
-      <i
-        v-if="contents.length == limit"
-        @click="loadNext()"
-        class="pi pi-arrow-right pi-style pi-style-right"
-      ></i>
+            <div class="flex justify-between items-center">
+            <div>
+            <i
+              v-if="offset > 0"
+              @click="loadPrev()"
+              class="pi pi-arrow-left pi-style"
+            ></i>
+            <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+            </div>
+            <div>
 
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
+            <i
+              v-if="contents.length == limit"
+              @click="loadNext()"
+              class="pi pi-arrow-right pi-style pi-style-right"
+            ></i>
+            </div>
+            </div>
+          </template>
+
+        </DataTable>
+      </div>
     </div>
-    <div class="column restrict-width mright" @focusin="keyboardDisabled = true" @focusout="keyboardDisabled = false">
+    <div class="column restrict-width mright">
       <content-form
         @update-content="onUpdateContent"
         @deleted-content="onDeleteContent"
@@ -88,11 +118,12 @@ export default {
       contents: [],
       selectedContent: null,
       isSelectedId: 0,
-      limit: 24,
+      limit: 21,
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       offset: 0,
       query: null,
       isLoading: false,
-      keyboardDisabled: false,
       baseContent: {
         id: 0,
         name: "",
@@ -137,42 +168,13 @@ export default {
 
       return link;
     },
-
-    setNextSelectedElement() {
-      for (var i = 0; i < this.contents.length; i++) {
-        if (this.contents[i].id == this.isSelectedId) {
-          if (i + 1 < this.contents.length) {
-            this.setSelectedContent(this.contents[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.contents.length - 1; i >= 0; i--) {
-        if (this.contents[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelectedContent(this.contents[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getContentLink());
       this.loadContents(true, function(){});
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getContentLink());
         this.loadContents(false, function(){});
       }
     },
@@ -232,7 +234,7 @@ export default {
                   newContent.updated_at
                 );
 
-                newContent.parsed.name = truncateString(newContent.name, 40)
+                newContent.parsed.name = truncateString(newContent.name, 60)
 
                 if (newContent.data) {
                   newContent.data = atob(newContent.data);
@@ -263,6 +265,14 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
+
+    this.selectedLimit = this.limit;
+  },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadContents(true, function(){})
+    }
   },
   mounted() {
 
@@ -271,22 +281,6 @@ export default {
       this.$refs.searchBar.setQuery(this.$route.query.q);
     }
     this.loadContents(true, function(){})
-
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrev();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNext();
-        }
-      }
-    });
   },
 };
 </script>

@@ -1,48 +1,74 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="tag"></DataSearchBar>
 
-      <table class="table is-hoverable" v-if="tags.length > 0">
-        <thead>
-            <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>HTML Color</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="t in tags"
-            @click="setSelected(t.id)"
-            :key="t.id"
-            :class="isSelectedId == t.id ? 'is-selected' : ''"
-          >
-            <td>{{ t.id }}</td>
-            <td>{{ t.name }}</td>
-            <td><span :style="'background-color:#' + t.color_html">#{{ t.color_html }}</span></td>
-            <td>{{ t.description }}</td>
-          </tr>
-        </tbody>
-      </table>
 
-      <i
-        v-if="offset > 0"
-        @click="loadPrev()"
-        class="pi pi-arrow-left pi-style"
-      ></i>
-      <i
-        v-if="tags.length == limit"
-        @click="loadNext()"
-        class="pi pi-arrow-right pi-style pi-style-right"
-      ></i>
+
+      <div class="card">
+        <DataTable
+          :value="tags"
+          tableStyle="min-width: 50rem"
+          :metaKeySelection="true"
+          dataKey="id"
+          showGridlines
+          compareSelectionBy="equals"
+          v-model:selection="selectedTag"
+          selectionMode="single"
+        >
+          <template #header>
+            <DataSearchBar
+              ref="searchBar"
+              :isloading="isLoading"
+              @search="performNewSearch"
+              modelname="tag"
+            ></DataSearchBar>
+          </template>
+          <template #empty>No data matched. </template>
+          <template #loading>Loading request data. Please wait. </template>
+
+          <DataColumn field="id" header="ID" style="width: 4%">
+          </DataColumn>
+          <DataColumn field="name" header="Name" style="width: 10%">
+          </DataColumn>
+          <DataColumn header="HTML Color" style="width: 10%">
+            <template #body="slotProps">
+              <span :style="'background-color:#' + slotProps.data.color_html">#{{ slotProps.data.color_html }}</span>
+            </template>
+          </DataColumn>
+          <DataColumn field="description" header="Description">
+          </DataColumn>
+
+          <template #footer>
+            <div class="flex justify-between items-center">
+            <div>
+            <i
+              v-if="offset > 0"
+              @click="loadPrev()"
+              class="pi pi-arrow-left pi-style"
+            ></i>
+            <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+            </div>
+            <div>
+
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
+            <i
+              v-if="tags.length == limit"
+              @click="loadNext()"
+              class="pi pi-arrow-right pi-style pi-style-right"
+            ></i>
+            </div>
+            </div>
+          </template>
+
+        </DataTable>
+      </div>
     </div>
-    <div
-      class="column mright"
-      @focusin="keyboardDisabled = true"
-      @focusout="keyboardDisabled = false"
-    >
+    <div class="column mright">
       <tag-form
         @update-tag="onUpdateTag"
         @delete-tag="onDeleteTag"
@@ -72,7 +98,8 @@ export default {
       query: null,
       limit: 24,
       offset: 0,
-      keyboardDisabled: false,
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       isLoading: false,
       baseTag: {
         id: 0,
@@ -131,41 +158,13 @@ export default {
 
       return link;
     },
-    setNextSelectedElement() {
-      for (var i = 0; i < this.tags.length; i++) {
-        if (this.tags[i].id == this.isSelectedId) {
-          if (i + 1 < this.tags.length) {
-            this.setSelected(this.tags[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.tags.length - 1; i >= 0; i--) {
-        if (this.tags[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelected(this.tags[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getTagLink());
       this.loadTags(true, function () {});
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getTagLink());
         this.loadTags(false, function () {});
       }
     },
@@ -234,6 +233,14 @@ export default {
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
     }
+
+    this.selectedLimit = this.limit;
+  },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadTags(true, function () {});
+    }
   },
   mounted() {
 
@@ -242,22 +249,6 @@ export default {
     } else {
       this.loadTags(true, function () {});
     }
-
-    const that = this;
-    window.addEventListener("keyup", function (event) {
-      if (that.keyboardDisabled) {
-        return;
-      }
-      if (event.key == "j") {
-        if (!that.setPrevSelectedElement()) {
-          that.loadPrev();
-        }
-      } else if (event.key == "k") {
-        if (!that.setNextSelectedElement()) {
-          that.loadNext();
-        }
-      }
-    });
   },
 };
 </script>

@@ -1,52 +1,73 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="storedquery"></DataSearchBar>
 
-      <table class="table is-hoverable" v-if="queries.length > 0">
-        <thead>
-            <tr>
-            <th>ID</th>
-            <th>Created at</th>
-            <th>Last ran</th>
-            <th>Count</th>
-            <th>Query</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="query in queries"
-            @click="setSelected(query.id)"
-            :key="query.id"
-            :class="isSelectedId == query.id ? 'is-selected' : ''"
-          >
-            <td>{{ query.id }}</td>
-            <td>{{ query.parsed.created_at }}</td>
-            <td>{{ query.parsed.last_ran_at }}</td>
-            <td>{{ query.record_count }}</td>
-            <td>
-              <a :href="'/requests?q=' + encodeURI(query.query)">{{ query.query }}</a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="card">
+        <DataTable
+          :value="queries"
+          tableStyle="min-width: 50rem"
+          :metaKeySelection="true"
+          dataKey="id"
+          showGridlines
+          compareSelectionBy="equals"
+          v-model:selection="selectedQuery"
+          selectionMode="single"
+        >
+          <template #header>
+            <DataSearchBar
+              ref="searchBar"
+              :isloading="isLoading"
+              @search="performNewSearch"
+              modelname="storedquery"
+            ></DataSearchBar>
+          </template>
+          <template #empty>No data matched. </template>
+          <template #loading>Loading request data. Please wait. </template>
 
-      <i
-        v-if="offset > 0"
-        @click="loadPrev()"
-        class="pi pi-arrow-left pi-style"
-      ></i>
-      <i
-        v-if="queries.length == limit"
-        @click="loadNext()"
-        class="pi pi-arrow-right pi-style pi-style-right"
-      ></i>
+          <DataColumn field="id" header="ID" style="width: 4%">
+          </DataColumn>
+          <DataColumn field="parsed.created_at" header="Created at" style="width: 12%">
+          </DataColumn>
+          <DataColumn field="parsed.last_ran_at" header="Last ran" style="width: 12%">
+          </DataColumn>
+          <DataColumn header="Query">
+            <template #body="slotProps">
+              <a :href="config.requestsLink + '?q=' + encodeURI(slotProps.data.query)">{{ slotProps.data.query }}</a>
+            </template>
+          </DataColumn>
+
+          <template #footer>
+            <div class="flex justify-between items-center">
+            <div>
+            <i
+              v-if="offset > 0"
+              @click="loadPrev()"
+              class="pi pi-arrow-left pi-style"
+            ></i>
+            <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+            </div>
+            <div>
+
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
+            <i
+              v-if="queries.length == limit"
+              @click="loadNext()"
+              class="pi pi-arrow-right pi-style pi-style-right"
+            ></i>
+            </div>
+            </div>
+          </template>
+
+
+        </DataTable>
+      </div>
     </div>
-    <div
-      class="column mright"
-      @focusin="keyboardDisabled = true"
-      @focusout="keyboardDisabled = false"
-    >
+    <div class="column mright">
       <query-form
         @update-query="onUpdateQuery"
         @delete-query="onDeleteQuery"
@@ -75,8 +96,9 @@ export default {
       isSelectedId: 0,
       query: null,
       limit: 24,
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       offset: 0,
-      keyboardDisabled: false,
       isLoading: false,
       base: {
         id: 0,
@@ -135,41 +157,13 @@ export default {
 
       return link;
     },
-    setNextSelectedElement() {
-      for (var i = 0; i < this.queries.length; i++) {
-        if (this.queries[i].id == this.isSelectedId) {
-          if (i + 1 < this.queries.length) {
-            this.setSelected(this.queries[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.queries.length - 1; i >= 0; i--) {
-        if (this.queries[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelected(this.queries[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getQueryLink());
       this.loadQueries(true, function () {});
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getQueryLink());
         this.loadQueries(false, function () {});
       }
     },
@@ -240,6 +234,14 @@ export default {
 
     if (this.$route.params.offset) {
       this.offset = parseInt(this.$route.params.offset);
+    }
+
+    this.selectedLimit = this.limit;
+  },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadQueries(true, function () {});
     }
   },
   mounted() {

@@ -1,8 +1,8 @@
 <template>
   <div>
     <input type="hidden" name="id" v-model="localQuery.id" />
-    <div class="card">
-    <FieldSet legend="Settings" :toggleable="true">
+    <div>
+    <FieldSet legend="Settings" :toggleable="false">
       <div>
         <label class="label">Query</label>
         <InputText
@@ -237,7 +237,6 @@ export default {
   created() {
     this.localQuery = Object.assign({}, this.baseQuery);
     this.getAllTags();
-    // this.app = this.modelValue;
   },
 };
 </script>

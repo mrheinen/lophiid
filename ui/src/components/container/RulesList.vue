@@ -16,79 +16,104 @@
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
 
-      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="contentrule"></DataSearchBar>
 
-      <div>
-        <table class="table is-hoverable" v-if="rules.length > 0">
-          <thead>
-            <tr>
-              <th>App</th>
-              <th>App version</th>
-              <th>ID</th>
-              <th>Method</th>
-              <th>URI / Body</th>
-              <th>Port</th>
-              <th>Content ID</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="rule in appRules"
-              @click="setSelectedRule(rule.id)"
-              :key="rule.id + rule.alert"
-              :class="isSelectedId == rule.id ? 'is-selected' : ''"
-            >
-              <td>
-                <a :href="'/rules?q=app_id:' + rule.app_id">
-                  {{ rule.app_name }}</a
+      <div class="card">
+        <DataTable
+          :value="appRules"
+          tableStyle="min-width: 50rem"
+          :metaKeySelection="true"
+          dataKey="id"
+          showGridlines
+          compareSelectionBy="equals"
+          v-model:selection="selectedRule"
+          selectionMode="single"
+        >
+          <template #header>
+            <DataSearchBar
+              ref="searchBar"
+              :isloading="isLoading"
+              @search="performNewSearch"
+              modelname="contentrule"
+            ></DataSearchBar>
+          </template>
+          <template #empty>No data matched. </template>
+          <template #loading>Loading request data. Please wait. </template>
+
+          <DataColumn field="id" header="ID" style="width: 4%">
+          </DataColumn>
+          <DataColumn header="App name" style="width: 15%">
+            <template #body="slotProps">
+             <a :href="config.rulesLink + '?q=app_id:' + slotProps.data.app_id">
+               {{ slotProps.data.app_name }} </a
                 >
-              </td>
-              <td>
-                {{ rule.app_version }}
-              </td>
-              <td>{{ rule.id }}</td>
-              <td>{{ rule.method == "ANY" ? "Any" : rule.method }}</td>
-              <td>{{ rule.parsed.uri_body }}</td>
-              <td>{{ rule.port == 0 ? "Any" : rule.port }}</td>
-              <td>
-                <a :href="'/content?q=id:' + rule.content_id">
-                  {{ rule.content_id }}</a
-                >
-              </td>
-              <td>
-                <a :href="'/requests?q=rule_uuid:' + rule.ext_uuid">
+            </template>
+          </DataColumn>
+          <DataColumn field="app_version" header="App version" style="width: 15%">
+          </DataColumn>
+          <DataColumn field="method" header="Method" style="width: 6%">
+          </DataColumn>
+          <DataColumn field="parsed.uri_body" header="Uri / Body">
+          </DataColumn>
+
+          <DataColumn header="Port" style="width: 8%">
+            <template #body="slotProps">
+              {{ slotProps.data.port == 0 ? "Any" : slotProps.data.port }}
+            </template>
+          </DataColumn>
+          <DataColumn header="Content ID" style="width: 8%">
+            <template #body="slotProps">
+                <a :href="config.contentLink + '?q=id:' + slotProps.data.content_id">
+                  {{ slotProps.data.content_id }}</a>
+            </template>
+          </DataColumn>
+          <DataColumn header="Actions" style="width: 6%">
+            <template #body="slotProps">
+                <a :href="config.requestsLink + '?q=rule_uuid:' + slotProps.data.ext_uuid">
                   <i
                     title="View requests that matched this rule"
                     class="pi pi-search"
                   ></i>
                 </a>
-
                 &nbsp;
                 <i
-                  @click="toggleAlert(rule)"
+                  @click="toggleAlert(slotProps.data)"
                   title="Enable alerting"
                   :class="
-                    rule.alert
+                    slotProps.data.alert
                       ? 'pi pi-bell pointer alert'
                       : 'pi pi-bell pointer'
                   "
                 ></i>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            </template>
+          </DataColumn>
 
-        <i
-          v-if="offset > 0"
-          @click="loadPrevRules()"
-          class="pi pi-arrow-left pi-style"
-        ></i>
-        <i
-          v-if="rules.length == limit"
-          @click="loadNextRules()"
-          class="pi pi-arrow-right pi-style pi-style-right"
-        ></i>
+          <template #footer>
+            <div class="flex justify-between items-center">
+            <div>
+            <i
+              v-if="offset > 0"
+              @click="loadPrev()"
+              class="pi pi-arrow-left pi-style"
+            ></i>
+            <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+            </div>
+            <div>
+
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
+            <i
+              v-if="appRules.length == limit"
+              @click="loadNext()"
+              class="pi pi-arrow-right pi-style pi-style-right"
+            ></i>
+            </div>
+            </div>
+          </template>
+        </DataTable>
       </div>
     </div>
     <div class="column mright">
@@ -132,6 +157,8 @@ export default {
       rulesLoading: false,
       apps: {},
       query: null,
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       appsLoading: false,
       appRules: [],
       selectedRule: null,
@@ -200,15 +227,13 @@ export default {
       this.offset = 0;
       this.loadRules(true, function () {});
     },
-    loadNextRules() {
+    loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getRulesLink());
       this.loadRules(true, function () {});
     },
-    loadPrevRules() {
+    loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getRulesLink());
         this.loadRules(false, function () {});
       }
     },
@@ -218,32 +243,6 @@ export default {
         link += "?q=" + this.query;
       }
       return link;
-    },
-    setNextSelectedElement() {
-      for (var i = 0; i < this.rules.length; i++) {
-        if (this.rules[i].id == this.isSelectedId) {
-          if (i + 1 < this.rules.length) {
-            this.setSelectedRule(this.rules[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.rules.length - 1; i >= 0; i--) {
-        if (this.rules[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelectedRule(this.rules[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
     },
     onUpdatedRule(id) {
       const that = this;
@@ -407,6 +406,10 @@ export default {
     },
   },
   watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadRules(true, function () {});
+    },
     isLoading(newVal) {
       if (newVal == true) {
         return;
@@ -447,6 +450,7 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
+    this.selectedLimit = this.limit;
   },
   mounted() {
    if (this.$route.query.q) {

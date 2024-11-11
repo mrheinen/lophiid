@@ -1,105 +1,120 @@
 <template>
   <div class="columns">
     <div class="column is-three-fifths" style="margin-left: 15px">
-      <DataSearchBar ref="searchBar" :isloading="isLoading" @search="performNewSearch" modelname="download"></DataSearchBar>
 
-      <table class="table is-hoverable" v-if="downloads.length > 0">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th title="ID of the first request">First RID</th>
-            <th title="ID of the last request">Last RID</th>
-            <th>Orig URL</th>
-            <th>Content Type</th>
-            <th>Times Seen</th>
-            <th>Last seen</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="dl in downloads"
-            @click="setSelectedDownload(dl.id)"
-            :key="dl.id"
-            :class="isSelectedId == dl.id ? 'is-selected' : ''"
-          >
-            <td>{{ dl.id }}</td>
-            <td>
-              <a :href="'/requests?q=id:' + dl.request_id">{{
-                dl.request_id
-              }}</a>
-            </td>
-            <td v-if="dl.last_request_id">
-              <a :href="'/requests?q=id:' + dl.last_request_id">{{
-                dl.last_request_id
-              }}</a>
-            </td>
-            <td v-else>
-              <a :href="'/requests?q=id:' + dl.request_id">{{
-                dl.request_id
-              }}</a>
-            </td>
-            <td>{{ dl.original_url }}</td>
-            <td>{{ dl.content_type }}</td>
-            <td>{{ dl.times_seen }}</td>
-            <td :title="'First seen on: ' + dl.parsed.created_at">
-              {{ dl.parsed.last_seen_at }}
-            </td>
-            <td>
+      <div class="card">
+        <DataTable
+          :value="downloads"
+          tableStyle="min-width: 50rem"
+          :metaKeySelection="true"
+          dataKey="id"
+          showGridlines
+          compareSelectionBy="equals"
+          v-model:selection="selectedDownload"
+          selectionMode="single"
+        >
+          <template #header>
+            <DataSearchBar
+              ref="searchBar"
+              :isloading="isLoading"
+              @search="performNewSearch"
+              modelname="download"
+            ></DataSearchBar>
+          </template>
+          <template #empty>No data matched. </template>
+          <template #loading>Loading request data. Please wait. </template>
+
+          <DataColumn field="id" header="ID" style="width: 4%">
+          </DataColumn>
+          <DataColumn header="First RID" style="width: 5%">
+            <template #body="slotProps">
+              <a :href="config.requestsLink + '?q=id:' + slotProps.data.request_id">{{ slotProps.data.request_id }}</a>
+            </template>
+          </DataColumn>
+          <DataColumn header="Last RID" style="width: 5%">
+            <template #body="slotProps">
+              <a :href="config.requestsLink + '?q=id:' + slotProps.data.last_request_id">{{
+                slotProps.data.last_request_id }}</a>
+            </template>
+          </DataColumn>
+          <DataColumn field="parsed.original_url" header="Orig URL" style="width: 30%">
+          </DataColumn>
+          <DataColumn field="content_type" header="Content type" style="width: 15%">
+          </DataColumn>
+          <DataColumn field="times_seen" header="# seen" style="width: 6%">
+          </DataColumn>
+          <DataColumn field="parsed.last_seen_at" header="Last seen"
+          style="width: 14%">
+          </DataColumn>
+
+          <DataColumn header="Actions" style="width: 10%">
+            <template #body="slotProps">
               <a
-                v-if="dl.parsed.vt_url_analysis_id"
+                v-if="slotProps.data.parsed.vt_url_analysis_id"
                 target="_blank"
                 title="view URL analysis on virustotal"
                 :href="
                   'https://www.virustotal.com/gui/url/' +
-                  dl.parsed.vt_url_analysis_id
+                  slotProps.data.parsed.vt_url_analysis_id
                 "
               >
                 <i class="pi pi-bolt"></i>
               </a>
 
               <a
-                v-if="dl.parsed.vt_file_analysis_id"
+                v-if="slotProps.data.parsed.vt_file_analysis_id"
                 target="_blank"
                 title="view file analysis on virustotal"
                 :href="
                   'https://www.virustotal.com/gui/file-analysis/' +
-                  dl.parsed.vt_file_analysis_id
+                  slotProps.data.parsed.vt_file_analysis_id
                 "
               >
                 <i class="pi pi-exclamation-triangle"></i>
               </a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </template>
+          </DataColumn>
+          <template #footer>
+            <div class="flex justify-between items-center">
+            <div>
+            <i
+              v-if="offset > 0"
+              @click="loadPrev()"
+              class="pi pi-arrow-left pi-style"
+            ></i>
+            <i
+              v-if="offset == 0"
+              class="pi pi-arrow-left pi-style-disabled"
+            ></i>
+            </div>
+            <div>
 
-      <i
-        v-if="offset > 0"
-        @click="loadPrev()"
-        class="pi pi-arrow-left pi-style"
-      ></i>
-      <i
-        v-if="downloads.length == limit"
-        @click="loadNext()"
-        class="pi pi-arrow-right pi-style pi-style-right"
-      ></i>
+            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            </div>
+            <div>
+            <i
+              v-if="downloads.length == limit"
+              @click="loadNext()"
+              class="pi pi-arrow-right pi-style pi-style-right"
+            ></i>
+            </div>
+            </div>
+          </template>
+
+        </DataTable>
+      </div>
     </div>
     <div
       class="column mright"
-      @focusin="keyboardDisabled = true"
-      @focusout="keyboardDisabled = false"
     >
+
       <downloads-form :whois="selectedWhois" :download="selectedDownload"></downloads-form>
     </div>
   </div>
 </template>
 
 <script>
-function dateToString(inDate) {
-  const nd = new Date(Date.parse(inDate));
-  return nd.toLocaleString();
-}
+import { dateToString } from './../../helpers.js';
 import DownloadsForm from "./DownloadsForm.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
@@ -117,8 +132,9 @@ export default {
       isSelectedId: 0,
       query: null,
       limit: 24,
+      selectedLimit: 21,
+      limitOptions: [10, 20, 30, 40, 50],
       offset: 0,
-      keyboardDisabled: false,
       isLoading: false,
       baseDownload: {
         id: 0,
@@ -135,9 +151,6 @@ export default {
     performNewSearch(query) {
       this.query = query;
       this.offset = 0;
-      this.loadDownloads(true);
-    },
-    reloadDownloads() {
       this.loadDownloads(true);
     },
     setSelectedDownload(id) {
@@ -168,41 +181,13 @@ export default {
 
       return link;
     },
-    setNextSelectedElement() {
-      for (var i = 0; i < this.downloads.length; i++) {
-        if (this.downloads[i].id == this.isSelectedId) {
-          if (i + 1 < this.downloads.length) {
-            this.setSelectedDownload(this.downloads[i + 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
-    setPrevSelectedElement() {
-      for (var i = this.downloads.length - 1; i >= 0; i--) {
-        if (this.downloads[i].id == this.isSelectedId) {
-          if (i - 1 >= 0) {
-            this.setSelectedDownload(this.downloads[i - 1].id);
-          } else {
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    },
     loadNext() {
       this.offset += this.limit;
-      this.$router.push(this.getDownloadsLink());
       this.loadDownloads(true);
     },
     loadPrev() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getDownloadsLink());
         this.loadDownloads(false);
       }
     },
@@ -281,7 +266,15 @@ export default {
                 );
 
                 newDownload.parsed.sha256sum =
-                  newDownload.sha256sum.substr(0, 16) + "...";
+                  newDownload.sha256sum.slice(0, 16) + "...";
+
+
+                if (newDownload.original_url.length > 70) {
+                  newDownload.parsed.original_url =
+                    newDownload.original_url.slice(0, 70) + "...";
+                } else {
+                  newDownload.parsed.original_url = newDownload.original_url;
+                }
 
                 if (newDownload.vt_url_analysis_id) {
                   var parts = newDownload.vt_url_analysis_id.split("-");
@@ -327,6 +320,12 @@ export default {
         });
     },
   },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadDownloads(true);
+    }
+  },
   beforeCreate() {
     this.selectedDownload = this.baseDownload;
   },
@@ -339,6 +338,7 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
+    this.selectedLimit = this.limit;
   },
   mounted() {
     if (this.$route.query.q) {
