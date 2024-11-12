@@ -36,6 +36,7 @@ the search bar.
 | referer | string | The referer header value |
 | rule_id | int64 | The ID of the rule that matched this request |
 | rule_uuid | string | The UUID of the rule that matched this request |
+| session_id | int64 | The session ID of the request |
 | source_ip | string | The HTTP client source IP |
 | source_port | int64 | The HTTP client source port |
 | starred | bool | A bool if the request is starred |

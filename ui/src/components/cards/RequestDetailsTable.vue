@@ -24,6 +24,14 @@
           </a>
         </td>
       </tr>
+     <tr>
+        <th>Session ID</th>
+        <td>
+          <a :href="'/requests?q=session_id:' + request.session_id">
+            {{ request.session_id }}
+          </a>
+        </td>
+      </tr>
       <tr>
         <th>Honeypot IP</th>
         <td>

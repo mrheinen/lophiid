@@ -230,7 +230,7 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 	}
 }
 
-func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request) (models.ContentRule, error) {
+func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session) (models.ContentRule, error) {
 	var matchedRules []models.ContentRule
 	for _, rule := range rules {
 		// Port 0 means any port.
@@ -262,16 +262,6 @@ func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.R
 
 	if len(matchedRules) == 0 {
 		return models.ContentRule{}, fmt.Errorf("no rule found")
-	}
-
-	session, err := s.sessionMgr.GetCachedSession(req.SourceIP)
-	if err != nil || session == nil {
-		session, err = s.sessionMgr.StartSession(req.SourceIP)
-		if err != nil {
-			slog.Error("error starting session", slog.String("ip", req.SourceIP), slog.String("error", err.Error()))
-		} else {
-			session.LastRuleServed.AppID = -1
-		}
 	}
 
 	if len(matchedRules) == 1 {
@@ -706,7 +696,17 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	s.metrics.honeypotRequests.WithLabelValues(sReq.HoneypotIP).Add(1)
 	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
 
-	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq)
+	session, err := s.sessionMgr.GetCachedSession(sReq.SourceIP)
+	if err != nil || session == nil {
+		session, err = s.sessionMgr.StartSession(sReq.SourceIP)
+		if err != nil {
+			slog.Error("error starting session", slog.String("ip", sReq.SourceIP), slog.String("error", err.Error()))
+		} else {
+			session.LastRuleServed.AppID = -1
+		}
+	}
+
+	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq, session)
 	if err != nil {
 		hps, err := s.dbClient.SearchHoneypots(0, 1, fmt.Sprintf("ip:%s", sReq.HoneypotIP))
 
@@ -729,6 +729,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	sReq.RuleID = matchedRule.ID
 	sReq.AppID = matchedRule.AppID
 	sReq.RuleUuid = matchedRule.ExtUuid
+	sReq.SessionID = session.ID
 
 	colEx := extractors.NewExtractorCollection(true)
 	colEx.ParseRequest(sReq)
