@@ -145,7 +145,6 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			errorExpected:         false,
 		},
 
-
 		{
 			description: "matched one rule (regex) ",
 			requestInput: models.Request{
@@ -267,9 +266,9 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &models.Request{
-		Uri:  "/aa",
+		Uri:    "/aa",
 		Method: "GET",
-		Port: 80,
+		Port:   80,
 	})
 
 	if matchedRule.ID != 1 {
@@ -280,9 +279,9 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	// served though because it shares the app ID of the rule that was already
 	// served.
 	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &models.Request{
-		Uri:  "/bb",
+		Uri:    "/bb",
 		Method: "GET",
-		Port: 80,
+		Port:   80,
 	})
 
 	if matchedRule.ID != 2 {
@@ -293,9 +292,9 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	// and this is kept track off. Therefore we expect the rule that was not
 	// served before.
 	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &models.Request{
-		Uri:  "/bb",
+		Uri:    "/bb",
 		Method: "GET",
-		Port: 80,
+		Port:   80,
 	})
 
 	if matchedRule.ID != 3 {
@@ -543,8 +542,8 @@ func TestHandleProbe(t *testing.T) {
 			},
 		},
 		ContentRulesToReturn: []models.ContentRule{
-			{ID: 1, AppID: 1, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-			{ID: 2, AppID: 1, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			{ID: 1, AppID: 42, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			{ID: 2, AppID: 42, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
 			{ID: 3, AppID: 1, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
 		},
 	}
@@ -595,73 +594,104 @@ func TestHandleProbe(t *testing.T) {
 	// Everything is OK and we match a rule that has a content and the content
 	// data is as expected.
 	ctx := GetContextWithAuthMetadata()
-	res, err := b.HandleProbe(ctx, &probeReq)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
 
-	if res == nil {
-		t.Errorf("got nil result")
-	}
+	t.Run("Matches ok", func(t *testing.T) {
+		probeReq.RequestUri = "/aa"
+		res, err := b.HandleProbe(ctx, &probeReq)
+		if err != nil {
+			t.Errorf("got error: %s", err)
+		}
 
-	if !bytes.Equal(res.Response.Body, fdbc.ContentsToReturn[42].Data) {
-		t.Errorf("got %s, expected %s", res.Response.Body, fdbc.ContentsToReturn[42].Data)
-	}
+		if res == nil {
+			t.Errorf("got nil result")
+		}
 
-	// Now we simulate a request where the content response is based on a script.
-	probeReq.RequestUri = "/script"
-	_, err = b.HandleProbe(ctx, &probeReq)
-	if err != nil {
-		t.Errorf("got error: %s", err)
-	}
+		if !bytes.Equal(res.Response.Body, fdbc.ContentsToReturn[42].Data) {
+			t.Errorf("got %s, expected %s", res.Response.Body, fdbc.ContentsToReturn[42].Data)
+		}
 
-	// Now we test the default content fetching. Set the path to something that
-	// doesn't match any rule.
-	fdbc.HoneypotToReturn = models.Honeypot{
-		DefaultContentID: 66,
-	}
-	probeReq.RequestUri = "/dffsd"
-	res, err = b.HandleProbe(ctx, &probeReq)
-	if err != nil {
-		t.Fatalf("got error: %s", err)
-	}
-	if !bytes.Equal(res.Response.Body, []byte("default")) {
-		t.Errorf("got %s, expected %s", res.Response.Body, "default")
-	}
+		regWrap := <-b.reqsQueue
+		if regWrap.req.AppID != 42 {
+			t.Errorf("got %d, expected %d", regWrap.req.AppID, 42)
+		}
+	})
 
-	if len(res.Response.Header) != 3 {
-		t.Errorf("got %d, expected 3", len(res.Response.Header))
-	}
+	t.Run("Script ok", func(t *testing.T) {
+		// Now we simulate a request where the content response is based on a script.
+		probeReq.RequestUri = "/script"
+		_, err := b.HandleProbe(ctx, &probeReq)
+		if err != nil {
+			t.Errorf("got error: %s", err)
+		}
 
-	// Now we simulate a database error. Should never occur ;p
-	fdbc.ContentsToReturn = map[int64]models.Content{}
-	res, err = b.HandleProbe(ctx, &probeReq)
-	if res != nil || err == nil {
-		t.Errorf("Expected error but got none: %v %s", res, err)
-	}
+		regWrap := <-b.reqsQueue
+		if regWrap.req.AppID != 1 {
+			t.Errorf("got %d, expected %d", regWrap.req.AppID, 1)
+		}
+	})
 
-	// Call the method one more time but this time with a context that has
-	// no metadata.
-	_, err = b.HandleProbe(context.Background(), &probeReq)
-	if err == nil || !strings.Contains(err.Error(), "auth") {
-		t.Errorf("Expected error but got none")
-	}
+	t.Run("Honeypot default", func(t *testing.T) {
+		// Now we test the default content fetching. Set the path to something that
+		// doesn't match any rule.
+		fdbc.HoneypotToReturn = models.Honeypot{
+			DefaultContentID: 66,
+		}
+		probeReq.RequestUri = "/dffsd"
+		res, err := b.HandleProbe(ctx, &probeReq)
+		if err != nil {
+			t.Fatalf("got error: %s", err)
+		}
+		if !bytes.Equal(res.Response.Body, []byte("default")) {
+			t.Errorf("got %s, expected %s", res.Response.Body, "default")
+		}
 
-	fakeLimiter.BoolToReturn = false
-	fakeLimiter.ErrorToReturn = errors.New("w00p w00p")
+		if len(res.Response.Header) != 3 {
+			t.Errorf("got %d, expected 3", len(res.Response.Header))
+		}
 
-	_, err = b.HandleProbe(ctx, &probeReq)
-	if err == nil || !strings.Contains(err.Error(), "w00p") {
-		t.Errorf("Expected error but got none")
-	}
+		// Here it's 0 because we serve the default content for this honeypot and
+		// therefore do not have a rule to get the application from.
+		regWrap := <-b.reqsQueue
+		if regWrap.req.AppID != 0 {
+			t.Errorf("got %d, expected %d", regWrap.req.AppID, 0)
+		}
 
-	if len(fIpMgr.Events) != 1 {
-		t.Fatalf("expected 1 AddEventTimes call, got %d", len(fIpMgr.Events))
-	}
 
-	if fIpMgr.Events[0].Type != constants.IpEventRateLimited {
-		t.Fatalf("expected rate limited event, got %s", fIpMgr.Events[0].Type)
-	}
+	})
+
+	t.Run("database error", func(t *testing.T) {
+		// Now we simulate a database error. Should never occur ;p
+		fdbc.ContentsToReturn = map[int64]models.Content{}
+		res, err := b.HandleProbe(ctx, &probeReq)
+		if res != nil || err == nil {
+			t.Errorf("Expected error but got none: %v %s", res, err)
+		}
+
+		// Call the method one more time but this time with a context that has
+		// no metadata.
+		_, err = b.HandleProbe(context.Background(), &probeReq)
+		if err == nil || !strings.Contains(err.Error(), "auth") {
+			t.Errorf("Expected error but got none")
+		}
+	})
+
+	t.Run("limiter limits", func(t *testing.T) {
+		fakeLimiter.BoolToReturn = false
+		fakeLimiter.ErrorToReturn = errors.New("w00p w00p")
+
+		_, err := b.HandleProbe(ctx, &probeReq)
+		if err == nil || !strings.Contains(err.Error(), "w00p") {
+			t.Errorf("Expected error but got none")
+		}
+
+		if len(fIpMgr.Events) != 1 {
+			t.Fatalf("expected 1 AddEventTimes call, got %d", len(fIpMgr.Events))
+		}
+
+		if fIpMgr.Events[0].Type != constants.IpEventRateLimited {
+			t.Fatalf("expected rate limited event, got %s", fIpMgr.Events[0].Type)
+		}
+	})
 }
 
 func TestProcessQueue(t *testing.T) {

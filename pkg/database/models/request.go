@@ -46,6 +46,7 @@ type Request struct {
 	CreatedAt      time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"The date and time of creation"`
 	UpdatedAt      time.Time                `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"The date and time of the last update"`
 	ContentID      int64                    `ksql:"content_id" json:"content_id" doc:"The Content ID that was served"`
+	AppID          int64                    `ksql:"app_id" json:"app_id" doc:"The App ID of the rule that matched this request"`
 	ContentDynamic bool                     `ksql:"content_dynamic" json:"content_dynamic" doc:"A bool indicating if the Content is dynamic (script based)"`
 	RuleID         int64                    `ksql:"rule_id" json:"rule_id" doc:"The ID of the rule that matched this request"`
 	RuleUuid       string                   `ksql:"rule_uuid" json:"rule_uuid" doc:"The UUID of the rule that matched this request"`
