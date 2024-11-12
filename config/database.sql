@@ -344,6 +344,7 @@ CREATE INDEX session_ip ON session (
 );
 
 CREATE INDEX requests_session_idx ON request (
+  time_received desc,
   session_id desc
 );
 
