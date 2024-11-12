@@ -14,6 +14,7 @@ the search bar.
 
 | Keyword | Type | Description |
 | --- | --- | --- |
+| app_id | int64 | The App ID of the rule that matched this request |
 | base_hash | string | A base hash to find similar requests |
 | body |  | The request body |
 | content_dynamic | bool | A bool indicating if the Content is dynamic (script based) |
@@ -75,6 +76,7 @@ the search bar.
 | content_id | int64 | The ID of the Content this rule serves |
 | content_uuid | string | The external UUID of the related content |
 | created_at | Time | Creation date of the rule |
+| enabled | bool | A bool (0 or 1) indicating if the rule is enabled |
 | ext_uuid | string | The external unique ID of the rule |
 | ext_version | int64 | The external numerical version of the rule |
 | id | int64 | The rule ID |
@@ -146,6 +148,8 @@ the search bar.
 | id | int64 | The ID of the honeypot |
 | ip | string | The IP of the honeypot (v4 or v6) |
 | last_checkin | Time | Date and time of last seen |
+| ports | FlatArray[int64] | HTTP ports that the honeypot listens on |
+| ssl_ports | FlatArray[int64] | HTTPS ports that the honeypot listens on |
 | updated_at | Time | Date and time of last update |
 | version | string | The honeypot version |
 

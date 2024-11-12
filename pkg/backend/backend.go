@@ -714,7 +714,9 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			slog.Warn("error finding honeypot", slog.String("error", err.Error()), slog.String("honeypot", sReq.HoneypotIP))
 			matchedRule = s.safeRules.Get()[0]
 		} else {
+			// Fallback to an empty rule.
 			matchedRule.ContentID = hps[0].DefaultContentID
+			matchedRule.AppID = 0
 			matchedRule.ID = 0
 		}
 	} else {
@@ -725,6 +727,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	sReq.ContentID = matchedRule.ContentID
 	sReq.RuleID = matchedRule.ID
+	sReq.AppID = matchedRule.AppID
 	sReq.RuleUuid = matchedRule.ExtUuid
 
 	colEx := extractors.NewExtractorCollection(true)
