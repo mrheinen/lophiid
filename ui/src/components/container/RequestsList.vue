@@ -221,13 +221,11 @@ export default {
       if (this.requests.length > 0) {
         this.offset += this.limit;
       }
-      this.$router.replace(this.getRequestLink());
       this.loadRequests(true);
     },
     loadPrevRequests() {
       if (this.offset - this.limit >= 0) {
         this.offset -= this.limit;
-        this.$router.push(this.getRequestLink());
         this.loadRequests(false);
       }
     },
