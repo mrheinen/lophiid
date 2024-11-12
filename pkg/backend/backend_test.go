@@ -226,7 +226,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			fakeRes := &responder.FakeResponder{}
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
-			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput)
+			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput, models.NewSession())
 			if (err != nil) != test.errorExpected {
 				t.Errorf("error expected is: %t, but for err=%s", test.errorExpected, err)
 			}
@@ -265,11 +265,14 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	fakeRes := &responder.FakeResponder{}
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, GetDefaultBackendConfig())
 
+	myTestIP := "1.2.3.4"
+	session, _ := b.sessionMgr.StartSession(myTestIP)
 	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &models.Request{
 		Uri:    "/aa",
 		Method: "GET",
 		Port:   80,
-	})
+		SourceIP: myTestIP,
+	}, session)
 
 	if matchedRule.ID != 1 {
 		t.Errorf("expected 1 but got %d", matchedRule.ID)
@@ -282,7 +285,8 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		Uri:    "/bb",
 		Method: "GET",
 		Port:   80,
-	})
+		SourceIP: myTestIP,
+	}, session)
 
 	if matchedRule.ID != 2 {
 		t.Errorf("expected 2 but got %d", matchedRule.ID)
@@ -295,7 +299,8 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		Uri:    "/bb",
 		Method: "GET",
 		Port:   80,
-	})
+		SourceIP: myTestIP,
+	}, session)
 
 	if matchedRule.ID != 3 {
 		t.Errorf("expected 3 but got %d", matchedRule.ID)

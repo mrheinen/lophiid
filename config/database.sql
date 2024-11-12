@@ -60,6 +60,7 @@ CREATE TABLE request (
   content_dynamic BOOL default FALSE,
   base_hash       VARCHAR(64) DEFAULT '',
   content_id      INT,
+  session_id      INT,
   app_id          INT,
   rule_id         INT
   rule_uuid       VARCHAR(36) default '',
@@ -340,6 +341,11 @@ CREATE INDEX session_ip ON session (
   started_at desc,
   active,
   ip
+);
+
+CREATE INDEX requests_session_idx ON request (
+  time_received desc,
+  session_id desc
 );
 
 CREATE INDEX requests_idx ON request ( time_received desc );
