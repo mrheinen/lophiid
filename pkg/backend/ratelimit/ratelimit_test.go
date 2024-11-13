@@ -34,6 +34,7 @@ func TestRateLimitOk(t *testing.T) {
 	req := models.Request{
 		HoneypotIP: "1.1.1.1",
 		SourceIP:   "2.2.2.2",
+		Port:       31337,
 		Uri:        "/aa",
 	}
 	reg := prometheus.NewRegistry()

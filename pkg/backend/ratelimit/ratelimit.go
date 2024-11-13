@@ -34,9 +34,9 @@ type RateLimiter interface {
 	AllowRequest(req *models.Request) (bool, error)
 }
 
-// WindowRateLimiter can be used to limit requests per HoneypotIP, SourceIP and Uri
-// combination.  If BucketDuration is set to 1 minute and RateWindow is set to
-// one hour than:
+// WindowRateLimiter can be used to limit requests per HoneypotIP, Server port
+// and SourceIP combination.  If BucketDuration is set to 1 minute and
+// RateWindow is set to one hour then:
 //
 //	The ratelimiter will only allow MaxRequestPerBucket requests per minute
 //	The ratelimiter will only allow MaxRequestsPerWindow per the entire hour
@@ -122,7 +122,7 @@ func (r *WindowRateLimiter) Tick() {
 // then an error is returned with the reason why.
 // Requires that Start() has been called before usage.
 func (r *WindowRateLimiter) AllowRequest(req *models.Request) (bool, error) {
-	rKey := fmt.Sprintf("%s-%s-%s", req.HoneypotIP, req.SourceIP, req.Uri)
+	rKey := fmt.Sprintf("%s-%d-%s", req.HoneypotIP, req.Port, req.SourceIP)
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
