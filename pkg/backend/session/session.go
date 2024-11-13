@@ -39,15 +39,17 @@ type SessionManager interface {
 type DatabaseSessionManager struct {
 	activeSessions *util.StringMapCache[*models.Session]
 	dbClient       database.DatabaseClient
+	metrics        *SessionMetrics
 }
 
 // NewDatabaseSessionManager returns a new session manager.
-func NewDatabaseSessionManager(dbClient database.DatabaseClient, sessionTimeout time.Duration) *DatabaseSessionManager {
+func NewDatabaseSessionManager(dbClient database.DatabaseClient, sessionTimeout time.Duration, metrics *SessionMetrics) *DatabaseSessionManager {
 	cache := util.NewStringMapCache[*models.Session]("session cache", sessionTimeout)
 
 	sm := &DatabaseSessionManager{
 		dbClient:       dbClient,
 		activeSessions: cache,
+		metrics:        metrics,
 	}
 
 	cache.StartWithCallback(sm.SaveExpiredSession)
@@ -58,6 +60,8 @@ func NewDatabaseSessionManager(dbClient database.DatabaseClient, sessionTimeout 
 // sessions cleaned up so that the caller can deterime whether they want to call
 // the method again.
 func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) {
+
+	d.metrics.sessionsActiveGauge.Set(float64(len(d.activeSessions.GetAsMap())))
 	res, err := d.dbClient.SearchSession(0, limit, "active:true")
 	if err != nil {
 		return 0, fmt.Errorf("error fetching session: %w", err)
