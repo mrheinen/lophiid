@@ -61,7 +61,6 @@ func NewDatabaseSessionManager(dbClient database.DatabaseClient, sessionTimeout 
 // the method again.
 func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) {
 
-	d.metrics.sessionsActiveGauge.Set(float64(len(d.activeSessions.GetAsMap())))
 	res, err := d.dbClient.SearchSession(0, limit, "active:true")
 	if err != nil {
 		return 0, fmt.Errorf("error fetching session: %w", err)
@@ -138,5 +137,6 @@ func (d *DatabaseSessionManager) StartSession(ip string) (*models.Session, error
 
 	retSession := dm.(*models.Session)
 	d.activeSessions.Store(ip, retSession)
+	d.metrics.sessionsActiveGauge.Set(float64(d.activeSessions.Count()))
 	return retSession, nil
 }
