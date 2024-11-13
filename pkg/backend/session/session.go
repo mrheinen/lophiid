@@ -61,7 +61,6 @@ func NewDatabaseSessionManager(dbClient database.DatabaseClient, sessionTimeout 
 // the method again.
 func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) {
 
-	d.metrics.sessionsActiveGauge.Set(float64(d.activeSessions.Count()))
 	res, err := d.dbClient.SearchSession(0, limit, "active:true")
 	if err != nil {
 		return 0, fmt.Errorf("error fetching session: %w", err)
@@ -126,6 +125,7 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *models.Session) boo
 // StartNewSession starts a new session for the given IP and stores the session
 // in the cache.
 func (d *DatabaseSessionManager) StartSession(ip string) (*models.Session, error) {
+	d.metrics.sessionsActiveGauge.Set(float64(d.activeSessions.Count()))
 	newSession := models.NewSession()
 	newSession.Active = true
 	newSession.StartedAt = time.Now().UTC()
