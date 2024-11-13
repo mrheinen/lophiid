@@ -39,9 +39,14 @@ func TestStringMapCache(t *testing.T) {
 		t.Errorf("expected 22 but got %s", *ret)
 	}
 
+	expectedCurrentEntries := 3
+	if c.Count() != expectedCurrentEntries {
+		t.Errorf("expected %d, got %d", expectedCurrentEntries, c.Count())
+	}
+
 	rc := c.CleanExpired()
-	if rc != 3 {
-		t.Errorf("expected 3, got %d", rc)
+	if rc != int64(expectedCurrentEntries) {
+		t.Errorf("expected %d, got %d", expectedCurrentEntries, rc)
 	}
 
 	// Cache is empty, try to remove something

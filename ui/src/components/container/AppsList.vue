@@ -38,10 +38,10 @@
           <DataColumn header="Actions" style="width: 5%">
             <template #body="slotProps">
               <a
-                :href="config.rulesLink + '?app_id:' + slotProps.data.id"
+                :href="config.requestsLink + '?q=app_id:' + slotProps.data.id"
               >
                 <i
-                  title="Create a rule for this"
+                  title="Search requests that matched this app"
                   class="pi pi-search"
                 ></i>
               </a>

@@ -60,9 +60,9 @@ CREATE TABLE request (
   content_dynamic BOOL default FALSE,
   base_hash       VARCHAR(64) DEFAULT '',
   content_id      INT,
-  session_id      INT,
-  app_id          INT,
-  rule_id         INT
+  session_id      INT NOT NULL default 0,
+  app_id          INT NOT NULL default 0,
+  rule_id         INT NOT NULL DEFAULT 0,
   rule_uuid       VARCHAR(36) default '',
 );
 

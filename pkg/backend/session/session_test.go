@@ -21,6 +21,9 @@ import (
 	"lophiid/pkg/database/models"
 	"testing"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestSessionManagerCache(t *testing.T) {
@@ -28,7 +31,10 @@ func TestSessionManagerCache(t *testing.T) {
 		ErrorToReturn: nil,
 	}
 
-	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute)
+	reg := prometheus.NewRegistry()
+	metrics := CreateSessionMetrics(reg)
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute, metrics)
 
 	sessionKey := "1.1.1.1"
 	session, err := sm.StartSession(sessionKey)
@@ -44,6 +50,13 @@ func TestSessionManagerCache(t *testing.T) {
 		t.Errorf("unexpected session ID: %d", session.ID)
 	}
 
+	sm.CleanupStaleSessions(10)
+	// Check the gauge.
+	m := testutil.ToFloat64(metrics.sessionsActiveGauge)
+	if m != 1 {
+		t.Errorf("rateBucketsGauge should be 0 after reset")
+	}
+
 	session.ID = 43
 	session, _ = sm.GetCachedSession(sessionKey)
 	if session.ID != 43 {
@@ -57,7 +70,10 @@ func TestSessionManagerCleansStaleSessions(t *testing.T) {
 		ErrorToReturn:   nil,
 	}
 
-	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute)
+	reg := prometheus.NewRegistry()
+	metrics := CreateSessionMetrics(reg)
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute, metrics)
 
 	cnt, err := sm.CleanupStaleSessions(10)
 	if err != nil {
@@ -79,7 +95,10 @@ func TestSessionManagerEndSession(t *testing.T) {
 		Active: true,
 	}
 
-	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute)
+	reg := prometheus.NewRegistry()
+	metrics := CreateSessionMetrics(reg)
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute, metrics)
 	if err := sm.EndSession(&sess); err != nil {
 		t.Errorf("error ending session: %s", err.Error())
 	}

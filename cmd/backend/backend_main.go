@@ -183,6 +183,7 @@ func main() {
 	rMetrics := ratelimit.CreateRatelimiterMetrics(metricsRegistry)
 
 	rateLimiter := ratelimit.NewWindowRateLimiter(cfg.Backend.RateLimiter.RateWindow, cfg.Backend.RateLimiter.BucketDuration, cfg.Backend.RateLimiter.MaxRequestsPerWindow, cfg.Backend.RateLimiter.MaxRequestsPerBucket, rMetrics)
+	rateLimiter.Start()
 
 	var llmResponder responder.Responder
 	if cfg.Responder.Enable {
@@ -197,7 +198,9 @@ func main() {
 	}
 
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
-	sessionMgr := session.NewDatabaseSessionManager(dbc, cfg.Backend.Advanced.SessionTrackingTimeout)
+
+	sMetrics := session.CreateSessionMetrics(metricsRegistry)
+	sessionMgr := session.NewDatabaseSessionManager(dbc, cfg.Backend.Advanced.SessionTrackingTimeout, sMetrics)
 
 	slog.Info("Cleaning up any stale sessions")
 	totalSessionsCleaned := 0
