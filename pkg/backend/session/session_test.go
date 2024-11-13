@@ -50,11 +50,10 @@ func TestSessionManagerCache(t *testing.T) {
 		t.Errorf("unexpected session ID: %d", session.ID)
 	}
 
-	sm.CleanupStaleSessions(10)
 	// Check the gauge.
 	m := testutil.ToFloat64(metrics.sessionsActiveGauge)
 	if m != 1 {
-		t.Errorf("rateBucketsGauge should be 0 after reset")
+		t.Errorf("sessionsActiveGauge should be 1")
 	}
 
 	session.ID = 43

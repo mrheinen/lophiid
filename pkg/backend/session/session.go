@@ -125,7 +125,6 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *models.Session) boo
 // StartNewSession starts a new session for the given IP and stores the session
 // in the cache.
 func (d *DatabaseSessionManager) StartSession(ip string) (*models.Session, error) {
-	d.metrics.sessionsActiveGauge.Set(float64(d.activeSessions.Count()))
 	newSession := models.NewSession()
 	newSession.Active = true
 	newSession.StartedAt = time.Now().UTC()
@@ -138,5 +137,6 @@ func (d *DatabaseSessionManager) StartSession(ip string) (*models.Session, error
 
 	retSession := dm.(*models.Session)
 	d.activeSessions.Store(ip, retSession)
+	d.metrics.sessionsActiveGauge.Set(float64(d.activeSessions.Count()))
 	return retSession, nil
 }
