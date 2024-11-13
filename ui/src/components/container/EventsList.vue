@@ -25,11 +25,12 @@
           <template #empty>No data matched. </template>
           <template #loading>Loading request data. Please wait. </template>
 
-          <DataColumn field="id" header="ID" style="width: 4%">
+          <DataColumn field="id" header="ID" style="width: 5%">
           </DataColumn>
-          <DataColumn field="parsed.first_seen_at" header="First Seen" style="width: 12%">
+          <DataColumn field="parsed.first_seen_at" header="First Seen"
+          style="width: 16%">
           </DataColumn>
-          <DataColumn field="type" header="Type" style="width: 5%">
+          <DataColumn field="type" header="Type" style="width: 10%">
           </DataColumn>
 
           <DataColumn header="IP" style="width: 10%">
