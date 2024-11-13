@@ -183,6 +183,7 @@ func main() {
 	rMetrics := ratelimit.CreateRatelimiterMetrics(metricsRegistry)
 
 	rateLimiter := ratelimit.NewWindowRateLimiter(cfg.Backend.RateLimiter.RateWindow, cfg.Backend.RateLimiter.BucketDuration, cfg.Backend.RateLimiter.MaxRequestsPerWindow, cfg.Backend.RateLimiter.MaxRequestsPerBucket, rMetrics)
+	rateLimiter.Start()
 
 	var llmResponder responder.Responder
 	if cfg.Responder.Enable {
