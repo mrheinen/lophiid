@@ -29,7 +29,6 @@ type CacheEntry[T any] struct {
 	CreationTime  time.Time
 }
 
-
 type StringMapCache[T any] struct {
 	mu        sync.RWMutex
 	entries   map[string]CacheEntry[T]
@@ -45,6 +44,12 @@ func NewStringMapCache[T any](name string, timeout time.Duration) *StringMapCach
 		entries:   make(map[string]CacheEntry[T]),
 		bgChan:    make(chan bool),
 	}
+}
+
+func (r *StringMapCache[T]) Count() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.entries)
 }
 
 func (r *StringMapCache[T]) Store(key string, data T) {
