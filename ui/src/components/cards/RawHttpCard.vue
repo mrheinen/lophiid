@@ -51,7 +51,7 @@ export default {
 <style scoped>
 pre.rawhttp {
   max-height: 400px;
-  max-width: 675px;
+  max-width: 640px;
   overflow: auto;
   background-color: #eeeeee;
   word-break: normal !important;

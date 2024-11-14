@@ -6,6 +6,7 @@
       </FieldSet>
     </div>
 
+    <div>
     <FieldSet legend="Context" :toggleable="false">
     <PrimeTabs value="0">
     <TabList>
@@ -95,8 +96,8 @@
         </TabPanel>
     </TabPanels>
     </PrimeTabs>
-
     </FieldSet>
+    </div>
 
   </div>
 </template>
@@ -176,7 +177,7 @@ table {
 
 pre.whois {
   max-height: 400px;
-  max-width: 700px;
+  max-width: 640px;
   overflow: auto;
   background-color: #eeeeee;
   word-break: normal !important;

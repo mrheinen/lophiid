@@ -53,7 +53,7 @@ type WindowRateLimiter struct {
 	NumberBuckets        int
 	RateBuckets          map[string][]int
 	Metrics              *RatelimiterMetrics
-	mu                   sync.Mutex
+	rateMu               sync.Mutex
 	bgChan               chan bool
 }
 
@@ -103,8 +103,8 @@ func GetSumOfWindow(window []int) int {
 // bucket while removing windows where all buckets are 0 (basically no traffic
 // seen).
 func (r *WindowRateLimiter) Tick() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.rateMu.Lock()
+	defer r.rateMu.Unlock()
 
 	for k := range r.RateBuckets {
 		r.RateBuckets[k] = r.RateBuckets[k][1:]
@@ -124,8 +124,8 @@ func (r *WindowRateLimiter) Tick() {
 func (r *WindowRateLimiter) AllowRequest(req *models.Request) (bool, error) {
 	rKey := fmt.Sprintf("%s-%d-%s", req.HoneypotIP, req.Port, req.SourceIP)
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.rateMu.Lock()
+	defer r.rateMu.Unlock()
 
 	_, ok := r.RateBuckets[rKey]
 	// If the key is not present then this IP has no recent requests logged so we
@@ -138,11 +138,13 @@ func (r *WindowRateLimiter) AllowRequest(req *models.Request) (bool, error) {
 
 	// Check if the bucket limit is not already exceeded.
 	if r.RateBuckets[rKey][r.NumberBuckets-1] >= r.MaxRequestPerBucket {
+		r.RateBuckets[rKey][r.NumberBuckets-1] += 1
 		return false, ErrBucketLimitExceeded
 	}
 
 	// Check how many requests there have been in this window.
 	if GetSumOfWindow(r.RateBuckets[rKey]) >= r.MaxRequestsPerWindow {
+		r.RateBuckets[rKey][r.NumberBuckets-1] += 1
 		return false, ErrWindowLimitExceeded
 	}
 
