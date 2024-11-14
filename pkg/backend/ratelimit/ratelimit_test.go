@@ -28,7 +28,7 @@ import (
 func TestRateLimitOk(t *testing.T) {
 	testRateWindow := time.Second * 5
 	testBucketDuration := time.Second
-	testMaxRequestsPerWindow := 3
+	testMaxRequestsPerWindow := 4
 	testMaxRequestPerBucket := 2
 
 	req := models.Request{
@@ -65,7 +65,7 @@ func TestRateLimitOk(t *testing.T) {
 		t.Errorf("expected bucket exceeded, got unexpected error %v", err)
 	}
 
-	// Now we do a tick which resets the bucket limit. Therefore
+	// Now we do a tick twice which resets the bucket limit. Therefore
 	// the next request is allowed again.
 	r.Tick()
 	if isAllowed, err = r.AllowRequest(&req); !isAllowed {
