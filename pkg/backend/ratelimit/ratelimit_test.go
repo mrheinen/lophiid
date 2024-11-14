@@ -49,10 +49,10 @@ func TestRateLimitOk(t *testing.T) {
 	// work OK twice and be rejected a third time due to the
 	// MaxRequestPerBucket being set to 2.
 	if isAllowed, err := r.AllowRequest(&req); !isAllowed {
-		t.Errorf("unexpected error %v", err)
+		t.Errorf("not allowed, unexpected error %v", err)
 	}
 	if isAllowed, err := r.AllowRequest(&req); !isAllowed {
-		t.Errorf("unexpected error %v", err)
+		t.Errorf("not allowed, unexpected error %v", err)
 	}
 
 	// This is the third one and needs to be rejected.
@@ -62,7 +62,7 @@ func TestRateLimitOk(t *testing.T) {
 	}
 
 	if err != ErrBucketLimitExceeded {
-		t.Errorf("unexpected error %v", err)
+		t.Errorf("expected bucket exceeded, got unexpected error %v", err)
 	}
 
 	// Now we do a tick which resets the bucket limit. Therefore
