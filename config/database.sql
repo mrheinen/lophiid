@@ -66,6 +66,15 @@ CREATE TABLE request (
   rule_uuid       VARCHAR(36) default '',
 );
 
+CREATE TABLE base_hashes (
+  id                 SERIAL PRIMARY KEY,
+  created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  base_hash          VARCHAR(64) DEFAULT '',
+  example_request_id INT,
+  ai_description     TEXT,
+  CONSTRAINT fk_example_request_id FOREIGN KEY(example_request_id) REFERENCES request(id)
+);
 
 CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,

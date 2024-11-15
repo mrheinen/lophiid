@@ -47,6 +47,7 @@ var TagPerQueryTable = ksql.NewTable("tag_per_query")
 var P0fResultTable = ksql.NewTable("p0f_result")
 var IpEventTable = ksql.NewTable("ip_event")
 var SessionTable = ksql.NewTable("session")
+var BaseHashTable = ksql.NewTable("base_hash")
 
 type DatabaseClient interface {
 	Close()
@@ -70,6 +71,7 @@ type DatabaseClient interface {
 	SearchDownloads(offset int64, limit int64, query string) ([]models.Download, error)
 	SearchHoneypots(offset int64, limit int64, query string) ([]models.Honeypot, error)
 	SearchSession(offset int64, limit int64, query string) ([]models.Session, error)
+	SearchBaseHash(offset int64, limit int64, query string) ([]models.BaseHash, error)
 	SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]models.Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
@@ -173,42 +175,31 @@ func (d *KSQLClient) getTableNameForModel(dm models.DataModel) string {
 func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	name := util.GetStructName(dm)
 
-	switch name {
-	case "Application":
-		return &AppTable
-	case "Request":
-		return &RequestTable
-	case "Content":
-		return &ContentTable
-	case "ContentRule":
-		return &ContentRuleTable
-	case "RequestMetadata":
-		return &RequestMetadataTable
-	case "Download":
-		return &DownloadTable
-	case "Honeypot":
-		return &HoneypotTable
-	case "Whois":
-		return &WhoisTable
-	case "StoredQuery":
-		return &StoredQueryTable
-	case "Tag":
-		return &TagTable
-	case "TagPerQuery":
-		return &TagPerQueryTable
-	case "TagPerRequest":
-		return &TagPerRequestTable
-	case "P0fResult":
-		return &P0fResultTable
-	case "IpEvent":
-		return &IpEventTable
-	case "Session":
-		return &SessionTable
+	sqlTable := make(map[string]*ksql.Table)
+	sqlTable["Application"] = &AppTable
+	sqlTable["Request"] = &RequestTable
+	sqlTable["Content"] = &ContentTable
+	sqlTable["ContentRule"] = &ContentRuleTable
+	sqlTable["RequestMetadata"] = &RequestMetadataTable
+	sqlTable["Download"] = &DownloadTable
+	sqlTable["Honeypot"] = &HoneypotTable
+	sqlTable["Whois"] = &WhoisTable
+	sqlTable["StoredQuery"] = &StoredQueryTable
+	sqlTable["Tag"] = &TagTable
+	sqlTable["TagPerQuery"] = &TagPerQueryTable
+	sqlTable["TagPerRequest"] = &TagPerRequestTable
+	sqlTable["P0fResult"] = &P0fResultTable
+	sqlTable["IpEvent"] = &IpEventTable
+	sqlTable["Session"] = &SessionTable
+	sqlTable["BaseHash"] = &BaseHashTable
 
-	default:
-		fmt.Printf("Don't know %s datamodel\n", name)
+	table, ok := sqlTable[name]
+	if !ok {
+		slog.Error("Don't know datamodel!!", slog.String("datamodel", name))
 		return nil
 	}
+
+	return table
 }
 
 func (d *KSQLClient) Insert(dm models.DataModel) (models.DataModel, error) {
@@ -422,6 +413,25 @@ func (d *KSQLClient) SearchSession(offset int64, limit int64, query string) ([]m
 	}
 
 	query, values, err := buildComposedQuery(params, "FROM session", fmt.Sprintf("ORDER BY started_at DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) SearchBaseHash(offset int64, limit int64, query string) ([]models.BaseHash, error) {
+	var rs []models.BaseHash
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.BaseHash{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildComposedQuery(params, "FROM session", fmt.Sprintf("ORDER BY created_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
