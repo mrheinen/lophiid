@@ -310,6 +310,8 @@ export default {
     submitForm() {
       const ruleToSubmit = Object.assign({}, this.localRule);
       delete ruleToSubmit.parsed;
+      delete ruleToSubmit.app_version;
+      delete ruleToSubmit.app_name;
 
       fetch(this.config.backendAddress + "/contentrule/upsert", {
         method: "POST",
