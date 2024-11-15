@@ -174,7 +174,7 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	name := util.GetStructName(dm)
 
 	switch name {
-	case "models.Application":
+	case "Application":
 		return &AppTable
 	case "Request":
 		return &RequestTable
