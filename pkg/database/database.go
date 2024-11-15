@@ -695,6 +695,7 @@ type FakeDatabaseClient struct {
 	IpEventToReturn           models.IpEvent
 	DataModelToReturn         models.DataModel
 	SessionToReturn           models.Session
+	BaseHashToReturn          models.BaseHash
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -783,4 +784,8 @@ func (f *FakeDatabaseClient) GetRequestByID(id int64) (models.Request, error) {
 }
 func (f *FakeDatabaseClient) SearchWhois(offset int64, limit int64, query string) ([]models.Whois, error) {
 	return []models.Whois{f.WhoisToReturn}, f.WhoisErrorToReturn
+}
+
+func (f *FakeDatabaseClient) SearchBaseHash(offset int64, limit int64, query string) ([]models.BaseHash, error) {
+	return []models.BaseHash{f.BaseHashToReturn}, f.ErrorToReturn
 }
