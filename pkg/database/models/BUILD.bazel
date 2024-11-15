@@ -4,6 +4,7 @@ go_library(
     name = "models",
     srcs = [
         "application.go",
+        "base_hash.go",
         "content.go",
         "content_rule.go",
         "download.go",
