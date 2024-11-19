@@ -59,6 +59,7 @@ CREATE TABLE request (
   starred         BOOL default FALSE,
   content_dynamic BOOL default FALSE,
   base_hash       VARCHAR(64) DEFAULT '',
+  cmp_hash        VARCHAR(64) DEFAULT '',
   content_id      INT,
   session_id      INT NOT NULL default 0,
   app_id          INT NOT NULL default 0,
@@ -77,7 +78,7 @@ CREATE TABLE base_hash (
   ai_vulnerability   VARCHAR(128),
   ai_malicious       VARCHAR(6),
   ai_cve             VARCHAR(15),
-  review_status      REVIEW_STATUS_TYPE default UNREVIEWED,
+  review_status      REVIEW_STATUS_TYPE default 'UNREVIEWED',
   CONSTRAINT fk_example_request_id FOREIGN KEY(example_request_id) REFERENCES request(id)
 );
 
@@ -356,6 +357,11 @@ CREATE INDEX session_ip ON session (
   started_at desc,
   active,
   ip
+);
+
+CREATE INDEX requests_cmp_hash_idx ON request (
+  time_received desc,
+  cmp_hash
 );
 
 CREATE INDEX requests_session_idx ON request (
