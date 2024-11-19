@@ -47,7 +47,7 @@ var TagPerQueryTable = ksql.NewTable("tag_per_query")
 var P0fResultTable = ksql.NewTable("p0f_result")
 var IpEventTable = ksql.NewTable("ip_event")
 var SessionTable = ksql.NewTable("session")
-var BaseHashTable = ksql.NewTable("base_hash")
+var RequestDescriptionTable = ksql.NewTable("request_description")
 
 type DatabaseClient interface {
 	Close()
@@ -71,7 +71,7 @@ type DatabaseClient interface {
 	SearchDownloads(offset int64, limit int64, query string) ([]models.Download, error)
 	SearchHoneypots(offset int64, limit int64, query string) ([]models.Honeypot, error)
 	SearchSession(offset int64, limit int64, query string) ([]models.Session, error)
-	SearchBaseHash(offset int64, limit int64, query string) ([]models.BaseHash, error)
+	SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error)
 	SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]models.Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
@@ -191,7 +191,7 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["P0fResult"] = &P0fResultTable
 	sqlTable["IpEvent"] = &IpEventTable
 	sqlTable["Session"] = &SessionTable
-	sqlTable["BaseHash"] = &BaseHashTable
+	sqlTable["RequestDescription"] = &RequestDescriptionTable
 
 	table, ok := sqlTable[name]
 	if !ok {
@@ -424,9 +424,9 @@ func (d *KSQLClient) SearchSession(offset int64, limit int64, query string) ([]m
 	return rs, err
 }
 
-func (d *KSQLClient) SearchBaseHash(offset int64, limit int64, query string) ([]models.BaseHash, error) {
-	var rs []models.BaseHash
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.BaseHash{}))
+func (d *KSQLClient) SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error) {
+	var rs []models.RequestDescription
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.RequestDescription{}))
 	if err != nil {
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
@@ -671,31 +671,31 @@ func (d *KSQLClient) DeleteContentRule(id int64) error {
 // FakeDatabaseClient is a struct specifically for testing users of the
 // DatabaseClient interface
 type FakeDatabaseClient struct {
-	ContentIDToReturn         int64
-	ContentsToReturn          map[int64]models.Content
-	ErrorToReturn             error
-	ContentRuleIDToReturn     int64
-	ContentRulesToReturn      []models.ContentRule
-	RequestsToReturn          []models.Request
-	RequestToReturn           models.Request
-	DownloadsToReturn         []models.Download
-	ApplicationToReturn       models.Application
-	HoneypotToReturn          models.Honeypot
-	HoneypotErrorToReturn     error
-	QueriesToReturn           []models.StoredQuery
-	QueriesToReturnError      error
-	TagPerQueryReturn         []models.TagPerQuery
-	TagPerQueryReturnError    error
-	WhoisToReturn             models.Whois
-	WhoisErrorToReturn        error
-	LastDataModelSeen         interface{}
-	LastExternalDataModelSeen interface{}
-	P0fResultToReturn         models.P0fResult
-	P0fErrorToReturn          error
-	IpEventToReturn           models.IpEvent
-	DataModelToReturn         models.DataModel
-	SessionToReturn           models.Session
-	BaseHashToReturn          models.BaseHash
+	ContentIDToReturn           int64
+	ContentsToReturn            map[int64]models.Content
+	ErrorToReturn               error
+	ContentRuleIDToReturn       int64
+	ContentRulesToReturn        []models.ContentRule
+	RequestsToReturn            []models.Request
+	RequestToReturn             models.Request
+	DownloadsToReturn           []models.Download
+	ApplicationToReturn         models.Application
+	HoneypotToReturn            models.Honeypot
+	HoneypotErrorToReturn       error
+	QueriesToReturn             []models.StoredQuery
+	QueriesToReturnError        error
+	TagPerQueryReturn           []models.TagPerQuery
+	TagPerQueryReturnError      error
+	WhoisToReturn               models.Whois
+	WhoisErrorToReturn          error
+	LastDataModelSeen           interface{}
+	LastExternalDataModelSeen   interface{}
+	P0fResultToReturn           models.P0fResult
+	P0fErrorToReturn            error
+	IpEventToReturn             models.IpEvent
+	DataModelToReturn           models.DataModel
+	SessionToReturn             models.Session
+	RequestDescriptionsToReturn []models.RequestDescription
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -785,7 +785,6 @@ func (f *FakeDatabaseClient) GetRequestByID(id int64) (models.Request, error) {
 func (f *FakeDatabaseClient) SearchWhois(offset int64, limit int64, query string) ([]models.Whois, error) {
 	return []models.Whois{f.WhoisToReturn}, f.WhoisErrorToReturn
 }
-
-func (f *FakeDatabaseClient) SearchBaseHash(offset int64, limit int64, query string) ([]models.BaseHash, error) {
-	return []models.BaseHash{f.BaseHashToReturn}, f.ErrorToReturn
+func (f *FakeDatabaseClient) SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error) {
+	return f.RequestDescriptionsToReturn, f.ErrorToReturn
 }

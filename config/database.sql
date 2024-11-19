@@ -67,11 +67,11 @@ CREATE TABLE request (
   rule_uuid       VARCHAR(36) default '',
 );
 
-CREATE TABLE base_hash (
+CREATE TABLE request_description (
   id                 SERIAL PRIMARY KEY,
   created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  base_hash          VARCHAR(64) DEFAULT '',
+  cmp_hash           VARCHAR(64) DEFAULT '',
   example_request_id INT,
   ai_description     TEXT,
   ai_application     VARCHAR(128),
@@ -352,6 +352,9 @@ GRANT ALL PRIVILEGES ON ip_event TO lo;
 GRANT ALL PRIVILEGES ON ip_event_id_seq TO lo;
 GRANT ALL PRIVILEGES ON session TO lo;
 GRANT ALL PRIVILEGES ON session_id_seq TO lo;
+GRANT ALL PRIVILEGES ON request_description TO lo;
+GRANT ALL PRIVILEGES ON request_description_id_seq TO lo;
+
 
 CREATE INDEX session_ip ON session (
   started_at desc,

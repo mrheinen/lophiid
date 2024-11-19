@@ -4,7 +4,6 @@ go_library(
     name = "models",
     srcs = [
         "application.go",
-        "base_hash.go",
         "content.go",
         "content_rule.go",
         "download.go",
@@ -13,6 +12,7 @@ go_library(
         "models.go",
         "p0f_result.go",
         "request.go",
+        "request_description.go",
         "request_metadata.go",
         "session.go",
         "stored_query.go",
