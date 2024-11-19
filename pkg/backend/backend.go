@@ -200,6 +200,11 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 		sReq.BaseHash = hash
 	}
 
+	hash, err = database.GetSameRequestHash(&sReq)
+	if err == nil {
+		sReq.CmpHash = hash
+	}
+
 	return &sReq, nil
 }
 func MatchesString(method string, dataToSearch string, searchValue string) bool {

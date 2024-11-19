@@ -31,7 +31,7 @@ CREATE TYPE DOWNLOAD_STATUS AS ENUM ('UNKNOWN', 'SCHEDULED', 'DONE');
 CREATE TYPE REQUEST_PURPOSE AS ENUM ('UNKNOWN', 'RECON', 'CRAWL', 'ATTACK');
 CREATE TYPE RESPONDER_TYPE AS ENUM ('NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION');
 CREATE TYPE RESPONDER_DECODER_TYPE AS ENUM ('NONE', 'URI', 'HTML');
-
+CREATE TYPE REVIEW_STATUS_TYPE AS ENUM ('UNREVIEWED', 'REVIEWED_OK', 'REVIEWED_NOK');
 
 CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
@@ -66,15 +66,21 @@ CREATE TABLE request (
   rule_uuid       VARCHAR(36) default '',
 );
 
-CREATE TABLE base_hashes (
+CREATE TABLE base_hash (
   id                 SERIAL PRIMARY KEY,
   created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   base_hash          VARCHAR(64) DEFAULT '',
   example_request_id INT,
   ai_description     TEXT,
+  ai_application     VARCHAR(128),
+  ai_vulnerability   VARCHAR(128),
+  ai_malicious       VARCHAR(6),
+  ai_cve             VARCHAR(15),
+  review_status      REVIEW_STATUS_TYPE default UNREVIEWED,
   CONSTRAINT fk_example_request_id FOREIGN KEY(example_request_id) REFERENCES request(id)
 );
+
 
 CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,
