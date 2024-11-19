@@ -111,6 +111,28 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		hash.Write([]byte(field))
 	}
 
+	parametersToIgnore := map[string]bool{
+		"user":          true,
+		"new-user":      true,
+		"newuser":       true,
+		"new-username":  true,
+		"newusername":   true,
+		"login":         true,
+		"newlogin":      true,
+		"new-login":     true,
+		"username":      true,
+		"email":         true,
+		"email-address": true,
+		"e-mail":        true,
+		"pass":          true,
+		"password":      true,
+		"new-passwd":    true,
+		"new-pass":      true,
+		"new-password":  true,
+		"passwd":        true,
+		"secret":        true,
+	}
+
 	// Form fields.
 	if req.ContentType == "application/x-www-form-urlencoded" {
 		var formFields []string
@@ -121,7 +143,9 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		if err == nil {
 			for paramName, value := range parsedQuery {
 				formFields = append(formFields, paramName)
-				formFields = append(formFields, value...)
+				if _, ok := parametersToIgnore[paramName]; !ok {
+					formFields = append(formFields, value...)
+				}
 			}
 
 			sort.Strings(formFields)

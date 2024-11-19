@@ -214,6 +214,82 @@ func TestGetSameRequestHash(t *testing.T) {
 			shouldMatch: false,
 			wantErr:     true,
 		},
+		{
+			name: "form encoded bodies with ignored parameters should match regardless of values",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/login",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=john&password=secret123&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/login",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=alice&password=different456&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with mix of ignored and non-ignored parameters",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=john&password=secret123&age=25&location=NY"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=alice&password=different456&age=25&location=NY"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with mix of ignored and non-ignored parameters should not match with different non-ignored values",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=john&password=secret123&age=25&location=NY"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=alice&password=different456&age=30&location=LA"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with different ignored parameter names should not match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/auth",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=john&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/auth",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("email=john@example.com&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
 	}
 
 	for _, tt := range tests {
