@@ -9,6 +9,7 @@ go_library(
         "general.go",
         "logging.go",
         "net.go",
+        "queue.go",
         "security.go",
         "string_map_cache.go",
         "versioning.go",
