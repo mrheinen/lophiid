@@ -1,32 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "basehash",
-    srcs = ["manager.go"],
-    importpath = "lophiid/pkg/basehash",
-    visibility = ["//visibility:public"],
-    deps = [
-        "//pkg/database",
-        "//pkg/database/models",
-        "//pkg/llm",
-        "//pkg/util",
-    ],
-)
-
-go_test(
-    name = "basehash_test",
-    srcs = ["manager_test.go"],
-    embed = [":basehash"],
-    deps = [
-        "//pkg/database",
-        "//pkg/database/models",
-        "//pkg/llm",
-        "//pkg/util",
-        "@com_github_prometheus_client_golang//prometheus",
-    ],
-)
-
-go_library(
     name = "request_describer",
     srcs = [
         "manager.go",
