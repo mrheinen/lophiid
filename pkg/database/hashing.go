@@ -84,3 +84,69 @@ func GetHashFromStaticRequestFields(req *models.Request) (string, error) {
 	sum := hash.Sum(nil)
 	return fmt.Sprintf("%x", sum), nil
 }
+
+// GetSameRequestHash returns a hash that aims to be able to be equal for the
+// same request against different hosts. It is must more specific than the one
+// created above.
+func GetSameRequestHash(req *models.Request) (string, error) {
+	hash := sha256.New()
+	hash.Write([]byte(req.Method))
+	hash.Write([]byte(req.Path))
+
+	// Add the headers.
+	var headerFields []string
+	for _, header := range req.Headers {
+		headerArray := strings.SplitN(header, ": ", 2)
+		headerFields = append(headerFields, headerArray[0])
+
+		if len(headerArray) == 2 {
+			if strings.ToLower(headerArray[0]) != "host" {
+				headerFields = append(headerFields, headerArray[1])
+			}
+		}
+	}
+
+	sort.Strings(headerFields)
+	for _, field := range headerFields {
+		hash.Write([]byte(field))
+	}
+
+	// Form fields.
+	if req.ContentType == "application/x-www-form-urlencoded" {
+		var formFields []string
+
+		parsedQuery, err := util.CustomParseQuery(string(req.Body))
+		// We accept that an error can occur here because payloads are often really
+		// a mess and don't always parse well. If an error occurs; we don't return.
+		if err == nil {
+			for paramName, value := range parsedQuery {
+				formFields = append(formFields, paramName)
+				formFields = append(formFields, value...)
+			}
+
+			sort.Strings(formFields)
+			for _, field := range formFields {
+				hash.Write([]byte(field))
+			}
+		}
+	}
+
+	// Query fields.
+	parsedQuery, err := util.CustomParseQuery(req.Query)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse query: %w", err) //nolint:err
+	}
+
+	var queryFields []string
+	for paramName, paramValue := range parsedQuery {
+		queryFields = append(queryFields, paramName)
+		queryFields = append(queryFields, paramValue...)
+	}
+
+	sort.Strings(queryFields)
+	for _, field := range queryFields {
+		hash.Write([]byte(field))
+	}
+	sum := hash.Sum(nil)
+	return fmt.Sprintf("%x", sum), nil
+}
