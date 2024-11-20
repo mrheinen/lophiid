@@ -17,11 +17,14 @@
 package describer
 
 import (
+	"lophiid/pkg/metrics"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type DescriberMetrics struct {
-	pendingRequestsGauge prometheus.Gauge
+	pendingRequestsGauge         prometheus.Gauge
+	completeMultipleResponsetime prometheus.Histogram
 }
 
 func CreateDescriberMetrics(reg prometheus.Registerer) *DescriberMetrics {
@@ -31,8 +34,15 @@ func CreateDescriberMetrics(reg prometheus.Registerer) *DescriberMetrics {
 				Name: "lophiid_describer_pending_requests_gauge",
 				Help: "The amount of requests/cmp hashes that need to be described "},
 		),
+		completeMultipleResponsetime: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "lophiid_describer_complete_multipe_response_time",
+				Help:    "Response times of the CompleteMultiple LLM calls",
+				Buckets: metrics.SlowResponseTimebuckets},
+		),
 	}
 
 	reg.MustRegister(m.pendingRequestsGauge)
+	reg.MustRegister(m.completeMultipleResponsetime)
 	return m
 }

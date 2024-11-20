@@ -12,6 +12,7 @@ go_library(
         "//pkg/database",
         "//pkg/database/models",
         "//pkg/llm",
+        "//pkg/metrics",
         "//pkg/util",
         "@com_github_prometheus_client_golang//prometheus",
     ],

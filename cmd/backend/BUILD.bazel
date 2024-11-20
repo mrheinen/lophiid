@@ -18,6 +18,7 @@ go_library(
         "//pkg/database/models",
         "//pkg/javascript",
         "//pkg/llm",
+        "//pkg/request_describer",
         "//pkg/util",
         "//pkg/vt",
         "//pkg/whois",

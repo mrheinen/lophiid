@@ -51,7 +51,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 			promptInputs = append(promptInputs, fmt.Sprintf(basePrompt, cmd))
 		}
 
-		resMap, err := l.llmManager.CompleteMultiple(promptInputs)
+		resMap, err := l.llmManager.CompleteMultiple(promptInputs, true)
 		if err != nil {
 			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
 			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
@@ -67,7 +67,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 	case constants.ResponderTypeSourceCodeExecution:
 		basePrompt = sourceCodeExecutionPrompt
 		finalPrompt := fmt.Sprintf(basePrompt, promptInput)
-		res, err = l.llmManager.Complete(finalPrompt)
+		res, err = l.llmManager.Complete(finalPrompt, true)
 		if err != nil {
 			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
 			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err

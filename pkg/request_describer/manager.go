@@ -12,7 +12,13 @@ import (
 	"time"
 )
 
-type DescriptionManager struct {
+type DescriptionManager interface {
+	MaybeAddNewHash(hash string, req *models.Request) error
+}
+
+// CachedDescriptionManager is a manager for request descriptions. It caches
+// descriptions in memory so that database calls are minimal.
+type CachedDescriptionManager struct {
 	cache        *util.StringMapCache[struct{}]
 	dbClient     database.DatabaseClient
 	llmQueueMap  map[string]QueueEntry
@@ -52,8 +58,12 @@ cve: the relevant CVE or an empty string if you do not know.
 The request was:
 `
 
-func GetNewDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, cache *util.StringMapCache[struct{}], metrics *DescriberMetrics, batchSize int) *DescriptionManager {
-	return &DescriptionManager{
+func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, cacheTimeout time.Duration, metrics *DescriberMetrics, batchSize int) *CachedDescriptionManager {
+
+	cache := util.NewStringMapCache[struct{}]("CmpHash cache", cacheTimeout)
+	cache.Start()
+
+	return &CachedDescriptionManager{
 		dbClient:     dbClient,
 		cache:        cache,
 		llmQueueMap:  make(map[string]QueueEntry),
@@ -64,19 +74,19 @@ func GetNewDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.
 	}
 }
 
-func (b *DescriptionManager) Start() {
+func (b *CachedDescriptionManager) Start() {
 	slog.Info("Starting base hash manager")
 	go b.QueueProcessor()
 }
 
-func (b *DescriptionManager) Stop() {
+func (b *CachedDescriptionManager) Stop() {
 	slog.Info("Stopping base hash manager")
 	b.bgChan <- true
 }
 
 // MaybeAddNewHash add the hash to the cache and database if necessary. Also
 // schedules an LLM description for the hash.
-func (b *DescriptionManager) MaybeAddNewHash(hash string, req *models.Request) error {
+func (b *CachedDescriptionManager) MaybeAddNewHash(hash string, req *models.Request) error {
 	// First check the cache
 	_, err := b.cache.Get(hash)
 	if err == nil {
@@ -119,7 +129,7 @@ func (b *DescriptionManager) MaybeAddNewHash(hash string, req *models.Request) e
 	return nil
 }
 
-func (b *DescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry) error {
+func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry) error {
 
 	var prompts []string
 	promptMap := make(map[string]*models.RequestDescription, len(entries))
@@ -130,11 +140,15 @@ func (b *DescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry) erro
 		prompts = append(prompts, prompt)
 	}
 
-	result, err := b.llmManager.CompleteMultiple(prompts)
+	start := time.Now()
+	result, err := b.llmManager.CompleteMultiple(prompts, false)
 	if err != nil {
 		return fmt.Errorf("failed to complete LLM request: %w", err)
 	}
 
+	fmt.Printf("XXX: LLM result: %+v\n", result)
+
+	b.metrics.completeMultipleResponsetime.Observe(time.Since(start).Seconds())
 	for prompt, completion := range result {
 		var llmResult LLMResult
 		if err := json.Unmarshal([]byte(completion), &llmResult); err != nil {
@@ -156,7 +170,7 @@ func (b *DescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry) erro
 	return nil
 }
 
-func (b *DescriptionManager) QueueProcessor() {
+func (b *CachedDescriptionManager) QueueProcessor() {
 	for {
 
 		entries := []*QueueEntry{}
@@ -190,4 +204,12 @@ func (b *DescriptionManager) QueueProcessor() {
 			return
 		}
 	}
+}
+
+type FakeDescriptionManager struct {
+	addNewHashError error
+}
+
+func (f *FakeDescriptionManager) MaybeAddNewHash(hash string, req *models.Request) error {
+	return f.addNewHashError
 }

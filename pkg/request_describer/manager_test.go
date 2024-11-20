@@ -34,13 +34,11 @@ func GetMetrics() *DescriberMetrics {
 func TestMaybeAddNewHash(t *testing.T) {
 
 	t.Run("cache miss and db error", func(t *testing.T) {
-		cache := util.NewStringMapCache[struct{}]("foo", time.Hour)
-
 		fakeDbClient := &database.FakeDatabaseClient{
 			ErrorToReturn: errors.New("nope"),
 		}
 
-		hm := GetNewDescriptionManager(fakeDbClient, GetLMManager(""), cache, GetMetrics(), 3)
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), time.Minute, GetMetrics(), 3)
 		fakeHash := "ABCDEFGHIJKLMNOP"
 
 		err := hm.MaybeAddNewHash(fakeHash, &models.Request{})
@@ -54,7 +52,6 @@ func TestMaybeAddNewHash(t *testing.T) {
 	})
 
 	t.Run("cache miss but in db", func(t *testing.T) {
-		cache := util.NewStringMapCache[struct{}]("foo", time.Hour)
 
 		fakeHash := "ABCDEFGHIJKLMNOP"
 		fakeDbClient := &database.FakeDatabaseClient{
@@ -65,25 +62,23 @@ func TestMaybeAddNewHash(t *testing.T) {
 			},
 		}
 
-		hm := GetNewDescriptionManager(fakeDbClient, GetLMManager(""), cache, GetMetrics(), 3)
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), time.Minute, GetMetrics(), 3)
 		err := hm.MaybeAddNewHash(fakeHash, &models.Request{})
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
 		}
 
-		_, err = cache.Get(fakeHash)
+		_, err = hm.cache.Get(fakeHash)
 		if err != nil {
 			t.Fatalf("expected cache entry for %s, got none", fakeHash)
 		}
 	})
 
 	t.Run("missing in db and cache", func(t *testing.T) {
-		cache := util.NewStringMapCache[struct{}]("foo", time.Hour)
-
 		fakeHash := "ABCDEFGHIJKLMNOP"
 		fakeDbClient := &database.FakeDatabaseClient{}
 
-		hm := GetNewDescriptionManager(fakeDbClient, GetLMManager(""), cache, GetMetrics(), 3)
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), time.Minute, GetMetrics(), 3)
 		err := hm.MaybeAddNewHash(fakeHash, &models.Request{})
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
@@ -92,7 +87,7 @@ func TestMaybeAddNewHash(t *testing.T) {
 		if len(hm.llmQueueMap) != 1 {
 			t.Fatalf("expected 1 item in LLM queue, got %d", len(hm.llmQueueMap))
 		}
-		_, err = cache.Get(fakeHash)
+		_, err = hm.cache.Get(fakeHash)
 		if err != nil {
 			t.Fatalf("expected cache entry for %s, got none", fakeHash)
 		}
@@ -100,7 +95,6 @@ func TestMaybeAddNewHash(t *testing.T) {
 }
 
 func TestGenerateLLMDescriptionsOk(t *testing.T) {
-	cache := util.NewStringMapCache[struct{}]("foo", time.Hour)
 	fakeDbClient := &database.FakeDatabaseClient{}
 
 	testDescription := "description"
@@ -111,7 +105,7 @@ func TestGenerateLLMDescriptionsOk(t *testing.T) {
 
 	completionToReturn := fmt.Sprintf(`{"description": "%s", "malicious": "%s", "vulnerability_type": "%s", "application": "%s", "cve": "%s"}`, testDescription, testMalicious, testVulnerabilityType, testApplication, testCVE)
 
-	hm := GetNewDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), cache, GetMetrics(), 3)
+	hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), time.Minute, GetMetrics(), 3)
 
 	err := hm.GenerateLLMDescriptions([]*QueueEntry{
 		&QueueEntry{
@@ -157,13 +151,12 @@ func TestGenerateLLMDescriptionsErrorsOk(t *testing.T) {
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
-			cache := util.NewStringMapCache[struct{}]("foo", time.Hour)
 			fakeDbClient := &database.FakeDatabaseClient{
 				ErrorToReturn: test.dbErrorToReturn,
 			}
 
-			hm := GetNewDescriptionManager(
-				fakeDbClient, GetLMManager(test.completionToReturn), cache, GetMetrics(), 3)
+			hm := GetNewCachedDescriptionManager(
+				fakeDbClient, GetLMManager(test.completionToReturn), time.Minute, GetMetrics(), 3)
 			err := hm.GenerateLLMDescriptions([]*QueueEntry{
 				&QueueEntry{
 					RequestDescription: &models.RequestDescription{},

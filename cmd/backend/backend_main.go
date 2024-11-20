@@ -38,6 +38,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/llm"
+	describer "lophiid/pkg/request_describer"
 	"lophiid/pkg/util"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
@@ -186,15 +187,25 @@ func main() {
 	rateLimiter.Start()
 
 	var llmResponder responder.Responder
-	if cfg.Responder.Enable {
-		llmClient := llm.NewOpenAILLMClient(cfg.Responder.ApiKey, cfg.Responder.ApiLocation, "")
-		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.Responder.CacheExpirationTime)
-		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+	var desManager describer.DescriptionManager
 
-		llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.Responder.LLMCompletionTimeout, cfg.Responder.LLMConcurrentRequests)
-		llmResponder = responder.NewLLMResponder(llmManager, cfg.Responder.MaxInputCharacters)
-	} else {
-		llmResponder = nil
+	if cfg.AI.EnableResponder || cfg.AI.EnableDescriber {
+		llmClient := llm.NewOpenAILLMClient(cfg.AI.ApiKey, cfg.AI.ApiLocation, "")
+		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
+		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+		llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.AI.LLMCompletionTimeout, cfg.AI.LLMConcurrentRequests)
+
+		if cfg.AI.EnableResponder {
+			slog.Info("Creating responder")
+			llmResponder = responder.NewLLMResponder(llmManager, cfg.AI.MaxInputCharacters)
+		}
+
+		if cfg.AI.EnableDescriber {
+			slog.Info("Creating describer")
+			desMetric := describer.CreateDescriberMetrics(metricsRegistry)
+			desManager := describer.GetNewCachedDescriptionManager(dbc, llmManager, time.Hour*8, desMetric, 3)
+			desManager.Start()
+		}
 	}
 
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
@@ -220,7 +231,7 @@ func main() {
 
 	slog.Info("Cleaned up %d stale sessions", totalSessionsCleaned)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, cfg)
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desManager, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

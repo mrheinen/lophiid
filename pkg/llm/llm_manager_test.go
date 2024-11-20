@@ -35,7 +35,7 @@ func TestComplete(t *testing.T) {
 	metrics := CreateLLMMetrics(pReg)
 
 	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
-	res, err := lm.Complete("aaaa")
+	res, err := lm.Complete("aaaa", true)
 
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
@@ -55,7 +55,7 @@ func TestCompleteErrorCounted(t *testing.T) {
 	metrics := CreateLLMMetrics(pReg)
 
 	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
-	_, err := lm.Complete("aaaa")
+	_, err := lm.Complete("aaaa", true)
 
 	if err == nil {
 		t.Errorf("expected error")
@@ -77,7 +77,7 @@ func TestCompleteMultiple(t *testing.T) {
 	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
 
 	prompts := []string{"aaaa", "bbbb"}
-	resMap, err := lm.CompleteMultiple(prompts)
+	resMap, err := lm.CompleteMultiple(prompts, true)
 
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
