@@ -431,7 +431,7 @@ func (d *KSQLClient) SearchRequestDescription(offset int64, limit int64, query s
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM session", fmt.Sprintf("ORDER BY created_at DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM request_description", fmt.Sprintf("ORDER BY created_at DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -686,7 +686,7 @@ type FakeDatabaseClient struct {
 	QueriesToReturnError        error
 	TagPerQueryReturn           []models.TagPerQuery
 	TagPerQueryReturnError      error
-	WhoisToReturn               models.Whois
+	WhoisModelsToReturn         []models.Whois
 	WhoisErrorToReturn          error
 	LastDataModelSeen           interface{}
 	LastExternalDataModelSeen   interface{}
@@ -783,7 +783,7 @@ func (f *FakeDatabaseClient) GetRequestByID(id int64) (models.Request, error) {
 	return f.RequestToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchWhois(offset int64, limit int64, query string) ([]models.Whois, error) {
-	return []models.Whois{f.WhoisToReturn}, f.WhoisErrorToReturn
+	return f.WhoisModelsToReturn, f.WhoisErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error) {
 	return f.RequestDescriptionsToReturn, f.ErrorToReturn

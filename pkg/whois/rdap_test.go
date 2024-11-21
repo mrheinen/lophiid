@@ -42,8 +42,8 @@ func (f *FakeRdapClient) QueryIP(ip string) (*rdap.IPNetwork, error) {
 
 func TestDoWhoisRdapWorkCachesDatabaseMatch(t *testing.T) {
 	dbc := database.FakeDatabaseClient{
-		WhoisToReturn:      models.Whois{},
-		WhoisErrorToReturn: nil,
+		WhoisModelsToReturn: []models.Whois{models.Whois{}},
+		WhoisErrorToReturn:  nil,
 	}
 	testIP := "1.1.1.1"
 	wc := FakeRdapClient{}
@@ -71,8 +71,8 @@ func TestDoWhoisRdapWorkCachesDatabaseMatch(t *testing.T) {
 
 func TestDoWhoisRdapWorksOk(t *testing.T) {
 	dbc := database.FakeDatabaseClient{
-		WhoisToReturn:      models.Whois{},
-		WhoisErrorToReturn: errors.New("fail"),
+		WhoisModelsToReturn: []models.Whois{models.Whois{}},
+		WhoisErrorToReturn:  errors.New("fail"),
 	}
 	testIP := "1.1.1.1"
 	wc := FakeRdapClient{
@@ -111,8 +111,8 @@ func TestDoWhoisRdapWorksOk(t *testing.T) {
 
 func TestDoWhoisRdapWorkRetries(t *testing.T) {
 	dbc := database.FakeDatabaseClient{
-		WhoisToReturn:      models.Whois{},
-		WhoisErrorToReturn: errors.New("missing"),
+		WhoisModelsToReturn: []models.Whois{models.Whois{}},
+		WhoisErrorToReturn:  errors.New("missing"),
 	}
 	testIP := "1.1.1.1"
 	wc := FakeRdapClient{
