@@ -216,3 +216,5 @@ type FakeDescriptionManager struct {
 func (f *FakeDescriptionManager) MaybeAddNewHash(hash string, req *models.Request) error {
 	return f.addNewHashError
 }
+
+func (f *FakeDescriptionManager) Start() { }
