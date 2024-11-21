@@ -203,7 +203,7 @@ func main() {
 		if cfg.AI.EnableDescriber {
 			slog.Info("Creating describer")
 			desMetric := describer.CreateDescriberMetrics(metricsRegistry)
-			desManager := describer.GetNewCachedDescriptionManager(dbc, llmManager, time.Hour*8, desMetric, 3)
+			desManager = describer.GetNewCachedDescriptionManager(dbc, llmManager, time.Hour*8, desMetric, 3)
 			desManager.Start()
 		}
 	}
@@ -229,7 +229,7 @@ func main() {
 		}
 	}
 
-	slog.Info("Cleaned up %d stale sessions", totalSessionsCleaned)
+	slog.Info("Cleaned up stale sessions", slog.Int("count", totalSessionsCleaned))
 
 	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desManager, cfg)
 	if err = bs.Start(); err != nil {
