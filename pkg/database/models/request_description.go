@@ -20,7 +20,7 @@ import "time"
 
 type RequestDescription struct {
 	ID                  int64     `ksql:"id,skipInserts" json:"id"`
-	ExampleRequestID    int64     `ksql:"request_id" json:"request_id" doc:"The ID of a request related to the event"`
+	ExampleRequestID    int64     `ksql:"example_request_id" json:"example_request_id" doc:"The ID of a request related to the event"`
 	CreatedAt           time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"When the hash was created in the database"`
 	UpdatedAt           time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last time this record was updated"`
 	CmpHash             string    `ksql:"cmp_hash" json:"cmp_hash" doc:"The cmp hash of the request"`
