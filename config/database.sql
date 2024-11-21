@@ -75,7 +75,7 @@ CREATE TABLE request_description (
   example_request_id INT,
   ai_description     TEXT,
   ai_application     VARCHAR(128),
-  ai_vulnerability   VARCHAR(128),
+  ai_vulnerability_type   VARCHAR(128),
   ai_malicious       VARCHAR(6),
   ai_cve             VARCHAR(15),
   review_status      REVIEW_STATUS_TYPE default 'UNREVIEWED',
