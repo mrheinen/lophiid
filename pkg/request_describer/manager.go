@@ -14,6 +14,7 @@ import (
 
 type DescriptionManager interface {
 	MaybeAddNewHash(hash string, req *models.Request) error
+	Start()
 }
 
 // CachedDescriptionManager is a manager for request descriptions. It caches
@@ -45,9 +46,9 @@ type LLMResult struct {
 const LLMSystemPrompt = `
 Our security system receive a potential malicous HTTP request which is given
 below. Describe what the request tries to do and what application it targets. If the request is malicious
-then tell me what kind of vulnerability it tries to exploit.
+then tell me what kind of vulnerability it tries to exploit. Do not include the targetted server hostname, IP or port in the description.
 
-Your answer needs to be in the form of a JSON object where the keys are:
+Your answer needs to be in the form of a raw JSON object that is not formatted for displaying. The keys of the json object are:
 
 description: store here your answer but keep it one or two paragraphs long
 malicious: Use the string "true" if the request is likely malicious (e.g. it contains a payload, vulnerability type). Use the string "false" if the request does not appear malicious.
@@ -94,7 +95,7 @@ func (b *CachedDescriptionManager) MaybeAddNewHash(hash string, req *models.Requ
 	}
 
 	// Next check the database
-	res, err := b.dbClient.SearchRequestDescription(0, 1, fmt.Sprintf("base_hash:%s", hash))
+	res, err := b.dbClient.SearchRequestDescription(0, 1, fmt.Sprintf("cmp_hash:%s", hash))
 	if err != nil {
 		return fmt.Errorf("failed to check database for request description %s: %w", hash, err)
 	}
@@ -111,6 +112,7 @@ func (b *CachedDescriptionManager) MaybeAddNewHash(hash string, req *models.Requ
 	bh := &models.RequestDescription{
 		CmpHash:          hash,
 		ExampleRequestID: req.ID,
+		ReviewStatus:     "UNREVIEWED",
 	}
 
 	dm, err := b.dbClient.Insert(bh)
@@ -135,6 +137,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry
 	promptMap := make(map[string]*models.RequestDescription, len(entries))
 
 	for _, entry := range entries {
+		slog.Debug("Describing request for URI", slog.String("uri", entry.Request.Uri))
 		prompt := fmt.Sprintf("%s\n%s", LLMSystemPrompt, entry.Request.Raw)
 		promptMap[prompt] = entry.RequestDescription
 		prompts = append(prompts, prompt)
@@ -142,11 +145,10 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry
 
 	start := time.Now()
 	result, err := b.llmManager.CompleteMultiple(prompts, false)
+
 	if err != nil {
 		return fmt.Errorf("failed to complete LLM request: %w", err)
 	}
-
-	fmt.Printf("XXX: LLM result: %+v\n", result)
 
 	b.metrics.completeMultipleResponsetime.Observe(time.Since(start).Seconds())
 	for prompt, completion := range result {
@@ -175,7 +177,6 @@ func (b *CachedDescriptionManager) QueueProcessor() {
 
 		entries := []*QueueEntry{}
 
-		b.metrics.pendingRequestsGauge.Set(float64(len(b.llmQueueMap)))
 		b.queueLock.Lock()
 		if len(b.llmQueueMap) > 0 {
 			cnt := 0
@@ -202,6 +203,8 @@ func (b *CachedDescriptionManager) QueueProcessor() {
 		case <-b.bgChan:
 			slog.Info("Description hash queue processor done")
 			return
+		default:
+			b.metrics.pendingRequestsGauge.Set(float64(len(b.llmQueueMap)))
 		}
 	}
 }
