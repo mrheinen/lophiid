@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
@@ -663,4 +664,143 @@ func TestImportAppOk(t *testing.T) {
 		})
 	}
 
+}
+
+func TestHandleGetWhoisForIP(t *testing.T) {
+	t.Run("No results found", func(t *testing.T) {
+		fd := database.FakeDatabaseClient{
+			WhoisModelsToReturn: []models.Whois{},
+		}
+		s := NewApiServer(&fd, nil, "apikey")
+
+		req := httptest.NewRequest(http.MethodGet, "/whois?ip=1.2.3.4", nil)
+		w := httptest.NewRecorder()
+		s.HandleGetWhoisForIP(w, req)
+		res := w.Result()
+
+		defer res.Body.Close()
+		data, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Errorf("reading response body: %s", err)
+		}
+
+		var result HttpResult
+		if err = json.Unmarshal(data, &result); err != nil {
+			t.Errorf("error parsing response: %s (%s)", err, string(data))
+		}
+
+		if result.Status != ResultSuccess {
+			t.Errorf("expected status %s, got %s", ResultSuccess, result.Status)
+		}
+
+		if result.Message != "No result" {
+			t.Errorf("expected message 'No result', got %s", result.Message)
+		}
+
+		if result.Data != nil {
+			t.Errorf("expected nil data, got %v", result.Data)
+		}
+	})
+}
+
+func TestHandleGetDescriptionForCmpHash(t *testing.T) {
+	testCases := []struct {
+		name           string
+		hash           string
+		descriptions   []models.RequestDescription
+		dbError        error
+		expectedStatus string
+		expectedMsg    string
+		expectData     bool
+	}{
+		{
+			name:           "No results found",
+			hash:           "abc123",
+			descriptions:   []models.RequestDescription{},
+			dbError:        nil,
+			expectedStatus: ResultSuccess,
+			expectedMsg:    "No result",
+			expectData:     false,
+		},
+		{
+			name: "Description found",
+			hash: "abc123",
+			descriptions: []models.RequestDescription{
+				{
+					CmpHash:             "abc123",
+					AIDescription:       "Test description",
+					AIVulnerabilityType: "Test vulnerability",
+					AIApplication:       "Test app",
+					AIMalicious:        "false",
+					AICVE:              "CVE-2024-1234",
+				},
+			},
+			dbError:        nil,
+			expectedStatus: ResultSuccess,
+			expectedMsg:    "",
+			expectData:     true,
+		},
+		{
+			name:           "Database error",
+			hash:           "abc123",
+			descriptions:   nil,
+			dbError:        errors.New("database error"),
+			expectedStatus: ResultError,
+			expectedMsg:    "database error",
+			expectData:     false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fd := database.FakeDatabaseClient{
+				RequestDescriptionsToReturn: tc.descriptions,
+				ErrorToReturn:              tc.dbError,
+			}
+			s := NewApiServer(&fd, nil, "apikey")
+
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/description?cmp_hash=%s", tc.hash), nil)
+			w := httptest.NewRecorder()
+			s.HandleGetDescriptionForCmpHash(w, req)
+			res := w.Result()
+
+			defer res.Body.Close()
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Errorf("reading response body: %s", err)
+			}
+
+			var result HttpResult
+			if err = json.Unmarshal(data, &result); err != nil {
+				t.Errorf("error parsing response: %s (%s)", err, string(data))
+			}
+
+			if result.Status != tc.expectedStatus {
+				t.Errorf("expected status %s, got %s", tc.expectedStatus, result.Status)
+			}
+
+			if result.Message != tc.expectedMsg {
+				t.Errorf("expected message %q, got %q", tc.expectedMsg, result.Message)
+			}
+
+			if tc.expectData {
+				if result.Data == nil {
+					t.Error("expected data to be present, got nil")
+				}
+				// Verify the returned description matches what we expect
+				desc, ok := result.Data.(map[string]interface{})
+				if !ok {
+					t.Error("expected data to be a RequestDescription")
+					return
+				}
+				if desc["cmp_hash"] != tc.descriptions[0].CmpHash {
+					t.Errorf("expected cmp_hash %s, got %s", tc.descriptions[0].CmpHash, desc["cmp_hash"])
+				}
+			} else {
+				if result.Data != nil {
+					t.Errorf("expected no data, got %v", result.Data)
+				}
+			}
+		})
+	}
 }

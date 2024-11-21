@@ -373,11 +373,32 @@ func (a *ApiServer) HandleGetWhoisForIP(w http.ResponseWriter, req *http.Request
 	}
 
 	if len(res) == 0 {
-		a.sendStatus(w, "No result", ResultError, nil)
+		a.sendStatus(w, "No result", ResultSuccess, nil)
 		return
 	}
 
 	res[0].RdapString = string(res[0].Rdap)
+	a.sendStatus(w, "", ResultSuccess, res[0])
+}
+
+func (a *ApiServer) HandleGetDescriptionForCmpHash(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	hash := req.Form.Get("cmp_hash")
+	res, err := a.dbc.SearchRequestDescription(0, 1, fmt.Sprintf("cmp_hash:%s", hash))
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if len(res) == 0 {
+		a.sendStatus(w, "No result", ResultSuccess, nil)
+		return
+	}
+
 	a.sendStatus(w, "", ResultSuccess, res[0])
 }
 

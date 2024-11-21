@@ -141,6 +141,7 @@ func main() {
 	// All requests endpoints
 	r.HandleFunc("/request/update", as.HandleUpdateRequest).Methods("POST")
 	r.HandleFunc("/request/segment", as.HandleGetRequestsSegment).Methods("GET")
+	r.HandleFunc("/request/description", as.HandleGetDescriptionForCmpHash).Methods("POST")
 
 	// All application endpoints
 	r.HandleFunc("/app/upsert", as.HandleUpsertSingleApp).Methods("POST")
