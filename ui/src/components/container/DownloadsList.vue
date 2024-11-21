@@ -165,7 +165,6 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedDownload = selected;
-        this.loadWhois(selected.ip);
         this.isSelectedId = id;
       }
     },
@@ -324,6 +323,9 @@ export default {
     selectedLimit() {
       this.limit = this.selectedLimit;
       this.loadDownloads(true);
+    },
+    selectedDownload() {
+      this.loadWhois(this.selectedDownload.ip);
     }
   },
   beforeCreate() {
