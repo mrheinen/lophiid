@@ -5,9 +5,11 @@
         <RequestTable :request="request"></RequestTable>
       </FieldSet>
     </div>
-
     <div>
     <FieldSet legend="Context" :toggleable="false">
+      <div v-if="localDescription">
+        {{ localDescription.ai_description }}
+      </div>
     <PrimeTabs value="0">
     <TabList>
         <PrimeTab value="0">HTTP Request</PrimeTab>
@@ -107,11 +109,12 @@ import RawHttpCard from "../cards/RawHttpCard.vue";
 import RequestTable from "../cards/RequestDetailsTable.vue";
 export default {
   components: { RawHttpCard, RequestTable },
-  props: ["request", "metadata", "whois"],
+  props: ["request", "metadata", "whois", "description"],
   inject: ["config"],
   data() {
     return {
       localWhois: null,
+      localDescription: null,
       localMetadata: [],
       localBase64Metadata: [],
       localLinkMetadata: [],
@@ -127,6 +130,14 @@ export default {
         this.localWhois = null;
       } else {
         this.localWhois = Object.assign({}, this.whois);
+      }
+    },
+    description(){
+      console.log(this.description);
+      if (this.description == null) {
+        this.localDescription = null;
+      } else {
+        this.localDescription = Object.assign({}, this.description);
       }
     },
     metadata() {

@@ -59,6 +59,17 @@
           </a>
         </td>
       </tr>
+      <tr>
+        <th>Cmp Hash</th>
+        <td>
+          {{ request.cmp_hash }}
+          <a :href="'/requests?q=cmp_hash:' + request.cmp_hash">
+            <i class="pi pi-search" title="find the same requests across hosts"></i>
+          </a>
+        </td>
+      </tr>
+
+
       <tr v-if="request.tags">
         <th>Labels</th>
         <td>
@@ -126,6 +137,6 @@ export default {
 <style scoped>
 
 tr {
-  font-size: 13px;
+  font-size: 14px;
 }
 </style>

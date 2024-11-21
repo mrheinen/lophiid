@@ -104,6 +104,7 @@
         :request="selectedRequest"
         :metadata="selectedMetadata"
         :whois="selectedWhois"
+        :description="selectedDescription"
       ></request-view>
     </div>
   </div>
@@ -128,6 +129,7 @@ export default {
       selectedRequest: null,
       selectedMetadata: [],
       selectedWhois: null,
+      selectedDescription: null,
       displayRequest: {},
       selectedLimit: 21,
       limitOptions: [10, 20, 30, 40, 50],
@@ -246,6 +248,7 @@ export default {
       } else {
         this.selectedRequest = selected;
         this.loadWhois(selected.source_ip);
+        this.loadDescription(selected.cmp_hash);
         this.isSelectedId = id;
       }
     },
@@ -278,6 +281,36 @@ export default {
           }
         });
     },
+    loadDescription(cmpHash) {
+      fetch(this.config.backendAddress + "/request/description", {
+        method: "POST",
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "cmp_hash=" + cmpHash,
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+            this.selectedDescription = null;
+          } else {
+            if (response.data) {
+              this.selectedDescription = response.data;
+            } else {
+              this.selectedDescription = null;
+            }
+          }
+        });
+    },
+
 
     loadMetadata(id) {
       fetch(this.config.backendAddress + "/meta/request", {
@@ -378,7 +411,11 @@ export default {
     selectedLimit() {
       this.limit = this.selectedLimit;
       this.loadRequests(true);
-    }
+    },
+    selectedRequest() {
+      this.loadDescription(this.selectedRequest.cmp_hash);
+      this.loadWhois(this.selectedRequest.source_ip);
+    },
   },
   created() {
     if (this.$route.params.limit) {
