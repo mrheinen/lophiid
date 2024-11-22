@@ -203,7 +203,7 @@ func main() {
 		if cfg.AI.EnableDescriber {
 			slog.Info("Creating describer")
 			desMetric := describer.CreateDescriberMetrics(metricsRegistry)
-			desManager = describer.GetNewCachedDescriptionManager(dbc, llmManager, time.Hour*8, desMetric, 3)
+			desManager = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, time.Hour*8, desMetric, 3)
 			desManager.Start()
 		}
 	}

@@ -3,6 +3,7 @@ package describer
 import (
 	"errors"
 	"fmt"
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
@@ -38,7 +39,8 @@ func TestMaybeAddNewHash(t *testing.T) {
 			ErrorToReturn: errors.New("nope"),
 		}
 
-		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), time.Minute, GetMetrics(), 3)
+		eventMgr := analysis.FakeIpEventManager{}
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), &eventMgr, time.Minute, GetMetrics(), 3)
 		fakeHash := "ABCDEFGHIJKLMNOP"
 
 		err := hm.MaybeAddNewHash(fakeHash, &models.Request{})
@@ -62,7 +64,8 @@ func TestMaybeAddNewHash(t *testing.T) {
 			},
 		}
 
-		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), time.Minute, GetMetrics(), 3)
+		eventMgr := analysis.FakeIpEventManager{}
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), &eventMgr, time.Minute, GetMetrics(), 3)
 		err := hm.MaybeAddNewHash(fakeHash, &models.Request{})
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
@@ -78,7 +81,8 @@ func TestMaybeAddNewHash(t *testing.T) {
 		fakeHash := "ABCDEFGHIJKLMNOP"
 		fakeDbClient := &database.FakeDatabaseClient{}
 
-		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), time.Minute, GetMetrics(), 3)
+		eventMgr := analysis.FakeIpEventManager{}
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(""), &eventMgr, time.Minute, GetMetrics(), 3)
 		err := hm.MaybeAddNewHash(fakeHash, &models.Request{})
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
@@ -105,7 +109,8 @@ func TestGenerateLLMDescriptionsOk(t *testing.T) {
 
 	completionToReturn := fmt.Sprintf(`{"description": "%s", "malicious": "%s", "vulnerability_type": "%s", "application": "%s", "cve": "%s"}`, testDescription, testMalicious, testVulnerabilityType, testApplication, testCVE)
 
-	hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), time.Minute, GetMetrics(), 3)
+	eventMgr := analysis.FakeIpEventManager{}
+	hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), &eventMgr, time.Minute, GetMetrics(), 3)
 
 	err := hm.GenerateLLMDescriptions([]*QueueEntry{
 		&QueueEntry{
@@ -155,8 +160,9 @@ func TestGenerateLLMDescriptionsErrorsOk(t *testing.T) {
 				ErrorToReturn: test.dbErrorToReturn,
 			}
 
+			eventMgr := analysis.FakeIpEventManager{}
 			hm := GetNewCachedDescriptionManager(
-				fakeDbClient, GetLMManager(test.completionToReturn), time.Minute, GetMetrics(), 3)
+				fakeDbClient, GetLMManager(test.completionToReturn), &eventMgr, time.Minute, GetMetrics(), 3)
 			err := hm.GenerateLLMDescriptions([]*QueueEntry{
 				&QueueEntry{
 					RequestDescription: &models.RequestDescription{},
@@ -175,4 +181,107 @@ func TestGenerateLLMDescriptionsErrorsOk(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGenerateLLMDescriptionsCreatesEvent(t *testing.T) {
+	fakeDbClient := &database.FakeDatabaseClient{}
+
+	testDescription := "description"
+	testVulnerabilityType := "type"
+	testApplication := "application"
+	testCVE := "CVE-1234-1234"
+
+	t.Run("creates event when malicious and no rule", func(t *testing.T) {
+		completionToReturn := fmt.Sprintf(`{"description": "%s", "malicious": "yes", "vulnerability_type": "%s", "application": "%s", "cve": "%s"}`, 
+			testDescription, testVulnerabilityType, testApplication, testCVE)
+
+		eventMgr := &analysis.FakeIpEventManager{}
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), eventMgr, time.Minute, GetMetrics(), 3)
+
+		testReq := &models.Request{
+			ID:         123,
+			RuleID:     0,
+			SourceIP:   "1.2.3.4",
+			HoneypotIP: "5.6.7.8",
+			Raw:        "HTTP/1.0",
+		}
+
+		err := hm.GenerateLLMDescriptions([]*QueueEntry{
+			{
+				RequestDescription: &models.RequestDescription{},
+				Request:           testReq,
+			},
+		})
+
+		if err != nil {
+			t.Fatalf("failed to generate LLM descriptions: %s", err)
+		}
+
+		if len(eventMgr.Events) != 1 {
+			t.Fatalf("expected 1 event, got %d", len(eventMgr.Events))
+		}
+
+		event := eventMgr.Events[0]
+		if event.IP != testReq.SourceIP {
+			t.Errorf("expected source IP %s, got %s", testReq.SourceIP, event.IP)
+		}
+		if event.HoneypotIP != testReq.HoneypotIP {
+			t.Errorf("expected honeypot IP %s, got %s", testReq.HoneypotIP, event.HoneypotIP)
+		}
+		if event.SourceRef != "123" {
+			t.Errorf("expected source ref '123', got %s", event.SourceRef)
+		}
+	})
+
+	t.Run("no event when not malicious", func(t *testing.T) {
+		completionToReturn := fmt.Sprintf(`{"description": "%s", "malicious": "no", "vulnerability_type": "%s", "application": "%s", "cve": "%s"}`, 
+			testDescription, testVulnerabilityType, testApplication, testCVE)
+
+		eventMgr := &analysis.FakeIpEventManager{}
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), eventMgr, time.Minute, GetMetrics(), 3)
+
+		err := hm.GenerateLLMDescriptions([]*QueueEntry{
+			{
+				RequestDescription: &models.RequestDescription{},
+				Request: &models.Request{
+					RuleID: 0,
+					Raw:    "HTTP/1.0",
+				},
+			},
+		})
+
+		if err != nil {
+			t.Fatalf("failed to generate LLM descriptions: %s", err)
+		}
+
+		if len(eventMgr.Events) != 0 {
+			t.Fatalf("expected no events, got %d", len(eventMgr.Events))
+		}
+	})
+
+	t.Run("no event when has rule", func(t *testing.T) {
+		completionToReturn := fmt.Sprintf(`{"description": "%s", "malicious": "yes", "vulnerability_type": "%s", "application": "%s", "cve": "%s"}`, 
+			testDescription, testVulnerabilityType, testApplication, testCVE)
+
+		eventMgr := &analysis.FakeIpEventManager{}
+		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), eventMgr, time.Minute, GetMetrics(), 3)
+
+		err := hm.GenerateLLMDescriptions([]*QueueEntry{
+			{
+				RequestDescription: &models.RequestDescription{},
+				Request: &models.Request{
+					RuleID: 1,
+					Raw:    "HTTP/1.0",
+				},
+			},
+		})
+
+		if err != nil {
+			t.Fatalf("failed to generate LLM descriptions: %s", err)
+		}
+
+		if len(eventMgr.Events) != 0 {
+			t.Fatalf("expected no events, got %d", len(eventMgr.Events))
+		}
+	})
 }

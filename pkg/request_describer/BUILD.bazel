@@ -9,11 +9,13 @@ go_library(
     importpath = "lophiid/pkg/request_describer",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/analysis",
         "//pkg/database",
         "//pkg/database/models",
         "//pkg/llm",
         "//pkg/metrics",
         "//pkg/util",
+        "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
     ],
 )
@@ -23,6 +25,7 @@ go_test(
     srcs = ["manager_test.go"],
     embed = [":request_describer"],
     deps = [
+        "//pkg/analysis",
         "//pkg/database",
         "//pkg/database/models",
         "//pkg/llm",

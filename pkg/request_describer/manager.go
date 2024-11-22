@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"sync"
 	"time"
 )
@@ -25,6 +27,7 @@ type CachedDescriptionManager struct {
 	llmQueueMap  map[string]QueueEntry
 	queueLock    sync.RWMutex
 	llmManager   *llm.LLMManager
+	eventManager analysis.IpEventManager
 	llmBatchSize int
 	bgChan       chan bool
 	metrics      *DescriberMetrics
@@ -59,7 +62,7 @@ cve: the relevant CVE or an empty string if you do not know.
 The request was:
 `
 
-func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, cacheTimeout time.Duration, metrics *DescriberMetrics, batchSize int) *CachedDescriptionManager {
+func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, eventManager analysis.IpEventManager, cacheTimeout time.Duration, metrics *DescriberMetrics, batchSize int) *CachedDescriptionManager {
 
 	cache := util.NewStringMapCache[struct{}]("CmpHash cache", cacheTimeout)
 	cache.Start()
@@ -72,6 +75,7 @@ func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager
 		llmManager:   llmManager,
 		bgChan:       make(chan bool),
 		metrics:      metrics,
+		eventManager: eventManager,
 	}
 }
 
@@ -134,12 +138,12 @@ func (b *CachedDescriptionManager) MaybeAddNewHash(hash string, req *models.Requ
 func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry) error {
 
 	var prompts []string
-	promptMap := make(map[string]*models.RequestDescription, len(entries))
+	promptMap := make(map[string]*QueueEntry, len(entries))
 
 	for _, entry := range entries {
 		slog.Debug("Describing request for URI", slog.String("uri", entry.Request.Uri))
 		prompt := fmt.Sprintf("%s\n%s", LLMSystemPrompt, entry.Request.Raw)
-		promptMap[prompt] = entry.RequestDescription
+		promptMap[prompt] = entry
 		prompts = append(prompts, prompt)
 	}
 
@@ -157,7 +161,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry
 			return fmt.Errorf("failed to parse LLM result: %w, result: %s", err, result)
 		}
 
-		bh := promptMap[prompt]
+		bh := promptMap[prompt].RequestDescription
 		bh.AIDescription = llmResult.Description
 		bh.AIVulnerabilityType = llmResult.VulnerabilityType
 		bh.AIApplication = llmResult.Application
@@ -166,6 +170,20 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry
 
 		if err := b.dbClient.Update(bh); err != nil {
 			return fmt.Errorf("failed to insert description: %w", err)
+		}
+
+		req := promptMap[prompt].Request
+		// If the rule is 0 then no existing rule matched. In this case if the AI
+		// says the request was malicious then we want to raise an event.
+		if req.RuleID == 0 && llmResult.Malicious == "yes" {
+			b.eventManager.AddEvent(&models.IpEvent{
+				IP:         req.SourceIP,
+				HoneypotIP: req.HoneypotIP,
+				Source:     constants.IpEventSourceAI,
+				SourceRef:  fmt.Sprintf("%d", req.ID),
+				Type:       constants.IpEventAttacked,
+				Details:    "AI marked request as malicious",
+			})
 		}
 	}
 
