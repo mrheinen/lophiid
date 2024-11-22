@@ -29,6 +29,9 @@ import (
 	"net/http/httputil"
 	"strconv"
 	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type HttpServer struct {
@@ -183,13 +186,21 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO: process and return response from the server.
 	res, err := h.client.HandleProbeRequest(pr)
 	if err != nil {
-		log.Printf("unable to process request: %s", err)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("<html></html>"))
-		return
+		log.Printf("unable to process request: %+v", err)
+
+		if st, ok := status.FromError(err); ok {
+			if st.Code() == codes.ResourceExhausted {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("<html></html>"))
+				return
+			}
+		} else {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("<html></html>"))
+			return
+		}
 	}
 
 	slog.Debug("got new request", slog.String("request_uri", pr.RequestUri))

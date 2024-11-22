@@ -24,6 +24,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestCatchAllOk(t *testing.T) {
@@ -87,5 +90,39 @@ func TestCatchAllOk(t *testing.T) {
 	actualQueryLen := len(bc.CapturedProbeRequest.Request.GetParsedUrl().GetQuery())
 	if actualQueryLen != expectedQueryLen {
 		t.Errorf("len Query %d != %d", actualQueryLen, expectedQueryLen)
+	}
+}
+
+func TestCatchAllResourceExhausted(t *testing.T) {
+	listenAddr := "127.0.0.1:8888"
+
+	// Create a backend client that returns a ResourceExhausted error
+	bc := backend.FakeBackendClient{
+		HandleProbeReturnError: status.Error(codes.ResourceExhausted, "resource exhausted"),
+	}
+
+	// Create server and test request
+	s := NewHttpServer(&bc, listenAddr, "127.0.0.1")
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+	s.catchAll(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	// Verify status code is 404
+	if res.StatusCode != http.StatusNotFound {
+		t.Errorf("expected status code %d, got %d", http.StatusNotFound, res.StatusCode)
+	}
+
+	// Verify response body
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("reading response body: %s", err)
+	}
+
+	expectedBody := "<html></html>"
+	if string(data) != expectedBody {
+		t.Errorf("expected body %q, got %q", expectedBody, string(data))
 	}
 }
