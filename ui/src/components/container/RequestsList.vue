@@ -282,6 +282,10 @@ export default {
         });
     },
     loadDescription(cmpHash) {
+      if (cmpHash == "") {
+        this.selectedDescription = null;
+        return;
+      }
       fetch(this.config.backendAddress + "/request/description", {
         method: "POST",
         headers: {

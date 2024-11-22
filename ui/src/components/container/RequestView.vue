@@ -145,14 +145,15 @@ export default {
         this.localConclusion = null;
       } else {
         this.localDescription = Object.assign({}, this.description);
-        if (this.localDescription.ai_malicious == "true") {
+        if (this.localDescription.ai_malicious == "yes") {
           if (this.localDescription.ai_vulnerability_type != "") {
             this.localConclusion = "AI conclusion: this request is malicious and tries to exploit a \"" +
               this.localDescription.ai_vulnerability_type + "\" vulnerability type.";
           } else {
             this.localConclusion = "AI conclusion: this request is malicous.";
           }
-        } else {
+
+        } else if (this.localDescription.ai_malicious == "no") {
             this.localConclusion = "AI conclusion: this request is not malicous";
         }
       }
