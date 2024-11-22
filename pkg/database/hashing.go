@@ -114,21 +114,28 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 	parametersToIgnore := map[string]bool{
 		"user":          true,
 		"new-user":      true,
+		"new_user":      true,
 		"newuser":       true,
 		"new-username":  true,
 		"newusername":   true,
 		"login":         true,
 		"newlogin":      true,
 		"new-login":     true,
+		"new_login":     true,
 		"username":      true,
+		"user_name":     true,
 		"email":         true,
 		"email-address": true,
 		"e-mail":        true,
+		"e_mail":        true,
 		"pass":          true,
 		"password":      true,
 		"new-passwd":    true,
 		"new-pass":      true,
 		"new-password":  true,
+		"new_pass":      true,
+		"new_password":  true,
+		"new_passwd":    true,
 		"passwd":        true,
 		"secret":        true,
 	}
@@ -153,6 +160,8 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 				hash.Write([]byte(field))
 			}
 		}
+	} else {
+		hash.Write(req.Body)
 	}
 
 	// Query fields.

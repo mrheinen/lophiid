@@ -290,6 +290,82 @@ func TestGetSameRequestHash(t *testing.T) {
 			shouldMatch: false,
 			wantErr:     false,
 		},
+		{
+			name: "form encoded bodies with new underscore parameters should match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("user_name=john&new_password=secret123&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("user_name=alice&new_password=different456&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with all new underscore variants should match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("new_user=john&new_login=john123&e_mail=john@example.com&new_passwd=secret123"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("new_user=alice&new_login=alice123&e_mail=alice@example.com&new_passwd=different456"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with mixed dash and underscore parameters should match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("new-user=john&new_login=john123&email-address=john@example.com&new_password=secret123"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("new-user=alice&new_login=alice123&email-address=alice@example.com&new_password=different456"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "non-form encoded bodies should be hashed as-is",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/api/data",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/json"},
+				Body:       []byte(`{"username":"john","password":"secret123"}`),
+				ContentType: "application/json",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/api/data",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/json"},
+				Body:       []byte(`{"username":"alice","password":"different456"}`),
+				ContentType: "application/json",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
 	}
 
 	for _, tt := range tests {

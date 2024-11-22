@@ -8,7 +8,13 @@
     <div>
     <FieldSet legend="Context" :toggleable="false">
       <div v-if="localDescription">
+        <p>
         {{ localDescription.ai_description }}
+        </p>
+        <br />
+        <p>
+        {{ localConclusion }}
+        </p>
       </div>
     <PrimeTabs value="0">
     <TabList>
@@ -115,6 +121,7 @@ export default {
     return {
       localWhois: null,
       localDescription: null,
+      localConclusion: null,
       localMetadata: [],
       localBase64Metadata: [],
       localLinkMetadata: [],
@@ -133,11 +140,21 @@ export default {
       }
     },
     description(){
-      console.log(this.description);
       if (this.description == null) {
         this.localDescription = null;
+        this.localConclusion = null;
       } else {
         this.localDescription = Object.assign({}, this.description);
+        if (this.localDescription.ai_malicious == "true") {
+          if (this.localDescription.ai_vulnerability_type != "") {
+            this.localConclusion = "AI conclusion: this request is malicious and tries to exploit a \"" +
+              this.localDescription.ai_vulnerability_type + "\" vulnerability type.";
+          } else {
+            this.localConclusion = "AI conclusion: this request is malicous.";
+          }
+        } else {
+            this.localConclusion = "AI conclusion: this request is not malicous";
+        }
       }
     },
     metadata() {
