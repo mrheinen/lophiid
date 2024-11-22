@@ -51,7 +51,7 @@ then tell me what kind of vulnerability it tries to exploit. Do not include the 
 Your answer needs to be in the form of a raw JSON object that is not formatted for displaying. The keys of the json object are:
 
 description: store here your answer but keep it one or two paragraphs long
-malicious: Use the string "true" if the request is likely malicious (e.g. it contains a payload, vulnerability type). Use the string "false" if the request does not appear malicious.
+malicious: Use the string "yes" if the request is likely malicious (e.g. it contains a payload, vulnerability type). Use the string "no" if the request does not appear malicious.
 vulnerability type: a string with the type of vulnerability if malicious. Use the string "unknown" if the request is malicious but you don't know the vulnerability type. Use "none" if the request is not malicious.
 application: a string with the full application/device name that is being targetted or "unknown" if you don't know
 cve: the relevant CVE or an empty string if you do not know.
@@ -217,4 +217,4 @@ func (f *FakeDescriptionManager) MaybeAddNewHash(hash string, req *models.Reques
 	return f.addNewHashError
 }
 
-func (f *FakeDescriptionManager) Start() { }
+func (f *FakeDescriptionManager) Start() {}
