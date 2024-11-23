@@ -301,7 +301,7 @@ CREATE TABLE whois (
 
 -- These need to be kept in sync with pkg/util/constants/shared_constants.go
 CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'ATTACKED', 'RECONNED', 'CRAWLED', 'SCANNED', 'BRUTEFORCED', 'HOSTED_MALWARE', 'RATELIMITED', 'HOST_C2');
-CREATE TYPE IP_EVENT_SOURCE AS ENUM ('OTHER', 'VT', 'RULE', 'BACKEND', 'ANALYSIS', 'WHOIS');
+CREATE TYPE IP_EVENT_SOURCE AS ENUM ('OTHER', 'VT', 'RULE', 'BACKEND', 'ANALYSIS', 'WHOIS', 'AI');
 CREATE TABLE ip_event (
   id                     SERIAL PRIMARY KEY,
   ip                     VARCHAR(52),
