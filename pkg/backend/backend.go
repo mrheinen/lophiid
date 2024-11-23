@@ -882,7 +882,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 	}
 
 	// TODO: describe all requests, not just those that match rules.
-	if s.describer != nil && req.RuleID != 0 {
+	if s.describer != nil {
 		err := s.describer.MaybeAddNewHash(req.CmpHash, dm.(*models.Request))
 		if err != nil {
 			slog.Error("error adding new hash", slog.String("error", err.Error()))
