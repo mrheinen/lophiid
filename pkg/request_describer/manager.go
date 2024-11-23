@@ -180,6 +180,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry
 				IP:         req.SourceIP,
 				HoneypotIP: req.HoneypotIP,
 				Source:     constants.IpEventSourceAI,
+				RequestID:  req.ID,
 				SourceRef:  fmt.Sprintf("%d", req.ID),
 				Type:       constants.IpEventAttacked,
 				Details:    "AI marked request as malicious",
