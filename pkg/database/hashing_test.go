@@ -366,6 +366,57 @@ func TestGetSameRequestHash(t *testing.T) {
 			shouldMatch: false,
 			wantErr:     false,
 		},
+		{
+			name: "query parameters with ignored values should match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/login",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "username=john&password=secret123&remember=true",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/login",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "username=alice&password=different456&remember=true",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "query parameters with mixed ignored and non-ignored values",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/register",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "new_user=john&age=25&location=NY",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/register",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "new_user=alice&age=25&location=NY",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "query parameters with mixed ignored and non-ignored values should not match with different non-ignored values",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/register",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "new_user=john&age=25&location=NY",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/register",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "new_user=alice&age=30&location=LA",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
 	}
 
 	for _, tt := range tests {

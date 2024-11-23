@@ -111,7 +111,7 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		hash.Write([]byte(field))
 	}
 
-	parametersToIgnore := map[string]bool{
+	parameterValsToIgnore := map[string]bool{
 		"user":          true,
 		"new-user":      true,
 		"new_user":      true,
@@ -150,7 +150,7 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		if err == nil {
 			for paramName, value := range parsedQuery {
 				formFields = append(formFields, paramName)
-				if _, ok := parametersToIgnore[paramName]; !ok {
+				if _, ok := parameterValsToIgnore[paramName]; !ok {
 					formFields = append(formFields, value...)
 				}
 			}
@@ -173,7 +173,9 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 	var queryFields []string
 	for paramName, paramValue := range parsedQuery {
 		queryFields = append(queryFields, paramName)
-		queryFields = append(queryFields, paramValue...)
+		if _, ok := parameterValsToIgnore[paramName]; !ok {
+			queryFields = append(queryFields, paramValue...)
+		}
 	}
 
 	sort.Strings(queryFields)
