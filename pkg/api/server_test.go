@@ -731,8 +731,8 @@ func TestHandleGetDescriptionForCmpHash(t *testing.T) {
 					AIDescription:       "Test description",
 					AIVulnerabilityType: "Test vulnerability",
 					AIApplication:       "Test app",
-					AIMalicious:        "false",
-					AICVE:              "CVE-2024-1234",
+					AIMalicious:         "false",
+					AICVE:               "CVE-2024-1234",
 				},
 			},
 			dbError:        nil,
@@ -755,7 +755,7 @@ func TestHandleGetDescriptionForCmpHash(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fd := database.FakeDatabaseClient{
 				RequestDescriptionsToReturn: tc.descriptions,
-				ErrorToReturn:              tc.dbError,
+				ErrorToReturn:               tc.dbError,
 			}
 			s := NewApiServer(&fd, nil, "apikey")
 
@@ -803,4 +803,42 @@ func TestHandleGetDescriptionForCmpHash(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleReviewDescription(t *testing.T) {
+
+	t.Run("Incorrect status", func(t *testing.T) {
+		fd := database.FakeDatabaseClient{
+			RequestDescriptionsToReturn: []models.RequestDescription{},
+			ErrorToReturn:               nil,
+		}
+
+		s := NewApiServer(&fd, nil, "apikey")
+
+		formdata := url.Values{}
+		formdata.Set("status", "WRONG")
+		formdata.Set("hash", "ignored")
+
+		req := httptest.NewRequest(http.MethodPost, "/foo", bytes.NewBufferString(formdata.Encode()))
+
+		w := httptest.NewRecorder()
+		s.HandleDescriptionReview(w, req)
+		res := w.Result()
+
+		defer res.Body.Close()
+		data, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Errorf("reading response body: %s", err)
+		}
+
+		var result HttpResult
+		if err = json.Unmarshal(data, &result); err != nil {
+			t.Errorf("error parsing response: %s (%s)", err, string(data))
+		}
+
+		if result.Status != ResultError {
+			t.Errorf("expected status %s, got %s", ResultError, result.Status)
+		}
+	})
+
 }
