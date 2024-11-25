@@ -92,7 +92,7 @@ ratelimiter:
 ai:
   # Whether to enable the responder.
   enable_responder: 1
-  # Wehter to enable the describer.
+  # Wehter to enable the triage describer.
   enable_describer: 1
   # API location. Note that the implementation was tested with Gemma 2 27b and
   # is not guaranteed to work with other versions or other LLMs.
