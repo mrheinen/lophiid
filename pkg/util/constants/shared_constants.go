@@ -49,3 +49,10 @@ const (
 	ResponderDecoderTypeUri  = "URI"
 	ResponderDecoderTypeHtml = "HTML"
 )
+
+// These need to be kept in sync with REVIEW_STATUS_TYPE in the database
+const (
+	DescriberUnreviewed  = "UNREVIEWED"
+	DescriberReviewedOk  = "REVIEWED_OK"
+	DescriberReviewedNok = "REVIEWED_NOK"
+)
