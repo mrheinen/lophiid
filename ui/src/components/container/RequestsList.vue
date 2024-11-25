@@ -286,7 +286,7 @@ export default {
         this.selectedDescription = null;
         return;
       }
-      fetch(this.config.backendAddress + "/request/description", {
+      fetch(this.config.backendAddress + "/description/single", {
         method: "POST",
         headers: {
           "API-Key": this.$store.getters.apiToken,
