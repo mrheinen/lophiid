@@ -28,9 +28,10 @@ Key features:
 
 - A distributed honeypot approach
 - Rule based interactions with attacks
-- Static, scripted (Javascript) and LLM supported response handling
+- Static, scripted (Javascript) and AI supported response handling
 - Alerting possible (Telegram, extensible)
 - UI with comprehensive search
+- AI analysis of attacks
 - Automatic tagging of requests and attacks to help triage
 - Automatically collects malware
 - Direct integration with VirusTotal
@@ -67,6 +68,11 @@ anything. One special case is that the backend can tell a honeypot for download
 malware from an HTTP endpoint that was previously extracted from a request that
 hit that same honeypot. The honeypot in this case will download the malware and
 send it to the backend using gRPC.
+
+AI is used for analysing incoming requests. The AI determines if the request is
+malicous, what attack is exploited, what application is targetted and creates a
+description of the attack/request. AI can also be used to responds to RCE and
+code injection attacks where the AI will help generate a realistic response.
 
 ### Rule based content serving
 
@@ -109,19 +115,35 @@ on the honeypot systems. All this information is available in the UI.
 
 ### AI / LLM integration
 
-Lophiid can use a local running LLM to help it with creating the best response
+Lophiid can use a local running LLM for two purposes:
+
+- Generating realistic responses
+- Triaging the incoming requests
+
+Small descriptions are below but for more information about the AI integration, look at [./AI.md](./AI.md).
+#### Generating realistic responses
+
+Lophiid can use a local LLM to help it with creating the best response
 for an attack. For example, say an attacker want to exploit a remote command
 execution vulnerability but you can not anticipate up front what commands will
 be executed during the attack: lophiid will use the LLM to create example
 command outputs that match with what the attacker has send.
 
 This results in lophiid responses that look more realistic than, for example,
-typical honeypot responses that try to cover all bases by putting many different
-command outputs in the response.
-
-For more information about the AI integration, look at [./AI.md](./AI.md).
+typical honeypot responses thata have only a few hardcoded responses.
 
 NOTE: This is a very experimental feature. Be aware that using AI-generated responses in a honeypot system may have security implications. Use with caution and ensure you understand the risks before enabling this feature in a production environment.
+
+#### Triaging incoming requests
+
+When enabled, a local LLM will be used to triage incoming requests. The AI will
+try to determine for each request whether it is malicious, what type of weakness
+is exploited, what application is targetted and, although this is currently
+unstable, what CVE is being abused. The LLM will also create a description of
+the attack which makes it easier for humans to review it in the web UI.
+
+NOTE: This is a very experimental feature. Be aware that using AI-generated responses in a honeypot system may have security implications. Use with caution and ensure you understand the risks before enabling this feature in a production environment.
+
 
 ### Queries and labels
 

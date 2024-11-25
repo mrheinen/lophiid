@@ -52,7 +52,8 @@ type Request struct {
 	RuleID         int64                    `ksql:"rule_id" json:"rule_id" doc:"The ID of the rule that matched this request"`
 	RuleUuid       string                   `ksql:"rule_uuid" json:"rule_uuid" doc:"The UUID of the rule that matched this request"`
 	Starred        bool                     `ksql:"starred" json:"starred" doc:"A bool if the request is starred"`
-	BaseHash       string                   `ksql:"base_hash" json:"base_hash" doc:"A base hash to find similar requests"`
+	BaseHash       string                   `ksql:"base_hash" json:"base_hash" doc:"A base hash to find roughly similar requests"`
+	CmpHash        string                   `ksql:"cmp_hash" json:"cmp_hash" doc:"A hash to compare request across hosts"`
 	Tags           []TagPerRequestFull      `json:"tags"`
 	P0fResult      P0fResult                `json:"p0f_result"`
 }

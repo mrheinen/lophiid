@@ -16,6 +16,8 @@ go_library(
         "//pkg/util/constants",
         "@com_github_mrheinen_magicmime//:magicmime",
         "@com_github_mrheinen_p0fclient//:p0fclient",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
     ],
 )
 
@@ -31,5 +33,7 @@ go_test(
         "//pkg/backend",
         "//pkg/util",
         "@com_github_mrheinen_p0fclient//:p0fclient",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
     ],
 )

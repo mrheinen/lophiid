@@ -1,12 +1,46 @@
 # AI Integration
 
 ## Introduction
-Lophiid can integrate with a local LLM, such as served with llama.cpp or ollama,
-to help it better answer certain requests. This removes the need to create
-hardcoded replies for all kind of possible commands that can be send in a
-payload.
+Lophiid can work with a local LLM, such as served with llama.cpp or ollama,
+or OpenAI directly. The LLM is used for assisting in response creation to certain
+attacks and additionally is used to triage incoming requests.
 
-For example, say you emulate an application that is vulnerable to remote command
+### AI assisted triage
+
+#### Description
+
+AI assisted triage is currently limited to the following:
+For each request a unique CmpHash hash is created that uses all request fields except
+for the Host: header and some commonly changed parameters such as "user" and
+"password".  This hash is intended to be the same for the same request across
+multiple hosts and the excluded paramaters are specifically for keeping
+bruteforce noise down.
+
+For every unique CmpHash, and this means each unique request, the backend
+will use the AI to:
+
+- Describe the request
+- Determine whether the request is malicious
+- Determine the application that was likely targeted by the request
+- Determine the possible CVE that was targeted
+- Determine the Common Weakness (CWE) that was exploited
+
+This information is surfaced in the UI. Additionally for every malicious event
+that was for a request that has no rule associated with it the AI will create an
+IP event that can be viewed and queried in the Events tab in the UI.  This helps
+to highlight potentially interesting requests.
+
+#### Enabling
+Configure the backend with the parameters of the AI. This is documented in the
+[example config](./backend-config.yaml) in the AI section. In the config set
+"enable_describer" to true or 1.
+Make sure the (local) LLM is running and that the lophiid backend was restarted with the new config.
+
+### AI assisted responses
+
+#### Description
+
+Say you emulate an application that is vulnerable to remote command
 injection and you want to get as much interaction with attackers are possible.
 If an attacker send a payload of "echo <random string>; uname" and thus expects
 the random string and OS to be returned in the response then there are
@@ -31,7 +65,7 @@ will give example outputs that will then be embedded in the response.
 As a sidenote though, it is possible to combine content scripts with LLM
 integration but that is currently beyond the scope of this document.
 
-## Enabling AI
+#### Enabling
 
 To enable AI support for a content rule you need to do the following:
 
@@ -54,27 +88,27 @@ To enable AI support for a content rule you need to do the following:
 > The Raw field of the request contains the raw request with all headers. You
 > can see this in the "HTTP Request" field in the Requests tab of the UI.
 
-## The concept of responders
+#### The concept of responders
 
 Responders can be seen as AI interfaces that are specific for a vulnerability or
 exploitation technique. They contain an AI prompt that prepares the AI for how
 it should interpret the data the rule is sending (remember, what you grabbed
 with the regex) and tells the AI how it should respond.
 
-### SOURCE_CODE_INJECTION responder
+#### SOURCE_CODE_INJECTION responder
 
 To use this responder you will use the regex to grep the source code that is
 being send by the attacker to the server. The responder will try to determine
 what the output is that this source code would generate. Currently only tested
 with simple PHP snippets.
 
-### CODE_EXECUTION responder
+#### CODE_EXECUTION responder
 
 To use this render you let the regex grab the commands that the attacker is
 trying to execute on the honeypot. The responder will try to determine what the
 output of those commands would be and returns that.
 
-## Some implementation details
+#### Some implementation details
 
 The AI interaction caused by a rule is cached and the timeout of this cache is
 configurable. The cache will make sure that we do not do multiple lookups if the

@@ -109,3 +109,340 @@ func TestHashRequestOk(t *testing.T) {
 		})
 	}
 }
+
+func TestGetSameRequestHash(t *testing.T) {
+	tests := []struct {
+		name        string
+		req1        models.Request
+		req2        models.Request
+		shouldMatch bool
+		wantErr     bool
+	}{
+		{
+			name: "same request different hosts should match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Host: example1.com", "Accept: application/json"},
+				Query:   "id=123",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Host: example2.com", "Accept: application/json"},
+				Query:   "id=123",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "different header orders should match",
+			req1: models.Request{
+				Method:  "POST",
+				Path:    "/api/v1/submit",
+				Headers: pgtype.FlatArray[string]{"Content-Type: application/json", "Accept: application/json"},
+				Query:   "type=user",
+			},
+			req2: models.Request{
+				Method:  "POST",
+				Path:    "/api/v1/submit",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json", "Content-Type: application/json"},
+				Query:   "type=user",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "different query param orders should match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/search",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "q=test&sort=asc",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/search",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "sort=asc&q=test",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with different orders should match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/submit",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("name=john&age=30"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/submit",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("age=30&name=john"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "different paths should not match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/users",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/posts",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
+		{
+			name: "invalid query parameters should return error",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/api",
+				Query:   "invalid=%%query",
+			},
+			req2: models.Request{},
+			shouldMatch: false,
+			wantErr:     true,
+		},
+		{
+			name: "form encoded bodies with ignored parameters should match regardless of values",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/login",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=john&password=secret123&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/login",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=alice&password=different456&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with mix of ignored and non-ignored parameters",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=john&password=secret123&age=25&location=NY"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=alice&password=different456&age=25&location=NY"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with mix of ignored and non-ignored parameters should not match with different non-ignored values",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=john&password=secret123&age=25&location=NY"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=alice&password=different456&age=30&location=LA"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with different ignored parameter names should not match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/auth",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("username=john&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/auth",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("email=john@example.com&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with new underscore parameters should match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("user_name=john&new_password=secret123&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("user_name=alice&new_password=different456&remember=true"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with all new underscore variants should match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("new_user=john&new_login=john123&e_mail=john@example.com&new_passwd=secret123"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("new_user=alice&new_login=alice123&e_mail=alice@example.com&new_passwd=different456"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "form encoded bodies with mixed dash and underscore parameters should match",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("new-user=john&new_login=john123&email-address=john@example.com&new_password=secret123"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/register",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/x-www-form-urlencoded"},
+				Body:       []byte("new-user=alice&new_login=alice123&email-address=alice@example.com&new_password=different456"),
+				ContentType: "application/x-www-form-urlencoded",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "non-form encoded bodies should be hashed as-is",
+			req1: models.Request{
+				Method:      "POST",
+				Path:       "/api/data",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/json"},
+				Body:       []byte(`{"username":"john","password":"secret123"}`),
+				ContentType: "application/json",
+			},
+			req2: models.Request{
+				Method:      "POST",
+				Path:       "/api/data",
+				Headers:    pgtype.FlatArray[string]{"Content-Type: application/json"},
+				Body:       []byte(`{"username":"alice","password":"different456"}`),
+				ContentType: "application/json",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
+		{
+			name: "query parameters with ignored values should match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/login",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "username=john&password=secret123&remember=true",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/login",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "username=alice&password=different456&remember=true",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "query parameters with mixed ignored and non-ignored values",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/register",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "new_user=john&age=25&location=NY",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/register",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "new_user=alice&age=25&location=NY",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "query parameters with mixed ignored and non-ignored values should not match with different non-ignored values",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/register",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "new_user=john&age=25&location=NY",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/register",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "new_user=alice&age=30&location=LA",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hash1, err1 := GetSameRequestHash(&tt.req1)
+			if (err1 != nil) != tt.wantErr {
+				t.Errorf("GetSameRequestHash() error = %v, wantErr %v", err1, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				return
+			}
+
+			hash2, err2 := GetSameRequestHash(&tt.req2)
+			if err2 != nil {
+				t.Errorf("GetSameRequestHash() unexpected error = %v", err2)
+				return
+			}
+
+			if tt.shouldMatch && hash1 != hash2 {
+				t.Errorf("Hashes should match but don't: hash1=%v, hash2=%v", hash1, hash2)
+			}
+			if !tt.shouldMatch && hash1 == hash2 {
+				t.Errorf("Hashes should not match but do: hash1=%v", hash1)
+			}
+		})
+	}
+}

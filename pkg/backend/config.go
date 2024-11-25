@@ -54,7 +54,7 @@ type Config struct {
 			RequestsQueueSize          int           `fig:"requests_queue_size" default:"500"`
 			MaintenanceRoutineInterval time.Duration `fig:"maintenance_routine_interval" default:"1m"`
 			// After how long of no communication a session times out.
-			SessionTrackingTimeout     time.Duration `fig:"session_tracking_timeout" default:"1h"`
+			SessionTrackingTimeout time.Duration `fig:"session_tracking_timeout" default:"1h"`
 		} `fig:"advanced"`
 	} `fig:"backend"`
 	Analysis struct {
@@ -101,13 +101,14 @@ type Config struct {
 		MaxAttempts         int           `fig:"max_attempts" default:"6"`
 	} `fig:"whois_manager"`
 
-	Responder struct {
-		Enable                bool          `fig:"enable" default:"0"`
+	AI struct {
+		EnableResponder       bool          `fig:"enable_responder" `
+		EnableDescriber       bool          `fig:"enable_describer" `
 		ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
 		ApiKey                string        `fig:"api_key"`
 		CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
 		LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
 		LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
 		MaxInputCharacters    int           `fig:"max_input_characters" default:"4096"`
-	} `fig:"responder"`
+	} `fig:"ai"`
 }

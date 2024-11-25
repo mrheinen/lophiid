@@ -45,6 +45,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
@@ -89,10 +90,11 @@ type BackendServer struct {
 	config          Config
 	llmResponder    responder.Responder
 	sessionMgr      session.SessionManager
+	describer       describer.DescriptionManager
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriptionManager, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
@@ -121,6 +123,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		ipEventManager:  ipEventManager,
 		llmResponder:    llmResponder,
 		sessionMgr:      sessionMgr,
+		describer:       describer,
 	}
 }
 
@@ -198,6 +201,11 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 	hash, err := database.GetHashFromStaticRequestFields(&sReq)
 	if err == nil {
 		sReq.BaseHash = hash
+	}
+
+	hash, err = database.GetSameRequestHash(&sReq)
+	if err == nil {
+		sReq.CmpHash = hash
 	}
 
 	return &sReq, nil
@@ -871,6 +879,14 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 	dm, err := s.dbClient.Insert(req)
 	if err != nil {
 		return fmt.Errorf("error saving request: %s", err)
+	}
+
+	// TODO: describe all requests, not just those that match rules.
+	if s.describer != nil {
+		err := s.describer.MaybeAddNewHash(req.CmpHash, dm.(*models.Request))
+		if err != nil {
+			slog.Error("error adding new hash", slog.String("error", err.Error()))
+		}
 	}
 
 	if rule.RequestPurpose != models.RuleRequestPurposeUnknown {

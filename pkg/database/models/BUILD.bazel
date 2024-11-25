@@ -12,6 +12,7 @@ go_library(
         "models.go",
         "p0f_result.go",
         "request.go",
+        "request_description.go",
         "request_metadata.go",
         "session.go",
         "stored_query.go",

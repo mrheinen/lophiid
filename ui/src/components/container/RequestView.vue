@@ -5,9 +5,22 @@
         <RequestTable :request="request"></RequestTable>
       </FieldSet>
     </div>
-
     <div>
     <FieldSet legend="Context" :toggleable="false">
+      <div v-if="localDescription && localDescription.ai_description">
+        <p>
+        {{ localDescription.ai_description }}
+        </p>
+        <br />
+        <p>
+        {{ localConclusion }}
+        </p>
+        <i v-if="localDescription.review_status == config.reviewStatusOk" class="pi pi-thumbs-up-fill" @click="toggleReviewOk(localDescription.cmp_hash)" ></i>
+        <i v-else class="pi pi-thumbs-up" @click="toggleReviewOk(localDescription.cmp_hash)" ></i>
+        &nbsp;
+        <i v-if="localDescription.review_status == config.reviewStatusNok" class="pi pi-thumbs-down-fill" @click="toggleReviewNok(localDescription.cmp_hash)" ></i>
+        <i v-else class="pi pi-thumbs-down" @click="toggleReviewNok(localDescription.cmp_hash)" ></i>
+      </div>
     <PrimeTabs value="0">
     <TabList>
         <PrimeTab value="0">HTTP Request</PrimeTab>
@@ -107,11 +120,13 @@ import RawHttpCard from "../cards/RawHttpCard.vue";
 import RequestTable from "../cards/RequestDetailsTable.vue";
 export default {
   components: { RawHttpCard, RequestTable },
-  props: ["request", "metadata", "whois"],
+  props: ["request", "metadata", "whois", "description"],
   inject: ["config"],
   data() {
     return {
       localWhois: null,
+      localDescription: null,
+      localConclusion: null,
       localMetadata: [],
       localBase64Metadata: [],
       localLinkMetadata: [],
@@ -120,13 +135,78 @@ export default {
       localUnicodeMetadata: [],
     };
   },
-  methods: {},
+  methods: {
+    toggleReviewOk(hash) {
+      var newStatus = this.config.reviewStatusOk;
+      if (this.localDescription.review_status == this.config.reviewStatusOk) {
+        newStatus = this.config.reviewStatusNew;
+      }
+      this.updateReview(newStatus, hash);
+      this.localDescription.review_status = newStatus;
+    },
+    toggleReviewNok(hash) {
+      var newStatus = this.config.reviewStatusNok;
+      if (this.localDescription.review_status == this.config.reviewStatusNok) {
+        newStatus = this.config.reviewStatusNew;
+      }
+      this.updateReview(newStatus, hash);
+      this.localDescription.review_status = newStatus;
+    },
+    updateReview(status, hash) {
+      fetch(this.config.backendAddress + "/description/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "API-Key": this.$store.getters.apiToken,
+        },
+        body: "status=" + status + "&hash=" + hash,
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            this.$toast.success("Updated status");
+          }
+        });
+    },
+
+  },
   watch: {
     whois() {
       if (this.whois == null) {
         this.localWhois = null;
       } else {
         this.localWhois = Object.assign({}, this.whois);
+      }
+    },
+    description(){
+      if (this.description == null) {
+        this.localDescription = null;
+        this.localConclusion = null;
+      } else {
+        this.localDescription = Object.assign({}, this.description);
+        if (this.localDescription.ai_malicious == "") {
+          this.localConclusion = "";
+        } else {
+          if (this.localDescription.ai_malicious == "yes") {
+            if (this.localDescription.ai_vulnerability_type != "") {
+              this.localConclusion = "AI conclusion: this request is malicious and tries to exploit a \"" +
+                this.localDescription.ai_vulnerability_type + "\" vulnerability type.";
+            } else {
+              this.localConclusion = "AI conclusion: this request is malicous.";
+            }
+
+          } else if (this.localDescription.ai_malicious == "no") {
+              this.localConclusion = "AI conclusion: this request is not malicous";
+          }
+        }
       }
     },
     metadata() {

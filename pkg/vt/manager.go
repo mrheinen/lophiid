@@ -17,6 +17,7 @@
 package vt
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/analysis"
@@ -163,6 +164,12 @@ func (v *VTBackgroundManager) SubmitFiles() error {
 		v.metrics.fileSubmitResponseTime.Observe(time.Since(startTime).Seconds())
 		v.metrics.apiCallsCount.WithLabelValues("file_submit").Add(1)
 		if err != nil {
+			if errors.Is(err, ErrQuotaReached) {
+				slog.Warn("quota error submitting file")
+				continue
+			}
+
+			// In this case we're going to give up.
 			slog.Warn("error submitting file", slog.String("error", err.Error()))
 		} else {
 			dl.VTFileAnalysisID = cRes.Data.ID

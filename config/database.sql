@@ -31,7 +31,7 @@ CREATE TYPE DOWNLOAD_STATUS AS ENUM ('UNKNOWN', 'SCHEDULED', 'DONE');
 CREATE TYPE REQUEST_PURPOSE AS ENUM ('UNKNOWN', 'RECON', 'CRAWL', 'ATTACK');
 CREATE TYPE RESPONDER_TYPE AS ENUM ('NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION');
 CREATE TYPE RESPONDER_DECODER_TYPE AS ENUM ('NONE', 'URI', 'HTML');
-
+CREATE TYPE REVIEW_STATUS_TYPE AS ENUM ('UNREVIEWED', 'REVIEWED_OK', 'REVIEWED_NOK');
 
 CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
@@ -59,11 +59,27 @@ CREATE TABLE request (
   starred         BOOL default FALSE,
   content_dynamic BOOL default FALSE,
   base_hash       VARCHAR(64) DEFAULT '',
+  cmp_hash        VARCHAR(64) DEFAULT '',
   content_id      INT,
   session_id      INT NOT NULL default 0,
   app_id          INT NOT NULL default 0,
   rule_id         INT NOT NULL DEFAULT 0,
   rule_uuid       VARCHAR(36) default '',
+);
+
+CREATE TABLE request_description (
+  id                 SERIAL PRIMARY KEY,
+  created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  cmp_hash           VARCHAR(64) DEFAULT '',
+  example_request_id INT,
+  ai_description     TEXT,
+  ai_application     VARCHAR(128),
+  ai_vulnerability_type   VARCHAR(128),
+  ai_malicious       VARCHAR(6),
+  ai_cve             VARCHAR(15),
+  review_status      REVIEW_STATUS_TYPE default 'UNREVIEWED',
+  CONSTRAINT fk_example_request_id FOREIGN KEY(example_request_id) REFERENCES request(id)
 );
 
 
@@ -285,7 +301,7 @@ CREATE TABLE whois (
 
 -- These need to be kept in sync with pkg/util/constants/shared_constants.go
 CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'ATTACKED', 'RECONNED', 'CRAWLED', 'SCANNED', 'BRUTEFORCED', 'HOSTED_MALWARE', 'RATELIMITED', 'HOST_C2');
-CREATE TYPE IP_EVENT_SOURCE AS ENUM ('OTHER', 'VT', 'RULE', 'BACKEND', 'ANALYSIS', 'WHOIS');
+CREATE TYPE IP_EVENT_SOURCE AS ENUM ('OTHER', 'VT', 'RULE', 'BACKEND', 'ANALYSIS', 'WHOIS', 'AI');
 CREATE TABLE ip_event (
   id                     SERIAL PRIMARY KEY,
   ip                     VARCHAR(52),
@@ -336,11 +352,19 @@ GRANT ALL PRIVILEGES ON ip_event TO lo;
 GRANT ALL PRIVILEGES ON ip_event_id_seq TO lo;
 GRANT ALL PRIVILEGES ON session TO lo;
 GRANT ALL PRIVILEGES ON session_id_seq TO lo;
+GRANT ALL PRIVILEGES ON request_description TO lo;
+GRANT ALL PRIVILEGES ON request_description_id_seq TO lo;
+
 
 CREATE INDEX session_ip ON session (
   started_at desc,
   active,
   ip
+);
+
+CREATE INDEX requests_cmp_hash_idx ON request (
+  time_received desc,
+  cmp_hash
 );
 
 CREATE INDEX requests_session_idx ON request (

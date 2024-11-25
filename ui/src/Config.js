@@ -23,6 +23,9 @@ export default {
   //backendAddress: 'http://127.0.0.1:8088',
   backendResultOk: 'OK',
   backendResultNotOk: 'ERR',
+  reviewStatusOk: "REVIEWED_OK",
+  reviewStatusNok: "REVIEWED_NOK",
+  reviewStatusNew: "UNREVIEWED",
 
   // There next 5 need to be in sync with the database enums.
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
