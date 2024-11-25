@@ -265,7 +265,7 @@ func (d *KSQLClient) GetTagsPerRequestForRequestID(id int64) ([]models.TagPerReq
 
 func (d *KSQLClient) GetRequestByID(id int64) (models.Request, error) {
 	var rs models.Request
-	err := d.db.Query(d.ctx, &rs, "FROM request WHERE id = $1", id)
+	err := d.db.QueryOne(d.ctx, &rs, "FROM request WHERE id = $1", id)
 	return rs, err
 }
 
