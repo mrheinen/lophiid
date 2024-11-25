@@ -45,7 +45,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
-	describer "lophiid/pkg/request_describer"
+	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"

@@ -15,6 +15,7 @@ go_library(
         "//pkg/database/models",
         "//pkg/javascript",
         "//pkg/util",
+        "//pkg/util/constants",
         "@com_github_google_uuid//:uuid",
         "@in_gopkg_yaml_v3//:yaml_v3",
     ],
