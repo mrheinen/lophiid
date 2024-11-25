@@ -102,8 +102,8 @@ type Config struct {
 	} `fig:"whois_manager"`
 
 	AI struct {
-		EnableResponder       bool          `fig:"enable_responder" default:"0"`
-		EnableDescriber       bool          `fig:"enable_describer" default:"0"`
+		EnableResponder       bool          `fig:"enable_responder" `
+		EnableDescriber       bool          `fig:"enable_describer" `
 		ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
 		ApiKey                string        `fig:"api_key"`
 		CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
