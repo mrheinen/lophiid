@@ -106,6 +106,7 @@ type Config struct {
 		EnableDescriber       bool          `fig:"enable_describer" `
 		ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
 		ApiKey                string        `fig:"api_key"`
+		Model                 string        `fig:"model" default:""`
 		CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
 		LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
 		LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
