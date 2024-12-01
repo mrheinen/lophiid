@@ -79,6 +79,7 @@ CREATE TABLE request_description (
   ai_malicious       VARCHAR(6),
   ai_cve             VARCHAR(15),
   review_status      REVIEW_STATUS_TYPE default 'UNREVIEWED',
+  source_model       VARCHAR(256) default 'UNKNOWN',
   CONSTRAINT fk_example_request_id FOREIGN KEY(example_request_id) REFERENCES request(id)
 );
 

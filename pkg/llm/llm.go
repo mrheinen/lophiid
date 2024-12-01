@@ -30,6 +30,7 @@ type OpenAIClientInterface interface {
 
 type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
+	LoadedModel() string
 }
 
 type MockLLMClient struct {
@@ -41,10 +42,14 @@ func (m *MockLLMClient) Complete(ctx context.Context, prompt string) (string, er
 	return m.CompletionToReturn, m.ErrorToReturn
 }
 
+func (m *MockLLMClient) LoadedModel() string {
+	return "gpt-3.5-turbo"
+}
+
 type OpenAILLMClient struct {
 	client      *openai.Client
 	apiEndpoint string // E.g. http://localhost:8000/v1
-	model       string
+	Model       string
 	// promptTemplate is used to construct the prompt. It needs to contain a
 	// single %s at a location where the request prompt needs to go.
 	promptTemplate string
@@ -61,7 +66,7 @@ func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTempla
 		client:         client,
 		apiEndpoint:    apiEndpoint,
 		promptTemplate: promptTemplate,
-		model:          model,
+		Model:          model,
 	}
 
 	models, err := client.ListModels(context.Background())
@@ -99,8 +104,12 @@ func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string
 		return nil
 	}
 
-	slog.Info("Selected model", slog.String("model", ret.model))
+	slog.Info("Selected model", slog.String("model", ret.Model))
 	return ret
+}
+
+func (l *OpenAILLMClient) LoadedModel() string {
+	return l.Model
 }
 
 // SelectModel queries the OpenAI API for models and selects the first model.
@@ -118,7 +127,7 @@ func (l *OpenAILLMClient) SelectModel() error {
 		slog.Warn("Found multiple models! Using the first.", slog.String("model", models.Models[0].ID))
 	}
 
-	l.model = models.Models[0].ID
+	l.Model = models.Models[0].ID
 	return nil
 }
 
@@ -126,7 +135,7 @@ func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, 
 	resp, err := l.client.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model: l.model,
+			Model: l.Model,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleUser,
