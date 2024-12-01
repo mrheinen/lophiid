@@ -46,6 +46,10 @@ func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metric
 	}
 }
 
+func (l *LLMManager) LoadedModel() string {
+	return l.client.LoadedModel()
+}
+
 // CompleteMultiple completes multiple prompts in parallel. It will return a map
 func (l *LLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[string]string, error) {
 	var result sync.Map
@@ -59,7 +63,7 @@ func (l *LLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[s
 				return err
 			}
 
-	  	result.Store(localPrompt, ret)
+			result.Store(localPrompt, ret)
 			return nil
 		})
 	}

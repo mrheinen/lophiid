@@ -190,10 +190,16 @@ func main() {
 	var desManager describer.DescriptionManager
 
 	if cfg.AI.EnableResponder || cfg.AI.EnableDescriber {
-		llmClient := llm.NewOpenAILLMClient(cfg.AI.ApiKey, cfg.AI.ApiLocation, "")
+
+		var llmClient llm.OpenAILLMClient
+		if cfg.AI.Model != "" {
+			llmClient = *llm.NewOpenAILLMClientWithModel(cfg.AI.ApiKey, cfg.AI.ApiLocation, "", cfg.AI.Model)
+		} else {
+			llmClient = *llm.NewOpenAILLMClient(cfg.AI.ApiKey, cfg.AI.ApiLocation, "")
+		}
 		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
 		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-		llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.AI.LLMCompletionTimeout, cfg.AI.LLMConcurrentRequests)
+		llmManager := llm.NewLLMManager(&llmClient, pCache, llmMetrics, cfg.AI.LLMCompletionTimeout, cfg.AI.LLMConcurrentRequests)
 
 		if cfg.AI.EnableResponder {
 			slog.Info("Creating responder")

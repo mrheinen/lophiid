@@ -27,7 +27,7 @@
         <PrimeTab value="1" v-if="request.raw_response">HTTP Response</PrimeTab>
         <PrimeTab value="2" v-if="metadata.length">Metadata</PrimeTab>
         <PrimeTab value="3" v-if="localWhois">Whois</PrimeTab>
-        <PrimeTab value="4" v-if="request.content_dynamic == true">Debug</PrimeTab>
+        <PrimeTab value="4">Debug</PrimeTab>
     </TabList>
 
         <TabPanels>
@@ -102,9 +102,38 @@
             localWhois.rdap_string
           }}</pre>
         </TabPanel>
-        <TabPanel value="4" v-if="request.content_dynamic == true">
-          <div v-if="request.content_dynamic == true">
+        <TabPanel value="4">
+          <div v-if="request.raw_response">
+            <label class="label">Raw response</label>
               <pre class="rawrequest">{{ request.raw_response }}</pre>
+              <br/>
+          </div>
+          <div v-if="localDescription">
+            <label class="label">AI description</label>
+            <table>
+            <tbody>
+              <tr>
+                <th>Review status</th>
+                <td>{{ localDescription.review_status }}</td>
+              </tr>
+              <tr>
+                <th>Source request ID</th>
+                <td>{{ localDescription.example_request_id }}</td>
+              </tr>
+              <tr>
+                <th>Detected application</th>
+                <td>{{ localDescription.ai_application }}</td>
+              </tr>
+              <tr v-if="localDescription.ai_cve">
+                <th>Guessed CVE</th>
+                <td>{{ localDescription.ai_cve }}</td>
+              </tr>
+              <tr v-if="localDescription.source_model">
+                <th>AI model</th>
+                <td>{{ localDescription.source_model }}</td>
+              </tr>
+            </tbody>
+            </table>
           </div>
         </TabPanel>
     </TabPanels>
@@ -196,7 +225,8 @@ export default {
           this.localConclusion = "";
         } else {
           if (this.localDescription.ai_malicious == "yes") {
-            if (this.localDescription.ai_vulnerability_type != "") {
+            if (this.localDescription.ai_vulnerability_type != "" &&
+              this.localDescription.ai_vulnerability_type != "none") {
               this.localConclusion = "AI conclusion: this request is malicious and tries to exploit a \"" +
                 this.localDescription.ai_vulnerability_type + "\" vulnerability type.";
             } else {

@@ -112,8 +112,8 @@ func TestGenerateLLMDescriptionsOk(t *testing.T) {
 	eventMgr := analysis.FakeIpEventManager{}
 	hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), &eventMgr, time.Minute, GetMetrics(), 3)
 
-	err := hm.GenerateLLMDescriptions([]*QueueEntry{
-		&QueueEntry{
+	err := hm.GenerateLLMDescriptions([]QueueEntry{
+		QueueEntry{
 			RequestDescription: &models.RequestDescription{},
 			Request: &models.Request{
 				Raw: "HTTP/1.0",
@@ -163,8 +163,8 @@ func TestGenerateLLMDescriptionsErrorsOk(t *testing.T) {
 			eventMgr := analysis.FakeIpEventManager{}
 			hm := GetNewCachedDescriptionManager(
 				fakeDbClient, GetLMManager(test.completionToReturn), &eventMgr, time.Minute, GetMetrics(), 3)
-			err := hm.GenerateLLMDescriptions([]*QueueEntry{
-				&QueueEntry{
+			err := hm.GenerateLLMDescriptions([]QueueEntry{
+				QueueEntry{
 					RequestDescription: &models.RequestDescription{},
 					Request: &models.Request{
 						Raw: "HTTP/1.0",
@@ -206,7 +206,7 @@ func TestGenerateLLMDescriptionsCreatesEvent(t *testing.T) {
 			Raw:        "HTTP/1.0",
 		}
 
-		err := hm.GenerateLLMDescriptions([]*QueueEntry{
+		err := hm.GenerateLLMDescriptions([]QueueEntry{
 			{
 				RequestDescription: &models.RequestDescription{},
 				Request:            testReq,
@@ -240,7 +240,7 @@ func TestGenerateLLMDescriptionsCreatesEvent(t *testing.T) {
 		eventMgr := &analysis.FakeIpEventManager{}
 		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), eventMgr, time.Minute, GetMetrics(), 3)
 
-		err := hm.GenerateLLMDescriptions([]*QueueEntry{
+		err := hm.GenerateLLMDescriptions([]QueueEntry{
 			{
 				RequestDescription: &models.RequestDescription{},
 				Request: &models.Request{
@@ -266,7 +266,7 @@ func TestGenerateLLMDescriptionsCreatesEvent(t *testing.T) {
 		eventMgr := &analysis.FakeIpEventManager{}
 		hm := GetNewCachedDescriptionManager(fakeDbClient, GetLMManager(completionToReturn), eventMgr, time.Minute, GetMetrics(), 3)
 
-		err := hm.GenerateLLMDescriptions([]*QueueEntry{
+		err := hm.GenerateLLMDescriptions([]QueueEntry{
 			{
 				RequestDescription: &models.RequestDescription{},
 				Request: &models.Request{

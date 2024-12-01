@@ -30,6 +30,7 @@ type RequestDescription struct {
 	AIVulnerabilityType string    `ksql:"ai_vulnerability_type" json:"ai_vulnerability_type" doc:"An AI generated vulnerability type that is exploited"`
 	AICVE               string    `ksql:"ai_cve" json:"ai_cve" doc:"The CVE the AI thinks is related - highly incorrect"`
 	ReviewStatus        string    `ksql:"review_status" json:"review_status" doc:"Whether the AI data was manually reviewed (excluding CVE)"`
+	SourceModel         string    `ksql:"source_model" json:"source_model" doc:"The model used to generate the AI data"`
 }
 
 func (c *RequestDescription) ModelID() int64 { return c.ID }
