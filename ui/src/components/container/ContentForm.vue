@@ -57,7 +57,7 @@
     <FieldSet legend="Extra options" :toggleable="true" :collapsed="true">
       <div>
         <label class="label">HTTP status code</label>
-        <DropDown
+        <FormSelect
           v-model="localContent.status_code"
           :options="config.statusCodeValues"
           optionLabel="label"
