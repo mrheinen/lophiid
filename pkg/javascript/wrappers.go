@@ -6,7 +6,6 @@ import (
 	"lophiid/backend_service"
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/responder"
-	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 )
@@ -53,38 +52,6 @@ func (r *ResponseWrapper) GetBody() string {
 
 func (r *ResponseWrapper) BodyString() string {
 	return string(r.response.Body)
-}
-
-// ContentWrapper wraps the models.Content
-type ContentWrapper struct {
-	Content models.Content
-}
-
-func (c *ContentWrapper) GetData() string {
-	return string(c.Content.Data)
-}
-
-func (c *ContentWrapper) GetID() int64 {
-	return c.Content.ID
-}
-
-func (c *ContentWrapper) GetContentType() string {
-	return c.Content.ContentType
-}
-
-// The DatabaseClientWrapper exposes database functions to ze Javascripts
-// Only update this to expose read functions.
-type DatabaseClientWrapper struct {
-	dbClient database.DatabaseClient
-}
-
-func (d *DatabaseClientWrapper) GetContentById(id int64) *ContentWrapper {
-	cn, err := d.dbClient.GetContentByID(id)
-	if err != nil {
-		return nil
-	}
-
-	return &ContentWrapper{Content: cn}
 }
 
 // RequestContext contains context information about the request.

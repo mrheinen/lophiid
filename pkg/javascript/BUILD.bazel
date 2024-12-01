@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "command_runner.go",
         "crypto.go",
+        "database.go",
         "encoding.go",
         "goja.go",
         "logger.go",
