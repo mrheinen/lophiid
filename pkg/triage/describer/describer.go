@@ -55,8 +55,8 @@ Your answer needs to be in the form of a raw JSON object that is not formatted f
 
 description: store here your answer but keep it one or two paragraphs long
 malicious: Use the string "yes" if the request is likely malicious (e.g. it contains a payload, vulnerability type). Use the string "no" if the request does not appear malicious.
-vulnerability_type: A string containing the Common Weakness Enumeration ID for the type of weakness being exploited. use the string "none" if you don't know.
-application: a string with the full application/device name that is being targetted or "unknown" if you don't know
+vulnerability_type: A string containing the Mitre CWE (Common Weakness Enumeration) ID for the type of weakness being exploited. Use an empty string if you don't know.
+application: a string with the full application/device name that is being targetted or an empty string if you don't know
 cve: the relevant CVE or an empty string if you do not know.
 
 The request was:
@@ -125,6 +125,7 @@ func (b *CachedDescriptionManager) MaybeAddNewHash(hash string, req *models.Requ
 	}
 
 	b.queueLock.Lock()
+	slog.Info("Scheduling LLM description for hash/uri", slog.String("uri", req.Uri), slog.String("hash", hash))
 	b.llmQueueMap[hash] = QueueEntry{
 		RequestDescription: dm.(*models.RequestDescription),
 		Request:            req,
@@ -135,34 +136,38 @@ func (b *CachedDescriptionManager) MaybeAddNewHash(hash string, req *models.Requ
 	return nil
 }
 
-func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry) error {
+func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []QueueEntry) error {
 
 	var prompts []string
 	promptMap := make(map[string]*QueueEntry, len(entries))
 
 	for _, entry := range entries {
-		slog.Debug("Describing request for URI", slog.String("uri", entry.Request.Uri))
+		slog.Debug("Describing request for URI", slog.String("uri", entry.Request.Uri), slog.String("hash", entry.Request.CmpHash))
 		prompt := fmt.Sprintf("%s\n%s", LLMSystemPrompt, entry.Request.Raw)
-		promptMap[prompt] = entry
+		promptMap[prompt] = &entry
 		prompts = append(prompts, prompt)
 	}
 
 	start := time.Now()
 	result, err := b.llmManager.CompleteMultiple(prompts, false)
-
 	if err != nil {
 		return fmt.Errorf("failed to complete LLM request: %w", err)
 	}
 
+	if len(result) != len(entries) {
+		slog.Debug("Inconsistent number of results", slog.Int("expected", len(entries)), slog.Int("got", len(result)))
+	}
+
 	b.metrics.completeMultipleResponsetime.Observe(time.Since(start).Seconds())
 	for prompt, completion := range result {
+
 		var llmResult LLMResult
 		if err := json.Unmarshal([]byte(completion), &llmResult); err != nil {
-			slog.Error("The completion was", slog.String("completion", completion))
 			return fmt.Errorf("failed to parse LLM result: %w, result: %s", err, completion)
 		}
 
 		bh := promptMap[prompt].RequestDescription
+		bh.SourceModel = b.llmManager.LoadedModel()
 		bh.AIDescription = llmResult.Description
 		bh.AIVulnerabilityType = llmResult.VulnerabilityType
 		bh.AIApplication = llmResult.Application
@@ -175,7 +180,6 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry
 		}
 
 		if err := b.dbClient.Update(bh); err != nil {
-			fmt.Printf("Description: %s\nMalicious: %s\nVulnerability Type: %s\nApplication: %s\n", bh.AIDescription, bh.AIMalicious, bh.AIVulnerabilityType, bh.AIApplication)
 			return fmt.Errorf("failed to insert description: %w: %+v", err, bh)
 		}
 
@@ -201,19 +205,24 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []*QueueEntry
 func (b *CachedDescriptionManager) QueueProcessor() {
 	for {
 
-		entries := []*QueueEntry{}
+		entries := []QueueEntry{}
+		keysToDelete := []string{}
 
 		b.queueLock.Lock()
 		if len(b.llmQueueMap) > 0 {
 			cnt := 0
 			for k, v := range b.llmQueueMap {
-				entries = append(entries, &v)
-				delete(b.llmQueueMap, k)
+				entries = append(entries, v)
+				keysToDelete = append(keysToDelete, k)
 				cnt += 1
 				if cnt > b.llmBatchSize {
 					break
 				}
 			}
+		}
+
+		for _, k := range keysToDelete {
+			delete(b.llmQueueMap, k)
 		}
 		b.queueLock.Unlock()
 
