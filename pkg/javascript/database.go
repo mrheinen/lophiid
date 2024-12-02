@@ -41,7 +41,7 @@ func (d *DatabaseClientWrapper) GetContentById(id int64) *ContentWrapper {
 // GetContentByUUID searches the database for a content with the given UUID. If
 // it finds one it returns a ContentWrapper, otherwise it returns nil.
 func (d *DatabaseClientWrapper) GetContentByUUID(uuid string) *ContentWrapper {
-	cn, err := d.dbClient.SearchContent(0, 1, fmt.Sprintf("uuid:%s", uuid))
+	cn, err := d.dbClient.SearchContent(0, 1, fmt.Sprintf("ext_uuid:%s", uuid))
 	if err != nil || len(cn) == 0 {
 		return nil
 	}
