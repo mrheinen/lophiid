@@ -11,6 +11,7 @@ app:
     ext_uuid: f58e359d-a9ed-42f9-9f09-50dd90e81f9b
     cves:
         - CVE-2021-26120
+        - CVE-2019-9053
 rules:
     - id: 569
       uri: /admin/moduleinterface.php
