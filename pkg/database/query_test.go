@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package database
 
 import (
@@ -211,6 +210,106 @@ func TestParseQuery(t *testing.T) {
 			validFields:   []string{"notfoo"},
 			result:        [][]SearchRequestsParam{},
 		},
+		{
+			description:   "unclosed single quote",
+			queryString:   "field:'unclosed quote",
+			errorContains: "end quote is missing",
+			validFields:   []string{"field"},
+			result:        [][]SearchRequestsParam{},
+		},
+		{
+			description:   "unclosed double quote",
+			queryString:   "field:\"unclosed quote",
+			errorContains: "end quote is missing",
+			validFields:   []string{"field"},
+			result:        [][]SearchRequestsParam{},
+		},
+		{
+			description:   "empty value after colon",
+			queryString:   "field:",
+			errorContains: "unexpected end of query",
+			validFields:   []string{"field"},
+			result:        [][]SearchRequestsParam{},
+		},
+		{
+			description:   "empty value with quotes",
+			queryString:   "field:''",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "malformed query - just negation",
+			queryString:   "!",
+			errorContains: "unexpected end of query",
+			validFields:   []string{"field"},
+			result:        [][]SearchRequestsParam{},
+		},
+		{
+			description:   "special characters in quoted value",
+			queryString:   "field:'!@#$%^&*()'",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "!@#$%^&*()",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "multiple whitespace between terms",
+			queryString:   "field1:value1    field2:value2",
+			errorContains: "",
+			validFields:   []string{"field1", "field2"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field1",
+						value:    "value1",
+						matching: IS,
+					},
+					{
+						key:      "field2",
+						value:    "value2",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "whitespace around OR",
+			queryString:   "field1:value1   OR    field2:value2",
+			errorContains: "",
+			validFields:   []string{"field1", "field2"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field1",
+						value:    "value1",
+						matching: IS,
+					},
+				},
+				{
+					{
+						key:      "field2",
+						value:    "value2",
+						matching: IS,
+					},
+				},
+			},
+		},
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
@@ -218,17 +317,23 @@ func TestParseQuery(t *testing.T) {
 			res, err := ParseQuery(test.queryString, test.validFields)
 			if test.errorContains != "" {
 				if err == nil || !strings.Contains(err.Error(), test.errorContains) {
-					t.Errorf("expected \"%s\" in \"%s\"", err.Error(), test.errorContains)
+					t.Errorf("expected \"%s\" in error message, got: %v", test.errorContains, err)
 				}
-			} else {
+				return
+			}
 
-				if len(res) != len(test.result) {
-					t.Errorf("expected len %d but go %d", len(test.result), len(res))
-				}
+			if err != nil {
+				t.Errorf("unexpected error: %s", err)
+				return
+			}
 
-				if !reflect.DeepEqual(res, test.result) {
-					t.Errorf("%+v is not %+v", test.result, res)
-				}
+			if len(res) != len(test.result) {
+				t.Errorf("expected len %d but got %d", len(test.result), len(res))
+				return
+			}
+
+			if !reflect.DeepEqual(res, test.result) {
+				t.Errorf("%+v is not %+v", test.result, res)
 			}
 		})
 	}

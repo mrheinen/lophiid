@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package database
 
 import (
@@ -81,6 +80,10 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 	currentParams := make([]SearchRequestsParam, 0)
 	for i := 0; i < len(q); {
 		if outsideParam && unicode.IsSpace(rune(q[i])) {
+			if i+1 >= len(q) {
+				return ret, fmt.Errorf("unexpected end of query")
+			}
+
 			i++
 			continue
 		}
@@ -103,6 +106,9 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 		not := false
 		if q[i] == '!' || q[i] == '-' {
 			not = true
+			if i+1 >= len(q) {
+				return ret, fmt.Errorf("unexpected end of query")
+			}
 			i++
 		}
 
@@ -128,18 +134,28 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 
 		// We move to the start of the value and check if it is between quotes. When
 		// between quotes then we will allow spaces.
+		if i+1 >= len(q) {
+			return ret, fmt.Errorf("unexpected end of query")
+		}
 		i++
+
 		inQuote := false
 		var finishChar byte
 		if q[i] == '"' || q[i] == '\'' {
 			finishChar = q[i]
 			inQuote = true
+			if i+1 >= len(q) {
+				return ret, fmt.Errorf("unexpected end of query")
+			}
 			i++
 		}
 
 		var value strings.Builder
 		if inQuote {
-			for ; i < len(q) && q[i] != finishChar; i++ {
+			for ; q[i] != finishChar; i++ {
+				if i+1 >= len(q) {
+					return ret, fmt.Errorf("end quote is missing")
+				}
 				value.WriteByte(q[i])
 			}
 		} else {

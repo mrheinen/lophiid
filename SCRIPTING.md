@@ -223,6 +223,13 @@ upon error so please check for that. The returned object is a ContentWrapper
 type and get methods like getID(), getData() and getContentType() to get these
 fields from the embedded database.Content.
 
+### util.database.getContentByUUID(uuid string)
+
+Tries to fetch database.Content with UUID `uuid` from the database. Returns null
+upon error The returned object is a ContentWrapper type and get methods
+like getID(), getData() and getContentType() to get these fields from
+the embedded database.Content.
+
 ## Command execution
 
 Running commands is not allowed by default and commands need to be explicitly

@@ -413,6 +413,14 @@ export default {
 
 <style scoped>
 
+textarea {
+  width: 100%;
+}
+
+.p-inputwrapper {
+  width: 100%;
+}
+
 .button-group {
   padding: 1.25em;
 }
