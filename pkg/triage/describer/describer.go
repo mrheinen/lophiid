@@ -51,6 +51,8 @@ Our security system receive a potential malicous HTTP request which is given
 below. Describe what the request tries to do and what application it targets. If the request is malicious
 then tell me what kind of vulnerability it tries to exploit. Do not include the targetted server hostname, IP or port in the description.
 
+Note that requests for no resources (e.g. the root directory) should not be considered malicious unless there are clear attack vectors in the request.
+
 Your answer needs to be in the form of a raw JSON object that is not formatted for displaying. The keys of the json object are:
 
 description: store here your answer but keep it one or two paragraphs long
