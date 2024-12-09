@@ -56,3 +56,10 @@ const (
 	DescriberReviewedOk  = "REVIEWED_OK"
 	DescriberReviewedNok = "REVIEWED_NOK"
 )
+
+// These need to be kept in sync with TRIAGE_STATUS_TYPE in the database
+const (
+	TriageStatusTypePending = "PENDING"
+	TriageStatusTypeUnknown = "UNKNOWN"
+	TriageStatusTypeDone    = "DONE"
+)
