@@ -226,7 +226,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 			fIpMgr := analysis.FakeIpEventManager{}
 			fakeRes := &responder.FakeResponder{}
-			fakeDescriber := describer.FakeDescriptionManager{}
+			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
@@ -268,7 +268,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
-	fakeDescriber := describer.FakeDescriptionManager{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
@@ -333,7 +333,7 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fakeRes := &responder.FakeResponder{}
 	sMetrics := session.CreateSessionMetrics(reg)
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-	fakeDescriber := describer.FakeDescriptionManager{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 	probeReq := backend_service.HandleProbeRequest{
@@ -430,7 +430,7 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 
 			sMetrics := session.CreateSessionMetrics(reg)
 			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-			fakeDescriber := describer.FakeDescriptionManager{}
+			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
@@ -468,7 +468,7 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 
 	sMetrics := session.CreateSessionMetrics(reg)
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-	fakeDescriber := describer.FakeDescriptionManager{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
@@ -592,7 +592,7 @@ func TestHandleProbe(t *testing.T) {
 
 	sMetrics := session.CreateSessionMetrics(reg)
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-	fakeDescriber := describer.FakeDescriptionManager{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 	b.LoadRules()
@@ -766,7 +766,7 @@ func TestProcessQueue(t *testing.T) {
 
 		sMetrics := session.CreateSessionMetrics(reg)
 		fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-		fakeDescriber := describer.FakeDescriptionManager{}
+		fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 		req := models.Request{
@@ -908,7 +908,7 @@ func TestSendStatus(t *testing.T) {
 			fakeRes := &responder.FakeResponder{}
 			sMetrics := session.CreateSessionMetrics(reg)
 			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-			fakeDescriber := describer.FakeDescriptionManager{}
+			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
@@ -975,7 +975,7 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	sMetrics := session.CreateSessionMetrics(reg)
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 
-	fakeDescriber := describer.FakeDescriptionManager{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
 	statusRequest := backend_service.StatusRequest{
@@ -1033,7 +1033,7 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 
 	sMetrics := session.CreateSessionMetrics(reg)
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-	fakeDescriber := describer.FakeDescriptionManager{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
@@ -1092,7 +1092,7 @@ func TestHandleP0fResult(t *testing.T) {
 	sMetrics := session.CreateSessionMetrics(reg)
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 
-	fakeDescriber := describer.FakeDescriptionManager{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
@@ -1241,7 +1241,7 @@ func TestGetResponderDataCases(t *testing.T) {
 
 		t.Run(test.description, func(t *testing.T) {
 
-			fakeDescriber := describer.FakeDescriptionManager{}
+			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, test.responder, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 			ret := b.getResponderData(&test.request, &test.rule, &test.content)
