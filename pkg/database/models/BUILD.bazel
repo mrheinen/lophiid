@@ -14,7 +14,6 @@ go_library(
         "request.go",
         "request_description.go",
         "request_metadata.go",
-        "request_request_description.go",
         "session.go",
         "stored_query.go",
         "tag.go",

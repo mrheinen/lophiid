@@ -31,6 +31,7 @@ go_test(
         "//pkg/database/models",
         "//pkg/llm",
         "//pkg/util",
+        "//pkg/util/constants",
         "@com_github_prometheus_client_golang//prometheus",
     ],
 )

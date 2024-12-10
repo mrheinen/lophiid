@@ -728,7 +728,7 @@ func (f *FakeDatabaseClient) GetMetadataByRequestID(id int64) ([]models.RequestM
 	return []models.RequestMetadata{}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, query string) ([]models.Request, error) {
-	return []models.Request{}, f.ErrorToReturn
+	return f.RequestsToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchEvents(offset int64, limit int64, query string) ([]models.IpEvent, error) {
 	return []models.IpEvent{f.IpEventToReturn}, f.ErrorToReturn

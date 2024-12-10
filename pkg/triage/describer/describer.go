@@ -39,7 +39,6 @@ type CachedDescriptionManager struct {
 	dbClient     database.DatabaseClient
 	llmManager   *llm.LLMManager
 	eventManager analysis.IpEventManager
-	bgChan       chan bool
 	metrics      *DescriberMetrics
 }
 
@@ -78,41 +77,34 @@ func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager
 	return &CachedDescriptionManager{
 		dbClient:     dbClient,
 		llmManager:   llmManager,
-		bgChan:       make(chan bool),
 		metrics:      metrics,
 		eventManager: eventManager,
 	}
 }
 
-func (b *CachedDescriptionManager) Start() {
-	slog.Info("Starting base hash manager")
-	go b.QueueProcessor(time.Second * 15)
-}
-
-func (b *CachedDescriptionManager) Stop() {
-	slog.Info("Stopping base hash manager")
-	b.bgChan <- true
-}
-
-func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) error {
+func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int64, error) {
 
 	descs, err := b.dbClient.SearchRequestDescription(0, workCount, fmt.Sprintf("triage_status:%s", constants.TriageStatusTypePending))
 	if err != nil {
-		return fmt.Errorf("failed to get pending descriptions: %w", err)
+		return 0, fmt.Errorf("failed to get pending descriptions: %w", err)
 	}
 
 	if len(descs) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	var prompts []string
 	promptMap := make(map[string]*QueueEntry, workCount)
 
 	for _, desc := range descs {
-
 		reqs, err := b.dbClient.SearchRequests(0, 1, fmt.Sprintf("id:%d", desc.ExampleRequestID))
-		if err != nil || len(reqs) == 0 {
+		if err != nil {
 			slog.Error("failed to get request", slog.Int64("id", desc.ExampleRequestID), slog.String("error", err.Error()))
+			continue
+		}
+
+		if len(reqs) == 0 {
+			slog.Error("failed to get request", slog.Int64("id", desc.ExampleRequestID))
 			continue
 		}
 
@@ -129,14 +121,14 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) erro
 	start := time.Now()
 	result, err := b.llmManager.CompleteMultiple(prompts, false)
 	if err != nil {
-		return fmt.Errorf("failed to complete LLM request: %w", err)
+		return 0, fmt.Errorf("failed to complete LLM request: %w", err)
 	}
 
 	b.metrics.completeMultipleResponsetime.Observe(time.Since(start).Seconds())
 	for prompt, completion := range result {
 		var llmResult LLMResult
 		if err := json.Unmarshal([]byte(completion), &llmResult); err != nil {
-			return fmt.Errorf("failed to parse LLM result: %w, result: %s", err, completion)
+			return 0, fmt.Errorf("failed to parse LLM result: %w, result: %s", err, completion)
 		}
 
 		bh := promptMap[prompt].RequestDescription
@@ -155,13 +147,14 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) erro
 		}
 
 		if err := b.dbClient.Update(&bh); err != nil {
-			return fmt.Errorf("failed to insert description: %w: %+v", err, bh)
+			return 0, fmt.Errorf("failed to insert description: %w: %+v", err, bh)
 		}
 
 		req := promptMap[prompt].Request
 		// If the rule is 0 then no existing rule matched. In this case if the AI
 		// says the request was malicious then we want to raise an event.
 		if req.RuleID == 0 && llmResult.Malicious == "yes" {
+			slog.Info("Adding event")
 			b.eventManager.AddEvent(&models.IpEvent{
 				IP:         req.SourceIP,
 				HoneypotIP: req.HoneypotIP,
@@ -174,23 +167,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) erro
 		}
 	}
 
-	return nil
-}
-
-func (b *CachedDescriptionManager) QueueProcessor(interval time.Duration) {
-
-	ticker := time.NewTicker(interval)
-	for {
-
-		select {
-		case <-ticker.C:
-			b.GenerateLLMDescriptions(30)
-
-		case <-b.bgChan:
-			slog.Info("Description hash queue processor done")
-			return
-		}
-	}
+	return int64(len(descs)), nil
 }
 
 type FakeDescriptionManager struct {
