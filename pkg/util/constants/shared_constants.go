@@ -62,4 +62,5 @@ const (
 	TriageStatusTypePending = "PENDING"
 	TriageStatusTypeUnknown = "UNKNOWN"
 	TriageStatusTypeDone    = "DONE"
+	TriageStatusTypeFailed  = "FAILED"
 )
