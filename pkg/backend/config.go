@@ -104,6 +104,8 @@ type Config struct {
 	AI struct {
 		EnableResponder       bool          `fig:"enable_responder" `
 		EnableDescriber       bool          `fig:"enable_describer" `
+		DescriberLogFile      string        `fig:"describer_log_file" default:"describer.log" `
+		DescriberLogLevel     string        `fig:"describer_log_level" default:"debug" `
 		ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
 		ApiKey                string        `fig:"api_key"`
 		Model                 string        `fig:"model" default:""`
