@@ -100,7 +100,17 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		headerFields = append(headerFields, headerArray[0])
 
 		if len(headerArray) == 2 {
-			if strings.ToLower(headerArray[0]) != "host" {
+			if strings.ToLower(headerArray[0]) == "host" {
+				continue
+			}
+
+			if strings.ToLower(headerArray[0]) == "authorization" {
+				authArray := strings.SplitN(headerArray[1], " ", 2)
+				if len(authArray) == 2 {
+					// Just append the BASIC / NTLM / etc keywords
+					headerFields = append(headerFields, authArray[0])
+				}
+			} else {
 				headerFields = append(headerFields, headerArray[1])
 			}
 		}
@@ -112,6 +122,17 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 	}
 
 	parameterValsToIgnore := map[string]bool{
+		"csrf":          true,
+		"csrf-token":    true,
+		"csrftoken":     true,
+		"xsrf":          true,
+		"xsrf-token":    true,
+		"xsrftoken":     true,
+		"credential":    true,
+		"credentials":   true,
+		"creds":         true,
+		"hash":          true,
+		"checksum":      true,
 		"user":          true,
 		"new-user":      true,
 		"new_user":      true,
@@ -128,6 +149,7 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		"email-address": true,
 		"e-mail":        true,
 		"e_mail":        true,
+		"mail":          true,
 		"pass":          true,
 		"password":      true,
 		"new-passwd":    true,

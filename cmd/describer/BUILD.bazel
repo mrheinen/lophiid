@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "describer_lib",
+    srcs = ["main.go"],
+    importpath = "lophiid/cmd/describer",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/analysis",
+        "//pkg/backend",
+        "//pkg/database",
+        "//pkg/llm",
+        "//pkg/triage/describer",
+        "//pkg/util",
+        "@com_github_kkyr_fig//:fig",
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_vingarcia_ksql//:ksql",
+        "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
+    ],
+)
+
+go_binary(
+    name = "describer",
+    embed = [":describer_lib"],
+    visibility = ["//visibility:public"],
+)
