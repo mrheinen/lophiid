@@ -4,3 +4,9 @@
 #
 # For more details, please check https://github.com/bazelbuild/bazel/issues/18958
 ###############################################################################
+
+# -- bazel_dep definitions -- #
+
+# -- use_repo_rule statements -- #
+
+# -- repo definitions -- #
