@@ -103,9 +103,6 @@ type Config struct {
 
 	AI struct {
 		EnableResponder       bool          `fig:"enable_responder" `
-		EnableDescriber       bool          `fig:"enable_describer" `
-		DescriberLogFile      string        `fig:"describer_log_file" default:"describer.log" `
-		DescriberLogLevel     string        `fig:"describer_log_level" default:"debug" `
 		ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
 		ApiKey                string        `fig:"api_key"`
 		Model                 string        `fig:"model" default:""`
@@ -113,5 +110,11 @@ type Config struct {
 		LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
 		LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
 		MaxInputCharacters    int           `fig:"max_input_characters" default:"4096"`
+		Describer              struct {
+			Enable               bool   `fig:"enable"`
+			LogFile              string `fig:"log_file" default:"describer.log" `
+			LogLevel             string `fig:"log_level" default:"debug" `
+			MetricsListenAddress string `fig:"metrics_listen_address" default:"localhost:8999" `
+		} `fig:"describer"`
 	} `fig:"ai"`
 }
