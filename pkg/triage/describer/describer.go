@@ -56,24 +56,18 @@ type LLMResult struct {
 }
 
 const LLMSystemPrompt = `
-Our security system receive a potential malicous HTTP request which is given
-below. Describe what the request tries to do and what application it targets. If the request is malicious
-then tell me what kind of vulnerability it tries to exploit. Do not include the targetted server hostname, IP or port in the description.
+Analyze the provided HTTP response and generate a raw JSON response with the following keys:
 
-Note that requests for no resources (e.g. the root directory) should not be considered malicious unless there are clear attack vectors in the request.
-
-Your answer needs to be in the form of a raw JSON object that is not formatted for displaying. The keys of the json object are:
-
-description: store here your answer but keep it one or two paragraphs long
-malicious: Use the string "yes" if the request is likely malicious (e.g. it contains a payload, vulnerability type). Use the string "no" if the request does not appear malicious.
-vulnerability_type: A string containing the Mitre CWE (Common Weakness Enumeration) ID for the type of weakness being exploited. Use an empty string if you don't know.
-application: a string with the full application/device name that is being targetted or an empty string if you don't know
-cve: the relevant CVE or an empty string if you do not know.
+description: One paragraph describing the intend of the request, if it is malicous and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports.
+malicious: Use the string "yes" if the request is malicious. Else use the string "no".
+vulnerability_type: A string containing the Mitre CWE ID, starting with "CWE-" for weakness being exploited. Use an empty string if you don't know.
+application: A string with the targetted application/device name. An empty string if you don't know.
+cve: The relevant CVE if you know what vulnerability is exploited. A empty string if you don't know.
 
 The request was:
 `
 
-func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, eventManager analysis.IpEventManager, metrics *DescriberMetrics, batchSize int) *CachedDescriptionManager {
+func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
 	return &CachedDescriptionManager{
 		dbClient:     dbClient,
 		llmManager:   llmManager,
@@ -82,6 +76,13 @@ func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager
 	}
 }
 
+func (b *CachedDescriptionManager) MarkDescriptionFailed(desc *models.RequestDescription) {
+	desc.TriageStatus = constants.TriageStatusTypeFailed
+	if err := b.dbClient.Update(desc); err != nil {
+		slog.Error("failed to update failed description", slog.String("error", err.Error()))
+	}
+
+}
 func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int64, error) {
 
 	descs, err := b.dbClient.SearchRequestDescription(0, workCount, fmt.Sprintf("triage_status:%s", constants.TriageStatusTypePending))
@@ -121,13 +122,18 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 	start := time.Now()
 	result, err := b.llmManager.CompleteMultiple(prompts, false)
 	if err != nil {
-		return 0, fmt.Errorf("failed to complete LLM request: %w", err)
+		if len(result) == 0 {
+			return 0, fmt.Errorf("failed to complete all LLM requests: %w", err)
+		} else {
+			slog.Error("failed to complete LLM request", slog.String("error", err.Error()))
+		}
 	}
 
 	b.metrics.completeMultipleResponsetime.Observe(time.Since(start).Seconds())
 	for prompt, completion := range result {
 		var llmResult LLMResult
 		if err := json.Unmarshal([]byte(completion), &llmResult); err != nil {
+			b.MarkDescriptionFailed(&promptMap[prompt].RequestDescription)
 			return 0, fmt.Errorf("failed to parse LLM result: %w, result: %s", err, completion)
 		}
 
@@ -165,6 +171,15 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 				Details:    "AI marked request as malicious",
 			})
 		}
+
+		delete(promptMap, prompt)
+	}
+
+	// Anything left in the original map was not completed by the LLM. We
+	// therefore update these in the database with a failed status so that we can
+	// try again later.
+	for _, detail := range promptMap {
+		b.MarkDescriptionFailed(&detail.RequestDescription)
 	}
 
 	return int64(len(descs)), nil
