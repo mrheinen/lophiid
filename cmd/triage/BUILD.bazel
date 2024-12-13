@@ -14,6 +14,7 @@ go_library(
         "//pkg/util",
         "@com_github_kkyr_fig//:fig",
         "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/promhttp",
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
     ],
