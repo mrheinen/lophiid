@@ -1,9 +1,15 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
+go_binary(
+    name = "triage",
+    embed = [":triage_lib"],
+    visibility = ["//visibility:public"],
+)
+
 go_library(
-    name = "describer_lib",
+    name = "triage_lib",
     srcs = ["main.go"],
-    importpath = "lophiid/cmd/describer",
+    importpath = "lophiid/cmd/triage",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/analysis",
@@ -18,10 +24,4 @@ go_library(
         "@com_github_vingarcia_ksql//:ksql",
         "@com_github_vingarcia_ksql_adapters_kpgx5//:kpgx5",
     ],
-)
-
-go_binary(
-    name = "describer",
-    embed = [":describer_lib"],
-    visibility = ["//visibility:public"],
 )
