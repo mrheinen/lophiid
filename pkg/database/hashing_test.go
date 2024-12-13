@@ -417,6 +417,57 @@ func TestGetSameRequestHash(t *testing.T) {
 			shouldMatch: false,
 			wantErr:     false,
 		},
+		{
+			name: "same auth type different tokens should match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Authorization: Basic dXNlcjE6cGFzczE="},
+				Query:   "id=123",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Authorization: Basic dXNlcjI6cGFzczI="},
+				Query:   "id=123",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "different auth types should not match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Authorization: Basic dXNlcjE6cGFzczE="},
+				Query:   "id=123",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Authorization: Bearer eyJhbGciOiJIUzI1NiJ9"},
+				Query:   "id=123",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
+		{
+			name: "malformed auth header should be ignored",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Authorization:BasicWithNoSpace"},
+				Query:   "id=123",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Authorization: Basic dXNlcjE6cGFzczE="},
+				Query:   "id=123",
+			},
+			shouldMatch: false,
+			wantErr:     false,
+		},
 	}
 
 	for _, tt := range tests {

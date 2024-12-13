@@ -187,9 +187,9 @@ func main() {
 	rateLimiter.Start()
 
 	var llmResponder responder.Responder
-	var desManager describer.DescriptionManager
+	var desClient describer.DescriberClient
 
-	if cfg.AI.EnableResponder || cfg.AI.EnableDescriber {
+	if cfg.AI.EnableResponder || cfg.AI.Describer.Enable {
 
 		var llmClient llm.OpenAILLMClient
 		if cfg.AI.Model != "" {
@@ -206,11 +206,9 @@ func main() {
 			llmResponder = responder.NewLLMResponder(llmManager, cfg.AI.MaxInputCharacters)
 		}
 
-		if cfg.AI.EnableDescriber {
-			slog.Info("Creating describer")
-			desMetric := describer.CreateDescriberMetrics(metricsRegistry)
-			desManager = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, time.Hour*8, desMetric, 3)
-			desManager.Start()
+		if cfg.AI.Describer.Enable {
+			slog.Info("Creating describer client")
+			desClient = describer.GetNewCachedDescriberClient(dbc, cfg.AI.Describer.CacheExpirationTime)
 		}
 	}
 
@@ -237,7 +235,7 @@ func main() {
 
 	slog.Info("Cleaned up stale sessions", slog.Int("count", totalSessionsCleaned))
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desManager, cfg)
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("Error: %s", err)
 	}

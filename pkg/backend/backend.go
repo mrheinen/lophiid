@@ -90,11 +90,11 @@ type BackendServer struct {
 	config          Config
 	llmResponder    responder.Responder
 	sessionMgr      session.SessionManager
-	describer       describer.DescriptionManager
+	describer       describer.DescriberClient
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriptionManager, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriberClient, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
@@ -881,7 +881,6 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 		return fmt.Errorf("error saving request: %s", err)
 	}
 
-	// TODO: describe all requests, not just those that match rules.
 	if s.describer != nil {
 		err := s.describer.MaybeAddNewHash(req.CmpHash, dm.(*models.Request))
 		if err != nil {

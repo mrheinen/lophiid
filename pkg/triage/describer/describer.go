@@ -1,3 +1,19 @@
+// Lophiid distributed honeypot
+// Copyright (C) 2024 Niels Heinen
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation; either version 2 of the License, or (at your
+// option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+// or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+// for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package describer
 
 import (
@@ -8,9 +24,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
-	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
-	"sync"
 	"time"
 )
 
@@ -22,20 +36,15 @@ type DescriptionManager interface {
 // CachedDescriptionManager is a manager for request descriptions. It caches
 // descriptions in memory so that database calls are minimal.
 type CachedDescriptionManager struct {
-	cache        *util.StringMapCache[struct{}]
 	dbClient     database.DatabaseClient
-	llmQueueMap  map[string]QueueEntry
-	queueLock    sync.RWMutex
 	llmManager   *llm.LLMManager
 	eventManager analysis.IpEventManager
-	llmBatchSize int
-	bgChan       chan bool
 	metrics      *DescriberMetrics
 }
 
 type QueueEntry struct {
-	RequestDescription *models.RequestDescription
-	Request            *models.Request
+	RequestDescription models.RequestDescription
+	Request            models.Request
 }
 
 type LLMResult struct {
@@ -47,123 +56,85 @@ type LLMResult struct {
 }
 
 const LLMSystemPrompt = `
-Our security system receive a potential malicous HTTP request which is given
-below. Describe what the request tries to do and what application it targets. If the request is malicious
-then tell me what kind of vulnerability it tries to exploit. Do not include the targetted server hostname, IP or port in the description.
+Analyze the provided HTTP response. Your response needs to be a raw JSON object response that is not formatted for displaying, without any text outside the JSON, that has the following keys:
 
-Your answer needs to be in the form of a raw JSON object that is not formatted for displaying. The keys of the json object are:
-
-description: store here your answer but keep it one or two paragraphs long
-malicious: Use the string "yes" if the request is likely malicious (e.g. it contains a payload, vulnerability type). Use the string "no" if the request does not appear malicious.
-vulnerability_type: A string containing the Mitre CWE (Common Weakness Enumeration) ID for the type of weakness being exploited. Use an empty string if you don't know.
-application: a string with the full application/device name that is being targetted or an empty string if you don't know
-cve: the relevant CVE or an empty string if you do not know.
+description: One paragraph describing the intend of the request, if it is malicous and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports.
+malicious: Use the string "yes" if the request is malicious. Else use the string "no".
+vulnerability_type: A string containing the Mitre CWE ID, starting with "CWE-" for weakness being exploited. Use an empty string if you don't know.
+application: A string with the targetted application/device name. An empty string if you don't know.
+cve: The relevant CVE if you know what vulnerability is exploited. A empty string if you don't know.
 
 The request was:
 `
 
-func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, eventManager analysis.IpEventManager, cacheTimeout time.Duration, metrics *DescriberMetrics, batchSize int) *CachedDescriptionManager {
-
-	cache := util.NewStringMapCache[struct{}]("CmpHash cache", cacheTimeout)
-	cache.Start()
-
+func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
 	return &CachedDescriptionManager{
 		dbClient:     dbClient,
-		cache:        cache,
-		llmQueueMap:  make(map[string]QueueEntry),
-		llmBatchSize: batchSize,
 		llmManager:   llmManager,
-		bgChan:       make(chan bool),
 		metrics:      metrics,
 		eventManager: eventManager,
 	}
 }
 
-func (b *CachedDescriptionManager) Start() {
-	slog.Info("Starting base hash manager")
-	go b.QueueProcessor()
-}
-
-func (b *CachedDescriptionManager) Stop() {
-	slog.Info("Stopping base hash manager")
-	b.bgChan <- true
-}
-
-// MaybeAddNewHash add the hash to the cache and database if necessary. Also
-// schedules an LLM description for the hash.
-func (b *CachedDescriptionManager) MaybeAddNewHash(hash string, req *models.Request) error {
-	// First check the cache
-	_, err := b.cache.Get(hash)
-	if err == nil {
-		return nil
+func (b *CachedDescriptionManager) MarkDescriptionFailed(desc *models.RequestDescription) {
+	desc.TriageStatus = constants.TriageStatusTypeFailed
+	if err := b.dbClient.Update(desc); err != nil {
+		slog.Error("failed to update failed description", slog.String("error", err.Error()))
 	}
 
-	// Next check the database
-	res, err := b.dbClient.SearchRequestDescription(0, 1, fmt.Sprintf("cmp_hash:%s", hash))
+}
+func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int64, error) {
+
+	descs, err := b.dbClient.SearchRequestDescription(0, workCount, fmt.Sprintf("triage_status:%s", constants.TriageStatusTypePending))
 	if err != nil {
-		return fmt.Errorf("failed to check database for request description %s: %w", hash, err)
+		return 0, fmt.Errorf("failed to get pending descriptions: %w", err)
 	}
 
-	if len(res) == 1 {
-		// It's already in the database so update the cache to reflect this.
-		b.cache.Store(hash, struct{}{})
-		return nil
+	if len(descs) == 0 {
+		return 0, nil
 	}
-
-	// If we get here then we have not seen this hash before so we need to add
-	// to the database and additionally put it in the queue for LLM description
-	// generation.
-	bh := &models.RequestDescription{
-		CmpHash:          hash,
-		ExampleRequestID: req.ID,
-		ReviewStatus:     "UNREVIEWED",
-	}
-
-	dm, err := b.dbClient.Insert(bh)
-	if err != nil {
-		return fmt.Errorf("failed to insert description: %s: %w", hash, err)
-	}
-
-	b.queueLock.Lock()
-	slog.Info("Scheduling LLM description for hash/uri", slog.String("uri", req.Uri), slog.String("hash", hash))
-	b.llmQueueMap[hash] = QueueEntry{
-		RequestDescription: dm.(*models.RequestDescription),
-		Request:            req,
-	}
-	b.queueLock.Unlock()
-
-	b.cache.Store(hash, struct{}{})
-	return nil
-}
-
-func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []QueueEntry) error {
 
 	var prompts []string
-	promptMap := make(map[string]*QueueEntry, len(entries))
+	promptMap := make(map[string]*QueueEntry, workCount)
 
-	for _, entry := range entries {
-		slog.Debug("Describing request for URI", slog.String("uri", entry.Request.Uri), slog.String("hash", entry.Request.CmpHash))
-		prompt := fmt.Sprintf("%s\n%s", LLMSystemPrompt, entry.Request.Raw)
-		promptMap[prompt] = &entry
+	for _, desc := range descs {
+		reqs, err := b.dbClient.SearchRequests(0, 1, fmt.Sprintf("id:%d", desc.ExampleRequestID))
+		if err != nil {
+			slog.Error("failed to get request", slog.Int64("id", desc.ExampleRequestID), slog.String("error", err.Error()))
+			continue
+		}
+
+		if len(reqs) == 0 {
+			slog.Error("failed to get request", slog.Int64("id", desc.ExampleRequestID))
+			continue
+		}
+
+		slog.Debug("Describing request for URI", slog.String("uri", reqs[0].Uri), slog.String("hash", reqs[0].CmpHash))
+		prompt := fmt.Sprintf("%s\n%s", LLMSystemPrompt, reqs[0].Raw)
 		prompts = append(prompts, prompt)
+
+		promptMap[prompt] = &QueueEntry{
+			Request:            reqs[0],
+			RequestDescription: desc,
+		}
 	}
 
 	start := time.Now()
 	result, err := b.llmManager.CompleteMultiple(prompts, false)
 	if err != nil {
-		return fmt.Errorf("failed to complete LLM request: %w", err)
-	}
-
-	if len(result) != len(entries) {
-		slog.Debug("Inconsistent number of results", slog.Int("expected", len(entries)), slog.Int("got", len(result)))
+		if len(result) == 0 {
+			return 0, fmt.Errorf("failed to complete all LLM requests: %w", err)
+		} else {
+			slog.Error("failed to complete LLM request", slog.String("error", err.Error()))
+		}
 	}
 
 	b.metrics.completeMultipleResponsetime.Observe(time.Since(start).Seconds())
 	for prompt, completion := range result {
-
 		var llmResult LLMResult
 		if err := json.Unmarshal([]byte(completion), &llmResult); err != nil {
-			return fmt.Errorf("failed to parse LLM result: %w, result: %s", err, completion)
+			b.MarkDescriptionFailed(&promptMap[prompt].RequestDescription)
+			return 0, fmt.Errorf("failed to parse LLM result: %w, result: %s", err, completion)
 		}
 
 		bh := promptMap[prompt].RequestDescription
@@ -171,6 +142,8 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []QueueEntry)
 		bh.AIDescription = llmResult.Description
 		bh.AIVulnerabilityType = llmResult.VulnerabilityType
 		bh.AIApplication = llmResult.Application
+		bh.TriageStatus = constants.TriageStatusTypeDone
+
 		if llmResult.Malicious == "yes" || llmResult.Malicious == "no" {
 			bh.AIMalicious = llmResult.Malicious
 		}
@@ -179,14 +152,15 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []QueueEntry)
 			bh.AICVE = llmResult.CVE
 		}
 
-		if err := b.dbClient.Update(bh); err != nil {
-			return fmt.Errorf("failed to insert description: %w: %+v", err, bh)
+		if err := b.dbClient.Update(&bh); err != nil {
+			return 0, fmt.Errorf("failed to insert description: %w: %+v", err, bh)
 		}
 
 		req := promptMap[prompt].Request
 		// If the rule is 0 then no existing rule matched. In this case if the AI
 		// says the request was malicious then we want to raise an event.
 		if req.RuleID == 0 && llmResult.Malicious == "yes" {
+			slog.Info("Adding event")
 			b.eventManager.AddEvent(&models.IpEvent{
 				IP:         req.SourceIP,
 				HoneypotIP: req.HoneypotIP,
@@ -197,51 +171,18 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(entries []QueueEntry)
 				Details:    "AI marked request as malicious",
 			})
 		}
+
+		delete(promptMap, prompt)
 	}
 
-	return nil
-}
-
-func (b *CachedDescriptionManager) QueueProcessor() {
-	for {
-
-		entries := []QueueEntry{}
-		keysToDelete := []string{}
-
-		b.queueLock.Lock()
-		if len(b.llmQueueMap) > 0 {
-			cnt := 0
-			for k, v := range b.llmQueueMap {
-				entries = append(entries, v)
-				keysToDelete = append(keysToDelete, k)
-				cnt += 1
-				if cnt > b.llmBatchSize {
-					break
-				}
-			}
-		}
-
-		for _, k := range keysToDelete {
-			delete(b.llmQueueMap, k)
-		}
-		b.queueLock.Unlock()
-
-		if len(entries) > 0 {
-			if err := b.GenerateLLMDescriptions(entries); err != nil {
-				slog.Error("failed to generate LLM description", slog.String("error", err.Error()))
-			}
-		} else {
-			time.Sleep(time.Second)
-		}
-
-		select {
-		case <-b.bgChan:
-			slog.Info("Description hash queue processor done")
-			return
-		default:
-			b.metrics.pendingRequestsGauge.Set(float64(len(b.llmQueueMap)))
-		}
+	// Anything left in the original map was not completed by the LLM. We
+	// therefore update these in the database with a failed status so that we can
+	// try again later.
+	for _, detail := range promptMap {
+		b.MarkDescriptionFailed(&detail.RequestDescription)
 	}
+
+	return int64(len(descs)), nil
 }
 
 type FakeDescriptionManager struct {

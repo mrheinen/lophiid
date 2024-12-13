@@ -32,6 +32,7 @@ CREATE TYPE REQUEST_PURPOSE AS ENUM ('UNKNOWN', 'RECON', 'CRAWL', 'ATTACK');
 CREATE TYPE RESPONDER_TYPE AS ENUM ('NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION');
 CREATE TYPE RESPONDER_DECODER_TYPE AS ENUM ('NONE', 'URI', 'HTML');
 CREATE TYPE REVIEW_STATUS_TYPE AS ENUM ('UNREVIEWED', 'REVIEWED_OK', 'REVIEWED_NOK');
+CREATE TYPE TRIAGE_STATUS_TYPE AS ENUM ('UNKNOWN', 'PENDING', 'DONE', 'FAILED');
 
 CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
@@ -80,6 +81,7 @@ CREATE TABLE request_description (
   ai_cve             VARCHAR(15),
   review_status      REVIEW_STATUS_TYPE default 'UNREVIEWED',
   source_model       VARCHAR(256) default 'UNKNOWN',
+  triage_status             TRIAGE_STATUS_TYPE default 'UNKNOWN',
   CONSTRAINT fk_example_request_id FOREIGN KEY(example_request_id) REFERENCES request(id)
 );
 
@@ -425,4 +427,9 @@ CREATE INDEX ip_per_whois_idx ON whois (
 
 CREATE INDEX request_id_per_request_metdata ON request_metadata (
   request_id DESC
+);
+
+CREATE INDEX request_description_status_idx ON request_description (
+  created_at DESC,
+  triage_status
 );
