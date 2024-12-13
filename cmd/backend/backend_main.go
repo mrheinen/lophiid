@@ -189,7 +189,7 @@ func main() {
 	var llmResponder responder.Responder
 	var desClient describer.DescriberClient
 
-	if cfg.AI.EnableResponder || cfg.AI.Describer.Enable {
+	if cfg.AI.EnableResponder || cfg.AI.Triage.Enable {
 
 		var llmClient llm.OpenAILLMClient
 		if cfg.AI.Model != "" {
@@ -206,9 +206,9 @@ func main() {
 			llmResponder = responder.NewLLMResponder(llmManager, cfg.AI.MaxInputCharacters)
 		}
 
-		if cfg.AI.Describer.Enable {
+		if cfg.AI.Triage.Enable {
 			slog.Info("Creating describer client")
-			desClient = describer.GetNewCachedDescriberClient(dbc, cfg.AI.Describer.CacheExpirationTime)
+			desClient = describer.GetNewCachedDescriberClient(dbc, cfg.AI.Triage.CacheExpirationTime)
 		}
 	}
 

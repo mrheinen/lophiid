@@ -110,12 +110,12 @@ type Config struct {
 		LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
 		LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
 		MaxInputCharacters    int           `fig:"max_input_characters" default:"4096"`
-		Describer             struct {
+		Triage             struct {
 			Enable               bool          `fig:"enable"`
-			LogFile              string        `fig:"log_file" default:"describer.log" `
+			LogFile              string        `fig:"log_file" default:"triage.log" `
 			LogLevel             string        `fig:"log_level" default:"debug" `
 			MetricsListenAddress string        `fig:"metrics_listen_address" default:"localhost:8999" `
 			CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"8h"`
-		} `fig:"describer"`
+		} `fig:"triage"`
 	} `fig:"ai"`
 }
