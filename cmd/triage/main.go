@@ -38,7 +38,7 @@ func main() {
 		return
 	}
 
-	lf, err := os.OpenFile(cfg.AI.Describer.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	lf, err := os.OpenFile(cfg.AI.Triage.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("Could not open logfile: %s\n", err)
 		return
@@ -52,7 +52,7 @@ func main() {
 	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
 
-	switch cfg.AI.Describer.LogLevel {
+	switch cfg.AI.Triage.LogLevel {
 	case "info":
 		programLevel.Set(slog.LevelInfo)
 	case "warn":
@@ -83,7 +83,7 @@ func main() {
 	metricsRegistry := prometheus.NewRegistry()
 
 	http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
-	go http.ListenAndServe(cfg.AI.Describer.MetricsListenAddress, nil)
+	go http.ListenAndServe(cfg.AI.Triage.MetricsListenAddress, nil)
 
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
