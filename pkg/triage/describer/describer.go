@@ -56,7 +56,7 @@ type LLMResult struct {
 }
 
 const LLMSystemPrompt = `
-Analyze the provided HTTP response and generate a raw JSON response with the following keys:
+Analyze the provided HTTP response. Your response needs to be a raw JSON object response that is not formatted for displaying, without any text outside the JSON, that has the following keys:
 
 description: One paragraph describing the intend of the request, if it is malicous and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports.
 malicious: Use the string "yes" if the request is malicious. Else use the string "no".
