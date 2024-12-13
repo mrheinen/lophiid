@@ -83,7 +83,12 @@ func main() {
 	metricsRegistry := prometheus.NewRegistry()
 
 	http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
-	go http.ListenAndServe(cfg.AI.Triage.MetricsListenAddress, nil)
+ go func() {
+     if err := http.ListenAndServe(cfg.AI.Triage.MetricsListenAddress, nil); err != nil {
+         slog.Error("Failed to start metrics server", "error", err)
+         os.Exit(1)
+     }
+ }()
 
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
