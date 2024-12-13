@@ -177,6 +177,22 @@ One way to obtain it is by going to [https://web.telegram.org](https://web.teleg
 Once you have this setup, you can enable alerting for specific rules by clicking
 on the bell icon behind those rules in the Rules tab of the UI.
 
+#### Setting up LLM triage
+
+If you like to enable LLM triage and LLM descriptions of attacks then you will
+need edit the backend [config](./config/backend-config.yaml) and enable the
+triage process.
+
+In the config set AI -> Triage -> enable to 1.  Also make sure you have set an
+API endpoint and API key in the AI section.
+
+Now you need to run the triage process:
+
+```shell
+bazel build //cmd/triage:triage
+./bazel-bin/triage/triage_/triage -c backend-config.yaml
+```
+
 # Setting up the agent
 
 ## Prepare privilege dropping
