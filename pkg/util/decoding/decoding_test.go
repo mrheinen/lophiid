@@ -85,3 +85,62 @@ func TestRoughDencodeURL(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeURLOrEmptyString(t *testing.T) {
+	for _, test := range []struct {
+		description    string
+		stringToDecode string
+		removeSpace    bool
+		expectedResult string
+	}{
+		{
+			description:    "simple url encoded string",
+			stringToDecode: "hello%20world",
+			removeSpace:    false,
+			expectedResult: "hello world",
+		},
+		{
+			description:    "plus sign with removeSpace true",
+			stringToDecode: "hello+world",
+			removeSpace:    true,
+			expectedResult: "hello world",
+		},
+		{
+			description:    "plus sign with removeSpace false",
+			stringToDecode: "hello+world",
+			removeSpace:    false,
+			expectedResult: "hello+world",
+		},
+		{
+			description:    "double encoded string",
+			stringToDecode: "hello%2520world", // "hello%20world" encoded once more
+			removeSpace:    false,
+			expectedResult: "hello world",
+		},
+		{
+			description:    "invalid encoding falls back to rough decode",
+			stringToDecode: "hello%2world%20test",
+			removeSpace:    false,
+			expectedResult: "hello%2world test",
+		},
+		{
+			description:    "empty string",
+			stringToDecode: "",
+			removeSpace:    false,
+			expectedResult: "",
+		},
+		{
+			description:    "special characters",
+			stringToDecode: "%21%40%23%24%25%5E%26%2A%28%29",
+			removeSpace:    false,
+			expectedResult: "!@#$%^&*()",
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			result := DecodeURLOrEmptyString(test.stringToDecode, test.removeSpace)
+			if result != test.expectedResult {
+				t.Errorf("expected %q but got %q", test.expectedResult, result)
+			}
+		})
+	}
+}
