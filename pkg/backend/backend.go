@@ -555,8 +555,10 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 			slog.Warn("could not update", slog.String("error", err.Error()))
 		}
 
+		// If the existing uploaded file was found malicious then we will generate
+		// events for the IPs involved in the current exchange.
 		if dm.VTAnalysisMalicious > 0 || dm.VTAnalysisSuspicious > 0 {
-			for _, evt := range s.vtMgr.GetEventsForDownload(&dm) {
+			for _, evt := range s.vtMgr.GetEventsForDownload(&dm, false) {
 				s.ipEventManager.AddEvent(&evt)
 			}
 		}

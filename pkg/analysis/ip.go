@@ -69,6 +69,9 @@ func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, 
 }
 
 func (i *IpEventManagerImpl) AddEvent(evt *models.IpEvent) {
+	if evt.Subtype == "" {
+		evt.Subtype = constants.IpEventSubTypeNone
+	}
 	i.eventQueue <- evt
 }
 

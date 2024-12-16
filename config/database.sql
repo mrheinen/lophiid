@@ -303,7 +303,8 @@ CREATE TABLE whois (
 
 
 -- These need to be kept in sync with pkg/util/constants/shared_constants.go
-CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'ATTACKED', 'RECONNED', 'CRAWLED', 'SCANNED', 'BRUTEFORCED', 'HOSTED_MALWARE', 'RATELIMITED', 'HOST_C2');
+CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'ATTACKED', 'RECONNED', 'CRAWLED', 'SCANNED', 'BRUTEFORCED', 'HOSTED_MALWARE', 'SENT_MALWARE', 'RATELIMITED', 'HOST_C2');
+CREATE TYPE IP_EVENT_SUB_TYPE AS ENUM ('UNKNOWN', 'NONE', 'MALWARE_NEW', 'MALWARE_OLD' );
 CREATE TYPE IP_EVENT_SOURCE AS ENUM ('OTHER', 'VT', 'RULE', 'BACKEND', 'ANALYSIS', 'WHOIS', 'AI');
 CREATE TABLE ip_event (
   id                     SERIAL PRIMARY KEY,
@@ -313,7 +314,7 @@ CREATE TABLE ip_event (
   note                   VARCHAR(4096),
   count                  INTEGER default 0,
   type                   IP_EVENT_TYPE DEFAULT 'UNKNOWN',
-  subtype                VARCHAR(128),
+  subtype                IP_EVENT_SUB_TYPE DEFAULT 'NONE',
   request_id             INTEGER,   -- optional
   source                 IP_EVENT_SOURCE default 'OTHER',
   source_ref             VARCHAR(512),
@@ -322,6 +323,7 @@ CREATE TABLE ip_event (
   created_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
+
 
 GRANT ALL PRIVILEGES ON content TO lo;
 GRANT ALL PRIVILEGES ON content_id_seq TO lo;

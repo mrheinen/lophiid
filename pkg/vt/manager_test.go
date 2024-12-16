@@ -213,6 +213,7 @@ func TestGetEventsForDownload(t *testing.T) {
 		expectedEvents int
 		expectedIP     string
 		expectedDomain string
+		isMalwareNew   bool
 	}{
 		{
 			description: "returns events OK",
@@ -228,6 +229,7 @@ func TestGetEventsForDownload(t *testing.T) {
 			expectedEvents: 2,
 			expectedIP:     "1.1.1.1",
 			expectedDomain: "",
+			isMalwareNew:   true,
 		},
 		{
 			description: "returns events with domain port",
@@ -243,6 +245,7 @@ func TestGetEventsForDownload(t *testing.T) {
 			expectedEvents: 2,
 			expectedIP:     "1.1.1.1",
 			expectedDomain: "example.org",
+			isMalwareNew:   true,
 		},
 		{
 			description: "returns events with domain",
@@ -258,7 +261,25 @@ func TestGetEventsForDownload(t *testing.T) {
 			expectedEvents: 2,
 			expectedIP:     "1.1.1.1",
 			expectedDomain: "example.org",
+			isMalwareNew:   true,
 		},
+		{
+			description: "returns events with domain, malware old",
+			download: models.Download{
+				RequestID: 42,
+				IP:        "1.1.1.1",
+				Host:      "example.org",
+			},
+			request: models.Request{
+				ID:       22,
+				SourceIP: "1.1.1.1",
+			},
+			expectedEvents: 2,
+			expectedIP:     "1.1.1.1",
+			expectedDomain: "example.org",
+			isMalwareNew:   false,
+		},
+
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
@@ -271,7 +292,7 @@ func TestGetEventsForDownload(t *testing.T) {
 			fIpMgr := analysis.FakeIpEventManager{}
 			mgr := NewVTBackgroundManager(&fakeDBClient, &fIpMgr, metrics, &fakeVTClient)
 
-			events := mgr.GetEventsForDownload(&test.download)
+			events := mgr.GetEventsForDownload(&test.download, test.isMalwareNew)
 			if len(events) != test.expectedEvents {
 				t.Errorf("expected %d events, got %d", test.expectedEvents, len(events))
 			}
@@ -279,6 +300,15 @@ func TestGetEventsForDownload(t *testing.T) {
 			for _, evt := range events {
 				if evt.IP != test.expectedIP {
 					t.Errorf("expected IP %s, got %s", test.expectedIP, evt.IP)
+				}
+
+				expectedSubType := constants.IpEventSubTypeMalwareOld
+				if test.isMalwareNew {
+					expectedSubType = constants.IpEventSubTypeMalwareNew
+				}
+
+				if evt.Subtype != expectedSubType {
+					t.Errorf("expected subtype %s, got %s", expectedSubType, evt.Subtype)
 				}
 
 				if evt.Source != constants.IpEventSourceVT {
