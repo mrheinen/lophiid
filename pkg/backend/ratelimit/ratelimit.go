@@ -67,6 +67,7 @@ func NewWindowRateLimiter(rateWindow time.Duration, bucketDuration time.Duration
 		RateBuckets:          make(map[string][]int),
 		NumberBuckets:        int(rateWindow / bucketDuration),
 		Metrics:              metrics,
+		bgChan:               make(chan bool),
 	}
 }
 
@@ -136,16 +137,16 @@ func (r *WindowRateLimiter) AllowRequest(req *models.Request) (bool, error) {
 		return true, nil
 	}
 
-	// Check if the bucket limit is not already exceeded.
-	if r.RateBuckets[rKey][r.NumberBuckets-1] >= r.MaxRequestPerBucket {
-		r.RateBuckets[rKey][r.NumberBuckets-1] += 1
-		return false, ErrBucketLimitExceeded
-	}
-
 	// Check how many requests there have been in this window.
 	if GetSumOfWindow(r.RateBuckets[rKey]) >= r.MaxRequestsPerWindow {
 		r.RateBuckets[rKey][r.NumberBuckets-1] += 1
 		return false, ErrWindowLimitExceeded
+	}
+
+	// Check if the bucket limit is not already exceeded.
+	if r.RateBuckets[rKey][r.NumberBuckets-1] >= r.MaxRequestPerBucket {
+		r.RateBuckets[rKey][r.NumberBuckets-1] += 1
+		return false, ErrBucketLimitExceeded
 	}
 
 	r.RateBuckets[rKey][r.NumberBuckets-1] += 1
