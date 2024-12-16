@@ -18,23 +18,30 @@ const (
 
 // This needs to be kept in sync with IP_EVENT_TYPE in the database.
 const (
-	IpEventCrawl         = "CRAWLED"
 	IpEventHostedMalware = "HOSTED_MALWARE"
 	IpEventSentMalware   = "SENT_MALWARE"
-	IpEventRecon         = "RECONNED"
-	IpEventScanned       = "SCANNED"
-	IpEventAttacked      = "ATTACKED"
-	IpEventBrute         = "BRUTEFORCED"
+	IpEventTrafficClass  = "TRAFFIC_CLASS"
 	IpEventHostC2        = "HOST_C2"
 	IpEventRateLimited   = "RATELIMITED"
 )
 
 // This needs to be kept in sync with IP_EVENT_SUB_TYPE in the database.
 const (
-	IpEventSubTypeUnknown    = "UNKNOWN"
-	IpEventSubTypeNone       = "NONE"
+	IpEventSubTypeUnknown = "UNKNOWN"
+	IpEventSubTypeNone    = "NONE"
+
 	IpEventSubTypeMalwareNew = "MALWARE_NEW"
 	IpEventSubTypeMalwareOld = "MALWARE_OLD"
+
+	IpEventSubTypeRateWindow = "RATE_WINDOW"
+	IpEventSubTypeRateBucket = "RATE_BUCKET"
+
+	IpEventSubTypeTrafficClassScanned   = "TC_SCANNED"
+	IpEventSubTypeTrafficClassAttacked  = "TC_ATTACKED"
+	IpEventSubTypeTrafficClassRecon     = "TC_RECONNED"
+	IpEventSubTypeTrafficClassBrute     = "TC_BRUTEFORCED"
+	IpEventSubTypeTrafficClassCrawl     = "TC_CRAWLED"
+	IpEventSubTypeTrafficClassMalicious = "TC_MALICIOUS"
 )
 
 // These constants are the extractor types used in ./pkg/backend/extractors

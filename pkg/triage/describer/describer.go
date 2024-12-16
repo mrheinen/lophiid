@@ -167,7 +167,8 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 				Source:     constants.IpEventSourceAI,
 				RequestID:  req.ID,
 				SourceRef:  fmt.Sprintf("%d", req.ID),
-				Type:       constants.IpEventAttacked,
+				Type:       constants.IpEventTrafficClass,
+				Subtype:    constants.IpEventSubTypeTrafficClassMalicious,
 				Details:    "AI marked request as malicious",
 			})
 		}

@@ -680,22 +680,26 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
 	if !allowRequest {
 
-		s.ipEventManager.AddEvent(&models.IpEvent{
+		evt := &models.IpEvent{
 			IP:         sReq.SourceIP,
 			Type:       constants.IpEventRateLimited,
 			Details:    err.Error(),
 			Source:     constants.IpEventSourceBackend,
 			HoneypotIP: sReq.HoneypotIP,
-		})
+		}
 
 		switch err {
 		case ratelimit.ErrBucketLimitExceeded:
+			evt.Subtype = constants.IpEventSubTypeRateBucket
 			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonBucket).Add(1)
 		case ratelimit.ErrWindowLimitExceeded:
+			evt.Subtype = constants.IpEventSubTypeRateWindow
 			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonWindow).Add(1)
 		default:
 			slog.Error("error happened in ratelimiter", slog.String("error", err.Error()))
 		}
+
+		s.ipEventManager.AddEvent(evt)
 
 		slog.Debug("ratelimiter blocked request", slog.String("error", err.Error()))
 		return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
@@ -895,7 +899,8 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 		case models.RuleRequestPurposeAttack:
 			s.ipEventManager.AddEvent(&models.IpEvent{
 				IP:         req.SourceIP,
-				Type:       constants.IpEventAttacked,
+				Type:       constants.IpEventTrafficClass,
+				Subtype:    constants.IpEventSubTypeTrafficClassAttacked,
 				Details:    "rule indicated the IP attacked",
 				Source:     constants.IpEventSourceRule,
 				SourceRef:  fmt.Sprintf("%d", rule.ID),
@@ -905,7 +910,8 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 		case models.RuleRequestPurposeCrawl:
 			s.ipEventManager.AddEvent(&models.IpEvent{
 				IP:         req.SourceIP,
-				Type:       constants.IpEventCrawl,
+				Type:       constants.IpEventTrafficClass,
+				Subtype:    constants.IpEventSubTypeTrafficClassCrawl,
 				Source:     constants.IpEventSourceRule,
 				SourceRef:  fmt.Sprintf("%d", rule.ID),
 				Details:    "rule indicated the IP crawled",
@@ -917,7 +923,8 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 				IP:         req.SourceIP,
 				Source:     constants.IpEventSourceRule,
 				SourceRef:  fmt.Sprintf("%d", rule.ID),
-				Type:       constants.IpEventRecon,
+				Type:       constants.IpEventTrafficClass,
+				Subtype:    constants.IpEventSubTypeTrafficClassRecon,
 				Details:    "rule indicated the IP reconned",
 				RequestID:  dm.ModelID(),
 				HoneypotIP: req.HoneypotIP,

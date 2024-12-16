@@ -121,15 +121,16 @@ func (i *IpEventManagerImpl) CreateScanEvents() int {
 	const scanThreshold = 3
 
 	eventReturnCount := 0
-	scanEvents := map[string]bool{
-		constants.IpEventAttacked: true,
-		constants.IpEventRecon:    true,
+	scanSubEvents := map[string]bool{
+		constants.IpEventSubTypeTrafficClassAttacked: true,
+		constants.IpEventSubTypeTrafficClassBrute:    true,
+		constants.IpEventSubTypeTrafficClassRecon:    true,
 	}
 
 	scanCount := make(map[string]int64)
 
 	for _, evt := range i.ipCache.GetAsMap() {
-		if _, ok := scanEvents[evt.Type]; ok {
+		if _, ok := scanSubEvents[evt.Subtype]; ok {
 			if _, ok := scanCount[evt.IP]; !ok {
 				scanCount[evt.IP] = evt.Count
 			} else {
@@ -161,7 +162,8 @@ func (i *IpEventManagerImpl) CreateScanEvents() int {
 
 			evt := models.IpEvent{
 				IP:      ip,
-				Type:    constants.IpEventScanned,
+				Type:    constants.IpEventTrafficClass,
+				Subtype: constants.IpEventSubTypeTrafficClassScanned,
 				Details: fmt.Sprintf("found %d events", cnt),
 				Source:  constants.IpEventSourceAnalysis,
 			}

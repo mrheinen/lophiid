@@ -92,16 +92,20 @@ func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 			description: "detects scan, same event",
 			events: []models.IpEvent{
 				{
-					Type: constants.IpEventAttacked,
-					IP:   "1.1.1.1",
+					Type:    constants.IpEventTrafficClass,
+					Subtype: constants.IpEventSubTypeTrafficClassAttacked,
+					IP:      "1.1.1.1",
+				},
+
+				{
+					Type:    constants.IpEventTrafficClass,
+					Subtype: constants.IpEventSubTypeTrafficClassAttacked,
+					IP:      "1.1.1.1",
 				},
 				{
-					Type: constants.IpEventAttacked,
-					IP:   "1.1.1.1",
-				},
-				{
-					Type: constants.IpEventAttacked,
-					IP:   "1.1.1.1",
+					Type:    constants.IpEventTrafficClass,
+					Subtype: constants.IpEventSubTypeTrafficClassAttacked,
+					IP:      "1.1.1.1",
 				},
 			},
 			expectScanEvent: true,
@@ -111,16 +115,20 @@ func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 			description: "detects scan, combined event",
 			events: []models.IpEvent{
 				{
-					Type: constants.IpEventRecon,
-					IP:   "1.1.1.1",
+					Type:    constants.IpEventTrafficClass,
+					Subtype: constants.IpEventSubTypeTrafficClassRecon,
+					IP:      "1.1.1.1",
+				},
+
+				{
+					Type:    constants.IpEventTrafficClass,
+					Subtype: constants.IpEventSubTypeTrafficClassAttacked,
+					IP:      "1.1.1.1",
 				},
 				{
-					Type: constants.IpEventAttacked,
-					IP:   "1.1.1.1",
-				},
-				{
-					Type: constants.IpEventAttacked,
-					IP:   "1.1.1.1",
+					Type:    constants.IpEventTrafficClass,
+					Subtype: constants.IpEventSubTypeTrafficClassAttacked,
+					IP:      "1.1.1.1",
 				},
 			},
 			expectScanEvent: true,
@@ -153,18 +161,21 @@ func TestIpEventManagerCreatesNoDuplicateScanEvents(t *testing.T) {
 	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
 
 	im.ProcessNewEvent(&models.IpEvent{
-		IP:   "1.1.1.1",
-		Type: constants.IpEventAttacked,
+		IP:      "1.1.1.1",
+		Type:    constants.IpEventTrafficClass,
+		Subtype: constants.IpEventSubTypeTrafficClassAttacked,
 	})
 
 	im.ProcessNewEvent(&models.IpEvent{
-		IP:   "1.1.1.1",
-		Type: constants.IpEventAttacked,
+		IP:      "1.1.1.1",
+		Type:    constants.IpEventTrafficClass,
+		Subtype: constants.IpEventSubTypeTrafficClassAttacked,
 	})
 
 	im.ProcessNewEvent(&models.IpEvent{
-		IP:   "1.1.1.1",
-		Type: constants.IpEventAttacked,
+		IP:      "1.1.1.1",
+		Type:    constants.IpEventTrafficClass,
+		Subtype: constants.IpEventSubTypeTrafficClassAttacked,
 	})
 
 	numberEvents := im.CreateScanEvents()

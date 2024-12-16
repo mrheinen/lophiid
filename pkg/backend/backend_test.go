@@ -722,28 +722,32 @@ func TestHandleProbe(t *testing.T) {
 
 func TestProcessQueue(t *testing.T) {
 	for _, test := range []struct {
-		description       string
-		requestPurpose    string
-		expectedEventType string
-		ruleID            int
+		description          string
+		requestPurpose       string
+		expectedEventType    string
+		expectedEventSubType string
+		ruleID               int
 	}{
 		{
-			description:       "Runs ok, marked attack",
-			requestPurpose:    models.RuleRequestPurposeAttack,
-			expectedEventType: constants.IpEventAttacked,
-			ruleID:            42,
+			description:          "Runs ok, marked attack",
+			requestPurpose:       models.RuleRequestPurposeAttack,
+			expectedEventType:    constants.IpEventTrafficClass,
+			expectedEventSubType: constants.IpEventSubTypeTrafficClassAttacked,
+			ruleID:               42,
 		},
 		{
-			description:       "Runs ok, marked crawl",
-			requestPurpose:    models.RuleRequestPurposeCrawl,
-			expectedEventType: constants.IpEventCrawl,
-			ruleID:            43,
+			description:          "Runs ok, marked crawl",
+			requestPurpose:       models.RuleRequestPurposeCrawl,
+			expectedEventType:    constants.IpEventTrafficClass,
+			expectedEventSubType: constants.IpEventSubTypeTrafficClassCrawl,
+			ruleID:               43,
 		},
 		{
-			description:       "Runs ok, marked recon",
-			requestPurpose:    models.RuleRequestPurposeRecon,
-			expectedEventType: constants.IpEventRecon,
-			ruleID:            44,
+			description:          "Runs ok, marked recon",
+			requestPurpose:       models.RuleRequestPurposeRecon,
+			expectedEventType:    constants.IpEventTrafficClass,
+			expectedEventSubType: constants.IpEventSubTypeTrafficClassRecon,
+			ruleID:               44,
 		},
 	} {
 
@@ -794,6 +798,9 @@ func TestProcessQueue(t *testing.T) {
 
 			if fIpMgr.Events[0].Type != test.expectedEventType {
 				t.Errorf("expected %s, got %s", test.expectedEventType, fIpMgr.Events[0].Type)
+			}
+			if fIpMgr.Events[0].Subtype != test.expectedEventSubType {
+				t.Errorf("expected %s, got %s", test.expectedEventSubType, fIpMgr.Events[0].Subtype)
 			}
 
 			if fIpMgr.Events[0].SourceRef != fmt.Sprintf("%d", test.ruleID) {
