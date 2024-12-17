@@ -708,15 +708,25 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		return nil, status.Errorf(codes.Internal, "cannot convert request: %s", err)
 	}
 
+	session, err := s.sessionMgr.GetCachedSession(sReq.SourceIP)
+	if err != nil || session == nil {
+		session, err = s.sessionMgr.StartSession(sReq.SourceIP)
+		if err != nil {
+			slog.Error("error starting session", slog.String("ip", sReq.SourceIP), slog.String("error", err.Error()))
+		} else {
+			session.LastRuleServed.AppID = -1
+		}
+	}
+
 	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
 	if !allowRequest {
-
 		evt := &models.IpEvent{
 			IP:            sReq.SourceIP,
 			Type:          constants.IpEventRateLimited,
 			Details:       err.Error(),
 			Source:        constants.IpEventSourceBackend,
-			SourceRefType: constants.IpEventRefTypeUnknown,
+			SourceRef:     fmt.Sprintf("%d", session.ID),
+			SourceRefType: constants.IpEventRefTypeSessionId,
 			HoneypotIP:    sReq.HoneypotIP,
 		}
 
@@ -741,16 +751,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	s.metrics.methodPerRequest.WithLabelValues(sReq.Method).Add(1)
 	s.metrics.honeypotRequests.WithLabelValues(sReq.HoneypotIP).Add(1)
 	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
-
-	session, err := s.sessionMgr.GetCachedSession(sReq.SourceIP)
-	if err != nil || session == nil {
-		session, err = s.sessionMgr.StartSession(sReq.SourceIP)
-		if err != nil {
-			slog.Error("error starting session", slog.String("ip", sReq.SourceIP), slog.String("error", err.Error()))
-		} else {
-			session.LastRuleServed.AppID = -1
-		}
-	}
 
 	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq, session)
 

@@ -542,6 +542,7 @@ func TestHasParseableContent(t *testing.T) {
 }
 
 func TestHandleProbe(t *testing.T) {
+
 	fdbc := &database.FakeDatabaseClient{
 		RequestsToReturn: []models.Request{},
 		ContentsToReturn: map[int64]models.Content{
@@ -590,8 +591,14 @@ func TestHandleProbe(t *testing.T) {
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
 
-	sMetrics := session.CreateSessionMetrics(reg)
-	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	testSessionId := int64(3454)
+	testSession := models.NewSession()
+	testSession.ID = testSessionId
+	fSessionMgr := &session.FakeSessionManager{
+		ErrorToReturn:   nil,
+		SessionToReturn: *testSession,
+	}
+
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
@@ -716,6 +723,14 @@ func TestHandleProbe(t *testing.T) {
 
 		if fIpMgr.Events[0].Type != constants.IpEventRateLimited {
 			t.Fatalf("expected rate limited event, got %s", fIpMgr.Events[0].Type)
+		}
+
+		if fIpMgr.Events[0].SourceRefType != constants.IpEventRefTypeSessionId {
+			t.Fatalf("expected session event, got %s", fIpMgr.Events[0].SourceRefType)
+		}
+
+		if fIpMgr.Events[0].SourceRef != fmt.Sprintf("%d", testSessionId) {
+			t.Fatalf("expected %d, got %s", testSessionId, fIpMgr.Events[0].SourceRef)
 		}
 	})
 }
