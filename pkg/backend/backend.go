@@ -690,11 +690,6 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 // HandleProbe receives requests from te honeypots and tells them how to
 // respond.
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
-
-	if req.GetRequestUri() == "/global-protect/login.esp" {
-		return nil, status.Errorf(codes.Internal, "cannot")
-	}
-
 	_, ok := auth.GetHoneypotMetadata(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "no authentication found")
