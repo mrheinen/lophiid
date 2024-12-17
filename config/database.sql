@@ -306,6 +306,7 @@ CREATE TABLE whois (
 CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'TRAFFIC_CLASS', 'HOSTED_MALWARE', 'SENT_MALWARE', 'RATELIMITED', 'HOST_C2');
 CREATE TYPE IP_EVENT_SUB_TYPE AS ENUM ('UNKNOWN', 'NONE', 'MALWARE_NEW', 'MALWARE_OLD', 'RATE_WINDOW', 'RATE_BUCKET', 'TC_SCANNED', 'TC_ATTACKED', 'TC_RECONNED', 'TC_BRUTEFORCED', 'TC_CRAWLED');
 CREATE TYPE IP_EVENT_SOURCE AS ENUM ('OTHER', 'VT', 'RULE', 'BACKEND', 'ANALYSIS', 'WHOIS', 'AI');
+CREATE TYPE IP_EVENT_REF_TYPE AS ENUM ('UNKNOWN', 'NONE', 'REQUEST_ID', 'RULE_ID', 'CONTENT_ID', 'VT_ANALYSIS_ID', 'DOWNLOAD_ID', 'REQUEST_DESCRIPTION_ID', 'REQUEST_SOURCE_IP', 'SESSION_ID', 'APP_ID');
 CREATE TABLE ip_event (
   id                     SERIAL PRIMARY KEY,
   ip                     VARCHAR(52),
@@ -318,6 +319,7 @@ CREATE TABLE ip_event (
   request_id             INTEGER,   -- optional
   source                 IP_EVENT_SOURCE default 'OTHER',
   source_ref             VARCHAR(512),
+  source_ref_type        IP_EVENT_REF_TYPE default 'NONE',
   honeypot_ip            VARCHAR(52),
   first_seen_at          TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   created_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),

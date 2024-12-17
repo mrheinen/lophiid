@@ -44,6 +44,21 @@ const (
 	IpEventSubTypeTrafficClassMalicious = "TC_MALICIOUS"
 )
 
+// These need to be kept in sync with IP_EVENT_REF_TYPE in the database.
+const (
+	IpEventRefTypeUnknown              = "UNKNOWN"
+	IpEventRefTypeNone                 = "NONE"
+	IpEventRefTypeRequestId            = "REQUEST_ID"
+	IpEventRefTypeRuleId               = "RULE_ID"
+	IpEventRefTypeContentId            = "CONTENT_ID"
+	IpEventRefTypeAppId                = "APP_ID"
+	IpEventRefTypeVtAnalysisId         = "VT_ANALYSIS_ID"
+	IpEventRefTypeRequestSourceIp      = "REQUEST_SOURCE_IP"
+	IpEventRefTypeSessionId            = "SESSION_ID"
+	IpEventRefTypeDownloadId           = "DOWNLOAD_ID"
+	IpEventRefTypeRequestDescriptionId = "REQUEST_DESCRIPTION_ID"
+)
+
 // These constants are the extractor types used in ./pkg/backend/extractors
 const (
 	ExtractorTypeBase64  = "DECODED_STRING_BASE64"

@@ -160,16 +160,21 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 		// If the rule is 0 then no existing rule matched. In this case if the AI
 		// says the request was malicious then we want to raise an event.
 		if req.RuleID == 0 && llmResult.Malicious == "yes" {
-			slog.Info("Adding event")
+			detail := ""
+			if bh.AIVulnerabilityType != "" {
+				detail = fmt.Sprintf("vulnerability type: %s", bh.AIVulnerabilityType)
+			}
+
 			b.eventManager.AddEvent(&models.IpEvent{
-				IP:         req.SourceIP,
-				HoneypotIP: req.HoneypotIP,
-				Source:     constants.IpEventSourceAI,
-				RequestID:  req.ID,
-				SourceRef:  fmt.Sprintf("%d", req.ID),
-				Type:       constants.IpEventTrafficClass,
-				Subtype:    constants.IpEventSubTypeTrafficClassMalicious,
-				Details:    "AI marked request as malicious",
+				IP:            req.SourceIP,
+				HoneypotIP:    req.HoneypotIP,
+				Source:        constants.IpEventSourceAI,
+				RequestID:     req.ID,
+				SourceRef:     fmt.Sprintf("%d", bh.ID),
+				SourceRefType: constants.IpEventRefTypeRequestDescriptionId,
+				Type:          constants.IpEventTrafficClass,
+				Subtype:       constants.IpEventSubTypeTrafficClassMalicious,
+				Details:       detail,
 			})
 		}
 

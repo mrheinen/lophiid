@@ -203,13 +203,14 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *models.Download, isNew bo
 	ret := []models.IpEvent{}
 	// Register the IP hosting the malware.
 	evt := models.IpEvent{
-		IP:         dl.IP,
-		Type:       constants.IpEventHostedMalware,
-		Subtype:    malwareSubType,
-		RequestID:  dl.LastRequestID,
-		Details:    fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
-		HoneypotIP: dl.HoneypotIP,
-		SourceRef:  fmt.Sprintf("%d", dl.ID),
+		IP:            dl.IP,
+		Type:          constants.IpEventHostedMalware,
+		Subtype:       malwareSubType,
+		RequestID:     dl.LastRequestID,
+		Details:       fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		HoneypotIP:    dl.HoneypotIP,
+		SourceRef:     fmt.Sprintf("%d", dl.ID),
+		SourceRefType: constants.IpEventRefTypeDownloadId,
 	}
 
 	host, _, err := net.SplitHostPort(dl.Host)
@@ -230,13 +231,14 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *models.Download, isNew bo
 		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.LastRequestID))
 	} else {
 		ret = append(ret, models.IpEvent{
-			IP:         r.SourceIP,
-			Type:       constants.IpEventSentMalware,
-			Subtype:    malwareSubType,
-			RequestID:  dl.LastRequestID,
-			Details:    fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
-			HoneypotIP: dl.HoneypotIP,
-			SourceRef:  fmt.Sprintf("%d", dl.ID),
+			IP:            r.SourceIP,
+			Type:          constants.IpEventSentMalware,
+			Subtype:       malwareSubType,
+			RequestID:     dl.LastRequestID,
+			Details:       fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+			HoneypotIP:    dl.HoneypotIP,
+			SourceRef:     fmt.Sprintf("%d", dl.ID),
+			SourceRefType: constants.IpEventRefTypeDownloadId,
 		})
 	}
 
