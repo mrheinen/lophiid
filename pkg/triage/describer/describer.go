@@ -157,9 +157,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 		}
 
 		req := promptMap[prompt].Request
-		// If the rule is 0 then no existing rule matched. In this case if the AI
-		// says the request was malicious then we want to raise an event.
-		if req.RuleID == 0 && llmResult.Malicious == "yes" {
+		if llmResult.Malicious == "yes" {
 			detail := ""
 			if bh.AIVulnerabilityType != "" {
 				detail = fmt.Sprintf("vulnerability type: %s", bh.AIVulnerabilityType)
