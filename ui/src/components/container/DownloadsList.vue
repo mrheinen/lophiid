@@ -331,7 +331,12 @@ export default {
   beforeCreate() {
     this.selectedDownload = this.baseDownload;
   },
-  created() {
+  mounted() {
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    }
+
     if (this.$route.params.limit) {
       this.limit = parseInt(this.$route.params.limit);
     }
@@ -340,15 +345,10 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
+    // Note that setting selectedLimit also causes the data to be loaded.
     this.selectedLimit = this.limit;
   },
-  mounted() {
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-      this.$refs.searchBar.setQuery(this.$route.query.q);
-    }
-    this.loadDownloads(true);
-  },
+
 };
 </script>
 

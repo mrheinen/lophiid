@@ -441,7 +441,7 @@ export default {
       }
     },
   },
-  created() {
+  mounted() {
     if (this.$route.params.limit) {
       this.limit = parseInt(this.$route.params.limit);
     }
@@ -451,12 +451,11 @@ export default {
     }
 
     this.selectedLimit = this.limit;
-  },
-  mounted() {
-   if (this.$route.query.q) {
+
+    if (this.$route.query.q) {
       this.$refs.searchBar.setQuery(this.$route.query.q);
       this.query = this.$route.query.q;
-     this.loadRules(true, function () {});
+      this.loadRules(true, function () {});
     } else {
       // If a uri and method parameter is given, reset the form and use the given
       // values.
