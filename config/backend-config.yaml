@@ -86,9 +86,10 @@ whois_manager:
 ratelimiter:
   rate_window: 1h
   bucket_duration: 1m
-  max_requests_per_window: 500
-  max_requests_per_bucket: 50
-
+  max_ip_requests_per_window: 500
+  max_ip_requests_per_bucket: 50
+  max_uri_requests_per_window: 1500
+  max_uri_requests_per_bucket: 200
 ai:
   # Whether to enable the responder.
   enable_responder: 1

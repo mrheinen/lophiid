@@ -33,8 +33,10 @@ const (
 	IpEventSubTypeMalwareNew = "MALWARE_NEW"
 	IpEventSubTypeMalwareOld = "MALWARE_OLD"
 
-	IpEventSubTypeRateWindow = "RATE_WINDOW"
-	IpEventSubTypeRateBucket = "RATE_BUCKET"
+	IpEventSubTypeRateIPWindow  = "IP_RATE_WINDOW"
+	IpEventSubTypeRateIPBucket  = "IP_RATE_BUCKET"
+	IpEventSubTypeRateURIWindow = "URI_RATE_WINDOW"
+	IpEventSubTypeRateURIBucket = "URI_RATE_BUCKET"
 
 	IpEventSubTypeTrafficClassScanned   = "TC_SCANNED"
 	IpEventSubTypeTrafficClassAttacked  = "TC_ATTACKED"

@@ -23,8 +23,10 @@ import (
 )
 
 var (
-	RatelimiterRejectReasonWindow = "window"
-	RatelimiterRejectReasonBucket = "bucket"
+	RatelimiterRejectReasonIPWindow  = "ip_window"
+	RatelimiterRejectReasonIPBucket  = "ip_bucket"
+	RatelimiterRejectReasonURIWindow = "uri_window"
+	RatelimiterRejectReasonURIBucket = "uri_bucket"
 )
 
 type BackendMetrics struct {

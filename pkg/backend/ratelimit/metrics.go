@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package ratelimit
 
 import (
@@ -22,19 +21,26 @@ import (
 )
 
 type RatelimiterMetrics struct {
-	rateBucketsGauge prometheus.Gauge
+	ipRateBucketsGauge  prometheus.Gauge
+	uriRateBucketsGauge prometheus.Gauge
 }
 
 // Register Metrics
 func CreateRatelimiterMetrics(reg prometheus.Registerer) *RatelimiterMetrics {
 	m := &RatelimiterMetrics{
-		rateBucketsGauge: prometheus.NewGauge(
+		ipRateBucketsGauge: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "lophiid_backend_ratelimit_buckets_gauge",
-				Help: "The amount of active ratelimit buckets"},
+				Name: "lophiid_backend_ratelimit_ip_buckets_gauge",
+				Help: "The amount of active IP ratelimit buckets"},
+		),
+		uriRateBucketsGauge: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "lophiid_backend_ratelimit_uri_buckets_gauge",
+				Help: "The amount of active URI ratelimit buckets"},
 		),
 	}
 
-	reg.MustRegister(m.rateBucketsGauge)
+	reg.MustRegister(m.ipRateBucketsGauge)
+	reg.MustRegister(m.uriRateBucketsGauge)
 	return m
 }
