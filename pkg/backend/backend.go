@@ -690,12 +690,13 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 // HandleProbe receives requests from te honeypots and tells them how to
 // respond.
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
+
 	_, ok := auth.GetHoneypotMetadata(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "no authentication found")
 	}
 
-	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()))
+	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()), slog.String("ip", req.GetRequest().GetRemoteAddress()))
 
 	rpcStartTime := time.Now()
 	sReq, err := s.ProbeRequestToDatabaseRequest(req)
