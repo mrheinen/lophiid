@@ -33,6 +33,7 @@ export default {
   ipEventSourceRefRequestId: 'REQUEST_ID',
   ipEventSourceRefSessionId: 'SESSION_ID',
   ipEventSourceRefContentId: 'CONTENT_ID',
+  ipEventSourceRefReqDescriptionId: 'REQUEST_DESCRIPTION_ID',
 
 
   // There next 5 need to be in sync with the database enums.
