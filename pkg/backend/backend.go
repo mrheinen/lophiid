@@ -472,6 +472,7 @@ func HasParseableContent(fileUrl string, mime string) bool {
 		strings.HasSuffix(parsedUrl.Path, ".py")
 }
 
+// getCachedHoneypot returns the honeypot with the given IP from the cache.
 func (s *BackendServer) getCachedHoneypot(hpIP string) (*models.Honeypot, error) {
 	// Check the cache.
 	hp, err := s.hCache.Get(hpIP)
@@ -486,6 +487,9 @@ func (s *BackendServer) getCachedHoneypot(hpIP string) (*models.Honeypot, error)
 			// Update the cache.
 			s.hCache.Store(hpIP, hps[0])
 			hp = &hps[0]
+		} else {
+			slog.Error("could not find honeypot", slog.String("ip", hpIP))
+			return nil, nil
 		}
 	}
 	return hp, nil
