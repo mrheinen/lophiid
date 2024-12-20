@@ -56,13 +56,13 @@ type LLMResult struct {
 }
 
 const LLMSystemPrompt = `
-Analyze the provided HTTP response. Your response needs to be a raw JSON object response that is not formatted for displaying, without any text outside the JSON, that has the following keys:
+Analyze the provided HTTP request. Your response needs to be a raw JSON object that is not formatted for displaying, without any text outside the JSON, that has the following keys:
 
-description: One paragraph describing the intend of the request, if it is malicous and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports.
-malicious: Use the string "yes" if the request is malicious. Else use the string "no".
-vulnerability_type: A string containing the Mitre CWE ID, starting with "CWE-" for weakness being exploited. Use an empty string if you don't know.
+description: One paragraph describing the intent of the request, if it is malicious and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports.
+malicious: Use the string "yes" if the request is malicious. Else "no".
+vulnerability_type: A string containing the Mitre CWE ID, starting with "CWE-" for the main weakness being exploited. Use an empty string if you don't know.
 application: A string with the targetted application/device name. An empty string if you don't know.
-cve: The relevant CVE if you know what vulnerability is exploited. A empty string if you don't know.
+cve: The relevant CVE if you know what vulnerability is exploited. An empty string if you don't know.
 
 The request was:
 `
@@ -157,18 +157,22 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 		}
 
 		req := promptMap[prompt].Request
-		// If the rule is 0 then no existing rule matched. In this case if the AI
-		// says the request was malicious then we want to raise an event.
-		if req.RuleID == 0 && llmResult.Malicious == "yes" {
-			slog.Info("Adding event")
+		if llmResult.Malicious == "yes" {
+			detail := ""
+			if bh.AIVulnerabilityType != "" {
+				detail = fmt.Sprintf("vulnerability type: %s", bh.AIVulnerabilityType)
+			}
+
 			b.eventManager.AddEvent(&models.IpEvent{
-				IP:         req.SourceIP,
-				HoneypotIP: req.HoneypotIP,
-				Source:     constants.IpEventSourceAI,
-				RequestID:  req.ID,
-				SourceRef:  fmt.Sprintf("%d", req.ID),
-				Type:       constants.IpEventAttacked,
-				Details:    "AI marked request as malicious",
+				IP:            req.SourceIP,
+				HoneypotIP:    req.HoneypotIP,
+				Source:        constants.IpEventSourceAI,
+				RequestID:     req.ID,
+				SourceRef:     fmt.Sprintf("%d", bh.ID),
+				SourceRefType: constants.IpEventRefTypeRequestDescriptionId,
+				Type:          constants.IpEventTrafficClass,
+				Subtype:       constants.IpEventSubTypeTrafficClassMalicious,
+				Details:       detail,
 			})
 		}
 

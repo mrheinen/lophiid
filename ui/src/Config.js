@@ -27,6 +27,15 @@ export default {
   reviewStatusNok: "REVIEWED_NOK",
   reviewStatusNew: "UNREVIEWED",
 
+  // IP event source ref types
+  ipEventSourceRefRuleId: 'RULE_ID',
+  ipEventSourceRefDownloadId: 'DOWNLOAD_ID',
+  ipEventSourceRefRequestId: 'REQUEST_ID',
+  ipEventSourceRefSessionId: 'SESSION_ID',
+  ipEventSourceRefContentId: 'CONTENT_ID',
+  ipEventSourceRefReqDescriptionId: 'REQUEST_DESCRIPTION_ID',
+
+
   // There next 5 need to be in sync with the database enums.
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
   contentRuleRequestPurposes: ['UNKNOWN', 'RECON', 'CRAWL', 'ATTACK'],

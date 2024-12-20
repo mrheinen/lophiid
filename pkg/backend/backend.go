@@ -91,6 +91,7 @@ type BackendServer struct {
 	llmResponder    responder.Responder
 	sessionMgr      session.SessionManager
 	describer       describer.DescriberClient
+	hCache          *util.StringMapCache[models.Honeypot]
 }
 
 // NewBackendServer creates a new instance of the backend server.
@@ -101,6 +102,11 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	// we get a request with the same download (payload URL) within that time
 	// window then we will not download it again.
 	dCache := util.NewStringMapCache[time.Time]("download_cache", config.Backend.Advanced.DownloadCacheDuration)
+
+	// The honeypot cache is simply to try and reduce the amount of honeypot
+	// queries to the database.
+	hCache := util.NewStringMapCache[models.Honeypot]("honeypot_cache", time.Minute*15)
+	hCache.Start()
 
 	return &BackendServer{
 		dbClient:        c,
@@ -124,6 +130,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		llmResponder:    llmResponder,
 		sessionMgr:      sessionMgr,
 		describer:       describer,
+		hCache:          hCache,
 	}
 }
 
@@ -465,6 +472,29 @@ func HasParseableContent(fileUrl string, mime string) bool {
 		strings.HasSuffix(parsedUrl.Path, ".py")
 }
 
+// getCachedHoneypot returns the honeypot with the given IP from the cache.
+func (s *BackendServer) getCachedHoneypot(hpIP string) (*models.Honeypot, error) {
+	// Check the cache.
+	hp, err := s.hCache.Get(hpIP)
+	if err != nil {
+		// Not in cache so fetch from the database
+		hps, err := s.dbClient.SearchHoneypots(0, 1, fmt.Sprintf("ip:%s", hpIP))
+		if err != nil {
+			return nil, fmt.Errorf("error finding honeypot: %w", err)
+		}
+
+		if len(hps) == 1 {
+			// Update the cache.
+			s.hCache.Store(hpIP, hps[0])
+			hp = &hps[0]
+		} else {
+			slog.Error("could not find honeypot", slog.String("ip", hpIP))
+			return nil, nil
+		}
+	}
+	return hp, nil
+}
+
 func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo models.Download) bool {
 
 	// Check against the reported and detected content type to see if we want to
@@ -555,8 +585,10 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 			slog.Warn("could not update", slog.String("error", err.Error()))
 		}
 
+		// If the existing uploaded file was found malicious then we will generate
+		// events for the IPs involved in the current exchange.
 		if dm.VTAnalysisMalicious > 0 || dm.VTAnalysisSuspicious > 0 {
-			for _, evt := range s.vtMgr.GetEventsForDownload(&dm) {
+			for _, evt := range s.vtMgr.GetEventsForDownload(&dm, false) {
 				s.ipEventManager.AddEvent(&evt)
 			}
 		}
@@ -662,47 +694,19 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 // HandleProbe receives requests from te honeypots and tells them how to
 // respond.
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
+
 	_, ok := auth.GetHoneypotMetadata(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "no authentication found")
 	}
 
-	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()))
+	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()), slog.String("ip", req.GetRequest().GetRemoteAddress()))
 
 	rpcStartTime := time.Now()
 	sReq, err := s.ProbeRequestToDatabaseRequest(req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot convert request: %s", err)
 	}
-
-	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
-	if !allowRequest {
-
-		s.ipEventManager.AddEvent(&models.IpEvent{
-			IP:         sReq.SourceIP,
-			Type:       constants.IpEventRateLimited,
-			Details:    err.Error(),
-			Source:     constants.IpEventSourceBackend,
-			HoneypotIP: sReq.HoneypotIP,
-		})
-
-		switch err {
-		case ratelimit.ErrBucketLimitExceeded:
-			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonBucket).Add(1)
-		case ratelimit.ErrWindowLimitExceeded:
-			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonWindow).Add(1)
-		default:
-			slog.Error("error happened in ratelimiter", slog.String("error", err.Error()))
-		}
-
-		slog.Debug("ratelimiter blocked request", slog.String("error", err.Error()))
-		return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
-	}
-
-	s.metrics.requestsPerPort.WithLabelValues(fmt.Sprintf("%d", sReq.Port)).Add(1)
-	s.metrics.methodPerRequest.WithLabelValues(sReq.Method).Add(1)
-	s.metrics.honeypotRequests.WithLabelValues(sReq.HoneypotIP).Add(1)
-	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
 
 	session, err := s.sessionMgr.GetCachedSession(sReq.SourceIP)
 	if err != nil || session == nil {
@@ -714,16 +718,56 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	}
 
-	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq, session)
-	if err != nil {
-		hps, err := s.dbClient.SearchHoneypots(0, 1, fmt.Sprintf("ip:%s", sReq.HoneypotIP))
+	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
+	if !allowRequest {
+		evt := &models.IpEvent{
+			IP:            sReq.SourceIP,
+			Type:          constants.IpEventRateLimited,
+			Details:       err.Error(),
+			Source:        constants.IpEventSourceBackend,
+			SourceRef:     fmt.Sprintf("%d", session.ID),
+			SourceRefType: constants.IpEventRefTypeSessionId,
+			HoneypotIP:    sReq.HoneypotIP,
+		}
 
-		if err != nil || len(hps) == 0 {
-			slog.Warn("error finding honeypot", slog.String("error", err.Error()), slog.String("honeypot", sReq.HoneypotIP))
+		switch err {
+		case ratelimit.ErrBucketLimitExceeded:
+			evt.Subtype = constants.IpEventSubTypeRateBucket
+			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonBucket).Add(1)
+		case ratelimit.ErrWindowLimitExceeded:
+			evt.Subtype = constants.IpEventSubTypeRateWindow
+			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonWindow).Add(1)
+		default:
+			slog.Error("error happened in ratelimiter", slog.String("error", err.Error()))
+		}
+
+		s.ipEventManager.AddEvent(evt)
+
+		slog.Debug("ratelimiter blocked request", slog.String("error", err.Error()))
+		return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
+	}
+
+	s.metrics.requestsPerPort.WithLabelValues(fmt.Sprintf("%d", sReq.Port)).Add(1)
+	s.metrics.methodPerRequest.WithLabelValues(sReq.Method).Add(1)
+	s.metrics.honeypotRequests.WithLabelValues(sReq.HoneypotIP).Add(1)
+	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
+
+	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq, session)
+
+	// If there was no matche rule then serve the default rule of the honeypot.
+	if err != nil {
+		hp, err := s.getCachedHoneypot(sReq.HoneypotIP)
+
+		if hp == nil {
+			if err != nil {
+				slog.Error("error finding honeypot", slog.String("error", err.Error()), slog.String("honeypot", sReq.HoneypotIP))
+			} else {
+				slog.Error("honeypot does not exist ?", slog.String("honeypot", sReq.HoneypotIP))
+			}
 			matchedRule = s.safeRules.Get()[0]
 		} else {
 			// Fallback to an empty rule.
-			matchedRule.ContentID = hps[0].DefaultContentID
+			matchedRule.ContentID = hp.DefaultContentID
 			matchedRule.AppID = 0
 			matchedRule.ID = 0
 		}
@@ -892,33 +936,39 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 		switch rule.RequestPurpose {
 		case models.RuleRequestPurposeAttack:
 			s.ipEventManager.AddEvent(&models.IpEvent{
-				IP:         req.SourceIP,
-				Type:       constants.IpEventAttacked,
-				Details:    "rule indicated the IP attacked",
-				Source:     constants.IpEventSourceRule,
-				SourceRef:  fmt.Sprintf("%d", rule.ID),
-				RequestID:  dm.ModelID(),
-				HoneypotIP: req.HoneypotIP,
+				IP:            req.SourceIP,
+				Type:          constants.IpEventTrafficClass,
+				Subtype:       constants.IpEventSubTypeTrafficClassAttacked,
+				Details:       "rule indicated the IP attacked",
+				Source:        constants.IpEventSourceRule,
+				SourceRef:     fmt.Sprintf("%d", rule.ID),
+				SourceRefType: constants.IpEventRefTypeRuleId,
+				RequestID:     dm.ModelID(),
+				HoneypotIP:    req.HoneypotIP,
 			})
 		case models.RuleRequestPurposeCrawl:
 			s.ipEventManager.AddEvent(&models.IpEvent{
-				IP:         req.SourceIP,
-				Type:       constants.IpEventCrawl,
-				Source:     constants.IpEventSourceRule,
-				SourceRef:  fmt.Sprintf("%d", rule.ID),
-				Details:    "rule indicated the IP crawled",
-				RequestID:  dm.ModelID(),
-				HoneypotIP: req.HoneypotIP,
+				IP:            req.SourceIP,
+				Type:          constants.IpEventTrafficClass,
+				Subtype:       constants.IpEventSubTypeTrafficClassCrawl,
+				Source:        constants.IpEventSourceRule,
+				SourceRef:     fmt.Sprintf("%d", rule.ID),
+				SourceRefType: constants.IpEventRefTypeRuleId,
+				Details:       "rule indicated the IP crawled",
+				RequestID:     dm.ModelID(),
+				HoneypotIP:    req.HoneypotIP,
 			})
 		case models.RuleRequestPurposeRecon:
 			s.ipEventManager.AddEvent(&models.IpEvent{
-				IP:         req.SourceIP,
-				Source:     constants.IpEventSourceRule,
-				SourceRef:  fmt.Sprintf("%d", rule.ID),
-				Type:       constants.IpEventRecon,
-				Details:    "rule indicated the IP reconned",
-				RequestID:  dm.ModelID(),
-				HoneypotIP: req.HoneypotIP,
+				IP:            req.SourceIP,
+				Source:        constants.IpEventSourceRule,
+				SourceRef:     fmt.Sprintf("%d", rule.ID),
+				Type:          constants.IpEventTrafficClass,
+				Subtype:       constants.IpEventSubTypeTrafficClassRecon,
+				SourceRefType: constants.IpEventRefTypeRuleId,
+				Details:       "rule indicated the IP reconned",
+				RequestID:     dm.ModelID(),
+				HoneypotIP:    req.HoneypotIP,
 			})
 		}
 	}

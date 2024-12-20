@@ -123,7 +123,7 @@ func RoughDecodeURL(encoded string) string {
 		} else {
 			dst := make([]byte, 1)
 			bytesWritten, err := hex.Decode(dst, []byte{encoded[i+1], encoded[i+2]})
-			if bytesWritten == 1 && err == nil && dst[0] > 32 && dst[0] < 177 {
+			if bytesWritten == 1 && err == nil && dst[0] >= 32 && dst[0] < 177 {
 				ret.WriteByte(dst[0])
 			} else {
 				ret.WriteByte(encoded[i])
@@ -150,11 +150,23 @@ func DecodeURLOrEmptyString(encoded string, removeSpace bool) string {
 		encoded = strings.ReplaceAll(encoded, "+", " ")
 	}
 
+	// Check for double encoded strings. If so, decode once first.
+	if strings.Contains(encoded, "%25") {
+		ret, err := DecodeURL(encoded)
+		if err != nil {
+			slog.Warn("could not decode, falling back", slog.String("error", err.Error()))
+			ret = RoughDecodeURL(encoded)
+		}
+
+		encoded = ret
+	}
+
 	ret, err := DecodeURL(encoded)
 	if err != nil {
 		slog.Warn("could not decode, falling back", slog.String("error", err.Error()))
 		return RoughDecodeURL(encoded)
 	}
+
 	return ret
 }
 

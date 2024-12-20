@@ -18,14 +18,45 @@ const (
 
 // This needs to be kept in sync with IP_EVENT_TYPE in the database.
 const (
-	IpEventCrawl         = "CRAWLED"
 	IpEventHostedMalware = "HOSTED_MALWARE"
-	IpEventRecon         = "RECONNED"
-	IpEventScanned       = "SCANNED"
-	IpEventAttacked      = "ATTACKED"
-	IpEventBrute         = "BRUTEFORCED"
+	IpEventSentMalware   = "SENT_MALWARE"
+	IpEventTrafficClass  = "TRAFFIC_CLASS"
 	IpEventHostC2        = "HOST_C2"
 	IpEventRateLimited   = "RATELIMITED"
+)
+
+// This needs to be kept in sync with IP_EVENT_SUB_TYPE in the database.
+const (
+	IpEventSubTypeUnknown = "UNKNOWN"
+	IpEventSubTypeNone    = "NONE"
+
+	IpEventSubTypeMalwareNew = "MALWARE_NEW"
+	IpEventSubTypeMalwareOld = "MALWARE_OLD"
+
+	IpEventSubTypeRateWindow = "RATE_WINDOW"
+	IpEventSubTypeRateBucket = "RATE_BUCKET"
+
+	IpEventSubTypeTrafficClassScanned   = "TC_SCANNED"
+	IpEventSubTypeTrafficClassAttacked  = "TC_ATTACKED"
+	IpEventSubTypeTrafficClassRecon     = "TC_RECONNED"
+	IpEventSubTypeTrafficClassBrute     = "TC_BRUTEFORCED"
+	IpEventSubTypeTrafficClassCrawl     = "TC_CRAWLED"
+	IpEventSubTypeTrafficClassMalicious = "TC_MALICIOUS"
+)
+
+// These need to be kept in sync with IP_EVENT_REF_TYPE in the database.
+const (
+	IpEventRefTypeUnknown              = "UNKNOWN"
+	IpEventRefTypeNone                 = "NONE"
+	IpEventRefTypeRequestId            = "REQUEST_ID"
+	IpEventRefTypeRuleId               = "RULE_ID"
+	IpEventRefTypeContentId            = "CONTENT_ID"
+	IpEventRefTypeAppId                = "APP_ID"
+	IpEventRefTypeVtAnalysisId         = "VT_ANALYSIS_ID"
+	IpEventRefTypeRequestSourceIp      = "REQUEST_SOURCE_IP"
+	IpEventRefTypeSessionId            = "SESSION_ID"
+	IpEventRefTypeDownloadId           = "DOWNLOAD_ID"
+	IpEventRefTypeRequestDescriptionId = "REQUEST_DESCRIPTION_ID"
 )
 
 // These constants are the extractor types used in ./pkg/backend/extractors

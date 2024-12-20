@@ -25,12 +25,12 @@
           <template #empty>No data matched. </template>
           <template #loading>Loading request data. Please wait. </template>
 
-          <DataColumn field="id" header="ID" style="width: 5%">
-          </DataColumn>
           <DataColumn field="parsed.first_seen_at" header="First Seen"
           style="width: 16%">
           </DataColumn>
           <DataColumn field="type" header="Type" style="width: 10%">
+          </DataColumn>
+          <DataColumn field="subtype" header="SubType" style="width: 10%">
           </DataColumn>
 
           <DataColumn header="IP" style="width: 10%">
@@ -49,10 +49,10 @@
           </DataColumn>
           <DataColumn header="Source ref" style="width: 7%">
             <template #body="slotProps">
-              <span v-if="slotProps.data.source == 'RULE'">
+              <span v-if="slotProps.data.source_ref_type == config.ipEventSourceRefRuleId">
                 <a :href="config.rulesLink + '?q=id:' + slotProps.data.source_ref">{{ slotProps.data.source_ref }}</a>
               </span>
-              <span v-else-if="slotProps.data.source == 'VT'">
+              <span v-else-if="slotProps.data.source_ref_type == config.ipEventSourceRefDownloadId">
                 <a :href="config.downloadsLink + '?q=vt_file_analysis_id:' + slotProps.data.source_ref">analysis</a>
               </span>
               <span v-else>{{ slotProps.data.source_ref }}</span>

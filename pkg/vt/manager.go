@@ -30,7 +30,7 @@ import (
 )
 
 type VTManager interface {
-	GetEventsForDownload(dl *models.Download) []models.IpEvent
+	GetEventsForDownload(dl *models.Download, isNew bool) []models.IpEvent
 	ProcessURLQueue() error
 	QueueURL(ip string)
 	SubmitFiles() error
@@ -45,15 +45,23 @@ type FakeVTManager struct {
 func (f *FakeVTManager) ProcessURLQueue() error {
 	return f.ErrorToReturn
 }
-func (f *FakeVTManager) GetEventsForDownload(dl *models.Download) []models.IpEvent {
+func (f *FakeVTManager) GetEventsForDownload(dl *models.Download, isNew bool) []models.IpEvent {
+
+	subType := constants.IpEventSubTypeMalwareOld
+	if isNew {
+		subType = constants.IpEventSubTypeMalwareNew
+	}
+
 	return []models.IpEvent{
 		{
-			Type: constants.IpEventAttacked,
-			IP:   "1.1.1.1",
+			Type:    constants.IpEventHostedMalware,
+			Subtype: subType,
+			IP:      "1.1.1.1",
 		},
 		{
-			Type: constants.IpEventAttacked,
-			IP:   "1.1.1.1",
+			Type:    constants.IpEventSentMalware,
+			Subtype: subType,
+			IP:      "1.1.1.1",
 		},
 	}
 }
@@ -185,15 +193,24 @@ func (v *VTBackgroundManager) SubmitFiles() error {
 	return nil
 }
 
-func (v *VTBackgroundManager) GetEventsForDownload(dl *models.Download) []models.IpEvent {
+func (v *VTBackgroundManager) GetEventsForDownload(dl *models.Download, isNew bool) []models.IpEvent {
+
+	malwareSubType := constants.IpEventSubTypeMalwareOld
+	if isNew {
+		malwareSubType = constants.IpEventSubTypeMalwareNew
+	}
+
 	ret := []models.IpEvent{}
 	// Register the IP hosting the malware.
 	evt := models.IpEvent{
-		IP:         dl.IP,
-		Type:       constants.IpEventHostedMalware,
-		RequestID:  dl.LastRequestID,
-		Details:    fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
-		HoneypotIP: dl.HoneypotIP,
+		IP:            dl.IP,
+		Type:          constants.IpEventHostedMalware,
+		Subtype:       malwareSubType,
+		RequestID:     dl.LastRequestID,
+		Details:       fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+		HoneypotIP:    dl.HoneypotIP,
+		SourceRef:     fmt.Sprintf("%d", dl.ID),
+		SourceRefType: constants.IpEventRefTypeDownloadId,
 	}
 
 	host, _, err := net.SplitHostPort(dl.Host)
@@ -214,11 +231,14 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *models.Download) []models
 		slog.Error("unexpected error, cannot find request", slog.String("error", err.Error()), slog.Int64("request_id", dl.LastRequestID))
 	} else {
 		ret = append(ret, models.IpEvent{
-			IP:         r.SourceIP,
-			Type:       constants.IpEventAttacked,
-			RequestID:  dl.LastRequestID,
-			Details:    fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
-			HoneypotIP: dl.HoneypotIP,
+			IP:            r.SourceIP,
+			Type:          constants.IpEventSentMalware,
+			Subtype:       malwareSubType,
+			RequestID:     dl.LastRequestID,
+			Details:       fmt.Sprintf("%d malicious, %d suspicious", dl.VTAnalysisMalicious, dl.VTAnalysisSuspicious),
+			HoneypotIP:    dl.HoneypotIP,
+			SourceRef:     fmt.Sprintf("%d", dl.ID),
+			SourceRefType: constants.IpEventRefTypeDownloadId,
 		})
 	}
 
@@ -263,7 +283,7 @@ func (v *VTBackgroundManager) GetFileAnalysis() error {
 		dl.VTFileAnalysisDone = true
 
 		if dl.VTAnalysisMalicious > 0 || dl.VTAnalysisSuspicious > 0 {
-			for _, evt := range v.GetEventsForDownload(&dl) {
+			for _, evt := range v.GetEventsForDownload(&dl, true) {
 				v.ipEventManager.AddEvent(&evt)
 			}
 		}

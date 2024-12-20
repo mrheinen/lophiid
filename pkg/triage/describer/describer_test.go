@@ -47,7 +47,7 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 			llmResponse:    `{"description":"Test request","vulnerability_type":"none","application":"web","malicious":"yes"}`,
 			expectedCount:  1,
 			expectError:    false,
-			expectedEvents: 0,
+			expectedEvents: 1,
 		},
 		{
 			name:      "successful processing sends event",
