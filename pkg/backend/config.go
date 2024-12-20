@@ -41,10 +41,12 @@ type Config struct {
 			MaxDownloadSizeMB  int    `fig:"max_download_size_mb" default:"200"`
 		} `fig:"downloader"`
 		RateLimiter struct {
-			RateWindow           time.Duration `fig:"rate_window" default:"1h"`
-			BucketDuration       time.Duration `fig:"bucket_duration" default:"1m"`
-			MaxRequestsPerWindow int           `fig:"max_requests_per_window" default:"1000"`
-			MaxRequestsPerBucket int           `fig:"max_requests_per_bucket" default:"50"`
+			RateWindow              time.Duration `fig:"rate_window" default:"1h"`
+			BucketDuration          time.Duration `fig:"bucket_duration" default:"1m"`
+			MaxIPRequestsPerWindow  int           `fig:"max_ip_requests_per_window" default:"1000"`
+			MaxIPRequestsPerBucket  int           `fig:"max_ip_requests_per_bucket" default:"50"`
+			MaxURIRequestsPerWindow int           `fig:"max_uri_requests_per_window" default:"2000"`
+			MaxURIRequestsPerBucket int           `fig:"max_uri_requests_per_bucket" default:"100"`
 		} `fig:"ratelimiter"`
 
 		Advanced struct {
@@ -110,7 +112,7 @@ type Config struct {
 		LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
 		LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
 		MaxInputCharacters    int           `fig:"max_input_characters" default:"4096"`
-		Triage             struct {
+		Triage                struct {
 			Enable               bool          `fig:"enable"`
 			LogFile              string        `fig:"log_file" default:"triage.log" `
 			LogLevel             string        `fig:"log_level" default:"debug" `

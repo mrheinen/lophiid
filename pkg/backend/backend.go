@@ -731,12 +731,19 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 
 		switch err {
-		case ratelimit.ErrBucketLimitExceeded:
-			evt.Subtype = constants.IpEventSubTypeRateBucket
-			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonBucket).Add(1)
-		case ratelimit.ErrWindowLimitExceeded:
-			evt.Subtype = constants.IpEventSubTypeRateWindow
-			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonWindow).Add(1)
+		case ratelimit.ErrIPBucketLimitExceeded:
+			evt.Subtype = constants.IpEventSubTypeRateIPBucket
+			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonIPBucket).Add(1)
+		case ratelimit.ErrIPWindowLimitExceeded:
+			evt.Subtype = constants.IpEventSubTypeRateIPWindow
+			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonIPWindow).Add(1)
+		case ratelimit.ErrURIBucketLimitExceeded:
+			evt.Subtype = constants.IpEventSubTypeRateURIBucket
+			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonURIBucket).Add(1)
+		case ratelimit.ErrURIWindowLimitExceeded:
+			evt.Subtype = constants.IpEventSubTypeRateURIWindow
+			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonURIWindow).Add(1)
+
 		default:
 			slog.Error("error happened in ratelimiter", slog.String("error", err.Error()))
 		}
