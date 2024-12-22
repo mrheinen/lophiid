@@ -1,6 +1,6 @@
 module lophiid
 
-go 1.22.2
+go 1.23.4
 
 require (
 	github.com/blang/semver/v4 v4.0.0
@@ -21,7 +21,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	github.com/vingarcia/ksql v1.12.3
 	github.com/vingarcia/ksql/adapters/kpgx5 v1.12.3
-	golang.org/x/net v0.24.0
+	golang.org/x/net v0.33.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.34.0
 	gopkg.in/yaml.v3 v3.0.1
