@@ -555,27 +555,6 @@ def go_dependencies():
         version = "v1.10.9",
     )
     go_repository(
-        name = "com_github_likexian_gokit",
-        build_file_proto_mode = "disable_global",
-        importpath = "github.com/likexian/gokit",
-        sum = "h1:p2Uw3+6fGG53CwdU2Dz0T6bOycdb2+bAFAa3ymwWVkM=",
-        version = "v0.25.13",
-    )
-    go_repository(
-        name = "com_github_likexian_whois",
-        build_file_proto_mode = "disable_global",
-        importpath = "github.com/likexian/whois",
-        sum = "h1:6vTMI8n9s1eJdmcO4R9h1x99aQWIZZX1CD3am68gApU=",
-        version = "v1.15.1",
-    )
-    go_repository(
-        name = "com_github_likexian_whois_parser",
-        build_file_proto_mode = "disable_global",
-        importpath = "github.com/likexian/whois-parser",
-        sum = "h1:BT6fzO3lj3F07yzVv0YXoaj+K4Ush0/cF+Yp6tvJJgk=",
-        version = "v1.24.9",
-    )
-    go_repository(
         name = "com_github_mailru_easyjson",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/mailru/easyjson",
@@ -651,13 +630,6 @@ def go_dependencies():
         importpath = "github.com/mrunalp/fileutils",
         sum = "h1:NKzVxiH7eSk+OQ4M+ZYW1K6h27RUV3MI6NUTsHhU6Z4=",
         version = "v0.5.0",
-    )
-    go_repository(
-        name = "com_github_mvdan_xurls",
-        build_file_proto_mode = "disable_global",
-        importpath = "github.com/mvdan/xurls",
-        sum = "h1:OpuDelGQ1R1ueQ6sSryzi6P+1RtBpfQHM8fJwlE45ww=",
-        version = "v1.1.0",
     )
     go_repository(
         name = "com_github_mwitkow_go_conntrack",
@@ -770,6 +742,13 @@ def go_dependencies():
         importpath = "github.com/prometheus/common",
         sum = "h1:YSZE6aa9+luNa2da6/Tik0q0A5AbR+U003TItK57CPQ=",
         version = "v0.50.0",
+    )
+    go_repository(
+        name = "com_github_prometheus_community_pro_bing",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/prometheus-community/pro-bing",
+        sum = "h1:Fq+4BUXKIvsPtXUY8K+04ud9dkAuFozqGmRAyNUpffY=",
+        version = "v0.5.0",
     )
     go_repository(
         name = "com_github_prometheus_procfs",
@@ -1034,8 +1013,8 @@ def go_dependencies():
         name = "org_golang_x_crypto",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/crypto",
-        sum = "h1:GBDwsMXVQi34v5CCYUm2jkJvu4cbtru2U4TN2PSyQnw=",
-        version = "v0.28.0",
+        sum = "h1:ihbySMvVjLAeSH1IbfcRTkD/iNscyz8rGzjF/E5hV6U=",
+        version = "v0.31.0",
     )
     go_repository(
         name = "org_golang_x_exp",
@@ -1062,8 +1041,8 @@ def go_dependencies():
         name = "org_golang_x_net",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/net",
-        sum = "h1:1PcaxkF854Fu3+lvBIx5SYn9wRlBzzcnHZSiaFFAb0w=",
-        version = "v0.24.0",
+        sum = "h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=",
+        version = "v0.33.0",
     )
     go_repository(
         name = "org_golang_x_oauth2",
@@ -1076,29 +1055,29 @@ def go_dependencies():
         name = "org_golang_x_sync",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/sync",
-        sum = "h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=",
-        version = "v0.8.0",
+        sum = "h1:3NQrjDixjgGwUOCaF8w2+VYHv0Ve/vGYSbdkTa98gmQ=",
+        version = "v0.10.0",
     )
     go_repository(
         name = "org_golang_x_sys",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/sys",
-        sum = "h1:KHjCJyddX0LoSTb3J+vWpupP9p0oznkqVk/IfjymZbo=",
-        version = "v0.26.0",
+        sum = "h1:Fksou7UEQUWlKvIdsqzJmUmCX3cZuD2+P3XyyzwMhlA=",
+        version = "v0.28.0",
     )
     go_repository(
         name = "org_golang_x_term",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/term",
-        sum = "h1:WtHI/ltw4NvSUig5KARz9h521QvRC8RmF/cuYqifU24=",
-        version = "v0.25.0",
+        sum = "h1:WP60Sv1nlK1T6SupCHbXzSaN0b9wUmsPoRS9b61A23Q=",
+        version = "v0.27.0",
     )
     go_repository(
         name = "org_golang_x_text",
         build_file_proto_mode = "disable_global",
         importpath = "golang.org/x/text",
-        sum = "h1:kTxAhCbGbxhK0IwgSKiMO5awPoDQ0RpfiVYBfK860YM=",
-        version = "v0.19.0",
+        sum = "h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=",
+        version = "v0.21.0",
     )
     go_repository(
         name = "org_golang_x_tools",

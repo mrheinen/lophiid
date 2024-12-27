@@ -44,6 +44,7 @@ type Agent struct {
 	statusInterval  time.Duration
 	contextChan     chan bool
 	contextInterval time.Duration
+	pinger          PingRunner
 	mimeMu          sync.Mutex
 	mimeInstance    *magicmime.Decoder
 	ipCache         *util.StringMapCache[bool]
@@ -52,7 +53,7 @@ type Agent struct {
 	sslPorts        []int64
 }
 
-func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, statusInterval time.Duration, contextInterval time.Duration, reportIP string) *Agent {
+func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, statusInterval time.Duration, contextInterval time.Duration, pingTimeout time.Duration, reportIP string) *Agent {
 
 	mi, _ := magicmime.NewDecoder(magicmime.MAGIC_MIME_TYPE)
 	ipCache := util.NewStringMapCache[bool]("IP cache", time.Hour*2)
@@ -67,6 +68,7 @@ func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, ht
 		statusInterval:  statusInterval,
 		contextChan:     make(chan bool),
 		contextInterval: contextInterval,
+		pinger:          NewProbingPingRunner(pingTimeout),
 		mimeInstance:    mi,
 		ipCache:         ipCache,
 		p0fRunner:       p0fRunner,
@@ -327,6 +329,13 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 					slog.Info("got error downloading", slog.String("error", err.Error()))
 				}
 			}(c.DownloadCmd)
+
+		case *backend_service.Command_PingCmd:
+			go func(dCmd *backend_service.CommandPingAddress) {
+				if err := a.pinger.Ping(c.PingCmd.Address, c.PingCmd.Count); err != nil {
+					slog.Error("Error pinging address", slog.String("address", c.PingCmd.Address), slog.String("error", err.Error()))
+				}
+			}(c.PingCmd)
 
 		case nil:
 			return nil

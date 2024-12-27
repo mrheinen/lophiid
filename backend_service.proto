@@ -67,12 +67,20 @@ message CommandDownloadFile {
   string ip = 6;
 }
 
+message CommandPingAddress {
+  // hostname, ipv4 or ipv6 address.
+  string address = 1;
+  // Amount of packets to send
+  int64 count = 2;
+}
+
 message CommandBlockURL {}
 
 message Command {
   oneof command {
     CommandDownloadFile download_cmd = 1;
     CommandBlockURL block_url_cmd = 2;
+    CommandPingAddress ping_cmd = 3;
   }
 }
 
