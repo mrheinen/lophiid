@@ -7,6 +7,7 @@ go_library(
         "extractor_collection.go",
         "extractors.go",
         "nc_extractor.go",
+        "ping_extractor.go",
         "tcp_extractor.go",
         "unicode_extractor.go",
         "url_extractor.go",
@@ -28,6 +29,7 @@ go_test(
         "base64_extractor_test.go",
         "extractor_collection_test.go",
         "nc_extractor_test.go",
+        "ping_extractor_test.go",
         "tcp_extractor_test.go",
         "unicode_extractor_test.go",
         "url_extractor_test.go",
@@ -36,5 +38,6 @@ go_test(
     deps = [
         "//pkg/database/models",
         "//pkg/util/constants",
+        "@com_github_stretchr_testify//assert",
     ],
 )

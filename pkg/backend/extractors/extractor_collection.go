@@ -11,6 +11,8 @@ import (
 type ExtractorCollection struct {
 	linksMap        map[string]struct{}
 	tcpAddressesMap map[string]int
+	pingMap         map[string]int
+	ncMap           map[string]int
 	b64Map          map[string][]byte
 	uniMap          map[string]string
 	extractors      []Extractor
@@ -20,20 +22,27 @@ func NewExtractorCollection(asciiOnly bool) *ExtractorCollection {
 	ae := ExtractorCollection{
 		linksMap:        make(map[string]struct{}),
 		tcpAddressesMap: make(map[string]int),
+		pingMap:         make(map[string]int),
+		ncMap:           make(map[string]int),
 		b64Map:          make(map[string][]byte),
 		uniMap:          make(map[string]string),
 	}
 
 	linkExtractor := NewURLExtractor(ae.linksMap)
 	tcpExtractor := NewTCPExtractor(ae.tcpAddressesMap)
+	pingExtractor := NewPingExtractor(ae.pingMap)
+	ncExtractor := NewNCExtractor(ae.ncMap)
+
 	base64Extractor := NewBase64Extractor(ae.b64Map, asciiOnly)
 	base64Extractor.AddSubExtractor(linkExtractor)
 	base64Extractor.AddSubExtractor(tcpExtractor)
+	base64Extractor.AddSubExtractor(pingExtractor)
+	base64Extractor.AddSubExtractor(ncExtractor)
 
 	uniExtractor := NewUnicodeExtractor(ae.uniMap, asciiOnly)
 	uniExtractor.AddSubExtractor(base64Extractor)
 
-	ae.extractors = []Extractor{base64Extractor, linkExtractor, tcpExtractor, uniExtractor}
+	ae.extractors = []Extractor{base64Extractor, linkExtractor, tcpExtractor, uniExtractor, pingExtractor, ncExtractor}
 	return &ae
 }
 
