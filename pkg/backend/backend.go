@@ -321,6 +321,35 @@ func (s *BackendServer) UpdateSessionWithRule(ip string, session *models.Session
 	}
 }
 
+// SendPingStatus is called by the agent to notify the backend about the status
+// of a ping test.
+func (s *BackendServer) SendPingStatus(ctx context.Context, req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error) {
+	hp, ok := auth.GetHoneypotMetadata(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no authentication found")
+	}
+
+	outcome := constants.IpEventSubTypeSuccess
+	if req.GetCount() != req.GetPacketsSent() || req.GetPacketsSent() != req.GetPacketsReceived() {
+		outcome = constants.IpEventSubTypeFailure
+	}
+
+	evt := &models.IpEvent{
+		IP:         req.GetAddress(),
+		Type:       constants.IpEventPing,
+		Subtype:    outcome,
+		Details:    fmt.Sprintf("sent %d packets, received %d", req.GetPacketsSent(), req.GetPacketsReceived()),
+		Source:     constants.IpEventSourceAgent,
+		RequestID:  req.GetRequestId(),
+		HoneypotIP: hp.IP,
+	}
+
+	slog.Info("ping status", slog.String("ip", req.GetAddress()), slog.String("outcome", outcome))
+	s.ipEventManager.AddEvent(evt)
+
+	return &backend_service.SendPingStatusResponse{}, nil
+}
+
 // SendStatus receives status information from honeypots and sends commands back
 // in response. This is not authenticated!
 func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {

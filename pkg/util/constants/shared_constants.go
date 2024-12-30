@@ -14,6 +14,7 @@ const (
 	IpEventSourceAnalysis = "ANALYSIS"
 	IpEventSourceWhois    = "WHOIS"
 	IpEventSourceAI       = "AI"
+	IpEventSourceAgent    = "AGENT"
 )
 
 // This needs to be kept in sync with IP_EVENT_TYPE in the database.
@@ -23,6 +24,7 @@ const (
 	IpEventTrafficClass  = "TRAFFIC_CLASS"
 	IpEventHostC2        = "HOST_C2"
 	IpEventRateLimited   = "RATELIMITED"
+	IpEventPing          = "PING"
 )
 
 // This needs to be kept in sync with IP_EVENT_SUB_TYPE in the database.
@@ -44,6 +46,9 @@ const (
 	IpEventSubTypeTrafficClassBrute     = "TC_BRUTEFORCED"
 	IpEventSubTypeTrafficClassCrawl     = "TC_CRAWLED"
 	IpEventSubTypeTrafficClassMalicious = "TC_MALICIOUS"
+
+	IpEventSubTypeSuccess = "SUCCESS"
+	IpEventSubTypeFailure = "FAILURE"
 )
 
 // These need to be kept in sync with IP_EVENT_REF_TYPE in the database.

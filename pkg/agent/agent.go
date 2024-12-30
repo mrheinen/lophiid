@@ -332,9 +332,23 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 
 		case *backend_service.Command_PingCmd:
 			go func(dCmd *backend_service.CommandPingAddress) {
-				if err := a.pinger.Ping(c.PingCmd.Address, c.PingCmd.Count); err != nil {
+				res, err := a.pinger.Ping(c.PingCmd.Address, c.PingCmd.Count)
+				if err != nil {
 					slog.Error("Error pinging address", slog.String("address", c.PingCmd.Address), slog.String("error", err.Error()))
+					return
 				}
+
+				_, err = a.backendClient.SendPingStatus(&backend_service.SendPingStatusRequest{
+					Address:         c.PingCmd.Address,
+					Count:           c.PingCmd.Count,
+					PacketsSent:     int64(res.PacketsSent),
+					PacketsReceived: int64(res.PacketsReceived),
+				})
+
+				if err != nil {
+					slog.Error("Error sending ping status", slog.String("address", c.PingCmd.Address), slog.String("error", err.Error()))
+				}
+
 			}(c.PingCmd)
 
 		case nil:

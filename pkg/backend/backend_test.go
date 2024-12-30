@@ -1278,3 +1278,84 @@ func TestGetResponderDataCases(t *testing.T) {
 		})
 	}
 }
+
+func TestHandlePingStatus(t *testing.T) {
+
+	fdbc := &database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{}
+	fakeLimiter := ratelimit.FakeRateLimiter{}
+	fSessionMgr := &session.FakeSessionManager{}
+	fakeDescriber := describer.FakeDescriberClient{}
+
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+
+	fakeRes := &responder.FakeResponder{}
+
+	for _, test := range []struct {
+		description          string
+		request              *backend_service.SendPingStatusRequest
+		expectedEventSubType string
+	}{
+		{
+			description:          "success event on success",
+			expectedEventSubType: constants.IpEventSubTypeSuccess,
+			request: &backend_service.SendPingStatusRequest{
+				Address:         "1.1.1.1",
+				Count:           5,
+				PacketsSent:     5,
+				PacketsReceived: 5,
+				RequestId:       42,
+			},
+		},
+		{
+			description:          "failure event on count failure",
+			expectedEventSubType: constants.IpEventSubTypeFailure,
+			request: &backend_service.SendPingStatusRequest{
+				Address:         "1.1.1.1",
+				Count:           4,
+				PacketsSent:     5,
+				PacketsReceived: 5,
+				RequestId:       42,
+			},
+		},
+		{
+			description:          "failure event on packets mismatch failure",
+			expectedEventSubType: constants.IpEventSubTypeFailure,
+			request: &backend_service.SendPingStatusRequest{
+				Address:         "1.1.1.1",
+				Count:           5,
+				PacketsSent:     5,
+				PacketsReceived: 4,
+				RequestId:       42,
+			},
+		},
+
+
+
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+
+			fIpMgr := analysis.FakeIpEventManager{}
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
+			ctx := GetContextWithAuthMetadata()
+
+			_, err := b.SendPingStatus(ctx, test.request)
+			if err != nil {
+				t.Errorf("got error: %s", err)
+			}
+
+			if len(fIpMgr.Events) != 1 {
+				t.Errorf("expected 1, got %d", len(fIpMgr.Events))
+			}
+
+			if fIpMgr.Events[0].Subtype != test.expectedEventSubType {
+				t.Errorf("expected %s, got %s", test.expectedEventSubType, fIpMgr.Events[0].Subtype)
+			}
+		})
+	}
+}

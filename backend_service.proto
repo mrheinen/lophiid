@@ -7,6 +7,7 @@ service BackendService {
   rpc SendStatus(StatusRequest) returns (StatusResponse) {}
   rpc SendSourceContext(SendSourceContextRequest) returns (SendSourceContextResponse) {}
   rpc HandleUploadFile(UploadFileRequest) returns (UploadFileResponse) {}
+  rpc SendPingStatus(SendPingStatusRequest) returns (SendPingStatusResponse) {}
 }
 
 // Stores 1:N
@@ -72,6 +73,8 @@ message CommandPingAddress {
   string address = 1;
   // Amount of packets to send
   int64 count = 2;
+  // Request ID
+  int64 request_id = 3;
 }
 
 message CommandBlockURL {}
@@ -154,6 +157,16 @@ message SendSourceContextRequest {
 }
 
 message SendSourceContextResponse {}
+
+message SendPingStatusRequest {
+  string address = 1;
+  int64 count = 2;
+  int64 packets_sent = 3;
+  int64 packets_received = 4;
+  int64 request_id = 5;
+}
+
+message SendPingStatusResponse {}
 
 message HandleProbeRequest {
   string request_uri = 1;

@@ -16,8 +16,13 @@ type Pinger interface {
 	Statistics() *probing.Statistics
 }
 
+type PingResult struct {
+	PacketsSent     int
+	PacketsReceived int
+}
+
 type PingRunner interface {
-	Ping(address string, count int64) error
+	Ping(address string, count int64) (PingResult, error)
 }
 
 type ProbingPingRunner struct {
@@ -32,14 +37,14 @@ func NewProbingPingRunner(timeout time.Duration) *ProbingPingRunner {
 }
 
 // Ping runs a ping with the specified amount.
-func (p *ProbingPingRunner) Ping(address string, count int64) error {
+func (p *ProbingPingRunner) Ping(address string, count int64) (PingResult, error) {
 	if count > maxPings {
 		slog.Warn("ping amount too high, using max", slog.Int("max", maxPings))
 		count = maxPings
 	}
 	pgr, err := probing.NewPinger(address)
 	if err != nil {
-		return fmt.Errorf("error creating pinger: %w", err)
+		return PingResult{}, fmt.Errorf("error creating pinger: %w", err)
 	}
 
 	pgr.Count = int(count)
@@ -48,7 +53,9 @@ func (p *ProbingPingRunner) Ping(address string, count int64) error {
 	return p.PingWithPinger(pgr)
 }
 
-func (p *ProbingPingRunner) PingWithPinger(pgr Pinger) error {
+func (p *ProbingPingRunner) PingWithPinger(pgr Pinger) (PingResult, error) {
+	result := PingResult{}
+
 	ch := make(chan error, 1)
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), p.timeout)
 	defer cancel()
@@ -60,16 +67,18 @@ func (p *ProbingPingRunner) PingWithPinger(pgr Pinger) error {
 
 	select {
 	case <-ctxTimeout.Done():
-		return fmt.Errorf("timeout reached: %w", ctxTimeout.Err())
+		return result, fmt.Errorf("timeout reached: %w", ctxTimeout.Err())
 	case err := <-ch:
 		if err != nil {
 			slog.Error("ping failed", slog.String("error", err.Error()))
-			return err
+			return result, err
 		} else {
 			stats := pgr.Statistics()
+			result.PacketsSent = stats.PacketsSent
+			result.PacketsReceived = stats.PacketsRecv
 			slog.Debug("ping success", slog.Int("Pkt sent", stats.PacketsSent), slog.Int("Pkt received", stats.PacketsRecv), slog.Float64("Pkt loss", stats.PacketLoss))
+			return result, nil
 		}
-		return nil
 	}
 
 }

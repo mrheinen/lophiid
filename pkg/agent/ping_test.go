@@ -8,7 +8,7 @@ import (
 
 func TestProbingPinger_PingTimesOut(t *testing.T) {
 	pp := NewProbingPingRunner(time.Millisecond)
-	err := pp.Ping("8.8.8.8", 10)
+	_, err := pp.Ping("8.8.8.8", 10)
 
 	if err == nil {
 		t.Error("expected error, got nil")
@@ -25,8 +25,16 @@ func TestProbingPinger_PingTimesOut(t *testing.T) {
 
 func TestProbingPinger_PingWorks(t *testing.T) {
 	pp := NewProbingPingRunner(time.Second * 5)
-	err := pp.Ping("::1", 1)
+	res, err := pp.Ping("::1", 1)
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
+
+	if res.PacketsSent != 1 {
+		t.Errorf("unexpected amount packets sent: %d", res.PacketsSent)
+	}
+	if res.PacketsReceived != 1 {
+		t.Errorf("unexpected amount packets received: %d", res.PacketsReceived)
+	}
+
 }

@@ -23,6 +23,7 @@ const (
 	BackendService_SendStatus_FullMethodName        = "/BackendService/SendStatus"
 	BackendService_SendSourceContext_FullMethodName = "/BackendService/SendSourceContext"
 	BackendService_HandleUploadFile_FullMethodName  = "/BackendService/HandleUploadFile"
+	BackendService_SendPingStatus_FullMethodName    = "/BackendService/SendPingStatus"
 )
 
 // BackendServiceClient is the client API for BackendService service.
@@ -33,6 +34,7 @@ type BackendServiceClient interface {
 	SendStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	SendSourceContext(ctx context.Context, in *SendSourceContextRequest, opts ...grpc.CallOption) (*SendSourceContextResponse, error)
 	HandleUploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error)
+	SendPingStatus(ctx context.Context, in *SendPingStatusRequest, opts ...grpc.CallOption) (*SendPingStatusResponse, error)
 }
 
 type backendServiceClient struct {
@@ -83,6 +85,16 @@ func (c *backendServiceClient) HandleUploadFile(ctx context.Context, in *UploadF
 	return out, nil
 }
 
+func (c *backendServiceClient) SendPingStatus(ctx context.Context, in *SendPingStatusRequest, opts ...grpc.CallOption) (*SendPingStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendPingStatusResponse)
+	err := c.cc.Invoke(ctx, BackendService_SendPingStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BackendServiceServer is the server API for BackendService service.
 // All implementations must embed UnimplementedBackendServiceServer
 // for forward compatibility
@@ -91,6 +103,7 @@ type BackendServiceServer interface {
 	SendStatus(context.Context, *StatusRequest) (*StatusResponse, error)
 	SendSourceContext(context.Context, *SendSourceContextRequest) (*SendSourceContextResponse, error)
 	HandleUploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error)
+	SendPingStatus(context.Context, *SendPingStatusRequest) (*SendPingStatusResponse, error)
 	mustEmbedUnimplementedBackendServiceServer()
 }
 
@@ -109,6 +122,9 @@ func (UnimplementedBackendServiceServer) SendSourceContext(context.Context, *Sen
 }
 func (UnimplementedBackendServiceServer) HandleUploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HandleUploadFile not implemented")
+}
+func (UnimplementedBackendServiceServer) SendPingStatus(context.Context, *SendPingStatusRequest) (*SendPingStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendPingStatus not implemented")
 }
 func (UnimplementedBackendServiceServer) mustEmbedUnimplementedBackendServiceServer() {}
 
@@ -195,6 +211,24 @@ func _BackendService_HandleUploadFile_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BackendService_SendPingStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendPingStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BackendServiceServer).SendPingStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BackendService_SendPingStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BackendServiceServer).SendPingStatus(ctx, req.(*SendPingStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BackendService_ServiceDesc is the grpc.ServiceDesc for BackendService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -217,6 +251,10 @@ var BackendService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "HandleUploadFile",
 			Handler:    _BackendService_HandleUploadFile_Handler,
+		},
+		{
+			MethodName: "SendPingStatus",
+			Handler:    _BackendService_SendPingStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
