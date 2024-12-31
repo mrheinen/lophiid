@@ -332,6 +332,7 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 
 		case *backend_service.Command_PingCmd:
 			go func(dCmd *backend_service.CommandPingAddress) {
+				slog.Info("Ping Command", slog.String("command", fmt.Sprintf("%+v", dCmd)))
 				res, err := a.pinger.Ping(c.PingCmd.Address, c.PingCmd.Count)
 				if err != nil {
 					slog.Error("Error pinging address", slog.String("address", c.PingCmd.Address), slog.String("error", err.Error()))
@@ -343,6 +344,7 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 					Count:           c.PingCmd.Count,
 					PacketsSent:     int64(res.PacketsSent),
 					PacketsReceived: int64(res.PacketsReceived),
+					RequestId:       c.PingCmd.RequestId,
 				})
 
 				if err != nil {
