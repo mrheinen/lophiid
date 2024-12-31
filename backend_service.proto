@@ -149,7 +149,7 @@ message HttpResponse {
 // port scanning information.
 message SendSourceContextRequest {
   string source_ip = 1; // The source / attacker IP
-  // 2-4 is reserved.
+  // 2-4 are reserved.
 
   oneof context {
     P0fResult p0f_result = 5;
