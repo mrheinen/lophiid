@@ -34,6 +34,9 @@ backend:
     # too long because attacker payloads change over time and it's interesting
     # to track this by refetching the same payload URLs.
     download_cache_duration: 5m
+    # How long to cache ping requests. As long as a ping request is in the cache
+    # no new ping requests are send.
+    ping_cache_duration: 1m
     # How long before sessions expire after receiving the last request. New
     # requests reset the timeout.
     session_tracking_timeout: 15m
