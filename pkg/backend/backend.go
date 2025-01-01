@@ -364,13 +364,14 @@ func (s *BackendServer) SendPingStatus(ctx context.Context, req *backend_service
 	}
 
 	evt := &models.IpEvent{
-		IP:         req.GetAddress(),
-		Type:       constants.IpEventPing,
-		Subtype:    outcome,
-		Details:    fmt.Sprintf("sent %d packets, received %d", req.GetPacketsSent(), req.GetPacketsReceived()),
-		Source:     constants.IpEventSourceAgent,
-		RequestID:  req.GetRequestId(),
-		HoneypotIP: hp.IP,
+		IP:            req.GetAddress(),
+		Type:          constants.IpEventPing,
+		Subtype:       outcome,
+		Details:       fmt.Sprintf("sent %d packets, received %d", req.GetPacketsSent(), req.GetPacketsReceived()),
+		Source:        constants.IpEventSourceAgent,
+		RequestID:     req.GetRequestId(),
+		HoneypotIP:    hp.IP,
+		SourceRefType: constants.IpEventRefTypeNone,
 	}
 
 	slog.Info("ping status", slog.String("ip", req.GetAddress()), slog.String("outcome", outcome))
