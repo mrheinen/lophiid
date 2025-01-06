@@ -27,7 +27,7 @@
 
           <DataColumn field="id" header="ID" style="width: 4%">
           </DataColumn>
-          <DataColumn field="name" header="Name" style="width: 15%">
+          <DataColumn field="name" header="Name" style="width: 20%">
           </DataColumn>
           <DataColumn field="vendor" header="Vendor" style="width: 15%">
           </DataColumn>
@@ -91,6 +91,7 @@
 import { dateToString } from "../../helpers.js";
 import AppForm from "./AppForm.vue";
 import DataSearchBar from "../DataSearchBar.vue";
+
 export default {
   components: {
     AppForm,
@@ -236,7 +237,9 @@ export default {
   watch: {
     selectedLimit() {
       this.limit = this.selectedLimit;
-      this.loadApps(true, function () {});
+      if (!this.isLoading) {
+        this.loadApps(true, function () {});
+      }
     }
   },
   created() {
@@ -254,13 +257,16 @@ export default {
     if (this.$route.query.q) {
       this.$refs.searchBar.setQuery(this.$route.query.q);
     } else {
-      this.loadApps(true, function () {});
+      if (!this.isLoading) {
+        this.loadApps(true, function () {});
+      }
     }
   },
 };
 </script>
 
 <style scoped>
+
 .table tr.is-selected {
   background-color: #4e726d;
 }
