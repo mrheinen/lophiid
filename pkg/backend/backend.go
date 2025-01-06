@@ -367,14 +367,14 @@ func (s *BackendServer) SendPingStatus(ctx context.Context, req *backend_service
 		IP:            req.GetAddress(),
 		Type:          constants.IpEventPing,
 		Subtype:       outcome,
-		Details:       fmt.Sprintf("sent %d packets, received %d", req.GetPacketsSent(), req.GetPacketsReceived()),
+		Details:       fmt.Sprintf("%d/%d sent/recv - rtt %d/%d/%d avg/min/max", req.GetPacketsSent(), req.GetPacketsReceived(), req.GetAverageRttMs(), req.GetMinRttMs(), req.GetMaxRttMs()),
 		Source:        constants.IpEventSourceAgent,
 		RequestID:     req.GetRequestId(),
 		HoneypotIP:    hp.IP,
 		SourceRefType: constants.IpEventRefTypeNone,
 	}
 
-	slog.Info("ping status", slog.String("ip", req.GetAddress()), slog.String("outcome", outcome))
+	slog.Info("ping status", slog.String("ip", req.GetAddress()), slog.String("outcome", outcome), slog.Int64("packets_sent", req.GetPacketsSent()), slog.Int64("packets_received", req.GetPacketsReceived()), slog.Int64("average_rtt", req.GetAverageRttMs()), slog.Int64("min_rtt", req.GetMinRttMs()), slog.Int64("max_rtt", req.GetMaxRttMs()))
 	s.ipEventManager.AddEvent(evt)
 
 	return &backend_service.SendPingStatusResponse{}, nil

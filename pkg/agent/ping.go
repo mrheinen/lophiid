@@ -16,9 +16,13 @@ type Pinger interface {
 	Statistics() *probing.Statistics
 }
 
+// PingResult is used for easily sharing of the results to the caller.
 type PingResult struct {
-	PacketsSent     int
-	PacketsReceived int
+	PacketsSent     int64
+	PacketsReceived int64
+	AverageRttMs    int64
+	MinRttMs        int64
+	MaxRttMs        int64
 }
 
 type PingRunner interface {
@@ -74,8 +78,11 @@ func (p *ProbingPingRunner) PingWithPinger(pgr Pinger) (PingResult, error) {
 			return result, err
 		} else {
 			stats := pgr.Statistics()
-			result.PacketsSent = stats.PacketsSent
-			result.PacketsReceived = stats.PacketsRecv
+			result.PacketsSent = int64(stats.PacketsSent)
+			result.PacketsReceived = int64(stats.PacketsRecv)
+			result.AverageRttMs = stats.AvgRtt.Milliseconds()
+			result.MinRttMs = stats.MinRtt.Milliseconds()
+			result.MaxRttMs = stats.MaxRtt.Milliseconds()
 			slog.Debug("ping success", slog.Int("Pkt sent", stats.PacketsSent), slog.Int("Pkt received", stats.PacketsRecv), slog.Float64("Pkt loss", stats.PacketLoss))
 			return result, nil
 		}

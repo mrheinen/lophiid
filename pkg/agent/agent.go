@@ -342,8 +342,11 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 				_, err = a.backendClient.SendPingStatus(&backend_service.SendPingStatusRequest{
 					Address:         c.PingCmd.Address,
 					Count:           c.PingCmd.Count,
-					PacketsSent:     int64(res.PacketsSent),
-					PacketsReceived: int64(res.PacketsReceived),
+					PacketsSent:     res.PacketsSent,
+					PacketsReceived: res.PacketsReceived,
+					AverageRttMs:    res.AverageRttMs,
+					MinRttMs:        res.MinRttMs,
+					MaxRttMs:        res.MaxRttMs,
 					RequestId:       c.PingCmd.RequestId,
 				})
 

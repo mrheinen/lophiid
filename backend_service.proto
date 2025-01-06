@@ -164,6 +164,9 @@ message SendPingStatusRequest {
   int64 packets_sent = 3;
   int64 packets_received = 4;
   int64 request_id = 5;
+  int64 average_rtt_ms = 6;
+  int64 min_rtt_ms = 7;
+  int64 max_rtt_ms = 8;
 }
 
 message SendPingStatusResponse {}
