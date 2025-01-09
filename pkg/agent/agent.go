@@ -40,7 +40,8 @@ type Agent struct {
 	httpServers     []*HttpServer
 	reportIP        string
 	httpClient      *http.Client
-	statusChan      chan bool
+	statusLoopChan  chan bool
+	statusRunChan   chan bool
 	statusInterval  time.Duration
 	contextChan     chan bool
 	contextInterval time.Duration
@@ -64,7 +65,8 @@ func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, ht
 		httpServers:     httpServers,
 		reportIP:        reportIP,
 		httpClient:      httpClient,
-		statusChan:      make(chan bool),
+		statusLoopChan:  make(chan bool),
+		statusRunChan:   make(chan bool, 10),
 		statusInterval:  statusInterval,
 		contextChan:     make(chan bool),
 		contextInterval: contextInterval,
@@ -100,11 +102,14 @@ func (a *Agent) Start() error {
 	go func() {
 		for {
 			select {
-			case <-a.statusChan:
+			case <-a.statusLoopChan:
 				ticker.Stop()
 				slog.Info("Status channel stopped")
 				return
 			case <-ticker.C:
+				a.statusRunChan <- true
+
+			case <-a.statusRunChan:
 				resp, err := a.backendClient.SendStatus(&backend_service.StatusRequest{
 					Ip:            a.reportIP,
 					Version:       constants.LophiidVersion,
@@ -149,7 +154,7 @@ func (a *Agent) Start() error {
 }
 
 func (a *Agent) Stop() {
-	a.statusChan <- true
+	a.statusLoopChan <- true
 	a.contextChan <- true
 }
 
@@ -363,5 +368,8 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 		}
 	}
 
+	// Update the status run chan after the commands were executed so that another
+	// status update is scheduled.
+	a.statusRunChan <- true
 	return nil
 }

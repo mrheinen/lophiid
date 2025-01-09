@@ -218,3 +218,62 @@ func TestSendContext(t *testing.T) {
 	}
 
 }
+
+func TestHandleCommandsFromResponse(t *testing.T) {
+
+	for _, test := range []struct {
+		description         string
+		response            *backend_service.StatusResponse
+		shouldHaveChanEntry bool
+	}{
+		{
+			description:         "Create status chan entry ok",
+			shouldHaveChanEntry: true,
+			response: &backend_service.StatusResponse{
+				Command: []*backend_service.Command{
+					{
+						Command: &backend_service.Command_PingCmd{
+							PingCmd: &backend_service.CommandPingAddress{
+								Address:   "127.0.0.1",
+								Count:     1,
+								RequestId: 567,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			description:         "Creates no status chan entry ok",
+			shouldHaveChanEntry: false,
+			response: &backend_service.StatusResponse{
+				Command: []*backend_service.Command{},
+			},
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fakeBackendClient := backend.FakeBackendClient{
+				SendSourceContextResponse: &backend_service.SendSourceContextResponse{},
+				SendSourceContextError:    nil,
+			}
+
+			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, nil, time.Minute, time.Minute, time.Minute, "1.1.1.1")
+
+			if len(agent.statusRunChan) != 0 {
+				t.Fatal("expected empty statusRunChan")
+			}
+
+			agent.HandleCommandsFromResponse(test.response)
+
+			if test.shouldHaveChanEntry && len(agent.statusRunChan) != 1 {
+				t.Fatal("expected 1 statusRunChan")
+			}
+
+			if !test.shouldHaveChanEntry && len(agent.statusRunChan) != 0 {
+				t.Fatal("expected 0 statusRunChan")
+			}
+
+		})
+	}
+}
