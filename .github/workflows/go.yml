@@ -20,6 +20,10 @@ jobs:
         run: |
           sudo apt-get install -y libmagic-dev
 
+      - name: Allow ICMP for tests
+        run: |
+          sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
