@@ -28,7 +28,6 @@ go_test(
     srcs = [
         "agent_test.go",
         "http_server_test.go",
-        "ping_test.go",
     ],
     embed = [":agent"],
     deps = [
