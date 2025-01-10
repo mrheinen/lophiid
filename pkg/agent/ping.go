@@ -42,11 +42,13 @@ func NewProbingPingRunner(timeout time.Duration) *ProbingPingRunner {
 
 // Ping runs a ping with the specified amount.
 func (p *ProbingPingRunner) Ping(address string, count int64) (PingResult, error) {
-	if count > maxPings {
-		slog.Warn("ping amount too high, using max", slog.Int("max", maxPings))
-		count = maxPings
-	}
-	pgr, err := probing.NewPinger(address)
+    if count <= 0 {
+        return PingResult{}, fmt.Errorf("invalid ping count: %d", count)
+    }
+    if count > maxPings {
+        slog.Warn("ping amount too high, using max", slog.Int("max", maxPings))
+        count = maxPings
+    }
 	if err != nil {
 		return PingResult{}, fmt.Errorf("error creating pinger: %w", err)
 	}
