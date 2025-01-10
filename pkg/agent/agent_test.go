@@ -75,7 +75,7 @@ func TestDownloadToBuffer(t *testing.T) {
 		}
 	})
 
-	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0fClient */, time.Minute, time.Minute, time.Minute, "1.1.1.1")
+	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0fClient */, &FakePingRunner{}, time.Minute, time.Minute, time.Minute, "1.1.1.1")
 
 	resp, err := agent.DownloadToBuffer(&backendRequest)
 	if err != nil {
@@ -121,7 +121,7 @@ func TestDownloadToBufferContentType(t *testing.T) {
 		}
 	})
 
-	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0frunner */, time.Minute, time.Minute, time.Minute, "1.1.1.1")
+	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0frunner */, &FakePingRunner{}, time.Minute, time.Minute, time.Minute, "1.1.1.1")
 
 	resp, err := agent.DownloadToBuffer(&backendRequest)
 	if err != nil {
@@ -198,7 +198,7 @@ func TestSendContext(t *testing.T) {
 				ipCache.Store(ip, wasSubmitted)
 			}
 
-			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, &fakeP0fRunner, time.Minute, time.Minute, time.Minute, "1.1.1.1")
+			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, &fakeP0fRunner, &FakePingRunner{}, time.Minute, time.Minute, time.Minute, "1.1.1.1")
 			agent.ipCache = ipCache
 
 			agent.SendContext()
@@ -258,7 +258,7 @@ func TestHandleCommandsFromResponse(t *testing.T) {
 				SendSourceContextError:    nil,
 			}
 
-			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, nil, time.Minute, time.Minute, time.Minute, "1.1.1.1")
+			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, nil, &FakePingRunner{}, time.Minute, time.Minute, time.Minute, "1.1.1.1")
 
 			if len(agent.statusRunChan) != 0 {
 				t.Fatal("expected empty statusRunChan")

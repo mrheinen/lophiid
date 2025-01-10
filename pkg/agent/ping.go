@@ -29,6 +29,15 @@ type PingRunner interface {
 	Ping(address string, count int64) (PingResult, error)
 }
 
+type FakePingRunner struct {
+	ResultToReturn PingResult
+	ErrorToReturn  error
+}
+
+func (f *FakePingRunner) Ping(address string, count int64) (PingResult, error) {
+	return f.ResultToReturn, f.ErrorToReturn
+}
+
 type ProbingPingRunner struct {
 	timeout time.Duration
 }

@@ -180,7 +180,8 @@ func main() {
 		p0fRunner = agent.NewP0fRunnerImpl(p0fclient)
 	}
 
-	agent := agent.NewAgent(c, httpServers, downloadHttpClient, p0fRunner, cfg.BackendClient.StatusInterval, cfg.P0f.SendInterval, cfg.Pinger.PingTimeout, cfg.General.PublicIP)
+	pinger := agent.NewProbingPingRunner(cfg.Pinger.PingTimeout)
+	agent := agent.NewAgent(c, httpServers, downloadHttpClient, p0fRunner, pinger, cfg.BackendClient.StatusInterval, cfg.P0f.SendInterval, cfg.Pinger.PingTimeout, cfg.General.PublicIP)
 	agent.Start()
 
 	// Sleep some time to let the HTTP servers initialize.

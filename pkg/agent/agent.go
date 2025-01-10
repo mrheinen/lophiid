@@ -54,7 +54,7 @@ type Agent struct {
 	sslPorts        []int64
 }
 
-func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, statusInterval time.Duration, contextInterval time.Duration, pingTimeout time.Duration, reportIP string) *Agent {
+func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, pRunner PingRunner, statusInterval time.Duration, contextInterval time.Duration, pingTimeout time.Duration, reportIP string) *Agent {
 
 	mi, _ := magicmime.NewDecoder(magicmime.MAGIC_MIME_TYPE)
 	ipCache := util.NewStringMapCache[bool]("IP cache", time.Hour*2)
@@ -70,7 +70,7 @@ func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, ht
 		statusInterval:  statusInterval,
 		contextChan:     make(chan bool),
 		contextInterval: contextInterval,
-		pinger:          NewProbingPingRunner(pingTimeout),
+		pinger:          pRunner,
 		mimeInstance:    mi,
 		ipCache:         ipCache,
 		p0fRunner:       p0fRunner,
