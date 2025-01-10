@@ -36,6 +36,7 @@ type BackendClient interface {
 	HandleUploadFile(request *backend_service.UploadFileRequest) (*backend_service.UploadFileResponse, error)
 	SendSourceContext(req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error)
 	SendStatus(req *backend_service.StatusRequest) (*backend_service.StatusResponse, error)
+	SendPingStatus(req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error)
 	Disconnect()
 }
 
@@ -53,6 +54,8 @@ type FakeBackendClient struct {
 	UploadFileReturnError     error
 	SendSourceContextResponse *backend_service.SendSourceContextResponse
 	SendSourceContextError    error
+	SendPingStatusResponse    *backend_service.SendPingStatusResponse
+	SendPingStatusError       error
 }
 
 func (f *FakeBackendClient) Connect(connectString string, authToken string) error {
@@ -76,6 +79,9 @@ func (f *FakeBackendClient) HandleUploadFile(req *backend_service.UploadFileRequ
 
 func (f *FakeBackendClient) SendSourceContext(req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error) {
 	return f.SendSourceContextResponse, f.SendSourceContextError
+}
+func (f *FakeBackendClient) SendPingStatus(req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error) {
+	return f.SendPingStatusResponse, f.SendPingStatusError
 }
 
 // InsecureBackendClient is a backend client that does not use SSL.
@@ -161,6 +167,10 @@ func (c *SecureBackendClient) SendSourceContext(req *backend_service.SendSourceC
 	return c.backendClient.SendSourceContext(context.Background(), req)
 }
 
+func (c *SecureBackendClient) SendPingStatus(req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error) {
+	return c.backendClient.SendPingStatus(context.Background(), req)
+}
+
 // InsecureBackendClient is a backend client that does not use SSL.
 type InsecureBackendClient struct {
 	clientConnect *grpc.ClientConn
@@ -199,4 +209,8 @@ func (c *InsecureBackendClient) HandleUploadFile(req *backend_service.UploadFile
 
 func (c *InsecureBackendClient) SendSourceContext(req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error) {
 	return c.backendClient.SendSourceContext(context.Background(), req)
+}
+
+func (c *InsecureBackendClient) SendPingStatus(req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error) {
+	return c.backendClient.SendPingStatus(context.Background(), req)
 }

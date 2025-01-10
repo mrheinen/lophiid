@@ -5,10 +5,10 @@
         <img src="@/assets/logo.png" width="112" height="28" />
       </template>
       <template #item="{ item, props, hasSubmenu, root }">
-        <a v-ripple class="flex align-items-center" v-bind="props.action">
+        <a class="flex align-items-center" v-bind="props.action">
           <span :class="item.icon" />
           <span class="ml-2">{{ item.label }}</span>
-          <Badge
+          <PrimeBadge
             v-if="item.badge"
             :class="{ 'ml-auto': !root, 'ml-2': root }"
             :value="item.badge"

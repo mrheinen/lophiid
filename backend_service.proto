@@ -7,6 +7,7 @@ service BackendService {
   rpc SendStatus(StatusRequest) returns (StatusResponse) {}
   rpc SendSourceContext(SendSourceContextRequest) returns (SendSourceContextResponse) {}
   rpc HandleUploadFile(UploadFileRequest) returns (UploadFileResponse) {}
+  rpc SendPingStatus(SendPingStatusRequest) returns (SendPingStatusResponse) {}
 }
 
 // Stores 1:N
@@ -67,12 +68,22 @@ message CommandDownloadFile {
   string ip = 6;
 }
 
+message CommandPingAddress {
+  // hostname, ipv4 or ipv6 address.
+  string address = 1;
+  // Amount of packets to send
+  int64 count = 2;
+  // Request ID
+  int64 request_id = 3;
+}
+
 message CommandBlockURL {}
 
 message Command {
   oneof command {
     CommandDownloadFile download_cmd = 1;
     CommandBlockURL block_url_cmd = 2;
+    CommandPingAddress ping_cmd = 3;
   }
 }
 
@@ -138,7 +149,7 @@ message HttpResponse {
 // port scanning information.
 message SendSourceContextRequest {
   string source_ip = 1; // The source / attacker IP
-  // 2-4 is reserved.
+  // 2-4 are reserved.
 
   oneof context {
     P0fResult p0f_result = 5;
@@ -146,6 +157,19 @@ message SendSourceContextRequest {
 }
 
 message SendSourceContextResponse {}
+
+message SendPingStatusRequest {
+  string address = 1;
+  int64 count = 2;
+  int64 packets_sent = 3;
+  int64 packets_received = 4;
+  int64 request_id = 5;
+  int64 average_rtt_ms = 6;
+  int64 min_rtt_ms = 7;
+  int64 max_rtt_ms = 8;
+}
+
+message SendPingStatusResponse {}
 
 message HandleProbeRequest {
   string request_uri = 1;

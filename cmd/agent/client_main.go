@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package main
 
 import (
@@ -65,6 +64,9 @@ type Config struct {
 		SocketLocation string        `fig:"socket_location"`
 		SendInterval   time.Duration `fig:"send_interval" default:"1m"`
 	} `fig:"p0f"`
+	Pinger struct {
+		PingTimeout time.Duration `fig:"ping_timeout" default:"1m"`
+	} `fig:"pinger"`
 	BackendClient struct {
 		StatusInterval time.Duration `fig:"status_interval" default:"10s"`
 		AuthToken      string        `fig:"auth_token" valiate:"required"`
@@ -178,7 +180,8 @@ func main() {
 		p0fRunner = agent.NewP0fRunnerImpl(p0fclient)
 	}
 
-	agent := agent.NewAgent(c, httpServers, downloadHttpClient, p0fRunner, cfg.BackendClient.StatusInterval, cfg.P0f.SendInterval, cfg.General.PublicIP)
+	pinger := agent.NewProbingPingRunner(cfg.Pinger.PingTimeout)
+	agent := agent.NewAgent(c, httpServers, downloadHttpClient, p0fRunner, pinger, cfg.BackendClient.StatusInterval, cfg.P0f.SendInterval, cfg.Pinger.PingTimeout, cfg.General.PublicIP)
 	agent.Start()
 
 	// Sleep some time to let the HTTP servers initialize.

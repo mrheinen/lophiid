@@ -2,7 +2,7 @@ package constants
 
 // The lophiid version. Needs to be bumped with every release and is used by
 // both the agent and the backend.
-const LophiidVersion = "0.20.0-alpha"
+const LophiidVersion = "0.21.0-alpha"
 
 // IP event sources are used to indicate the source of an IP event. The values
 // below need to be kept in sync with IP_EVENT_SOURCE in the database.
@@ -14,6 +14,7 @@ const (
 	IpEventSourceAnalysis = "ANALYSIS"
 	IpEventSourceWhois    = "WHOIS"
 	IpEventSourceAI       = "AI"
+	IpEventSourceAgent    = "AGENT"
 )
 
 // This needs to be kept in sync with IP_EVENT_TYPE in the database.
@@ -23,6 +24,7 @@ const (
 	IpEventTrafficClass  = "TRAFFIC_CLASS"
 	IpEventHostC2        = "HOST_C2"
 	IpEventRateLimited   = "RATELIMITED"
+	IpEventPing          = "PING"
 )
 
 // This needs to be kept in sync with IP_EVENT_SUB_TYPE in the database.
@@ -44,6 +46,9 @@ const (
 	IpEventSubTypeTrafficClassBrute     = "TC_BRUTEFORCED"
 	IpEventSubTypeTrafficClassCrawl     = "TC_CRAWLED"
 	IpEventSubTypeTrafficClassMalicious = "TC_MALICIOUS"
+
+	IpEventSubTypeSuccess = "SUCCESS"
+	IpEventSubTypeFailure = "FAILURE"
 )
 
 // These need to be kept in sync with IP_EVENT_REF_TYPE in the database.
@@ -66,6 +71,7 @@ const (
 	ExtractorTypeBase64  = "DECODED_STRING_BASE64"
 	ExtractorTypeUnicode = "DECODED_STRING_UNICODE"
 	ExtractorTypeLink    = "PAYLOAD_LINK"
+	ExtractorTypePing    = "PAYLOAD_PING"
 	ExtractorTypeTcpLink = "PAYLOAD_TCP_LINK"
 )
 

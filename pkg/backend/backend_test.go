@@ -36,6 +36,7 @@ import (
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -742,6 +743,8 @@ func TestProcessQueue(t *testing.T) {
 		expectedEventType    string
 		expectedEventSubType string
 		ruleID               int
+		request              *models.Request
+		expectedPingCommand  *backend_service.CommandPingAddress
 	}{
 		{
 			description:          "Runs ok, marked attack",
@@ -749,6 +752,12 @@ func TestProcessQueue(t *testing.T) {
 			expectedEventType:    constants.IpEventTrafficClass,
 			expectedEventSubType: constants.IpEventSubTypeTrafficClassAttacked,
 			ruleID:               42,
+			request: &models.Request{
+				ID:   42,
+				Uri:  "/aaaaa",
+				Body: []byte("body body"),
+				Raw:  "nothing",
+			},
 		},
 		{
 			description:          "Runs ok, marked crawl",
@@ -756,6 +765,12 @@ func TestProcessQueue(t *testing.T) {
 			expectedEventType:    constants.IpEventTrafficClass,
 			expectedEventSubType: constants.IpEventSubTypeTrafficClassCrawl,
 			ruleID:               43,
+			request: &models.Request{
+				ID:   42,
+				Uri:  "/aaaaa",
+				Body: []byte("body body"),
+				Raw:  "nothing",
+			},
 		},
 		{
 			description:          "Runs ok, marked recon",
@@ -763,6 +778,31 @@ func TestProcessQueue(t *testing.T) {
 			expectedEventType:    constants.IpEventTrafficClass,
 			expectedEventSubType: constants.IpEventSubTypeTrafficClassRecon,
 			ruleID:               44,
+			request: &models.Request{
+				ID:   42,
+				Uri:  "/aaaaa",
+				Body: []byte("body body"),
+				Raw:  "nothing",
+			},
+		},
+		{
+			description:          "Runs ok, marked attack, ping command",
+			requestPurpose:       models.RuleRequestPurposeAttack,
+			expectedEventType:    constants.IpEventTrafficClass,
+			expectedEventSubType: constants.IpEventSubTypeTrafficClassAttacked,
+			ruleID:               42,
+			request: &models.Request{
+				ID:         232,
+				Uri:        "/aaaaa",
+				Body:       []byte("body body ping -c 4 1.1.1.1 foo"),
+				Raw:        "nothing",
+				HoneypotIP: "4.4.4.4",
+			},
+			expectedPingCommand: &backend_service.CommandPingAddress{
+				Address:   "1.1.1.1",
+				Count:     4,
+				RequestId: 232,
+			},
 		},
 	} {
 
@@ -788,17 +828,12 @@ func TestProcessQueue(t *testing.T) {
 		fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
-		req := models.Request{
-			ID:   42,
-			Uri:  "/aaaaa",
-			Body: []byte("body body"),
-			Raw:  "nothing",
-		}
 
 		t.Run(test.description, func(t *testing.T) {
 
 			eCol := extractors.NewExtractorCollection(true)
-			err := b.ProcessRequest(&req, models.ContentRule{
+			eCol.ParseRequest(test.request)
+			err := b.ProcessRequest(test.request, models.ContentRule{
 				ID:             int64(test.ruleID),
 				RequestPurpose: test.requestPurpose,
 			}, eCol)
@@ -824,6 +859,17 @@ func TestProcessQueue(t *testing.T) {
 
 			if fIpMgr.Events[0].Source != constants.IpEventSourceRule {
 				t.Errorf("expected %s, got %s", constants.IpEventSourceRule, fIpMgr.Events[0].Source)
+			}
+
+			if test.expectedPingCommand != nil {
+				c, ok := b.pingQueue[test.request.HoneypotIP]
+				if !ok || len(c) == 0 {
+					t.Fatalf("Ping command not found in queue")
+				}
+
+				if !reflect.DeepEqual(c[0], *test.expectedPingCommand) {
+					t.Errorf("expected %v, got %v", test.expectedPingCommand, c[0])
+				}
 			}
 		})
 	}
@@ -982,7 +1028,6 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	}
 
 	testHoneypotIP := "1.1.1.1"
-	testUrl := "http://test"
 
 	reg := prometheus.NewRegistry()
 	bMetrics := CreateBackendMetrics(reg)
@@ -1005,25 +1050,64 @@ func TestSendStatusSendsCommands(t *testing.T) {
 		Version: constants.LophiidVersion,
 	}
 
-	b.downloadQueue[testHoneypotIP] = []backend_service.CommandDownloadFile{
-		{
-			Url: testUrl,
-		},
-	}
+	t.Run("SendStatus download command", func(t *testing.T) {
+		testUrl := "http://test"
+		b.downloadQueue[testHoneypotIP] = []backend_service.CommandDownloadFile{
+			{
+				Url: testUrl,
+			},
+		}
 
-	resp, err := b.SendStatus(context.Background(), &statusRequest)
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-	}
+		resp, err := b.SendStatus(context.Background(), &statusRequest)
+		if err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
 
-	if len(resp.GetCommand()) != 1 {
-		t.Errorf("expected 1 command. Got %d", len(resp.GetCommand()))
-	}
+		if len(resp.GetCommand()) != 1 {
+			t.Fatalf("expected 1 command. Got %d", len(resp.GetCommand()))
+		}
 
-	resUrl := resp.GetCommand()[0].GetDownloadCmd().Url
-	if resUrl != testUrl {
-		t.Errorf("expected %s, got %s", testUrl, resUrl)
-	}
+		resUrl := resp.GetCommand()[0].GetDownloadCmd().Url
+		if resUrl != testUrl {
+			t.Errorf("expected %s, got %s", testUrl, resUrl)
+		}
+	})
+
+	t.Run("SendStatus ping command", func(t *testing.T) {
+		testAddress := "1.1.1.1"
+		testCount := 12
+		testReqId := 42
+
+		b.pingQueue[testHoneypotIP] = []backend_service.CommandPingAddress{
+			{
+				Address:   testAddress,
+				Count:     int64(testCount),
+				RequestId: int64(testReqId),
+			},
+		}
+
+		resp, err := b.SendStatus(context.Background(), &statusRequest)
+		if err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+
+		if len(resp.GetCommand()) != 1 {
+			t.Fatalf("expected 1 command. Got %d", len(resp.GetCommand()))
+		}
+
+		resAdd := resp.GetCommand()[0].GetPingCmd().Address
+		if resAdd != testAddress {
+			t.Errorf("expected %s, got %s", testAddress, resAdd)
+		}
+
+		if resp.GetCommand()[0].GetPingCmd().Count != int64(testCount) {
+			t.Errorf("expected %d, got %d", testCount, resp.GetCommand()[0].GetPingCmd().Count)
+		}
+
+		if resp.GetCommand()[0].GetPingCmd().RequestId != int64(testReqId) {
+			t.Errorf("expected %d, got %d", testReqId, resp.GetCommand()[0].GetPingCmd().RequestId)
+		}
+	})
 }
 
 func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
@@ -1274,6 +1358,84 @@ func TestGetResponderDataCases(t *testing.T) {
 
 			if test.responder != nil && test.lastPromptInput != test.responder.LastPromptInput {
 				t.Errorf("expected last prompt input %s but got %s", test.lastPromptInput, test.responder.LastPromptInput)
+			}
+		})
+	}
+}
+
+func TestHandlePingStatus(t *testing.T) {
+
+	fdbc := &database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{}
+	fakeLimiter := ratelimit.FakeRateLimiter{}
+	fSessionMgr := &session.FakeSessionManager{}
+	fakeDescriber := describer.FakeDescriberClient{}
+
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+
+	fakeRes := &responder.FakeResponder{}
+
+	for _, test := range []struct {
+		description          string
+		request              *backend_service.SendPingStatusRequest
+		expectedEventSubType string
+	}{
+		{
+			description:          "success event on success",
+			expectedEventSubType: constants.IpEventSubTypeSuccess,
+			request: &backend_service.SendPingStatusRequest{
+				Address:         "1.1.1.1",
+				Count:           5,
+				PacketsSent:     5,
+				PacketsReceived: 5,
+				RequestId:       42,
+			},
+		},
+		{
+			description:          "failure event on count failure",
+			expectedEventSubType: constants.IpEventSubTypeFailure,
+			request: &backend_service.SendPingStatusRequest{
+				Address:         "1.1.1.1",
+				Count:           4,
+				PacketsSent:     5,
+				PacketsReceived: 5,
+				RequestId:       42,
+			},
+		},
+		{
+			description:          "failure event on packets mismatch failure",
+			expectedEventSubType: constants.IpEventSubTypeFailure,
+			request: &backend_service.SendPingStatusRequest{
+				Address:         "1.1.1.1",
+				Count:           5,
+				PacketsSent:     5,
+				PacketsReceived: 4,
+				RequestId:       42,
+			},
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+
+			fIpMgr := analysis.FakeIpEventManager{}
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
+			ctx := GetContextWithAuthMetadata()
+
+			_, err := b.SendPingStatus(ctx, test.request)
+			if err != nil {
+				t.Errorf("got error: %s", err)
+			}
+
+			if len(fIpMgr.Events) != 1 {
+				t.Errorf("expected 1, got %d", len(fIpMgr.Events))
+			}
+
+			if fIpMgr.Events[0].Subtype != test.expectedEventSubType {
+				t.Errorf("expected %s, got %s", test.expectedEventSubType, fIpMgr.Events[0].Subtype)
 			}
 		})
 	}

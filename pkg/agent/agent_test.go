@@ -75,7 +75,7 @@ func TestDownloadToBuffer(t *testing.T) {
 		}
 	})
 
-	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0fClient */, time.Minute, time.Minute, "1.1.1.1")
+	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0fClient */, &FakePingRunner{}, time.Minute, time.Minute, time.Minute, "1.1.1.1")
 
 	resp, err := agent.DownloadToBuffer(&backendRequest)
 	if err != nil {
@@ -121,7 +121,7 @@ func TestDownloadToBufferContentType(t *testing.T) {
 		}
 	})
 
-	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0frunner */, time.Minute, time.Minute, "1.1.1.1")
+	agent := NewAgent(nil, []*HttpServer{}, client, nil /* p0frunner */, &FakePingRunner{}, time.Minute, time.Minute, time.Minute, "1.1.1.1")
 
 	resp, err := agent.DownloadToBuffer(&backendRequest)
 	if err != nil {
@@ -198,7 +198,7 @@ func TestSendContext(t *testing.T) {
 				ipCache.Store(ip, wasSubmitted)
 			}
 
-			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, &fakeP0fRunner, time.Minute, time.Minute, "1.1.1.1")
+			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, &fakeP0fRunner, &FakePingRunner{}, time.Minute, time.Minute, time.Minute, "1.1.1.1")
 			agent.ipCache = ipCache
 
 			agent.SendContext()
@@ -217,4 +217,63 @@ func TestSendContext(t *testing.T) {
 
 	}
 
+}
+
+func TestHandleCommandsFromResponse(t *testing.T) {
+
+	for _, test := range []struct {
+		description         string
+		response            *backend_service.StatusResponse
+		shouldHaveChanEntry bool
+	}{
+		{
+			description:         "Create status chan entry ok",
+			shouldHaveChanEntry: true,
+			response: &backend_service.StatusResponse{
+				Command: []*backend_service.Command{
+					{
+						Command: &backend_service.Command_PingCmd{
+							PingCmd: &backend_service.CommandPingAddress{
+								Address:   "127.0.0.1",
+								Count:     1,
+								RequestId: 567,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			description:         "Creates no status chan entry ok",
+			shouldHaveChanEntry: false,
+			response: &backend_service.StatusResponse{
+				Command: []*backend_service.Command{},
+			},
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			fakeBackendClient := backend.FakeBackendClient{
+				SendSourceContextResponse: &backend_service.SendSourceContextResponse{},
+				SendSourceContextError:    nil,
+			}
+
+			agent := NewAgent(&fakeBackendClient, []*HttpServer{}, nil, nil, &FakePingRunner{}, time.Minute, time.Minute, time.Minute, "1.1.1.1")
+
+			if len(agent.statusRunChan) != 0 {
+				t.Fatal("expected empty statusRunChan")
+			}
+
+			agent.HandleCommandsFromResponse(test.response)
+
+			if test.shouldHaveChanEntry && len(agent.statusRunChan) != 1 {
+				t.Fatal("expected 1 statusRunChan")
+			}
+
+			if !test.shouldHaveChanEntry && len(agent.statusRunChan) != 0 {
+				t.Fatal("expected 0 statusRunChan")
+			}
+
+		})
+	}
 }

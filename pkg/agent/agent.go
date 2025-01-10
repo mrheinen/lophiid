@@ -40,10 +40,12 @@ type Agent struct {
 	httpServers     []*HttpServer
 	reportIP        string
 	httpClient      *http.Client
-	statusChan      chan bool
+	statusLoopChan  chan bool
+	statusRunChan   chan bool
 	statusInterval  time.Duration
 	contextChan     chan bool
 	contextInterval time.Duration
+	pinger          PingRunner
 	mimeMu          sync.Mutex
 	mimeInstance    *magicmime.Decoder
 	ipCache         *util.StringMapCache[bool]
@@ -52,7 +54,7 @@ type Agent struct {
 	sslPorts        []int64
 }
 
-func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, statusInterval time.Duration, contextInterval time.Duration, reportIP string) *Agent {
+func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, pRunner PingRunner, statusInterval time.Duration, contextInterval time.Duration, pingTimeout time.Duration, reportIP string) *Agent {
 
 	mi, _ := magicmime.NewDecoder(magicmime.MAGIC_MIME_TYPE)
 	ipCache := util.NewStringMapCache[bool]("IP cache", time.Hour*2)
@@ -63,10 +65,12 @@ func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, ht
 		httpServers:     httpServers,
 		reportIP:        reportIP,
 		httpClient:      httpClient,
-		statusChan:      make(chan bool),
+		statusLoopChan:  make(chan bool),
+		statusRunChan:   make(chan bool, 10),
 		statusInterval:  statusInterval,
 		contextChan:     make(chan bool),
 		contextInterval: contextInterval,
+		pinger:          pRunner,
 		mimeInstance:    mi,
 		ipCache:         ipCache,
 		p0fRunner:       p0fRunner,
@@ -98,11 +102,14 @@ func (a *Agent) Start() error {
 	go func() {
 		for {
 			select {
-			case <-a.statusChan:
+			case <-a.statusLoopChan:
 				ticker.Stop()
 				slog.Info("Status channel stopped")
 				return
 			case <-ticker.C:
+				a.statusRunChan <- true
+
+			case <-a.statusRunChan:
 				resp, err := a.backendClient.SendStatus(&backend_service.StatusRequest{
 					Ip:            a.reportIP,
 					Version:       constants.LophiidVersion,
@@ -147,7 +154,7 @@ func (a *Agent) Start() error {
 }
 
 func (a *Agent) Stop() {
-	a.statusChan <- true
+	a.statusLoopChan <- true
 	a.contextChan <- true
 }
 
@@ -328,6 +335,32 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 				}
 			}(c.DownloadCmd)
 
+		case *backend_service.Command_PingCmd:
+			go func(dCmd *backend_service.CommandPingAddress) {
+				slog.Info("Ping Command", slog.String("command", fmt.Sprintf("%+v", dCmd)))
+				res, err := a.pinger.Ping(c.PingCmd.Address, c.PingCmd.Count)
+				if err != nil {
+					slog.Error("Error pinging address", slog.String("address", c.PingCmd.Address), slog.String("error", err.Error()))
+					return
+				}
+
+				_, err = a.backendClient.SendPingStatus(&backend_service.SendPingStatusRequest{
+					Address:         c.PingCmd.Address,
+					Count:           c.PingCmd.Count,
+					PacketsSent:     res.PacketsSent,
+					PacketsReceived: res.PacketsReceived,
+					AverageRttMs:    res.AverageRttMs,
+					MinRttMs:        res.MinRttMs,
+					MaxRttMs:        res.MaxRttMs,
+					RequestId:       c.PingCmd.RequestId,
+				})
+
+				if err != nil {
+					slog.Error("Error sending ping status", slog.String("address", c.PingCmd.Address), slog.String("error", err.Error()))
+				}
+
+			}(c.PingCmd)
+
 		case nil:
 			return nil
 		default:
@@ -335,5 +368,8 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 		}
 	}
 
+	// Update the status run chan after the commands were executed so that another
+	// status update is scheduled.
+	a.statusRunChan <- true
 	return nil
 }

@@ -60,6 +60,7 @@ import (
 // User agent to use for downloading.
 const userAgent = "Wget/1.13.4 (linux-gnu)"
 const maxUrlsToExtractForDownload = 15
+const maxPingsToExtract = 5
 
 type ReqQueueEntry struct {
 	req        *models.Request
@@ -84,6 +85,9 @@ type BackendServer struct {
 	downloadQueue   map[string][]backend_service.CommandDownloadFile
 	downloadQueueMu sync.Mutex
 	downloadsCache  *util.StringMapCache[time.Time]
+	pingQueue       map[string][]backend_service.CommandPingAddress
+	pingQueueMu     sync.Mutex
+	pingsCache      *util.StringMapCache[time.Time]
 	metrics         *BackendMetrics
 	rateLimiter     ratelimit.RateLimiter
 	ipEventManager  analysis.IpEventManager
@@ -102,6 +106,8 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	// we get a request with the same download (payload URL) within that time
 	// window then we will not download it again.
 	dCache := util.NewStringMapCache[time.Time]("download_cache", config.Backend.Advanced.DownloadCacheDuration)
+	// Same for the ping cache.
+	pCache := util.NewStringMapCache[time.Time]("ping_cache", config.Backend.Advanced.PingCacheDuration)
 
 	// The honeypot cache is simply to try and reduce the amount of honeypot
 	// queries to the database.
@@ -122,6 +128,8 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		reqsQueue:       make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
 		downloadQueue:   make(map[string][]backend_service.CommandDownloadFile),
 		downloadsCache:  dCache,
+		pingQueue:       make(map[string][]backend_service.CommandPingAddress),
+		pingsCache:      pCache,
 		sessionCache:    sCache,
 		metrics:         metrics,
 		config:          config,
@@ -155,6 +163,27 @@ func (s *BackendServer) ScheduleDownloadOfPayload(honeypotIP string, originalUrl
 		Ip:          targetIP,
 	})
 	s.downloadQueueMu.Unlock()
+	return true
+}
+
+func (s *BackendServer) SchedulePingOfAddress(honeypotIP string, address string, count int64, requestID int64) bool {
+
+	_, err := s.pingsCache.Get(address)
+	if err == nil {
+		slog.Debug("skipping ping as it is in the cache", slog.String("address", address))
+		return false
+	}
+
+	slog.Debug("adding ping address to cache", slog.String("address", address))
+	s.pingsCache.Store(address, time.Now())
+
+	s.pingQueueMu.Lock()
+	s.pingQueue[honeypotIP] = append(s.pingQueue[honeypotIP], backend_service.CommandPingAddress{
+		RequestId: requestID,
+		Address:   address,
+		Count:     count,
+	})
+	s.pingQueueMu.Unlock()
 	return true
 }
 
@@ -321,6 +350,36 @@ func (s *BackendServer) UpdateSessionWithRule(ip string, session *models.Session
 	}
 }
 
+// SendPingStatus is called by the agent to notify the backend about the status
+// of a ping test.
+func (s *BackendServer) SendPingStatus(ctx context.Context, req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error) {
+	hp, ok := auth.GetHoneypotMetadata(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no authentication found")
+	}
+
+	outcome := constants.IpEventSubTypeSuccess
+	if req.GetCount() != req.GetPacketsSent() || req.GetPacketsSent() != req.GetPacketsReceived() {
+		outcome = constants.IpEventSubTypeFailure
+	}
+
+	evt := &models.IpEvent{
+		IP:            req.GetAddress(),
+		Type:          constants.IpEventPing,
+		Subtype:       outcome,
+		Details:       fmt.Sprintf("%d/%d sent/recv - rtt %d/%d/%d avg/min/max", req.GetPacketsSent(), req.GetPacketsReceived(), req.GetAverageRttMs(), req.GetMinRttMs(), req.GetMaxRttMs()),
+		Source:        constants.IpEventSourceAgent,
+		RequestID:     req.GetRequestId(),
+		HoneypotIP:    hp.IP,
+		SourceRefType: constants.IpEventRefTypeNone,
+	}
+
+	slog.Info("ping status", slog.String("ip", req.GetAddress()), slog.String("outcome", outcome), slog.Int64("packets_sent", req.GetPacketsSent()), slog.Int64("packets_received", req.GetPacketsReceived()), slog.Int64("average_rtt", req.GetAverageRttMs()), slog.Int64("min_rtt", req.GetMinRttMs()), slog.Int64("max_rtt", req.GetMaxRttMs()))
+	s.ipEventManager.AddEvent(evt)
+
+	return &backend_service.SendPingStatusResponse{}, nil
+}
+
 // SendStatus receives status information from honeypots and sends commands back
 // in response. This is not authenticated!
 func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
@@ -370,21 +429,39 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	s.downloadQueueMu.Lock()
 	defer s.downloadQueueMu.Unlock()
 	cmds, ok := s.downloadQueue[req.GetIp()]
-	if !ok || len(cmds) == 0 {
-		return &backend_service.StatusResponse{}, nil
+	if ok && len(cmds) > 0 {
+		ret := &backend_service.StatusResponse{}
+		for idx := range cmds {
+			ret.Command = append(ret.Command, &backend_service.Command{
+				Command: &backend_service.Command_DownloadCmd{
+					DownloadCmd: &cmds[idx],
+				},
+			})
+		}
+
+		delete(s.downloadQueue, req.GetIp())
+		return ret, nil
 	}
 
-	ret := &backend_service.StatusResponse{}
-	for idx := range cmds {
-		ret.Command = append(ret.Command, &backend_service.Command{
-			Command: &backend_service.Command_DownloadCmd{
-				DownloadCmd: &cmds[idx],
-			},
-		})
+	// Next check if a ping is desired.
+	s.pingQueueMu.Lock()
+	defer s.pingQueueMu.Unlock()
+	pcmds, ok := s.pingQueue[req.GetIp()]
+	if ok && len(pcmds) > 0 {
+		ret := &backend_service.StatusResponse{}
+		for idx := range pcmds {
+			ret.Command = append(ret.Command, &backend_service.Command{
+				Command: &backend_service.Command_PingCmd{
+					PingCmd: &pcmds[idx],
+				},
+			})
+		}
+
+		delete(s.pingQueue, req.GetIp())
+		return ret, nil
 	}
 
-	delete(s.downloadQueue, req.GetIp())
-	return ret, nil
+	return &backend_service.StatusResponse{}, nil
 }
 
 func (s *BackendServer) SendSourceContext(ctx context.Context, req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error) {
@@ -981,9 +1058,12 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 	}
 
 	downloadsScheduled := 0
+	pingsScheduled := 0
+
 	eCollector.IterateMetadata(dm.ModelID(), func(m *models.RequestMetadata) error {
 
-		if m.Type == constants.ExtractorTypeLink {
+		switch m.Type {
+		case constants.ExtractorTypeLink:
 			if downloadsScheduled <= maxUrlsToExtractForDownload {
 				ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(m.Data)
 				if err != nil {
@@ -994,6 +1074,25 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 				}
 			} else {
 				slog.Warn("skipping download due to excessive links", slog.String("url", m.Data))
+			}
+
+		case constants.ExtractorTypePing:
+
+			if pingsScheduled <= maxPingsToExtract {
+				parts := strings.Split(m.Data, " ")
+				if len(parts) != 2 {
+					slog.Error("invalid ping request", slog.String("data", m.Data))
+				} else {
+					cnt, err := strconv.Atoi(parts[1])
+					if err != nil {
+						slog.Error("invalid ping count", slog.String("data", m.Data))
+						cnt = 3
+					}
+					s.SchedulePingOfAddress(req.HoneypotIP, parts[0], int64(cnt), m.RequestID)
+				}
+
+			} else {
+				slog.Warn("skipping ping due to excessive amount", slog.String("ping", m.Data))
 			}
 		}
 
@@ -1029,6 +1128,7 @@ func (s *BackendServer) Start() error {
 
 				s.sessionCache.CleanExpired()
 				s.downloadsCache.CleanExpired()
+				s.pingsCache.CleanExpired()
 
 				// Reload the rules.
 				cl := len(s.safeRules.Get())

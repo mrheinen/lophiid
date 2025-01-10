@@ -14,15 +14,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.20'
+      - name: Install libmagic
+        run: |
+          sudo apt-get install -y libmagic-dev
 
-    - name: Build
-      run: bazel build //pkg/...
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
 
-    - name: Test
-      run: bazel test //pkg/...
+      - name: Build
+        run: bazel build //pkg/...
+
+      - name: Test
+        run: bazel test //pkg/...

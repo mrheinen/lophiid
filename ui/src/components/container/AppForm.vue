@@ -5,7 +5,7 @@
   </PrimeDialog>
 
 
-  <div>
+  <div v-if="localApp">
     <input type="hidden" name="id" v-model="localApp.id" />
     <div>
     <FieldSet legend="Settings" :toggleable="false">
@@ -65,7 +65,6 @@
         <label class="label">CVEs</label>
         <TextArea
           v-model="cves"
-          autoResize
           rows="4"
           cols="25"
         />
@@ -329,7 +328,6 @@ export default {
     },
   },
   created() {
-    // this.app = this.modelValue;
   },
 };
 </script>

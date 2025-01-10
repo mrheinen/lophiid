@@ -254,10 +254,9 @@ export default {
         });
     },
   },
-  beforeCreate() {
-    this.selectedContent = this.baseContent;
-  },
   created() {
+
+    this.selectedContent = this.baseContent;
     if (this.$route.params.limit) {
       this.limit = parseInt(this.$route.params.limit);
     }
@@ -275,6 +274,7 @@ export default {
     }
   },
   mounted() {
+
 
     if (this.$route.query.q) {
       this.query = this.$route.query.q;

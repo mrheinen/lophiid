@@ -16,7 +16,6 @@
         <label class="label">Description</label>
         <TextArea
           v-model="localContent.description"
-          autoResize
           rows="4"
           cols="40"
         />
@@ -91,7 +90,6 @@
         <label class="label">Custom headers</label>
         <TextArea
           v-model="customHeaders"
-          autoResize
           rows="4"
           cols="40"
         />
@@ -99,7 +97,7 @@
 
       <div v-if="!scriptMode">
         <label class="label">Data</label>
-        <TextArea v-model="localContent.data" autoResize rows="20" cols="70" />
+        <TextArea v-model="localContent.data" rows="20" cols="70" />
       </div>
     </FieldSet>
     <br />
@@ -190,7 +188,7 @@ import { solarizedLight } from "../../../node_modules/thememirror/dist";
 
 export default {
   props: ["content"],
-  emits: ["update-content", "deleted-content"],
+  emits: ["update-content", "deleted-content", "require-auth"],
   inject: ["config"],
   data() {
     return {
@@ -404,9 +402,6 @@ export default {
       }
 
     },
-  },
-  created() {
-    // this.content = this.modelValue;
   },
 };
 </script>

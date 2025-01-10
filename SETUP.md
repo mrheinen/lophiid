@@ -207,6 +207,15 @@ useradd -d /var/empty/lophiid -M -r -s /bin/false lophiid-agent
 Next update the configuration and set 'chroot_dir' to the chroot directory
 and 'user' to the user created with the command above.
 
+## Allow ICMP packets
+
+Use the following command to allow ICMP ping by the agent. The example is a bit
+lazy and allows it to all users. You can pudate the group range with a group ID
+that lophiid-agent belongs to in order to make it more strict.
+```shell
+sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
+```
+
 ## Create the configuration
 
 The configuration options are documented in the [config file](./config/agent-config.yaml).
