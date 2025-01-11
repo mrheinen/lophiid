@@ -1,0 +1,115 @@
+app:
+    id: 152
+    name: DGN1000
+    version: 1.1.00.47
+    vendor: Netgear
+    os: Linux
+    link: https://securityonline.info/cve-2024-12847-cvss-9-8-netgear-router-flaw-exploited-in-the-wild-for-years-poc-published/
+    created_at: 2025-01-11T08:47:29.444345Z
+    updated_at: 2025-01-11T13:47:29.444184Z
+    ext_version: 0
+    ext_uuid: ec8423e1-2a1e-49df-b277-20d6cafead03
+    cves:
+        - CVE-2024-12847
+rules:
+    - id: 629
+      uri: /setup.cgi?
+      body: ""
+      method: ANY
+      port: 0
+      uri_matching: prefix
+      body_matching: none
+      content_id: 624
+      app_id: 152
+      app_uuid: ec8423e1-2a1e-49df-b277-20d6cafead03
+      content_uuid: 1c1736c3-3300-4022-82c9-5bbca2b8be26
+      created_at: 2025-01-11T13:55:13.736128Z
+      updated_at: 2025-01-11T13:55:13.735939Z
+      alert: true
+      enabled: true
+      ext_version: 0
+      ext_uuid: d451c37b-3e22-4f13-8cce-c1819b93869b
+      request_purpose: ATTACK
+      responder: COMMAND_INJECTION
+      responder_regex: cmd=(.*)\&curpath
+      responder_decoder: URI
+    - id: 628
+      uri: /setup.cgi
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 623
+      app_id: 152
+      app_uuid: ec8423e1-2a1e-49df-b277-20d6cafead03
+      content_uuid: 27df4a87-e04a-4500-982e-bdd60c184e4f
+      created_at: 2025-01-11T13:47:45.254826Z
+      updated_at: 2025-01-11T13:47:45.254713Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 0d8c9ef6-49fb-479e-bd3e-53051e6b4743
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 627
+      uri: /
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 622
+      app_id: 152
+      app_uuid: ec8423e1-2a1e-49df-b277-20d6cafead03
+      content_uuid: fd2d33b1-143b-4a9b-b599-79a94f5f6d01
+      created_at: 2025-01-11T13:47:45.146Z
+      updated_at: 2025-01-11T13:47:45.145889Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 80eb05fa-3812-46d3-a9de-642d09863c2a
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 624
+      data: YWRtaW46cGFzc3dvcmQ=
+      name: DGN1000 - /setup.cgi
+      description: Exploit response to be used with prefix rule
+      content_type: text/plain; charset=UTF-8
+      server: Apache
+      status_code: "200"
+      created_at: 2025-01-11T13:51:46.462659Z
+      updated_at: 2025-01-11T13:51:46.462595Z
+      ext_version: 0
+      ext_uuid: 1c1736c3-3300-4022-82c9-5bbca2b8be26
+    - id: 623
+      data: PGh0bWw+CjxoZWFkPgo8TUVUQSBodHRwLWVxdWl2PSJQcmFnbWEiIENPTlRFTlQ9Im5vLWNhY2hlIj4KPE1FVEEgSFRUUC1FUVVJVj0iQ2FjaGUtQ29udHJvbCIgQ09OVEVOVD0ibm8tY2FjaGUiPgkKPG1ldGEgSFRUUC1FUVVJVj0iRXhwaXJlcyIgQ09OVEVOVD0iTW9uLCAwNiBKYW4gMTk5MCAwMDowMDowMSBHTVQiPiAKCgo8bWV0YSBuYW1lPSJkZXNjcmlwdGlvbiIgY29udGVudD0iREc4MzROIDEwNDkiPgo8bWV0YSBodHRwLWVxdWl2PSJjb250ZW50LXR5cGUiIGNvbnRlbnQ9InRleHQvaHRtbDtjaGFyc2V0PUlTTy04ODU5LTEiPgoKCQogCgoKCgoKCjx0aXRsZT4gQXV0aG9yaXphdGlvbiB3YXJuaW5nPC90aXRsZT4KPC9oZWFkPgoKPGJvZHkgYmdjb2xvcj0iI2ZmZmZmZiI+CjxwPjxmb250IHNpemU9NCBjb2xvcj0iIzAwOTljYyIgZmFjZT0nQXJpYWwsSGVsdmV0aWNhLEdlbmV2YSxTd2lzcyxTdW5TYW5zLVJlZ3VsYXIsc2Fucy1zZXJpZic+V2FybmluZzwvZm9udD48L3A+Cgo8aHIgY29sb3I9IiMwMDk5Y2MiPgoKPHAgYWxpZ249ImNlbnRlciI+PGI+PGZvbnQgc2l6ZT0zIGZhY2U9J0FyaWFsLEhlbHZldGljYSxHZW5ldmEsU3dpc3MsU3VuU2Fucy1SZWd1bGFyLHNhbnMtc2VyaWYnPlN5c3RlbSBBdXRoZW50aWNhdGlvbiBGYWlsZWQuPC9mb250PjwvYj48L3A+Cgo8cCBhbGlnbj0iY2VudGVyIj48QlI+PGZvbnQgc2l6ZT0tMSBmYWNlPSdBcmlhbCxIZWx2ZXRpY2EsR2VuZXZhLFN3aXNzLFN1blNhbnMtUmVndWxhcixzYW5zLXNlcmlmJz4KUGxlYXNlIGNvbnRhY3QgeW91ciBzeXN0ZW0gYWRtaW5pc3RyYXRvciBmb3IgdGhlIGNvcnJlY3QgaW5mb3JtYXRpb24uPC9mb250PjwvcD4KCjwvYm9keT4KPC9odG1sPgo8L0JPRFk+CjwvSFRNTD4K
+      name: DGN1000 - /setup.cgi
+      description: ""
+      content_type: text/html
+      server: Apache
+      status_code: "401"
+      headers:
+        - 'Www-Authenticate: Basic realm="NETGEAR DGN1000 "'
+      created_at: 2025-01-11T13:47:45.251244Z
+      updated_at: 2025-01-11T13:48:00.820334Z
+      ext_version: 0
+      ext_uuid: 27df4a87-e04a-4500-982e-bdd60c184e4f
+    - id: 622
+      data: PGh0bWw+CjxoZWFkPgo8TUVUQSBodHRwLWVxdWl2PSJQcmFnbWEiIENPTlRFTlQ9Im5vLWNhY2hlIj4KPE1FVEEgSFRUUC1FUVVJVj0iQ2FjaGUtQ29udHJvbCIgQ09OVEVOVD0ibm8tY2FjaGUiPgkKPG1ldGEgSFRUUC1FUVVJVj0iRXhwaXJlcyIgQ09OVEVOVD0iTW9uLCAwNiBKYW4gMTk5MCAwMDowMDowMSBHTVQiPiAKCgo8bWV0YSBuYW1lPSJkZXNjcmlwdGlvbiIgY29udGVudD0iREc4MzROIDEwNDkiPgo8bWV0YSBodHRwLWVxdWl2PSJjb250ZW50LXR5cGUiIGNvbnRlbnQ9InRleHQvaHRtbDtjaGFyc2V0PUlTTy04ODU5LTEiPgoKCQogCgoKCgoKCjx0aXRsZT4gQXV0aG9yaXphdGlvbiB3YXJuaW5nPC90aXRsZT4KPC9oZWFkPgoKPGJvZHkgYmdjb2xvcj0iI2ZmZmZmZiI+CjxwPjxmb250IHNpemU9NCBjb2xvcj0iIzAwOTljYyIgZmFjZT0nQXJpYWwsSGVsdmV0aWNhLEdlbmV2YSxTd2lzcyxTdW5TYW5zLVJlZ3VsYXIsc2Fucy1zZXJpZic+V2FybmluZzwvZm9udD48L3A+Cgo8aHIgY29sb3I9IiMwMDk5Y2MiPgoKPHAgYWxpZ249ImNlbnRlciI+PGI+PGZvbnQgc2l6ZT0zIGZhY2U9J0FyaWFsLEhlbHZldGljYSxHZW5ldmEsU3dpc3MsU3VuU2Fucy1SZWd1bGFyLHNhbnMtc2VyaWYnPlN5c3RlbSBBdXRoZW50aWNhdGlvbiBGYWlsZWQuPC9mb250PjwvYj48L3A+Cgo8cCBhbGlnbj0iY2VudGVyIj48QlI+PGZvbnQgc2l6ZT0tMSBmYWNlPSdBcmlhbCxIZWx2ZXRpY2EsR2VuZXZhLFN3aXNzLFN1blNhbnMtUmVndWxhcixzYW5zLXNlcmlmJz4KUGxlYXNlIGNvbnRhY3QgeW91ciBzeXN0ZW0gYWRtaW5pc3RyYXRvciBmb3IgdGhlIGNvcnJlY3QgaW5mb3JtYXRpb24uPC9mb250PjwvcD4KCjwvYm9keT4KPC9odG1sPgo8L0JPRFk+CjwvSFRNTD4K
+      name: DGN1000 - /
+      description: ""
+      content_type: text/html
+      server: Apache
+      status_code: "401"
+      headers:
+        - 'Www-Authenticate: Basic realm="NETGEAR DGN1000 "'
+      created_at: 2025-01-11T13:47:45.137994Z
+      updated_at: 2025-01-11T13:48:16.736335Z
+      ext_version: 0
+      ext_uuid: fd2d33b1-143b-4a9b-b599-79a94f5f6d01
