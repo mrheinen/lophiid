@@ -22,6 +22,7 @@ import (
 	"lophiid/pkg/api"
 	"lophiid/pkg/database/models"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -49,7 +50,7 @@ func TestFetchUrlToContent(t *testing.T) {
 	testExtraHeaderName := "X-Secret"
 	testIgnoredHeaderName := "Date"
 	httpResponseBody := "this is patrick"
-	testTargetUrl := "http://example.org/aaa"
+	testTargetUrl := "http://google.com/aaa"
 	testPrefix := "PREFIX"
 
 	client := NewTestClient(func(req *http.Request) *http.Response {
@@ -80,6 +81,14 @@ func TestFetchUrlToContent(t *testing.T) {
 
 	if content.Server != testServerHeader {
 		t.Errorf("expected server %s, got %s", testServerHeader, content.Server)
+	}
+
+	if strings.Contains(content.Description, "google.com") {
+		t.Errorf("expected no reference to google.com in description")
+	}
+
+	if !strings.Contains(content.Description, "example.com") {
+		t.Errorf("expected reference to example.com in description")
 	}
 
 	if len(content.Headers) != 1 {
