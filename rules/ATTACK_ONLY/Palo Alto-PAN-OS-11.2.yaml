@@ -1,0 +1,47 @@
+app:
+    id: 147
+    name: PAN-OS
+    version: "11.2"
+    vendor: Palo Alto
+    os: ""
+    link: https://labs.watchtowr.com/pots-and-pans-aka-an-sslvpn-palo-alto-pan-os-cve-2024-0012-and-cve-2024-9474/
+    created_at: 2024-12-11T06:14:04.758356Z
+    updated_at: 2024-12-11T11:14:04.758227Z
+    ext_version: 0
+    ext_uuid: 5d0cc2db-0e27-4956-94cb-1784c3d8cc2b
+    cves:
+        - CVE-2024-0012
+        - CVE-2024-9474
+rules:
+    - id: 574
+      uri: /php/utils/createRemoteAppwebSession.php
+      body: ""
+      method: POST
+      port: 0
+      uri_matching: prefix
+      body_matching: none
+      content_id: 650
+      app_id: 147
+      app_uuid: 5d0cc2db-0e27-4956-94cb-1784c3d8cc2b
+      content_uuid: 15d509d8-40da-43f4-9046-74bfcec50adc
+      created_at: 2024-12-11T11:14:20.477811Z
+      updated_at: 2025-01-12T15:58:49.071492Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 816217af-dbd3-4568-b123-03840f8d3232
+      request_purpose: ATTACK
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 650
+      name: Empty reply content, 200 status
+      description: This is for an empty reply with 200 status
+      content_type: text/html; charset=UTF-8
+      server: Apache/2.4.52
+      status_code: "200"
+      created_at: 2025-01-12T15:58:05.674066Z
+      updated_at: 2025-01-12T15:58:05.673955Z
+      ext_version: 0
+      ext_uuid: 15d509d8-40da-43f4-9046-74bfcec50adc
