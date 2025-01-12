@@ -164,9 +164,16 @@ func (a *ApiCLI) FetchUrlToContent(namePrefix string, targetUrl string) (models.
 		return retContent, fmt.Errorf("error reading response: %w", err)
 	}
 
+	parsedURL, err := url.Parse(targetUrl)
+	if err != nil {
+		return retContent, fmt.Errorf("error parsing url: %w", err)
+	}
+
+	parsedURL.Host = "example.com"
+
 	retContent.Data = respBytes
 	retContent.StatusCode = fmt.Sprintf("%d", resp.StatusCode)
-	retContent.Description = fmt.Sprintf("Fetched from URL: %s", targetUrl)
+	retContent.Description = fmt.Sprintf("Fetched from URL: %s", parsedURL.String())
 	retContent.Name = fmt.Sprintf("%s - %s", namePrefix, req.URL.Path)
 
 	for name, value := range resp.Header {
