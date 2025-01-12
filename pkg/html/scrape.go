@@ -42,6 +42,7 @@ func ExtractResourceLinks(baseUrl string, htmlContent string) []string {
 		"audio":  {"src"},    // Audio sources
 		"input":  {"src"},    // Input element sources
 		"iframe": {"src"},    // Embedded content
+		"frame": {"src"},     // Embedded content
 	}
 
 	doc, err := html.Parse(strings.NewReader(htmlContent))
