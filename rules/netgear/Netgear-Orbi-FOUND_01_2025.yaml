@@ -1,0 +1,91 @@
+app:
+    id: 153
+    name: Orbi
+    version: FOUND:01/2025
+    vendor: Netgear
+    os: Linux
+    link: https://www.netgear.com/home/wifi/mesh/orbi/
+    created_at: 2025-01-12T07:59:31.601748Z
+    updated_at: 2025-01-12T13:00:44.585462Z
+    ext_version: 0
+    ext_uuid: 4a195b86-c988-413c-b469-c3f5fb876013
+    cves: []
+rules:
+    - id: 631
+      uri: /unauth.cgi
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 626
+      app_id: 153
+      app_uuid: 4a195b86-c988-413c-b469-c3f5fb876013
+      content_uuid: 6792597b-ebef-4bc4-a7df-3afa3e163598
+      created_at: 2025-01-12T12:59:46.866384Z
+      updated_at: 2025-01-12T12:59:46.866298Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 15242d03-6d20-45ea-b981-2e42369eabcc
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 630
+      uri: /
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 625
+      app_id: 153
+      app_uuid: 4a195b86-c988-413c-b469-c3f5fb876013
+      content_uuid: 4e8ae7a6-15b1-4082-b7ba-b91575192310
+      created_at: 2025-01-12T12:59:45.368866Z
+      updated_at: 2025-01-12T12:59:45.368693Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 2419ff65-b7b8-4adc-bde5-d40e1cbe1482
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 626
+      data: PGh0bWw+PGhlYWQ+PGxpbmsgcmVsPSJzdHlsZXNoZWV0IiBocmVmPSIvc3R5bGUvZm9ybS5jc3MiPgo8dGl0bGU+IDQwMSBBdXRob3JpemF0aW9uPC90aXRsZT4KPG1ldGEgaHR0cC1lcXVpdj0nY29udGVudC10eXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7IGNoYXJzZXQ9VVRGLTgnPgo8c2NyaXB0PgpmdW5jdGlvbiBsb2FkdmFsdWUoKQp7CiAgICAgICAgdmFyIGVuYWJsZV9yZWNvdmVyeT0iIjsKICAgICAgICB2YXIgZW50ZXJfc25fYWdhaW49IjAiOwogICAgICAgIGlmKCBlbmFibGVfcmVjb3ZlcnkgPT0gIjEiICkKICAgICAgICB7CiAgICAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgicmVjb3ZlcnkiKS5zdHlsZS5kaXNwbGF5PSIiOwogICAgICAgICAgICAgICAgaWYoIGVudGVyX3NuX2FnYWluID09ICIxIiApCgkJIHsKICAgICAgICAgICAgICAgICAgICAgICAgYWxlcnQoIlRoZSBpbmZvcm1hdGlvbiB5b3UgZW50ZXJlZCBkb2VzIG5vdCBtYXRjaCB3aGF0IGlzIHNhdmVkIG9uIHRoZSByb3V0ZXIuIFBsZWFzZSBlbnRlciBpdCBhZ2Fpbi4iKTsKCQkgfQogICAgICAgICAgICAgICAgZWxzZQogICAgICAgICAgICAgICAgICAgICAgICBkb2N1bWVudC5mb3Jtc1swXS5zZXJpYWxfbnVtLnZhbHVlPSIiOwogICAgICAgIH0KICAgICAgICBlbHNlCiAgICAgICAgewogICAgICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoInJlY292ZXJ5Iikuc3R5bGUuZGlzcGxheT0ibm9uZSI7CiAgICAgICAgfQp9CmZ1bmN0aW9uIGdldGtleSh0eXBlLCBlKQp7Cgl2YXIga2V5Y29kZSwgZXZlbnQ7CglpZiAod2luZG93LmV2ZW50KQoJewoJCWV2ZW50ID0gd2luZG93LmV2ZW50OwoJCWtleWNvZGUgPSB3aW5kb3cuZXZlbnQua2V5Q29kZTsKCX0KCWVsc2UgaWYgKGUpCgl7CgkJZXZlbnQgPSBlOwoJCWtleWNvZGUgPSBlLndoaWNoOwoJfQoJZWxzZSByZXR1cm4gdHJ1ZTsKCglpZihldmVudC5jdHJsS2V5ICYmICgga2V5Y29kZT09OTkgfHwga2V5Y29kZT09MTE4IHx8IGtleWNvZGU9PTEyMCkgKQoJCXJldHVybiB0cnVlOwoJaWYodHlwZSA9PSAibnVtX2xldHRlciIpewoJCWlmKChrZXljb2RlPjQ3ICYmIGtleWNvZGU8NTgpfHwoa2V5Y29kZT42NCAmJiBrZXljb2RlPDkxKXx8KGtleWNvZGU+OTYgJiYga2V5Y29kZTwxMjMpfHwoa2V5Y29kZT09OCl8fChrZXljb2RlPT0wKSkKCQkJcmV0dXJuIHRydWU7CgkJZWxzZQoJCQlyZXR1cm4gZmFsc2U7Cgl9Cn0KPC9zY3JpcHQ+CjwvaGVhZD4KPGJvZHkgb25Mb2FkPSJsb2FkdmFsdWUoKSI+PGgxPiA0MDEgVW5hdXRob3JpemVkPC9oMT4KQWNjZXNzIHRvIHRoaXMgcmVzb3VyY2UgaXMgZGVuaWVkLCB5b3VyIGNsaWVudCBoYXMgbm90IHN1cHBsaWVkIHRoZSBjb3JyZWN0IGF1dGhlbnRpY2F0aW9uLgoKPGRpdiBpZD0icmVjb3ZlcnkiIHN0eWxlPSJkaXNwbGF5OiBub25lIj4KPGZvcm0gbWV0aG9kPSJwb3N0IiBhY3Rpb249Ii9yZWNvdmVyLmNnaT8vdW5hdXRoLmNnaSB0aW1lc3RhbXA9OTg0NTg1ODE3NDQ1MTYiPgo8cD5XZSBjYW4gaGVscCB5b3UgcmVzZXQgeW91ciByb3V0ZXIncyBhZG1pbiBwYXNzd29yZC4gWW91IG5lZWQgeW91ciByb3V0ZXIncyBzZXJpYWwgbnVtYmVyLCB3aGljaCBjYW4gYmUgZm91bmQgb24gdGhlIHJvdXRlciBsYWJlbC4gRW50ZXIgeW91ciByb3V0ZXIncyBzZXJpYWwgbnVtYmVyIGluIHRoZSBmaWVsZCBhbmQgY2xpY2sgdGhlIDxiPkNvbnRpbnVlPC9iPiBidXR0b24uPC9wPgo8aW5wdXQgdHlwZT0iaGlkZGVuIiBuYW1lPSJzdWJtaXRfZmxhZyIgdmFsdWU9Im1hdGNoX3NuIj4KPHA+RW50ZXIgdGhlIHJvdXRlcidzIFNlcmlhbCBOdW1iZXI6IDxpbnB1dCB0eXBlPSJ0ZXh0IiBzaXplPSIxMyIgbWF4bGVuZ3RoPSIxMyIgYXV0b2NvbXBsZXRlPSJvZmYiIG9uS2V5UHJlc3M9InJldHVybiBnZXRrZXkoJ251bV9sZXR0ZXInLCBldmVudCk7IiBuYW1lPSJzZXJpYWxfbnVtIiB2YWx1ZT0iIj48YnIvPgooWW91IGNhbiBmaW5kIGl0IG9uIHRoZSByb3V0ZXIgcHJvZHVjdCBsYWJlbC4pPC9wPgo8cD48aW5wdXQgY2xhc3M9ImNhbmNlbF9idCIgdHlwZT0ncmVzZXQnIG5hbWU9IkNhbmNlbCIgdmFsdWU9JyBDYW5jZWwgJyBvbkNsaWNrPSdsb2NhdGlvbi5ocmVmPSJ1bmF1dGguY2dpIjsnPiZuYnNwOyZuYnNwOwo8aW5wdXQgY2xhc3M9ImFwcGx5X2J0IiB0eXBlPSJzdWJtaXQiIG5hbWU9ImNvbnRpbnVlIiB2YWx1ZT0iIENvbnRpbnVlICI+PC9wPjwvZm9ybT4KPC9kaXY+CjwvYm9keT48L2h0bWw+Cg==
+      name: Orbi - /unauth.cgi
+      description: 'Fetched from URL: http://example.com/unauth.cgi'
+      content_type: text/html; charset="UTF-8"
+      server: uhttpd/1.0.0
+      status_code: "200"
+      headers:
+        - 'Cache-Control: no-cache,no-store'
+        - 'Pragma: no-cache'
+        - 'X-Content-Type-Options: nosniff'
+        - 'X-Frame-Options: SAMEORIGIN'
+        - 'Content-Security-Policy: default-src *; img-src * data:; style-src ''self'' ''unsafe-inline''; script-src ''self'' ''unsafe-inline'' ''unsafe-eval'' www.googletagmanager.com www.google-analytics.com'
+        - 'X-Xss-Protection: 1'
+        - 'Content-Length: 2269'
+      created_at: 2025-01-12T12:59:46.85813Z
+      updated_at: 2025-01-12T12:59:46.858002Z
+      ext_version: 0
+      ext_uuid: 6792597b-ebef-4bc4-a7df-3afa3e163598
+    - id: 625
+      data: PGh0bWw+PGhlYWQ+PG1ldGEgaHR0cC1lcXVpdj0nUHJhZ21hJyBjb250ZW50PSduby1jYWNoZSc+PG1ldGEgaHR0cC1lcXVpdj0nQ2FjaGUtQ29udHJvbCcgY29udGVudD0nbm8tY2FjaGUsbm8tc3RvcmUnPjx0aXRsZT4gNDAxIEF1dGhvcml6YXRpb248L3RpdGxlPgo8c2NyaXB0IGxhbmd1YWdlPSJqYXZhc2NyaXB0IiB0eXBlPSJ0ZXh0L2phdmFzY3JpcHQiPgpmdW5jdGlvbiBjYW5jZWxldmVudCgpCnsKCXRvcC5sb2NhdGlvbi5ocmVmPScvdW5hdXRoLmNnaSc7Cn0KPC9zY3JpcHQ+CjwvaGVhZD48Ym9keSBvbmxvYWQ9Y2FuY2VsZXZlbnQoKT48L2JvZHk+PC9odG1sPg==
+      name: Orbi - /
+      description: 'Fetched from URL: http://example.com/'
+      content_type: text/html; charset="UTF-8"
+      server: uhttpd/1.0.0
+      status_code: "401"
+      headers:
+        - 'Www-Authenticate: Basic realm="NETGEAR Orbi"'
+        - 'Content-Length: 325'
+        - 'Content-Security-Policy: default-src *; img-src * data:; style-src ''self'' ''unsafe-inline''; script-src ''self'' ''unsafe-inline'' ''unsafe-eval'' www.googletagmanager.com www.google-analytics.com'
+        - 'Set-Cookie: auth_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOiIxMzM4MzgxMyIsImlzcyI6Ind3dy5uZXRnZWFyLmNvbSIsInN1YiI6Ik1vemlsbGEvNS4wIChYMTE7IExpbnV4IHg4Nl82NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLw==.c043d9e19b78b227ccca21b64cddc4799aeb385b03a1ecb8a22a5cb315c1e029; Path=/; HttpOnly;'
+      created_at: 2025-01-12T12:59:45.360759Z
+      updated_at: 2025-01-12T12:59:45.360629Z
+      ext_version: 0
+      ext_uuid: 4e8ae7a6-15b1-4082-b7ba-b91575192310
