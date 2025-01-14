@@ -33,6 +33,7 @@ CREATE TYPE RESPONDER_TYPE AS ENUM ('NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_IN
 CREATE TYPE RESPONDER_DECODER_TYPE AS ENUM ('NONE', 'URI', 'HTML');
 CREATE TYPE REVIEW_STATUS_TYPE AS ENUM ('UNREVIEWED', 'REVIEWED_OK', 'REVIEWED_NOK');
 CREATE TYPE TRIAGE_STATUS_TYPE AS ENUM ('UNKNOWN', 'PENDING', 'DONE', 'FAILED');
+CREATE TYPE IOC_SOURCE_TYPE AS ENUM ('UNKNOWN', 'ABUSE');
 
 CREATE TABLE request (
   id              SERIAL PRIMARY KEY,
@@ -233,6 +234,21 @@ CREATE TABLE p0f_result (
   link_type                 VARCHAR(32),
   created_at                TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at                TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+);
+
+CREATE TABLE ioc (
+ ID                      SERIAL PRIMARY KEY,
+ Source                  IOC_SOURCE_TYPE default 'UNKNOWN',
+ ThreadType              VARCHAR(128),
+ ThreadTypeDescription   VARCHAR(8192),
+ IOCType                 VARCHAR(128),
+ IOCTypeDescription      VARCHAR(8192),
+ Malware                 VARCHAR(128),
+ MalwarePrintable        VARCHAR(128),
+ MalpediaUrl              VARCHAR(2048),
+ AbuseConfidenceLevel    INT default 0,
+ AbuseID                 VARCHAR(64),
+ AbuseReporter           VARCHAR(512)
 );
 
 CREATE TABLE stored_query (

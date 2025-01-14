@@ -8,6 +8,7 @@ go_library(
         "content_rule.go",
         "download.go",
         "honeypot.go",
+        "ioc.go",
         "ip_event.go",
         "models.go",
         "p0f_result.go",
