@@ -1,0 +1,48 @@
+app:
+    id: 160
+    name: R600VPN
+    version: FOUND:01/2025
+    vendor: TP-Link
+    os: Linux
+    link: https://www.tp-link.com/us/business-networking/vpn-router/tl-r600vpn/
+    created_at: 2025-01-14T08:55:03.895202Z
+    updated_at: 2025-01-14T13:57:38.460593Z
+    ext_version: 0
+    ext_uuid: 536461c1-80e7-4dbc-8a97-79ea1fb66596
+    cves: []
+rules:
+    - id: 694
+      uri: /
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 690
+      app_id: 160
+      app_uuid: 536461c1-80e7-4dbc-8a97-79ea1fb66596
+      content_uuid: c63a3cb5-53c3-4e92-a9d9-2745e57cf178
+      created_at: 2025-01-14T13:55:20.523032Z
+      updated_at: 2025-01-14T13:55:20.522856Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 53bf7d24-87e4-43e8-9029-d2a7efe95c51
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 690
+      data: PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9XM0MvL0RURCBIVE1MIDQuMDEgVHJhbnNpdGlvbmFsLy9FTiIgDQogICJodHRwOi8vd3d3LnczLm9yZy9UUi9odG1sNC9sb29zZS5kdGQiPg0KPEhUTUw+DQo8SEVBRD4NCjxUSVRMRT5Mb2dpbiBJbmNvcnJlY3Q8L1RJVExFPg0KPE1FVEEgaHR0cC1lcXVpdj0iQ29udGVudC1UeXBlIiBjb250ZW50PSJ0ZXh0L2h0bWw7IGNoYXJzZXQ9aXNvLTg4NTktMSI+DQo8U1RZTEUgdHlwZT0idGV4dC9jc3MiPg0KYm9keSwgcCB7DQoJZm9udC1mYW1pbHk6QXJpYWw7DQoJZm9udC1zaXplOjE0cHg7DQoJbGluZS1oZWlnaHQ6MTgwJTsNCgl0ZXh0LWFsaWduOmxlZnQ7DQp9DQpoMSB7DQoJdGV4dC1hbGlnbjpsZWZ0Ow0KCWZvbnQtc2l6ZTozMHB4Ow0KCWxpbmUtaGVpZ2h0Om5vcm1hbDsNCgljb2xvcjojMDA2OEIxDQp9DQojZXJyb3Jib2R5IHsNCgl3aWR0aDo2MjBweDsNCglkaXNwbGF5OmJsb2NrOw0KCXBhZGRpbmctdG9wOjVlbQ0KfQ0KPC9TVFlMRT4NCjwvSEVBRD4NCjxCT0RZPg0KPERJViBhbGlnbj0iY2VudGVyIj4NCiAgPERJViBpZD0iZXJyb3Jib2R5Ij4NCiAgICA8SDE+VXNlcm5hbWUgb3IgUGFzc3dvcmQgaXMgaW5jb3JyZWN0LjxCUj4NCiAgICAgIFBsZWFzZSByZWZlciB0byB0aGUgdHJvdWJsZXNob290aW5nIGJlbG93OjwvSDE+DQogICAgPEJSPg0KICAgIDxQPiA8Qj48Rk9OVCBzaXplPSI0Ij5JcyB0aGUgJnF1b3Q7Q2FwcyBMb2NrJnF1b3Q7IGVuYWJsZWQgb24geW91ciBrZXlib2FyZD88L0ZPTlQ+PC9CPiA8QlI+DQogICAgICBUaGUgdXNlcm5hbWUgYW5kIHBhc3N3b3JkIG11c3QgYmUgbG93ZXJjYXNlLCBwbGVhc2UgZW5zdXJlIHRoYXQgdGhlICZxdW90O0NhcHMgTG9jayZxdW90OyBMRUQgaXMgZGlzYWJsZWQgb24geW91ciBrZXlib2FyZCBhbmQgdHJ5IGFnYWluLjwvUD4NCiAgICA8UD48Qj48Rk9OVCBzaXplPSI0Ij5Gb3Jnb3QgeW91ciB1c2VybmFtZSBvciBwYXNzd29yZD88L0ZPTlQ+PC9CPjxCUj4NCiAgICAgIFBsZWFzZSByZXNldCB0aGUgZGV2aWNlIHRvIHRoZSBmYWN0b3J5IGRlZmF1bHQgc2V0dGluZ3MgaWYgeW91IGhhdmUgZm9yZ290dGVuIHlvdXIgdXNlcm5hbWUgb3IgcGFzc3dvcmQuIFRoZSBkZWZhdWx0IHVzZXJuYW1lIGFuZCBwYXNzd29yZCBhcmUgYm90aCBzZXQgYXMgPEI+JnF1b3Q7YWRtaW4mcXVvdDs8L0I+LjxCUj4NCiAgICAgIDxCPjxGT05UIGNvbG9yPSNlZTAwMDA+Tm90ZTogVGhlIHNldHRpbmdzIHdpbGwgYmUgcmVzdG9yZWQgdG8gZmFjdG9yeSBkZWZhdWx0IGFmdGVyIHRoZSByZXNldHRpbmcuPC9GT05UPjwvQj48L1A+DQogICAgPFA+PEI+PEZPTlQgc2l6ZT0iNCI+SG93IHRvIHJlc3RvcmUgdGhlIGRldmljZSB0byB0aGUgZmFjdG9yeSBkZWZhdWx0IHNldHRpbmdzPzwvRk9OVD48L0I+PEJSPg0KICAgICAgRmlyc3RseSBsb2NhdGUgdGhlIHJlc2V0IGJ1dHRvbiBvbiB0aGUgcmVhciBwYW5lbCBvZiB0aGUgdW5pdCwgd2hpbHN0IHRoZSBkZXZpY2UgaXMgcG93ZXJlZCBvbiBwcmVzcyBhbmQgaG9sZCB0aGUgPEI+cmVzZXQ8L0I+IGJ1dHRvbiBmb3IgbW9yZSB0aGFuIDUgc2Vjb25kcywgdGhlIGRldmljZSB3aWxsIHRoZW4gcmVib290IGFuZCByZXN0b3JlIGl0c2VsZiB0byB0aGUgZmFjdG9yeSBkZWZhdWx0IHNldHRpbmdzLiA8L1A+DQogIDwvRElWPg0KPC9ESVY+DQo8L0JPRFk+DQo8L0hUTUw+
+      name: R600VPN - /
+      description: 'Fetched from URL: http://example.com/'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "401"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-LINK Gigabit Broadband VPN Router R600VPN"'
+      created_at: 2025-01-14T13:55:20.514073Z
+      updated_at: 2025-01-14T13:55:20.513908Z
+      ext_version: 0
+      ext_uuid: c63a3cb5-53c3-4e92-a9d9-2745e57cf178
