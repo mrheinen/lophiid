@@ -1,0 +1,295 @@
+app:
+    id: 159
+    name: Sentry
+    version: 9.20.0
+    vendor: Ivanti
+    os: unknown
+    link: https://www.ivanti.com/products/secure-connectivity/sentry
+    created_at: 2025-01-14T08:31:44.089833Z
+    updated_at: 2025-01-14T13:31:51.263063Z
+    ext_version: 0
+    ext_uuid: 57b03df0-7474-4b91-abca-c86f4f17451d
+    cves: []
+rules:
+    - id: 693
+      uri: /mics/login.jsp?login_error=1
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 689
+      app_id: 159
+      app_uuid: 57b03df0-7474-4b91-abca-c86f4f17451d
+      content_uuid: bd92dab8-a533-4c44-be97-6ceacbf7c1b4
+      created_at: 2025-01-14T13:33:06.442067Z
+      updated_at: 2025-01-14T13:33:06.442004Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: f891a45b-8f5e-4324-b7ef-f043c20cbcbf
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 692
+      uri: /favicon.ico
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 688
+      app_id: 159
+      app_uuid: 57b03df0-7474-4b91-abca-c86f4f17451d
+      content_uuid: ab4cab3b-b6f6-4500-8682-db5ffaffe869
+      created_at: 2025-01-14T13:33:06.347378Z
+      updated_at: 2025-01-14T13:33:06.34724Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 382af6ba-8743-48b5-b05a-242ea8fcc925
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 691
+      uri: /mics/images/sentry-ivanti-logo-178x32.png
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 687
+      app_id: 159
+      app_uuid: 57b03df0-7474-4b91-abca-c86f4f17451d
+      content_uuid: fa17cf26-f26c-47f4-a693-35894e2a4d98
+      created_at: 2025-01-14T13:33:06.257612Z
+      updated_at: 2025-01-14T13:33:06.25759Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: b4a75a57-7049-4b1d-8782-32e6d4515cf0
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 690
+      uri: //mics/css/login.css?9.20.0
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 686
+      app_id: 159
+      app_uuid: 57b03df0-7474-4b91-abca-c86f4f17451d
+      content_uuid: 0ef8c20a-2875-46fd-8f87-717d8a8a71cd
+      created_at: 2025-01-14T13:33:06.167945Z
+      updated_at: 2025-01-14T13:33:06.167787Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: bb6f86b6-bc6a-4d51-93d0-4865775bf965
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 689
+      uri: /
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 685
+      app_id: 159
+      app_uuid: 57b03df0-7474-4b91-abca-c86f4f17451d
+      content_uuid: 274503ee-a011-4bd9-bf57-4b2c30d384b5
+      created_at: 2025-01-14T13:33:06.08667Z
+      updated_at: 2025-01-14T13:33:06.086565Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: e4dbbf5e-ec20-4dd4-8f2b-330f508576c0
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 688
+      uri: /mics/
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 684
+      app_id: 159
+      app_uuid: 57b03df0-7474-4b91-abca-c86f4f17451d
+      content_uuid: bb5af78b-ad03-4b88-8011-85d735887727
+      created_at: 2025-01-14T13:33:05.996861Z
+      updated_at: 2025-01-14T13:33:05.996702Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 44bdac23-cd68-47da-889d-0d98d5c0bec6
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 687
+      uri: /mics/login.jsp
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 683
+      app_id: 159
+      app_uuid: 57b03df0-7474-4b91-abca-c86f4f17451d
+      content_uuid: 64858a1d-31cb-40bb-8714-9b3274917653
+      created_at: 2025-01-14T13:33:05.905284Z
+      updated_at: 2025-01-14T13:33:05.905225Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 93ad0ed4-c2d1-4fb8-a412-b1036baa54dd
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 686
+      data: QGNoYXJzZXQgIlVURi04IjsKCi8qKioqKioKICogQ1NTIGZpbGUgZm9yIFN5c3RlbSBNYW5hZ2VyIExvZ2luIFNjcmVlbgogKioqKioqLwoKLyogUmVzZXQgKi8KewoJbWFyZ2luOiAwOwoJcGFkZGluZzogMDsKCWJvcmRlcjogMDsKfQovKiBWaWV3cG9ydCAqLwpodG1sLCBib2R5IHsKCWhlaWdodDogMTAwJTsKCW92ZWZsb3c6IGhpZGRlbjsKfQpib2R5IHsKCXdpZHRoOiAxMDAlOwoJbWluLXdpZHRoOiAzNzVweDsKCWZvbnQtZmFtaWx5OiBBcmlhbCxWZXJkYW5hLEhlbHZldGljYSxzYW5zLXNlcmlmOwoJY29sb3I6ICMzMzMzMzM7CgliYWNrZ3JvdW5kOiAjMTcyMDJCOyAvKiBPbGQgYnJvd3NlcnMgKi8KCWJhY2tncm91bmQ6IC1tb3otbGluZWFyLWdyYWRpZW50KHRvcCwgIzI1MmUzZCAwJSwgIzI1MmUzZCAxNSUsICMzYzQ0NTIgMzUlLCAjNGE1NDY2IDUwJSwgIzNjNDQ1MiA2NSUsICMyNTJlM2QgODUlLCAjMjUyZTNkIDEwMCUpOyAvKiBGRjMuNisgKi8KCWJhY2tncm91bmQ6IC13ZWJraXQtZ3JhZGllbnQobGluZWFyLCBsZWZ0IHRvcCwgbGVmdCBib3R0b20sIGNvbG9yLXN0b3AoMCUsIzI1MmUzZCksIGNvbG9yLXN0b3AoMTUlLCMyNTJlM2QpLCBjb2xvci1zdG9wKDM1JSwjM2M0NDUyKSwgY29sb3Itc3RvcCg1MCUsIzRhNTQ2NiksIGNvbG9yLXN0b3AoNjUlLCMzYzQ0NTIpLCBjb2xvci1zdG9wKDg1JSwjMjUyZTNkKSwgY29sb3Itc3RvcCgxMDAlLCMyNTJlM2QpKTsgLyogQ2hyb21lLFNhZmFyaTQrICovCgliYWNrZ3JvdW5kOiAtd2Via2l0LWxpbmVhci1ncmFkaWVudCh0b3AsICMyNTJlM2QgMCUsIzI1MmUzZCAxNSUsIzNjNDQ1MiAzNSUsIzRhNTQ2NiA1MCUsIzNjNDQ1MiA2NSUsIzI1MmUzZCA4NSUsIzI1MmUzZCAxMDAlKTsgLyogQ2hyb21lMTArLFNhZmFyaTUuMSsgKi8KCWJhY2tncm91bmQ6IC1vLWxpbmVhci1ncmFkaWVudCh0b3AsICMyNTJlM2QgMCUsIzI1MmUzZCAxNSUsIzNjNDQ1MiAzNSUsIzRhNTQ2NiA1MCUsIzNjNDQ1MiA2NSUsIzI1MmUzZCA4NSUsIzI1MmUzZCAxMDAlKTsgLyogT3BlcmEgMTEuMTArICovCgliYWNrZ3JvdW5kOiBsaW5lYXItZ3JhZGllbnQodG8gYm90dG9tLCAjMjUyZTNkIDAlLCMyNTJlM2QgMTUlLCMzYzQ0NTIgMzUlLCM0YTU0NjYgNTAlLCMzYzQ0NTIgNjUlLCMyNTJlM2QgODUlLCMyNTJlM2QgMTAwJSk7IC8qIFczQyAqLwp9CgojY29udGFpbmVyIHsKCXdpZHRoOiAzNzVweDsKCWhlaWdodDogMTAwJTsKCW1hcmdpbjogMCBhdXRvOwoJZGlzcGxheTogdGFibGU7CglvdmVyZmxvdzpoaWRkZW47Ci8qCWJhY2tncm91bmQ6IHVybCguLi8uLi9pbWFnZXMvc3Bpbm5lci5naWYpIG5vLXJlcGVhdCBjZW50ZXIgY2VudGVyOyAgVG8gcHJlbG9hZCBzcGlubmVyIGltYWdlIGZvciBtYWluIHZpZXcgKi8KfQoKI2NvbnRlbnQtd3JhcHBlciB7CglkaXNwbGF5OiB0YWJsZS1jZWxsOwoJdmVydGljYWwtYWxpZ246IG1pZGRsZTsKfQoKI2NvbnRlbnQgewoJYmFja2dyb3VuZC1jb2xvcjogI0ZGRjsKCWRpc3BsYXk6IHRhYmxlLWNlbGw7CiAgICBwb3NpdGlvbjogcmVsYXRpdmU7CiAgICBib3JkZXItcmFkaXVzOiA0cHg7Cn0KLmNvbnRlbnQtcmVkIHsKICAgIGJvcmRlci10b3A6IDNweCBzb2xpZCAjRDAxMDMyOwp9CgouY29udGVudC1ncmVlbiB7CiAgICBib3JkZXItdG9wOiAzcHggc29saWQgIzhBQzE0MTsKfQoKLmNvbnRlbnQtYmx1ZSB7CiAgICBib3JkZXItdG9wOiAzcHggc29saWQgIzQ5OTdEMjsKfQovKiBDb250ZW50ICovCiNoZWFkZXIgewogICAgd2lkdGg6IDQxMHB4OwogICAgaGVpZ2h0OiA1MHB4OwoJYmFja2dyb3VuZDogI0ZGRjsKCXBvc2l0aW9uOnJlbGF0aXZlOwp9CgojaGVhZGVyIC5sb2dvIHsKCW1hcmdpbi1sZWZ0OiA0NXB4OwoJbWFyZ2luLXRvcDogNDBweDsKCXdpZHRoOiAzMDBweDsKCWhlaWdodDogNDRweDsKCXBvc2l0aW9uOiByZWxhdGl2ZTsKCWJhY2tncm91bmQtcmVwZWF0OiBuby1yZXBlYXQ7CgliYWNrZ3JvdW5kLXBvc2l0aW9uOiAwIDA7Cn0KI2hlYWRlciBoMiB7Cgljb2xvcjojMzMzMzMzOwoJZm9udC1zaXplOiAxNHB4OwoJZm9udC13ZWlnaHQ6IGJvbGQ7Cglwb3NpdGlvbjogYWJzb2x1dGU7Cgl0b3A6IDEwcHg7CglyaWdodDogMTBweDsKfQoKI2hlYWRlciAucHJvZHVjdC1sb2dvIHsKCWJhY2tncm91bmQtcmVwZWF0OiBuby1yZXBlYXQ7CgliYWNrZ3JvdW5kLXBvc2l0aW9uOiBsZWZ0IHRvcDsKCWhlaWdodDogMzVweDsKCXdpZHRoOiAxMDBweDsKCn0KI2hlYWRlciAucHJvZHVjdC1yZGItbG9nbyB7CgliYWNrZ3JvdW5kLXJlcGVhdDogbm8tcmVwZWF0OwoJYmFja2dyb3VuZC1wb3NpdGlvbjogbGVmdCB0b3A7CgloZWlnaHQ6IDM0cHg7Cgl3aWR0aDogMjEwcHg7Cn0KI2hlYWRlciAucHJvZHVjdC12ZXJzaW9uIHsKCWZsb2F0OiByaWdodDsKCW1hcmdpbjogLTIwcHggNXB4IDAgMDsKCWNvbG9yOiAjODg5MTk5OwoJZm9udC1zaXplOiAxNHB4OwoJZm9udC13ZWlnaHQ6IG5vcm1hbDsKfQoKI21haW4gewoJd2lkdGg6IDQwMHB4OwoJbWFyZ2luIDogMCBhdXRvOwoJcGFkZGluZzogMjBweDsKfQojbWFpbiBoMiB7CglwYWRkaW5nLWJvdHRvbTogMTVweDsKCWZvbnQtc2l6ZTogMTZweDsKfQovKiBMb2dpbiBGb3JtICovCiNtYWluIGZvcm0gewoJbWFyZ2luOiAwIDAgNXB4IDI1cHg7Cn0KCnAgewoJbWFyZ2luOiAwIDAgOHB4IDBweDsKCWZvbnQtc2l6ZTogMTJweDsKfQoKcCBsYWJlbCB7CglmbG9hdDogbm9uZTsKCWRpc3BsYXk6IGJsb2NrOwoJbWFyZ2luLWJvdHRvbTogM3B4OwoJZm9udC1zaXplOiAxMnB4OwoJdGV4dC1hbGlnbjogbGVmdDsKCWNvbG9yOiAjNkU2RDcxOwp9CgpwIGlucHV0IHsKICAgIHdpZHRoOiAzMzVweDsKICAgIGJhY2tncm91bmQ6ICNGRkZGRkY7CiAgICBib3JkZXI6IDFweCBzb2xpZCAjQ0NEMEQzOwogICAgLXdlYmtpdC1ib3gtc2hhZG93OiBpbnNldCAwIDFweCAxcHggcmdiYSgwLCAwLCAwLCAwLjA3NSk7CiAgICAtbW96LWJveC1zaGFkb3c6IGluc2V0IDAgMXB4IDFweCByZ2JhKDAsIDAsIDAsIDAuMDc1KTsKICAgIGJveC1zaGFkb3c6IGluc2V0IDAgMXB4IDFweCByZ2JhKDAsIDAsIDAsIDAuMDc1KTsKICAgIGNvbG9yOiAjMjYyRTNDOwogICAgcGFkZGluZzogNnB4OwogICAgZm9udC1zaXplOiAxNHB4OwogICAgbGluZS1oZWlnaHQ6IDIwcHg7CiAgICB2ZXJ0aWNhbC1hbGlnbjogbWlkZGxlOwogICAgY29sb3I6ICMyNjJFM0M7CiAgICBib3JkZXItcmFkaXVzOiA0cHg7CiAgICBmb250LWZhbWlseTogIkhlbHZldGljYSBOZXVlIiwgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZjsKfQoKcCBpbnB1dDpmb2N1cyB7Cglib3JkZXI6IDFweCBzb2xpZCAjYmZkZGY1OwoJb3V0bGluZTogMDsKCS13ZWJraXQtYm94LXNoYWRvdzogaW5zZXQgMCAxcHggMXB4IHJnYmEoMCwgMCwgMCwgMC4wNzUpLCAwIDAgOHB4IHJnYmEoODIsIDE2OCwgMjM2LCAwLjYpOwoJYm94LXNoYWRvdzogaW5zZXQgMCAxcHggMXB4IHJnYmEoMCwgMCwgMCwgMC4wNzUpLCAwIDAgOHB4IHJnYmEoODIsIDE2OCwgMjM2LCAwLjYpOwp9CiNub3RlIHsKICAgIGNvbG9yOiAjQzBDMEMwOwogICAgcGFkZGluZzogNXB4IDVweCA1cHg7Cglmb250OiAxMXB4LzE0cHggQmFzaWNHb3RoaWNXZWIsYXJpYWwsc2Fucy1zZXJpZjsKfQphIHtjb2xvcjojMUI3NUJCOyB0ZXh0LWRlY29yYXRpb246IG5vbmU7fQphOmhvdmVyIHt0ZXh0LWRlY29yYXRpb246IHVuZGVybGluZTt9CgojbG9naW4tc3RhdHVzIHsKCWxpbmUtaGVpZ2h0OjEuNTsKCWZvbnQtd2VpZ2h0OmJvbGQ7CgljbGVhcjpib3RoOwoJY29sb3I6ICNFQzFFMjQ7CgliYWNrZ3JvdW5kLWNvbG9yOiAjRkJDN0M5OwoJYm9yZGVyOjFweCBzb2xpZCAjRUMxRTI0OwogICAgbWFyZ2luLWJvdHRvbTogNDBweDsKICAgIHdpZHRoOjM0MnB4OwogICAgZGlzcGxheTogaW5saW5lLWJsb2NrOwogICAgcG9zaXRpb246IHJlbGF0aXZlOwogICAgdGV4dC1kZWNvcmF0aW9uOiBub25lOwogICAgdGV4dC1hbGlnbjogY2VudGVyOwogICAgcGFkZGluZzogMTJweCAwcHg7CiAgICBmb250LXNpemU6IDEycHg7CiAgICBmb250LXdlaWdodDogNzAwOwogICAgZm9udC1mYW1pbHk6IGhlbHZldGljYSwgYXJpYWwsIHNhbnMtc2VyaWY7CiAgICBib3JkZXItcmFkaXVzOiA0cHg7Cn0KCiNjb3B5cmlnaHQgewoJcG9zaXRpb246IGFic29sdXRlOwoJYm90dG9tOiAwcHg7CglyaWdodCA6IDBweDsKCWZvbnQtc2l6ZTogMTBweDsKICAJZm9udC13ZWlnaHQ6IGJvbGQ7CiAgCXBhZGRpbmc6IDBweCAxNXB4IDVweCAwcHg7CiAgCXRleHQtYWxpZ246cmlnaHQ7CiAgCWNvbG9yOiAjNmU2ZDcxOwp9CgoubWktZ290byB7CgljdXJzb3I6IHBvaW50ZXI7Cglmb250LXNpemU6IDEycHg7Cgljb2xvcjogIzQzOThERCAhaW1wb3J0YW50OwoJcGFkZGluZy1sZWZ0OiAxMHB4Owp9Ci5taS1nb3RvOmhvdmVyIHsKCXRleHQtZGVjb3JhdGlvbjogdW5kZXJsaW5lOwp9Ci5taS1nb3RvLXNlbGVjdGVkIHsKCWNvbG9yOiAjNUM1RTYzICFpbXBvcnRhbnQ7Cn0KCi8qIEJ1dHRvbnMgKi8KLmJ0bi13cmFwcGVyIHsKCW92ZXJmbG93OiBoaWRkZW47Cgl3aWR0aDogaW5oZXJpdDsKCW1hcmdpbjogMjVweCAwcHggMHB4IDBweDsKfQojZXVsYSB7CiAgICBwYWRkaW5nLXRvcDogMTVweDsKCW1hcmdpbjogMCAwIDVweCAyNXB4OwoJd2lkdGg6IDM0OHB4Owp9Ci5ldWxhIHsKICAgIGJvcmRlcjogMXB4IHNvbGlkICM4ODg7CiAgICBwYWRkaW5nLWxlZnQ6IDZweDsKICAgIHBhZGRpbmctdG9wOiA2cHg7CiAgICBwYWRkaW5nLWJvdHRvbTogNnB4OwogICAgbWFyZ2luLWxlZnQ6IDFweDsKICAgIC13ZWJraXQtYm94LXNpemluZzogYm9yZGVyLWJveDsKICAgIC1tb3otYm94LXNpemluZzogYm9yZGVyLWJveDsKICAgIGJveC1zaXppbmc6IGJvcmRlci1ib3g7CiAgICB3aWR0aDogMTAwJTsKfQoKLmJ0biB7CiAgICB3aWR0aDogMzQ4cHg7CiAgICBwYWRkaW5nOiA5cHggMTVweCAxMHB4IDE1cHggIWltcG9ydGFudDsKICAgIGZvbnQtc2l6ZTogMTVweDsKfQouYnRuLWRlZmF1bHQgewogICAgZGlzcGxheTogaW5saW5lLWJsb2NrOwogICAgcGFkZGluZzogNnB4IDE1cHggOHB4OwogICAgbWFyZ2luLWJvdHRvbTogMDsKICAgIGNvbG9yOiByZ2JhKDI1NSwgMjU1LCAyNTUsIDEuMCk7CiAgICBmb250LXNpemU6IDEzcHg7CiAgICBmb250LXdlaWdodDogbm9ybWFsOwogICAgbGluZS1oZWlnaHQ6IDEuNDsKICAgIHRleHQtYWxpZ246IGNlbnRlcjsKICAgIHdoaXRlLXNwYWNlOiBub3dyYXA7CiAgICB2ZXJ0aWNhbC1hbGlnbjogbWlkZGxlOwogICAgY3Vyc29yOiBwb2ludGVyOwogICAgYmFja2dyb3VuZDogIzMxN0JDNjsKICAgIGJveC1zaGFkb3c6IGluc2V0IDAgLTNweCAwIHJnYmEoMCwwLDAsMC4xKTsKICAgIGJvcmRlcjogMXB4IHNvbGlkIHRyYW5zcGFyZW50OwogICAgLXdlYmtpdC1ib3JkZXItcmFkaXVzOiA0cHg7CiAgICAtbW96LWJvcmRlci1yYWRpdXM6IDRweDsKICAgIGJvcmRlci1yYWRpdXM6IDRweDsKICAgIC13ZWJraXQtdXNlci1zZWxlY3Q6IG5vbmU7CiAgICAtbW96LXVzZXItc2VsZWN0OiBub25lOwogICAgLW1zLXVzZXItc2VsZWN0OiBub25lOwogICAgLW8tdXNlci1zZWxlY3Q6IG5vbmU7CiAgICB1c2VyLXNlbGVjdDogbm9uZTsKfQoKLmJ0bi1zZWNvbmRhcnkgewoJZGlzcGxheTogaW5saW5lLWJsb2NrOwoJcGFkZGluZzogNnB4IDE1cHggOHB4OwoJbWFyZ2luLWJvdHRvbTogMDsKCW1hcmdpbi1sZWZ0OiAyNXB4OwoJY29sb3I6ICMzMTdCQzY7Cglmb250LXNpemU6IDEzcHg7Cglmb250LXdlaWdodDogbm9ybWFsOwoJbGluZS1oZWlnaHQ6IDEuNDsKCXRleHQtYWxpZ246IGNlbnRlcjsKCXdoaXRlLXNwYWNlOiBub3dyYXA7Cgl2ZXJ0aWNhbC1hbGlnbjogbWlkZGxlOwoJY3Vyc29yOiBwb2ludGVyOwoJYmFja2dyb3VuZDogcmdiYSgyNTUsIDI1NSwgMjU1LCAxLjApOwoJYm94LXNoYWRvdzogaW5zZXQgMCAtM3B4IDAgcmdiYSgwLDAsMCwwLjEpOwoJYm9yZGVyOiAxcHggc29saWQgdHJhbnNwYXJlbnQ7Cgktd2Via2l0LWJvcmRlci1yYWRpdXM6IDRweDsKCS1tb3otYm9yZGVyLXJhZGl1czogNHB4OwoJYm9yZGVyLXJhZGl1czogNHB4OwoJLXdlYmtpdC11c2VyLXNlbGVjdDogbm9uZTsKCS1tb3otdXNlci1zZWxlY3Q6IG5vbmU7CgktbXMtdXNlci1zZWxlY3Q6IG5vbmU7Cgktby11c2VyLXNlbGVjdDogbm9uZTsKCXVzZXItc2VsZWN0OiBub25lOwp9CgouYnRuOmZvY3VzLCAuYnRuOmFjdGl2ZTpmb2N1cywgLmJ0bi5hY3RpdmU6Zm9jdXMgewogICAgb3V0bGluZTogMCBub25lOwp9CgouYnRuLWRlZmF1bHQ6aG92ZXIsIC5idG4tZGVmYXVsdDpmb2N1cywgLmJ0bi1kZWZhdWx0OmFjdGl2ZSB7CiAgICBiYWNrZ3JvdW5kOiAjM2Y5NGUxOwp9CgouYnRuLWRlZmF1bHQ6YWN0aXZlLCAuYnRuLWRlZmF1bHQuYWN0aXZlIHsKICAgIGJhY2tncm91bmQ6ICMzZjk0ZTE7CiAgICBib3gtc2hhZG93OiBub25lOwp9Cgoub3JzdHlsZSB7CgltYXJnaW4tdG9wOiAxMHB4OwoJbWFyZ2luLWJvdHRvbTogMTBweDsKfQoub3JzdHlsZSBociB7Cgl3aWR0aDogNDUlOwoJbWFyZ2luLXRvcDogMTBweDsKCW1hcmdpbi1ib3R0b206IDEwcHg7Cglib3JkZXI6IDA7Cglib3JkZXItdG9wOiAxcHggc29saWQgI2MxYzFjMTsKfQoub3JzdHlsZSAudGV4dCB7Cgl3aWR0aDogMTAlOwoJdGV4dC1hbGlnbjogY2VudGVyOwoJZGlzcGxheTogaW5saW5lLWJsb2NrOwp9Cg==
+      name: Sentry - //mics/css/login.css
+      description: 'Fetched from URL: https://example.com//mics/css/login.css?9.20.0'
+      content_type: text/css
+      server: Server
+      status_code: "200"
+      headers:
+        - 'Cache-Control: public, max-age=2592000, must-revalidate'
+        - 'X-Content-Type-Options: nosniff'
+        - 'Pragma: no-cache'
+        - 'Last-Modified: Wed, 27 Mar 2024 05:24:02 GMT'
+        - 'Vary: Accept-Encoding'
+        - 'X-Xss-Protection: 1; mode=block'
+        - 'Etag: W/"6730-1711517042000-gzip"'
+        - 'Set-Cookie: JSESSIONID=B2E1DB28F3C7239053EDED5C9F88949E; Path=/mics; Secure; HttpOnly;SameSite=lax'
+        - 'Strict-Transport-Security: max-age=31536000; includeSubDomains'
+        - 'X-Frame-Options: SameOrigin'
+        - 'Accept-Ranges: bytes'
+      created_at: 2025-01-14T13:33:06.16229Z
+      updated_at: 2025-01-14T13:33:06.162095Z
+      ext_version: 0
+      ext_uuid: 0ef8c20a-2875-46fd-8f87-717d8a8a71cd
+    - id: 685
+      data: PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDIgRm91bmQ8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxoMT5Gb3VuZDwvaDE+CjxwPlRoZSBkb2N1bWVudCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cHM6Ly8yMTcuMjQ0LjQuNTU6ODQ0My9taWNzL21pY3MuaHRtbCI+aGVyZTwvYT4uPC9wPgo8aHI+CjxhZGRyZXNzPkFwYWNoZSBTZXJ2ZXIgYXQgMjE3LjI0NC40LjU1IFBvcnQgODQ0MzwvYWRkcmVzcz4KPC9ib2R5PjwvaHRtbD4K
+      name: Sentry - /
+      description: 'Fetched from URL: https://example.com/'
+      content_type: text/html; charset=iso-8859-1
+      server: Apache
+      status_code: "302"
+      headers:
+        - 'Location: https://217.244.4.55:8443/mics/mics.html'
+        - 'Content-Length: 288'
+      created_at: 2025-01-14T13:33:06.082531Z
+      updated_at: 2025-01-14T13:33:06.082334Z
+      ext_version: 0
+      ext_uuid: 274503ee-a011-4bd9-bf57-4b2c30d384b5
+    - id: 684
+      data: PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDIgRm91bmQ8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxoMT5Gb3VuZDwvaDE+CjxwPlRoZSBkb2N1bWVudCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cHM6Ly8yMTcuMjQ0LjQuNTU6ODQ0My9taWNzL21pY3MuaHRtbCI+aGVyZTwvYT4uPC9wPgo8aHI+CjxhZGRyZXNzPkFwYWNoZSBTZXJ2ZXIgYXQgMjE3LjI0NC40LjU1IFBvcnQgODQ0MzwvYWRkcmVzcz4KPC9ib2R5PjwvaHRtbD4K
+      name: Sentry - /mics/
+      description: 'Fetched from URL: https://example.com/mics/'
+      content_type: text/html; charset=iso-8859-1
+      server: Apache
+      status_code: "302"
+      headers:
+        - 'Location: https://217.244.4.55:8443/mics/mics.html'
+        - 'Content-Length: 288'
+      created_at: 2025-01-14T13:33:05.992325Z
+      updated_at: 2025-01-14T13:33:05.99217Z
+      ext_version: 0
+      ext_uuid: bb5af78b-ad03-4b88-8011-85d735887727
+    - id: 683
+      data: CgoKCgoKCgo8IURPQ1RZUEUgaHRtbCBQVUJMSUMgIi0vL1czQy8vRFREIFhIVE1MIDEuMCBTdHJpY3QvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvVFIveGh0bWwxL0RURC94aHRtbDEtc3RyaWN0LmR0ZCI+CjxodG1sIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj4KCjxoZWFkPgogICAgPG1ldGEgaHR0cC1lcXVpdj0iQ29udGVudC1UeXBlIiBjb250ZW50PSJ0ZXh0L2h0bWw7IGNoYXJzZXQ9VVRGLTgiLz4KICAgIDxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MSI+CiAgICAKICAgIDx0aXRsZT5JdmFudGkgU3lzdGVtIE1hbmFnZXI6IFNpZ24gSW48L3RpdGxlPgoKICAgIDxsaW5rIGhyZWY9ImNzcy9sb2dpbi5jc3M/OS4yMC4wIiByZWw9InN0eWxlc2hlZXQiIHR5cGU9InRleHQvY3NzIi8+CjwvaGVhZD4KCjxib2R5IG9ubG9hZD0iaW5pdCgpOyI+CiAgICA8ZGl2IGlkPSJjb250YWluZXIiPgogICAgPGRpdiBpZD0iY29udGVudC13cmFwcGVyIj4KICAgICAgICA8ZGl2IGlkPSJjb250ZW50Ij4KICAgICAgICAgICAgPGRpdiBpZD0iaGVhZGVyIj4KICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImxvZ28iIHN0eWxlPSJiYWNrZ3JvdW5kLWltYWdlOnVybChpbWFnZXMvc2VudHJ5LWl2YW50aS1sb2dvLTE3OHgzMi5wbmcpIj4KICAgICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwOi8vd3d3Lml2YW50aS5jb20iPjwvYT4KICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgPGgyPgogICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InByb2R1Y3QtdmVyc2lvbiI+OS4yMC4wCiAgICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICA8L2gyPgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPGRpdiBpZD0ibWFpbiI+CiAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIDxmb3JtIG1ldGhvZD0icG9zdCIgYWN0aW9uPScvbWljcy9qX3NwcmluZ19zZWN1cml0eV9jaGVjayc+CiAgICAgICAgICAgICAgICAgICAgPG5vc2NyaXB0PgogICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGlkPSJsb2dpbi1zdGF0dXMiPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPHNwYW4+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgVGhpcyBwYWdlIHJlcXVpcmVzIGEgc3VwcG9ydGVkIHdlYiBicm93c2VyIHZlcnNpb24gd2l0aCBqYXZhc2NyaXB0IGVuYWJsZWQuIFBsZWFzZSBlbmFibGUgamF2YXNjcmlwdCBpbiB5b3VyIGJyb3dzZXIgb3B0aW9ucywgYW5kIGNvbmZpcm0gdGhhdCB5b3UgYXJlIHJ1bm5pbmcgYSBzdXBwb3J0ZWQgYnJvd3NlciB2ZXJzaW9uLgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zcGFuPgogICAgICAgICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgICA8L25vc2NyaXB0PgogICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgIAoKICAgICAgICAgICAgICAgICAgICA8cD4KICAgICAgICAgICAgICAgICAgICAgICAgPGxhYmVsIGZvcj0ial91c2VybmFtZSI+VXNlcm5hbWU8L2xhYmVsPgogICAgICAgICAgICAgICAgICAgICAgICA8aW5wdXQgbmFtZT0ial91c2VybmFtZSIgaWQ9InVzZXJuYW1lIiBjbGFzcz0icmVxdWlyZWQiIHRhYmluZGV4PSIxIiBhY2Nlc3NrZXk9InUiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0eXBlPSJ0ZXh0IiB2YWx1ZT0iIiBzaXplPSIyNSIgYXV0b2NvbXBsZXRlPSJvZmYiLz4KICAgICAgICAgICAgICAgICAgICAgICAgPGxhYmVsIGlkPSJub3RlIj5Ob3RlOiBSZXF1aXJlcyBhIGxvY2FsIFNlbnRyeSBhZG1pbmlzdHJhdGl2ZSB1c2VyLjwvbGFiZWw+CiAgICAgICAgICAgICAgICAgICAgPC9wPgogICAgICAgICAgICAgICAgICAgIDxwPgogICAgICAgICAgICAgICAgICAgICAgICA8bGFiZWwgZm9yPSJqX3Bhc3N3b3JkIj5QYXNzd29yZDwvbGFiZWw+CiAgICAgICAgICAgICAgICAgICAgICAgIDxpbnB1dCBuYW1lPSJqX3Bhc3N3b3JkIiBpZD0icGFzc3dvcmQiIGNsYXNzPSJyZXF1aXJlZCIgdGFiaW5kZXg9IjIiIGFjY2Vzc2tleT0icCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHR5cGU9InBhc3N3b3JkIiB2YWx1ZT0iIiBzaXplPSIyNSIgYXV0b2NvbXBsZXRlPSJvZmYiLz4KICAgICAgICAgICAgICAgICAgICA8L3A+CiAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iYnRuLXdyYXBwZXIiPgogICAgICAgICAgICAgICAgICAgICAgICA8YnV0dG9uIGlkPSJsb2dpbi1idG4iIGNsYXNzPSJidG4gYnRuLWRlZmF1bHQiIHZhbHVlPSJMb2dpbiIgdGFiaW5kZXg9IjMiIHR5cGU9InN1Ym1pdCI+U0lHTiBJTjwvYnV0dG9uPgogICAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgPC9mb3JtPgogICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgCiAgICAgICAgICAgIDwvZGl2PgogICAgICAgIDwvZGl2PgogICAgPC9kaXY+CjwvZGl2Pgo8ZGl2IGlkPSJjb3B5cmlnaHQiPgogICAgQ29weXJpZ2h0ICZjb3B5OyAyMDIzIEl2YW50aS4gQWxsIHJpZ2h0cyByZXNlcnZlZC4KPC9kaXY+CjxkaXYgc3R5bGU9ImRpc3BsYXk6bm9uZSI+CiAgICBNSV9MT0dJTl9TQ1JFRU4KPC9kaXY+CjxzY3JpcHQgdHlwZT0idGV4dC9qYXZhc2NyaXB0Ij4KICAgIHZhciB1c2VybmFtZUVsZW1lbnQsIGxvY2tlZFRpbWVWYWx1ZTsKCiAgICBmdW5jdGlvbiBpbml0KCkgewogICAgICAgIC8vIHNlbGVjdCB1c2VybmFtZQogICAgICAgIHVzZXJuYW1lRWxlbWVudCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd1c2VybmFtZScpOwogICAgICAgIHVzZXJuYW1lRWxlbWVudC5mb2N1cygpOwogICAgICAgIHVzZXJuYW1lRWxlbWVudC5zZWxlY3QoKTsKCiAgICAgICAgLy8gU2V0IHVwIHRpbWVycyBpZiBjdXJyZW50IHVzZXIgaXMgbG9ja2VkIChiYXNlZCBvbiBlcnJvciBtZXNzYWdlKQogICAgICAgIHZhciBsb2NrZWRUaW1lRWxlbWVudCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdkZWxheS10aW1lJyk7CiAgICAgICAgaWYgKGxvY2tlZFRpbWVFbGVtZW50KSB7CiAgICAgICAgICAgIHZhciBsb2NrZWRUaW1lVGV4dCA9IGxvY2tlZFRpbWVFbGVtZW50LmlubmVyVGV4dCB8fCBsb2NrZWRUaW1lRWxlbWVudC50ZXh0Q29udGVudDsKICAgICAgICAgICAgbG9ja2VkVGltZVZhbHVlID0gcGFyc2VJbnQobG9ja2VkVGltZVRleHQpOwogICAgICAgICAgICBpZiAobG9ja2VkVGltZVZhbHVlICYmIGxvY2tlZFRpbWVWYWx1ZSA+IDApIHsKICAgICAgICAgICAgICAgIC8vIFRpbWVyIHRvIGNoZWNrIGxvY2tlZCB1c2VybmFtZSBmcm9tIGlucHV0IHRleHQKICAgICAgICAgICAgICAgIHZhciBjaGVja0lucHV0VGltZXJJZCA9IHdpbmRvdy5zZXRJbnRlcnZhbChjaGVja0xvY2tlZFVzZXIsIDI1MCk7CiAgICAgICAgICAgICAgICAvLyBUaW1lciB0byBjb3VudCBkb3duIHRoZSBsb2NrZWRUaW1lVmFsdWUKICAgICAgICAgICAgICAgIHZhciBjb3VudGRvd25UaW1lcklkID0gd2luZG93LnNldEludGVydmFsKGZ1bmN0aW9uICgpIHsKICAgICAgICAgICAgICAgICAgICBsb2NrZWRUaW1lVmFsdWUtLTsKICAgICAgICAgICAgICAgICAgICBpZiAobG9ja2VkVGltZVZhbHVlID09IDApIHsKICAgICAgICAgICAgICAgICAgICAgICAgd2luZG93LmNsZWFySW50ZXJ2YWwoY2hlY2tJbnB1dFRpbWVySWQpOwogICAgICAgICAgICAgICAgICAgICAgICB3aW5kb3cuY2xlYXJJbnRlcnZhbChjb3VudGRvd25UaW1lcklkKTsKICAgICAgICAgICAgICAgICAgICAgICAgY2hlY2tMb2NrZWRVc2VyKCk7CiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfSwgMTAwMCk7CgogICAgICAgICAgICB9CiAgICAgICAgfQoKICAgIH0KCiAgICBmdW5jdGlvbiBjaGVja0xvY2tlZFVzZXIoKSB7CiAgICAgICAgdmFyIHN0YXR1c0VsZW1lbnQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgibG9naW4tc3RhdHVzIik7CiAgICAgICAgdmFyIHN0YXR1c1RleHQgPSBzdGF0dXNFbGVtZW50LmlubmVyVGV4dCB8fCBzdGF0dXNFbGVtZW50LnRleHRDb250ZW50OwogICAgICAgIHZhciBsb2NrZWRVc2VybmFtZSA9IHN0YXR1c1RleHQucmVwbGFjZSgvXG4vZywgIiIpLnNwbGl0KCIgIilbMF07CgogICAgICAgIHZhciBwYXNzd29yZEVsZW1lbnQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncGFzc3dvcmQnKTsKICAgICAgICB2YXIgbG9naW5CdXR0b25FbGVtZW50ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2xvZ2luLWJ0bicpOwogICAgICAgIHZhciB1c2VybmFtZVZhbHVlID0gdXNlcm5hbWVFbGVtZW50LnZhbHVlOwoKICAgICAgICBpZiAobG9ja2VkVGltZVZhbHVlID4gMCAmJiB1c2VybmFtZVZhbHVlID09PSBsb2NrZWRVc2VybmFtZSkgewogICAgICAgICAgICBsb2dpbkJ1dHRvbkVsZW1lbnQuZGlzYWJsZWQgPSB0cnVlOwogICAgICAgICAgICBwYXNzd29yZEVsZW1lbnQuZGlzYWJsZWQgPSB0cnVlOwogICAgICAgICAgICBwYXNzd29yZEVsZW1lbnQudmFsdWUgPSAiIjsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBsb2dpbkJ1dHRvbkVsZW1lbnQuZGlzYWJsZWQgPSBmYWxzZTsKICAgICAgICAgICAgcGFzc3dvcmRFbGVtZW50LmRpc2FibGVkID0gZmFsc2U7CiAgICAgICAgfQogICAgfQo8L3NjcmlwdD4KPC9ib2R5Pgo8L2h0bWw+Cg==
+      name: Sentry - /mics/login.jsp
+      description: 'Fetched from URL: https://example.com/mics/login.jsp'
+      content_type: text/html;charset=UTF-8
+      server: Server
+      status_code: "200"
+      headers:
+        - 'X-Frame-Options: SameOrigin'
+        - 'Cache-Control: no-cache, no-store, must-revalidate'
+        - 'X-Xss-Protection: 1; mode=block'
+        - 'Strict-Transport-Security: max-age=31536000; includeSubDomains'
+        - 'X-Content-Type-Options: nosniff'
+        - 'Set-Cookie: JSESSIONID=D4980F67FA9207D212D44523D006374A; Path=/mics; Secure; HttpOnly;SameSite=lax'
+        - 'Pragma: no-cache'
+        - 'Vary: Accept-Encoding'
+      created_at: 2025-01-14T13:33:05.900002Z
+      updated_at: 2025-01-14T13:33:05.89985Z
+      ext_version: 0
+      ext_uuid: 64858a1d-31cb-40bb-8714-9b3274917653
+    - id: 689
+      data: CgoKCgoKCgo8IURPQ1RZUEUgaHRtbCBQVUJMSUMgIi0vL1czQy8vRFREIFhIVE1MIDEuMCBTdHJpY3QvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvVFIveGh0bWwxL0RURC94aHRtbDEtc3RyaWN0LmR0ZCI+CjxodG1sIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj4KCjxoZWFkPgogICAgPG1ldGEgaHR0cC1lcXVpdj0iQ29udGVudC1UeXBlIiBjb250ZW50PSJ0ZXh0L2h0bWw7IGNoYXJzZXQ9VVRGLTgiLz4KICAgIDxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MSI+CiAgICAKICAgIDx0aXRsZT5JdmFudGkgU3lzdGVtIE1hbmFnZXI6IFNpZ24gSW48L3RpdGxlPgoKICAgIDxsaW5rIGhyZWY9ImNzcy9sb2dpbi5jc3M/OS4yMC4wIiByZWw9InN0eWxlc2hlZXQiIHR5cGU9InRleHQvY3NzIi8+CjwvaGVhZD4KCjxib2R5IG9ubG9hZD0iaW5pdCgpOyI+CiAgICA8ZGl2IGlkPSJjb250YWluZXIiPgogICAgPGRpdiBpZD0iY29udGVudC13cmFwcGVyIj4KICAgICAgICA8ZGl2IGlkPSJjb250ZW50Ij4KICAgICAgICAgICAgPGRpdiBpZD0iaGVhZGVyIj4KICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImxvZ28iIHN0eWxlPSJiYWNrZ3JvdW5kLWltYWdlOnVybChpbWFnZXMvc2VudHJ5LWl2YW50aS1sb2dvLTE3OHgzMi5wbmcpIj4KICAgICAgICAgICAgICAgICAgICA8YSBocmVmPSJodHRwOi8vd3d3Lml2YW50aS5jb20iPjwvYT4KICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgPGgyPgogICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9InByb2R1Y3QtdmVyc2lvbiI+OS4yMC4wCiAgICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICA8L2gyPgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgPGRpdiBpZD0ibWFpbiI+CiAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIDxmb3JtIG1ldGhvZD0icG9zdCIgYWN0aW9uPScvbWljcy9qX3NwcmluZ19zZWN1cml0eV9jaGVjayc+CiAgICAgICAgICAgICAgICAgICAgPG5vc2NyaXB0PgogICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGlkPSJsb2dpbi1zdGF0dXMiPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPHNwYW4+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgVGhpcyBwYWdlIHJlcXVpcmVzIGEgc3VwcG9ydGVkIHdlYiBicm93c2VyIHZlcnNpb24gd2l0aCBqYXZhc2NyaXB0IGVuYWJsZWQuIFBsZWFzZSBlbmFibGUgamF2YXNjcmlwdCBpbiB5b3VyIGJyb3dzZXIgb3B0aW9ucywgYW5kIGNvbmZpcm0gdGhhdCB5b3UgYXJlIHJ1bm5pbmcgYSBzdXBwb3J0ZWQgYnJvd3NlciB2ZXJzaW9uLgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9zcGFuPgogICAgICAgICAgICAgICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICAgICAgICAgICA8L25vc2NyaXB0PgogICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGlkPSJsb2dpbi1zdGF0dXMiPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPHNwYW4+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3NwYW4+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgIAoKICAgICAgICAgICAgICAgICAgICA8cD4KICAgICAgICAgICAgICAgICAgICAgICAgPGxhYmVsIGZvcj0ial91c2VybmFtZSI+VXNlcm5hbWU8L2xhYmVsPgogICAgICAgICAgICAgICAgICAgICAgICA8aW5wdXQgbmFtZT0ial91c2VybmFtZSIgaWQ9InVzZXJuYW1lIiBjbGFzcz0icmVxdWlyZWQiIHRhYmluZGV4PSIxIiBhY2Nlc3NrZXk9InUiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0eXBlPSJ0ZXh0IiB2YWx1ZT0iIiBzaXplPSIyNSIgYXV0b2NvbXBsZXRlPSJvZmYiLz4KICAgICAgICAgICAgICAgICAgICAgICAgPGxhYmVsIGlkPSJub3RlIj5Ob3RlOiBSZXF1aXJlcyBhIGxvY2FsIFNlbnRyeSBhZG1pbmlzdHJhdGl2ZSB1c2VyLjwvbGFiZWw+CiAgICAgICAgICAgICAgICAgICAgPC9wPgogICAgICAgICAgICAgICAgICAgIDxwPgogICAgICAgICAgICAgICAgICAgICAgICA8bGFiZWwgZm9yPSJqX3Bhc3N3b3JkIj5QYXNzd29yZDwvbGFiZWw+CiAgICAgICAgICAgICAgICAgICAgICAgIDxpbnB1dCBuYW1lPSJqX3Bhc3N3b3JkIiBpZD0icGFzc3dvcmQiIGNsYXNzPSJyZXF1aXJlZCIgdGFiaW5kZXg9IjIiIGFjY2Vzc2tleT0icCIKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHR5cGU9InBhc3N3b3JkIiB2YWx1ZT0iIiBzaXplPSIyNSIgYXV0b2NvbXBsZXRlPSJvZmYiLz4KICAgICAgICAgICAgICAgICAgICA8L3A+CiAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzcz0iYnRuLXdyYXBwZXIiPgogICAgICAgICAgICAgICAgICAgICAgICA8YnV0dG9uIGlkPSJsb2dpbi1idG4iIGNsYXNzPSJidG4gYnRuLWRlZmF1bHQiIHZhbHVlPSJMb2dpbiIgdGFiaW5kZXg9IjMiIHR5cGU9InN1Ym1pdCI+U0lHTiBJTjwvYnV0dG9uPgogICAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgPC9mb3JtPgogICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgCiAgICAgICAgICAgIDwvZGl2PgogICAgICAgIDwvZGl2PgogICAgPC9kaXY+CjwvZGl2Pgo8ZGl2IGlkPSJjb3B5cmlnaHQiPgogICAgQ29weXJpZ2h0ICZjb3B5OyAyMDIzIEl2YW50aS4gQWxsIHJpZ2h0cyByZXNlcnZlZC4KPC9kaXY+CjxkaXYgc3R5bGU9ImRpc3BsYXk6bm9uZSI+CiAgICBNSV9MT0dJTl9TQ1JFRU4KPC9kaXY+CjxzY3JpcHQgdHlwZT0idGV4dC9qYXZhc2NyaXB0Ij4KICAgIHZhciB1c2VybmFtZUVsZW1lbnQsIGxvY2tlZFRpbWVWYWx1ZTsKCiAgICBmdW5jdGlvbiBpbml0KCkgewogICAgICAgIC8vIHNlbGVjdCB1c2VybmFtZQogICAgICAgIHVzZXJuYW1lRWxlbWVudCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd1c2VybmFtZScpOwogICAgICAgIHVzZXJuYW1lRWxlbWVudC5mb2N1cygpOwogICAgICAgIHVzZXJuYW1lRWxlbWVudC5zZWxlY3QoKTsKCiAgICAgICAgLy8gU2V0IHVwIHRpbWVycyBpZiBjdXJyZW50IHVzZXIgaXMgbG9ja2VkIChiYXNlZCBvbiBlcnJvciBtZXNzYWdlKQogICAgICAgIHZhciBsb2NrZWRUaW1lRWxlbWVudCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdkZWxheS10aW1lJyk7CiAgICAgICAgaWYgKGxvY2tlZFRpbWVFbGVtZW50KSB7CiAgICAgICAgICAgIHZhciBsb2NrZWRUaW1lVGV4dCA9IGxvY2tlZFRpbWVFbGVtZW50LmlubmVyVGV4dCB8fCBsb2NrZWRUaW1lRWxlbWVudC50ZXh0Q29udGVudDsKICAgICAgICAgICAgbG9ja2VkVGltZVZhbHVlID0gcGFyc2VJbnQobG9ja2VkVGltZVRleHQpOwogICAgICAgICAgICBpZiAobG9ja2VkVGltZVZhbHVlICYmIGxvY2tlZFRpbWVWYWx1ZSA+IDApIHsKICAgICAgICAgICAgICAgIC8vIFRpbWVyIHRvIGNoZWNrIGxvY2tlZCB1c2VybmFtZSBmcm9tIGlucHV0IHRleHQKICAgICAgICAgICAgICAgIHZhciBjaGVja0lucHV0VGltZXJJZCA9IHdpbmRvdy5zZXRJbnRlcnZhbChjaGVja0xvY2tlZFVzZXIsIDI1MCk7CiAgICAgICAgICAgICAgICAvLyBUaW1lciB0byBjb3VudCBkb3duIHRoZSBsb2NrZWRUaW1lVmFsdWUKICAgICAgICAgICAgICAgIHZhciBjb3VudGRvd25UaW1lcklkID0gd2luZG93LnNldEludGVydmFsKGZ1bmN0aW9uICgpIHsKICAgICAgICAgICAgICAgICAgICBsb2NrZWRUaW1lVmFsdWUtLTsKICAgICAgICAgICAgICAgICAgICBpZiAobG9ja2VkVGltZVZhbHVlID09IDApIHsKICAgICAgICAgICAgICAgICAgICAgICAgd2luZG93LmNsZWFySW50ZXJ2YWwoY2hlY2tJbnB1dFRpbWVySWQpOwogICAgICAgICAgICAgICAgICAgICAgICB3aW5kb3cuY2xlYXJJbnRlcnZhbChjb3VudGRvd25UaW1lcklkKTsKICAgICAgICAgICAgICAgICAgICAgICAgY2hlY2tMb2NrZWRVc2VyKCk7CiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfSwgMTAwMCk7CgogICAgICAgICAgICB9CiAgICAgICAgfQoKICAgIH0KCiAgICBmdW5jdGlvbiBjaGVja0xvY2tlZFVzZXIoKSB7CiAgICAgICAgdmFyIHN0YXR1c0VsZW1lbnQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgibG9naW4tc3RhdHVzIik7CiAgICAgICAgdmFyIHN0YXR1c1RleHQgPSBzdGF0dXNFbGVtZW50LmlubmVyVGV4dCB8fCBzdGF0dXNFbGVtZW50LnRleHRDb250ZW50OwogICAgICAgIHZhciBsb2NrZWRVc2VybmFtZSA9IHN0YXR1c1RleHQucmVwbGFjZSgvXG4vZywgIiIpLnNwbGl0KCIgIilbMF07CgogICAgICAgIHZhciBwYXNzd29yZEVsZW1lbnQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncGFzc3dvcmQnKTsKICAgICAgICB2YXIgbG9naW5CdXR0b25FbGVtZW50ID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2xvZ2luLWJ0bicpOwogICAgICAgIHZhciB1c2VybmFtZVZhbHVlID0gdXNlcm5hbWVFbGVtZW50LnZhbHVlOwoKICAgICAgICBpZiAobG9ja2VkVGltZVZhbHVlID4gMCAmJiB1c2VybmFtZVZhbHVlID09PSBsb2NrZWRVc2VybmFtZSkgewogICAgICAgICAgICBsb2dpbkJ1dHRvbkVsZW1lbnQuZGlzYWJsZWQgPSB0cnVlOwogICAgICAgICAgICBwYXNzd29yZEVsZW1lbnQuZGlzYWJsZWQgPSB0cnVlOwogICAgICAgICAgICBwYXNzd29yZEVsZW1lbnQudmFsdWUgPSAiIjsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBsb2dpbkJ1dHRvbkVsZW1lbnQuZGlzYWJsZWQgPSBmYWxzZTsKICAgICAgICAgICAgcGFzc3dvcmRFbGVtZW50LmRpc2FibGVkID0gZmFsc2U7CiAgICAgICAgfQogICAgfQo8L3NjcmlwdD4KPC9ib2R5Pgo8L2h0bWw+Cg==
+      name: Sentry - /mics/login.jsp
+      description: 'Fetched from URL: https://example.com/mics/login.jsp?login_error=1'
+      content_type: text/html;charset=UTF-8
+      server: Server
+      status_code: "200"
+      headers:
+        - 'Pragma: no-cache'
+        - 'Strict-Transport-Security: max-age=31536000; includeSubDomains'
+        - 'Cache-Control: no-cache, no-store, must-revalidate'
+        - 'Set-Cookie: JSESSIONID=833BBE7A57A367F9B06CB8C1BDAEE492; Path=/mics; Secure; HttpOnly;SameSite=lax'
+        - 'X-Frame-Options: SameOrigin'
+        - 'X-Content-Type-Options: nosniff'
+        - 'Vary: Accept-Encoding'
+        - 'X-Xss-Protection: 1; mode=block'
+      created_at: 2025-01-14T13:33:06.440186Z
+      updated_at: 2025-01-14T13:33:06.440103Z
+      ext_version: 0
+      ext_uuid: bd92dab8-a533-4c44-be97-6ceacbf7c1b4
+    - id: 688
+      data: iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAPMSURBVHgBxVc7TBRRFL2zu+wCyqL8NEEpjURItMFENBK1shCkkgIoNQEqE/zQ2GDUToHE0AmFnSiJ2GCiBYVoYyDByoJPARI+uyjsR9d73uzbfTM7nx0wchLC7My8d8+999z77mhLZSdStI8IkEdopSXkD5eSv6bacP/3/BIlFxbJK1wJFNTVUuh8AwUbG6igvpb8x6sd30/MzgkyOxPvKTb1SVw7QbNLwcFbnVR49YowvBfEp6bp18sx/ntFeRGAl2UjQ4YQJ2fm2Jtp4V1i5psIdWozatyIUxPkaGFdsPEshZi4ugcisdrcnhMRAwGEu/Lja3Gd2ozQ1vMXtM3skwvOYbQD9jvAkSxuu54hsdLUbCBvIBBi5uXjI+J6+cwl1/zlTYSjWvlBd2z5NO+rOGQrQifjCDfIwkPxLm/oJLg/HE07eC5DiLOkt5tJhHOe/eSURZ4M5OjDQCYS2T2Bkjs9wjgAjcSmPovrgrqTQnDId5BLdvVau4GETyFrJmcg4NRIittaM8atPJWRQVrCvT202fcwSyActt3XZ/cAeVYhjaOmsbnZE1TMevc9cY1IBOprc/a00oKBgCFsCmsITtZ0lD23w87EpGg8Ys25bANDigArkfrsGGqHsgSkcWzgVpoJblrCqBKBzPoFFwLqS8FTuSHcLSQZdFFXAsn0S6oG0IIBeGLWhhk4P3Rj+hpUgDxP4twr3AnM65WAEzBDgDdLpdMDhdsBlSDDvfNuMnMfa5G6WFofjgQSs3oEzKegLCsovLT/fs48AONhvp/5fbNTRAu6WmlqEWeAFXJOQ4Ts6He9waChxBXWKEU0Iwn5DCqXnRGeqqK1OgFV+G8XlT9Qb6RiMQ6/XnaBmmOi7lWDECmaDYjiHaGLwpB+ej4dprWOLkpFohS6fEG8U8SaEEOKzYlqOZAg/BXjo5ZRkIDYsofRIm1zD1D7CJ6VjQ4p/WOQoo8H8iMAgACI5BNGO8B4OZMIpIlittjo6zc2PLvF6913RVixCTxxKz+z4cODj0jjbrpysSXjeREPJsU3Wo3vmjUgAZbxL1/FIeSvqqRCzun22FuiWJzcjFe8GRWnov9IBa+ZECmELqCVrWfD9hORFcAa3gAQ01p7l206pHH8T6XLzy11PnIB8oZ0ABCWNGAGDqwqHrvwTNdNR166cSUgSfzgXEpNgIQUFoAmhFkSvUCKVrZiN2hePs3UEAPojqh1OSvAKPqAl4rRvH4bmktLAh8eVoOKG/JKgQox23M6MJZJoMw2eBryahzQ9vJ1DFFafSX9NwL/An8Br6Lz9O6O8WUAAAAASUVORK5CYII=
+      name: Sentry - /favicon.ico
+      description: 'Fetched from URL: https://example.com/favicon.ico'
+      content_type: image/x-icon
+      server: Apache
+      status_code: "200"
+      headers:
+        - 'Last-Modified: Thu, 23 May 2024 10:42:00 GMT'
+        - 'Etag: "437-6191cb36cbada"'
+        - 'Content-Length: 1079'
+        - 'X-Xss-Protection: 1; mode=block'
+        - 'Strict-Transport-Security: max-age=31536000; includeSubDomains'
+        - 'X-Content-Type-Options: nosniff'
+        - 'Accept-Ranges: bytes'
+        - 'X-Frame-Options: SameOrigin'
+      created_at: 2025-01-14T13:33:06.343233Z
+      updated_at: 2025-01-14T13:33:06.343072Z
+      ext_version: 0
+      ext_uuid: ab4cab3b-b6f6-4500-8682-db5ffaffe869
+    - id: 687
+      data: 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
+      name: Sentry - /mics/images/sentry-ivanti-logo-178x32.png
+      description: 'Fetched from URL: https://example.com/mics/images/sentry-ivanti-logo-178x32.png'
+      content_type: image/png
+      server: Server
+      status_code: "200"
+      headers:
+        - 'Etag: W/"2174-1711517042000"'
+        - 'Cache-Control: public, max-age=2592000, must-revalidate'
+        - 'Last-Modified: Wed, 27 Mar 2024 05:24:02 GMT'
+        - 'Content-Length: 2174'
+        - 'X-Content-Type-Options: nosniff'
+        - 'Pragma: no-cache'
+        - 'Accept-Ranges: bytes'
+        - 'Set-Cookie: JSESSIONID=1B97AEC24F722EDAC77853400E87AC73; Path=/mics; Secure; HttpOnly;SameSite=lax'
+        - 'X-Xss-Protection: 1; mode=block'
+        - 'Strict-Transport-Security: max-age=31536000; includeSubDomains'
+        - 'X-Frame-Options: SameOrigin'
+      created_at: 2025-01-14T13:33:06.256115Z
+      updated_at: 2025-01-14T13:33:06.25603Z
+      ext_version: 0
+      ext_uuid: fa17cf26-f26c-47f4-a693-35894e2a4d98
