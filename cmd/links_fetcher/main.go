@@ -29,7 +29,10 @@ import (
 	"io"
 	"lophiid/pkg/html"
 	"net/http"
+	"net/url"
 	"os"
+	"regexp"
+	"strings"
 	"time"
 
 	"log/slog"
@@ -59,6 +62,12 @@ func main() {
 		programLevel.Set(slog.LevelInfo)
 	}
 
+	Crawl(*targetURL)
+
+}
+
+func Crawl(targetURL string) {
+
 	insecureHttpTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -70,7 +79,7 @@ func main() {
 		},
 	}
 
-	req, err := http.NewRequest(http.MethodGet, *targetURL, nil)
+	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
 	if err != nil {
 		slog.Error("unable to create http request", slog.String("error", err.Error()))
 		return
@@ -88,8 +97,39 @@ func main() {
 		return
 	}
 
-	links := html.ExtractResourceLinks(*targetURL, string(resBody))
+	parsedUrl, err := url.Parse(targetURL)
+	if err != nil {
+		slog.Error("unable to parse url", slog.String("error", err.Error()))
+		return
+	}
+
+	baseUrl := parsedUrl.Scheme + "://" + parsedUrl.Host
+
+	suffixToFetch := map[string]bool{
+		"html": true,
+		"htm":  true,
+		"php":  true,
+		"asp":  true,
+	}
+
+	links := html.ExtractResourceLinks(targetURL, string(resBody))
 	for _, link := range links {
+		if strings.HasPrefix(link, baseUrl) {
+			parsedLink, err := url.Parse(link)
+			if err != nil {
+				slog.Error("could not parse link", slog.String("link", link))
+				continue
+			}
+
+			r := regexp.MustCompile(`\.([^.]+)$`)
+			matches := r.FindStringSubmatch(parsedLink.Path)
+			if len(matches) > 1 {
+				if _, ok := suffixToFetch[matches[1]]; ok {
+					fmt.Printf("INFO: Crawling %s\n", link)
+					Crawl(link)
+				}
+			}
+		}
 		fmt.Printf("%s\n", link)
 	}
 
