@@ -10,6 +10,28 @@
 
 You will need to have [bazel](https://bazel.build/) installed. Just grab the latest version from your OS distribution and install it.
 
+##### Yara-X
+
+Run the following command to install cargo-c
+
+```shell
+cargo install cargo-c
+```
+
+Now clone the YARA-X repository:
+
+```shell
+git clone https://github.com/VirusTotal/yara-x.git
+```
+
+Once cargo-c is installed, go to the directory of the YARA-X repository and run the following command as root:
+
+```shell
+cargo cinstall -p yara-x-capi --release
+```
+
+
+
 ##### Protobuf
 
 Before you can build, you will need to compile some protobuffers by running a script. For this to work, you need protobuf-compiler installed. On Debian and Ubuntu, you do this with:
