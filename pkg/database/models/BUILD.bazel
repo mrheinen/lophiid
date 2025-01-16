@@ -21,6 +21,7 @@ go_library(
         "tag_per_request.go",
         "whois.go",
         "yammablebytes.go",
+        "yara.go",
     ],
     importpath = "lophiid/pkg/database/models",
     visibility = ["//visibility:public"],
