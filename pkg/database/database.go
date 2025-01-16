@@ -704,6 +704,7 @@ type FakeDatabaseClient struct {
 	DataModelToReturn           models.DataModel
 	SessionToReturn             models.Session
 	RequestDescriptionsToReturn []models.RequestDescription
+	YarasToReturn               []models.Yara
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -743,6 +744,9 @@ func (f *FakeDatabaseClient) SearchEvents(offset int64, limit int64, query strin
 }
 func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error) {
 	return f.ContentRulesToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchYara(offset int64, limit int64, query string) ([]models.Yara, error) {
+	return f.YarasToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchSession(offset int64, limit int64, query string) ([]models.Session, error) {
 	return []models.Session{f.SessionToReturn}, f.ErrorToReturn
