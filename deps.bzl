@@ -870,6 +870,13 @@ def go_dependencies():
         version = "v1.12.3",
     )
     go_repository(
+        name = "com_github_virustotal_yara_x_go",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/VirusTotal/yara-x/go",
+        sum = "h1:nR7MKfNOOqsLXyeJYjgFOQcCjfME9qAoDLiN2Z7/pcg=",
+        version = "v0.12.0",
+    )
+    go_repository(
         name = "com_github_vishvananda_netlink",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/vishvananda/netlink",
@@ -1006,8 +1013,8 @@ def go_dependencies():
         name = "org_golang_google_protobuf",
         build_file_proto_mode = "disable_global",
         importpath = "google.golang.org/protobuf",
-        sum = "h1:Qo/qEd2RZPCf2nKuorzksSknv0d3ERwp1vFG38gSmH4=",
-        version = "v1.34.0",
+        sum = "h1:82DV7MYdb8anAVi3qge1wSnMDrnKK7ebr+I0hHRN1BU=",
+        version = "v1.36.3",
     )
     go_repository(
         name = "org_golang_x_crypto",

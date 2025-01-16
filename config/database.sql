@@ -31,6 +31,7 @@ CREATE TYPE DOWNLOAD_STATUS AS ENUM ('UNKNOWN', 'SCHEDULED', 'DONE');
 CREATE TYPE REQUEST_PURPOSE AS ENUM ('UNKNOWN', 'RECON', 'CRAWL', 'ATTACK');
 CREATE TYPE RESPONDER_TYPE AS ENUM ('NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION');
 CREATE TYPE RESPONDER_DECODER_TYPE AS ENUM ('NONE', 'URI', 'HTML');
+CREATE TYPE YARA_STATUS_TYPE AS ENUM ('UNKNOWN', 'PENDING', 'DONE', 'FAILED');
 CREATE TYPE REVIEW_STATUS_TYPE AS ENUM ('UNREVIEWED', 'REVIEWED_OK', 'REVIEWED_NOK');
 CREATE TYPE TRIAGE_STATUS_TYPE AS ENUM ('UNKNOWN', 'PENDING', 'DONE', 'FAILED');
 
@@ -209,9 +210,22 @@ CREATE TABLE downloads (
   vt_analysis_undetected INT DEFAULT 0,
   vt_analysis_timeout    INT DEFAULT 0,
   status         DOWNLOAD_STATUS default 'UNKNOWN',
+  yara_status    YARA_STATUS_TYPE default 'UNKNOWN',
+  yara_last_scan TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
 );
 
+
+CREATE TABLE yara (
+  id                        SERIAL PRIMARY KEY,
+  download_id               INT,
+  identifier                VARCHAR(2048),
+  author                    VARCHAR(2048),
+  metadata                  VARCHAR(4096) ARRAY,
+  created_at                TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at                TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  CONSTRAINT fk_download_id FOREIGN KEY(download_id) REFERENCES downloads(id) ON DELETE CASCADE
+);
 
 CREATE TABLE p0f_result (
   id                        SERIAL PRIMARY KEY,

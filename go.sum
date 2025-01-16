@@ -11,6 +11,13 @@ github.com/Microsoft/go-winio v0.6.0 h1:slsWYD/zyx7lCXoZVlvQrj0hPTM1HI4+v1sIda2y
 github.com/Microsoft/go-winio v0.6.0/go.mod h1:cTAf44im0RAYeL23bpB+fzCyDH2MJiz2BO69KH/soAE=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEVMRuU21PR1EtLVZJmdB18Gu3Rw=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5/go.mod h1:lmUJ/7eu/Q8D7ML55dXQrVaamCz2vxCfdQBasLZfHKk=
+github.com/VirusTotal/yara-x v0.12.0/go.mod h1:SgsYnsR+DaDKfPJ2zDwB8o5uXmWIHcSJ/zvdokS1yVk=
+github.com/VirusTotal/yara-x/go v0.3.0 h1:nkVmjJN3yUJLmxRb5tMbejen5AyNuC3x/lN578s3RJM=
+github.com/VirusTotal/yara-x/go v0.3.0/go.mod h1:lgXP/nkYX349MVowrtTtU5hzMdCOWQLv3+wKll9+0F8=
+github.com/VirusTotal/yara-x/go v0.11.1 h1:iDFreBdKdUg/jJtLSh8tyxl9bXuTtJ9KRFq0+8het2E=
+github.com/VirusTotal/yara-x/go v0.11.1/go.mod h1:lgXP/nkYX349MVowrtTtU5hzMdCOWQLv3+wKll9+0F8=
+github.com/VirusTotal/yara-x/go v0.12.0 h1:nR7MKfNOOqsLXyeJYjgFOQcCjfME9qAoDLiN2Z7/pcg=
+github.com/VirusTotal/yara-x/go v0.12.0/go.mod h1:lgXP/nkYX349MVowrtTtU5hzMdCOWQLv3+wKll9+0F8=
 github.com/alecthomas/kingpin/v2 v2.4.0 h1:f48lwail6p8zpO1bC4TxtqACaGqHYA22qkHjHpqDjYY=
 github.com/alecthomas/kingpin/v2 v2.4.0/go.mod h1:0gyi0zQnjuFk8xrkNKamJoyUo382HRL7ATRpFZCw6tE=
 github.com/alecthomas/units v0.0.0-20240626203959-61d1e3462e30 h1:t3eaIm0rUkzbrIewtiFmMK5RXHej2XnoXNhxVsAYUfg=
@@ -148,6 +155,8 @@ github.com/mrheinen/magicmime v0.0.0-20240329164816-cbc792827fe4 h1:B7uMqdZujqJ6
 github.com/mrheinen/magicmime v0.0.0-20240329164816-cbc792827fe4/go.mod h1:MS8maN8ynhB3UMa743cwPHw0eTWbTgKbXAMUSPW2n3E=
 github.com/mrheinen/p0fclient v0.0.0-20240415163501-4961d493ae47 h1:UsCD/XNDmk+WVYj9by9dFJ6UtwqDGFfumDI3wIag8Oc=
 github.com/mrheinen/p0fclient v0.0.0-20240415163501-4961d493ae47/go.mod h1:HM6cKoSgXXdE7RSk4+C/Ygm/TCx42022qZc8MfVY9uQ=
+github.com/mrheinen/yaraxx/go v0.0.0-20250116134922-effed2f5f227 h1:OBPTXDXIGeixKgN7DNNlRK3cCvzuxCbFj6LTxGByKN4=
+github.com/mrheinen/yaraxx/go v0.0.0-20250116134922-effed2f5f227/go.mod h1:1ozKty6fPsJQlXLO2X9akHM8D2XGfZLC2WDiHkhGKxc=
 github.com/mrunalp/fileutils v0.5.0/go.mod h1:M1WthSahJixYnrXQl/DFQuteStB1weuxD2QJNHXfbSQ=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
@@ -378,6 +387,8 @@ google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQ
 google.golang.org/protobuf v1.27.1/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
 google.golang.org/protobuf v1.34.0 h1:Qo/qEd2RZPCf2nKuorzksSknv0d3ERwp1vFG38gSmH4=
 google.golang.org/protobuf v1.34.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
+google.golang.org/protobuf v1.36.3 h1:82DV7MYdb8anAVi3qge1wSnMDrnKK7ebr+I0hHRN1BU=
+google.golang.org/protobuf v1.36.3/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
