@@ -53,6 +53,7 @@ type Download struct {
 	VTAnalysisTimeout       int64                    `ksql:"vt_analysis_timeout" json:"vt_analysis_timeout"`
 	YaraStatus              string                   `ksql:"yara_status" json:"yara_status" doc:"Yara scan status"`
 	YaraLastScan            time.Time                `ksql:"yara_last_scan" json:"yara_last_scan" doc:"Last time a yara scan ran"`
+	YaraScannedUnpacked     bool                     `ksql:"yara_scanned_unpacked" json:"yara_scanned_unpacked" doc:"Whether yara scanned the unpacked file"`
 }
 
 func (c *Download) ModelID() int64 { return c.ID }

@@ -212,6 +212,7 @@ CREATE TABLE downloads (
   status         DOWNLOAD_STATUS default 'UNKNOWN',
   yara_status    YARA_STATUS_TYPE default 'UNKNOWN',
   yara_last_scan TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  yara_scanned_unpacked BOOLEAN default FALSE,
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
 );
 

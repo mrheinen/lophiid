@@ -30,6 +30,14 @@
                 {{ localDownload.used_url }} (Host: {{ localDownload.host }})
               </td>
             </tr>
+            <tr v-if="localDownload.yara_scanned_unpacked == true">
+              <th>Binary was packed</th>
+              <td>
+                Yes
+              </td>
+            </tr>
+
+
             <tr>
 
               <th>SHA 256</th>

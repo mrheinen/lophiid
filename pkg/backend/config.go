@@ -97,8 +97,9 @@ type Config struct {
 	} `fig:"virustotal"`
 	Yara struct {
 		LogFile              string `fig:"log_file" default:"yara.log" `
-		LogLevel             string        `fig:"log_level" default:"debug" `
+		LogLevel             string `fig:"log_level" default:"debug" `
 		MetricsListenAddress string `fig:"metrics_listen_address" default:"localhost:8997" `
+		PrepareCommand       string `fig:"prepare_command" default:"" `
 	} `fig:"yara"`
 	Metrics struct {
 		ListenAddress string `fig:"listen_address" default:"localhost:8998"`

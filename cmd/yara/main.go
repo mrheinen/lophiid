@@ -103,7 +103,7 @@ func main() {
 		}
 	}()
 
-	mgr := yara.NewYaraManager(dbc, *rulesDir, metrics)
+	mgr := yara.NewYaraManager(dbc, *rulesDir, cfg.Yara.PrepareCommand, metrics)
 
 	yarax := yara.YaraxWrapper{}
 

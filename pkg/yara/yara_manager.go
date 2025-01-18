@@ -6,21 +6,27 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
 
+const UnpackedExtension = ".unpacked"
+
 type YaraManager struct {
-	dbClient      database.DatabaseClient
-	rulesLocation string
-	metrics       *YaraMetrics
+	dbClient       database.DatabaseClient
+	rulesLocation  string
+	metrics        *YaraMetrics
+	prepareCommand string
 }
 
-func NewYaraManager(dbClient database.DatabaseClient, rulesLocation string, metrics *YaraMetrics) *YaraManager {
+func NewYaraManager(dbClient database.DatabaseClient, rulesLocation string, prepareCommand string, metrics *YaraMetrics) *YaraManager {
 	return &YaraManager{
-		dbClient:      dbClient,
-		rulesLocation: rulesLocation,
-		metrics:       metrics,
+		dbClient:       dbClient,
+		rulesLocation:  rulesLocation,
+		metrics:        metrics,
+		prepareCommand: prepareCommand,
 	}
 }
 
@@ -35,13 +41,45 @@ func (d *YaraManager) GetPendingScanList(limit int64) ([]models.Download, error)
 	return res, nil
 }
 
+func (d *YaraManager) PrepareDownloadsForScan(downloads *[]models.Download) {
+}
+
 // ScanDownloads scans the downloads using the given Yara instance.
+// If the downloaded file exists with the .unpacked extention then this will be
+// used for the scan instead of the original file. Such an unpacked file could,
+// for example, be created by the prepareCommand.
 func (d *YaraManager) ScanDownloads(yw Yara, downloads *[]models.Download) (map[*models.Download][]YaraResult, error) {
 	rets := make(map[*models.Download][]YaraResult)
 
 	for _, dl := range *downloads {
 		start := time.Now()
-		res, err := yw.ScanFile(dl.FileLocation)
+
+		// Run the command to prepare the download for the scan.
+		if d.prepareCommand != "" {
+			cmd := exec.Command(d.prepareCommand, dl.FileLocation)
+			if err := cmd.Run(); err != nil {
+				slog.Error("Error running command", slog.String("command", d.prepareCommand), slog.String("error", err.Error()))
+			}
+		}
+
+		// If the file exists with the .unpacked extension then this is used to do
+		// the yara scan.
+		unpackedLocation := fmt.Sprintf("%s%s", dl.FileLocation, UnpackedExtension)
+		fileToScan := dl.FileLocation
+
+		if _, err := os.Stat(unpackedLocation); err == nil {
+			slog.Debug("Unpacked file found", slog.String("file", unpackedLocation))
+			dl.YaraScannedUnpacked = true
+			fileToScan = unpackedLocation
+		}
+
+		if _, err := os.Stat(fileToScan); err != nil {
+			slog.Error("File is missing", slog.String("file", dl.FileLocation), slog.String("error", err.Error()))
+			continue
+		}
+
+		slog.Info("Scanning", slog.String("file", fileToScan))
+		res, err := yw.ScanFile(fileToScan)
 		if err != nil {
 			slog.Error("Error scanning", slog.String("file", dl.FileLocation), slog.String("error", err.Error()))
 			return rets, fmt.Errorf("error scanning %s: %w", dl.FileLocation, err)
