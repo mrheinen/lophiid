@@ -51,7 +51,7 @@ func (d *YaraManager) PrepareDownloadsForScan(downloads *[]models.Download) {
 func (d *YaraManager) ScanDownloads(yw Yara, downloads *[]models.Download) (map[*models.Download][]YaraResult, error) {
 	rets := make(map[*models.Download][]YaraResult)
 
-	for _, dl := range *downloads {
+	for idx, dl := range *downloads {
 		start := time.Now()
 
 		// Run the command to prepare the download for the scan.
@@ -69,7 +69,7 @@ func (d *YaraManager) ScanDownloads(yw Yara, downloads *[]models.Download) (map[
 
 		if _, err := os.Stat(unpackedLocation); err == nil {
 			slog.Debug("Unpacked file found", slog.String("file", unpackedLocation))
-			dl.YaraScannedUnpacked = true
+			(*downloads)[idx].YaraScannedUnpacked = true
 			fileToScan = unpackedLocation
 		}
 
