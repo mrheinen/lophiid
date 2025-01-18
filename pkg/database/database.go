@@ -361,7 +361,7 @@ func (d *KSQLClient) SearchYara(offset int64, limit int64, query string) ([]mode
 		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM content", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
+	query, values, err := buildComposedQuery(params, "FROM yara", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -765,7 +765,7 @@ func (f *FakeDatabaseClient) SearchApps(offset int64, limit int64, query string)
 	return []models.Application{f.ApplicationToReturn}, nil
 }
 func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query string) ([]models.Download, error) {
-	return f.DownloadsToReturn, nil
+	return f.DownloadsToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query string) ([]models.Honeypot, error) {
 	return []models.Honeypot{f.HoneypotToReturn}, f.HoneypotErrorToReturn

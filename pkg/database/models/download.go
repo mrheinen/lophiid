@@ -51,6 +51,8 @@ type Download struct {
 	VTAnalysisSuspicious    int64                    `ksql:"vt_analysis_suspicious" json:"vt_analysis_suspicious" doc:"Virus total results marked suspicious"`
 	VTAnalysisUndetected    int64                    `ksql:"vt_analysis_undetected" json:"vt_analysis_undetected" doc:"Virus total results marked undetected"`
 	VTAnalysisTimeout       int64                    `ksql:"vt_analysis_timeout" json:"vt_analysis_timeout"`
+	YaraStatus              string                   `ksql:"yara_status" json:"yara_status" doc:"Yara scan status"`
+	YaraLastScan            time.Time                `ksql:"yara_last_scan" json:"yara_last_scan" doc:"Last time a yara scan ran"`
 }
 
 func (c *Download) ModelID() int64 { return c.ID }

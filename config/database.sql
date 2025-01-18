@@ -221,7 +221,16 @@ CREATE TABLE yara (
   download_id               INT,
   identifier                VARCHAR(2048),
   author                    VARCHAR(2048),
+  description               VARCHAR(4096),
+  reference                 VARCHAR(2048),
+  date                      VARCHAR(64),
+  eid                        VARCHAR(256),
+  malpedia_reference        VARCHAR(2048),
+  malpedia_version          VARCHAR(64),
+  malpedia_license          VARCHAR(256),
+  malpedia_sharing          VARCHAR(32),
   metadata                  VARCHAR(4096) ARRAY,
+  tags                      VARCHAR(512) ARRAY,
   created_at                TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at                TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   CONSTRAINT fk_download_id FOREIGN KEY(download_id) REFERENCES downloads(id) ON DELETE CASCADE
@@ -375,6 +384,9 @@ GRANT ALL PRIVILEGES ON session TO lo;
 GRANT ALL PRIVILEGES ON session_id_seq TO lo;
 GRANT ALL PRIVILEGES ON request_description TO lo;
 GRANT ALL PRIVILEGES ON request_description_id_seq TO lo;
+GRANT ALL PRIVILEGES ON yara TO lo;
+GRANT ALL PRIVILEGES ON yara_id_seq TO lo;
+
 
 
 CREATE INDEX session_ip ON session (

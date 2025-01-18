@@ -382,6 +382,29 @@ func (a *ApiServer) HandleGetWhoisForIP(w http.ResponseWriter, req *http.Request
 	a.sendStatus(w, "", ResultSuccess, res[0])
 }
 
+func (a *ApiServer) HandleGetYaraForDownload(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	id := req.Form.Get("id")
+
+	// Only return 25 maximum matches which would already be excessive.
+	res, err := a.dbc.SearchYara(0, 25, fmt.Sprintf("download_id:%s", id))
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if len(res) == 0 {
+		a.sendStatus(w, "No result", ResultSuccess, nil)
+		return
+	}
+
+	a.sendStatus(w, "", ResultSuccess, res)
+}
+
 func (a *ApiServer) HandleGetDescriptionForCmpHash(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)

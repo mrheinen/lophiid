@@ -103,12 +103,17 @@
     <br />
 
     <FieldSet legend="Context" :toggleable="false">
-    <PrimeTabs value="0">
+    <PrimeTabs v-model:value="activeTab">
     <TabList>
         <PrimeTab value="0">HTTP Request</PrimeTab>
-        <PrimeTab value="1" v-if="localWhois">Whois</PrimeTab>
+        <PrimeTab value="1" v-if="localYara">Yara result</PrimeTab>
+        <PrimeTab value="2" v-if="localWhois">Whois</PrimeTab>
     </TabList>
         <TabPanels>
+        <TabPanel value="1" v-if="localYara">
+          <YaraCard :data="localYara">
+          </YaraCard>
+        </TabPanel>
         <TabPanel value="0">
           <RawHttpCard
             v-if="localDownload.raw_http_response"
@@ -116,7 +121,7 @@
             :data="localDownload.raw_http_response"
           ></RawHttpCard>
         </TabPanel>
-        <TabPanel value="1" v-if="localWhois">
+        <TabPanel value="2" v-if="localWhois">
           <table v-if="localWhois.country">
             <tbody>
               <tr>
@@ -144,10 +149,12 @@
 <script>
 import { copyToClipboardHelper } from "../../helpers.js";
 import RawHttpCard from "../cards/RawHttpCard.vue";
+import YaraCard from "../cards/YaraCard.vue";
 
 export default {
   components: {
     RawHttpCard,
+    YaraCard,
   },
   props: ["download", "whois"],
   emits: ["require-auth"],
@@ -155,6 +162,8 @@ export default {
   data() {
     return {
       localWhois: null,
+      localYara: null,
+      activeTab: "0",
       localDownload: {
         parsed: {},
       },
@@ -164,6 +173,33 @@ export default {
     copyToClipboard() {
       copyToClipboardHelper(this.$refs.sha256sum.value);
       this.$toast.info("Copied");
+    },
+    loadYaraForDownload(id) {
+      fetch(this.config.backendAddress + "/yara/bydownloadid", {
+        method: "POST",
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "id=" + id,
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            if (response.data) {
+              this.localYara = response.data;
+              this.activeTab = "1";
+            }
+          }
+        });
     },
     exportDownload(id) {
       fetch(this.config.backendAddress + "/download/export", {
@@ -207,6 +243,9 @@ export default {
   watch: {
     download() {
       this.localDownload = Object.assign({}, this.download);
+      this.activeTab = "0";
+      this.localYara = null;
+      this.loadYaraForDownload(this.download.id);
     },
     whois() {
       if (this.whois == null) {
@@ -260,6 +299,7 @@ pre.whois {
 
 table th {
   padding-right: 13px;
+  width: 140px;
 }
 table td {
   padding-right: 13px;

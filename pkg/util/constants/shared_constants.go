@@ -103,3 +103,11 @@ const (
 	TriageStatusTypeDone    = "DONE"
 	TriageStatusTypeFailed  = "FAILED"
 )
+
+// These need to be kept in sync with YARA_STATUS_TYPE in the database
+const (
+	YaraStatusTypeUnknown = "UNKNOWN"
+  YaraStatusTypePending = "PENDING"
+  YaraStatusTypeDone    = "DONE"
+  YaraStatusTypeFailed  = "FAILED"
+)
