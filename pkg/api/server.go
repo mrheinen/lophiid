@@ -747,6 +747,31 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 	a.sendStatus(w, "", ResultSuccess, reqs)
 }
 
+func (a *ApiServer) HandleSearchYara(w http.ResponseWriter, req *http.Request) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	var rls []models.Yara
+	query := req.URL.Query().Get("q")
+	rls, err = a.dbc.SearchYara(iOffset, iLimit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
 func (a *ApiServer) HandleSearchContentRules(w http.ResponseWriter, req *http.Request) {
 	offset := req.URL.Query().Get("offset")
 	iOffset, err := strconv.ParseInt(offset, 10, 64)
@@ -1253,6 +1278,7 @@ func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Reques
 		"tag":         models.Tag{},
 		"storedquery": models.StoredQuery{},
 		"ipevent":     models.IpEvent{},
+		"yara":        models.Yara{},
 	}
 
 	if model, ok := modelMap[modelName]; ok {

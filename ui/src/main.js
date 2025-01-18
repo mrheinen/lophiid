@@ -16,6 +16,7 @@ import HoneyList from './components/container/HoneypotList.vue';
 import QueryList from './components/container/QueryList.vue';
 import EventsList from './components/container/EventsList.vue';
 import TagList from './components/container/TagList.vue';
+import YaraList from './components/container/YaraList.vue';
 import PrimeVue from './../node_modules/primevue/config';
 
 import CodeMirror from './../node_modules/vue-codemirror';
@@ -51,6 +52,8 @@ const router = createRouter({
     {path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },
     {path: Config.eventLink, component: EventsList },
     {path: Config.eventSegmentLink, component: EventsList },
+    {path: Config.yaraLink, component: YaraList },
+    {path: Config.yaraSegmentLink, component: YaraList },
   ]
 });
 

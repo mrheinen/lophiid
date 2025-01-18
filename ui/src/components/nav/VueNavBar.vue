@@ -29,8 +29,7 @@
       </template>
 
       <template #end>
-        <div class="flex align-items-center gap-2">
-        </div>
+        <div class="flex align-items-center gap-2"></div>
       </template>
     </MenuBar>
   </div>
@@ -75,13 +74,6 @@ export default {
           },
         },
         {
-          label: "Downloads",
-          icon: "pi pi-download",
-          command: () => {
-            this.$router.push(this.config.downloadsLink);
-          },
-        },
-        {
           label: "Honeypots",
           icon: "pi pi-eye",
           command: () => {
@@ -95,6 +87,28 @@ export default {
             this.$router.push(this.config.eventLink);
           },
         },
+
+        {
+          label: "Malware",
+          icon: "pi pi-exclamation-triangle",
+          items: [
+            {
+              label: "Yara",
+              icon: "pi pi-list",
+              command: () => {
+                this.$router.push(this.config.yaraLink);
+              },
+            },
+            {
+              label: "Downloads",
+              icon: "pi pi-download",
+              command: () => {
+                this.$router.push(this.config.downloadsLink);
+              },
+            },
+          ],
+        },
+
         {
           label: "Queries",
           icon: "pi pi-search",
@@ -104,20 +118,17 @@ export default {
               icon: "pi pi-search",
               command: () => {
                 this.$router.push(this.config.storedqueryLink);
-              }
+              },
             },
             {
               label: "Manage labels",
               icon: "pi pi-tag",
               command: () => {
                 this.$router.push(this.config.tagsLink);
-              }
+              },
             },
           ],
         },
-
-
-
       ],
     };
   },
