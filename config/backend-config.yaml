@@ -69,6 +69,12 @@ analysis:
   # get an event every ~1 hour.
   scan_monitor_interval: 1h
 
+yara:
+  log_file: /tmp/yara.log
+  log_level: debug
+  metrics_listen_address: 127.0.0.1:8997
+
+
 virustotal:
   # Your virus total API key.
   api_key: AAAAAAAAAAAAAAAAAA
