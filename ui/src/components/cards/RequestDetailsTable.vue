@@ -139,4 +139,9 @@ export default {
 tr {
   font-size: 14px;
 }
+
+          th {
+            width: 140px;
+
+          };
 </style>

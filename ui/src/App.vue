@@ -89,6 +89,10 @@ th {
   color: #616060 !important;
 }
 
+td {
+  text-align: left;
+}
+
 tr {
   font-size: 13px;
 }

@@ -56,6 +56,7 @@ func main() {
 	WriteModelToFile(fo, models.StoredQuery{}, "Manage Queries")
 	WriteModelToFile(fo, models.Tag{}, "Manage tags")
 	WriteModelToFile(fo, models.IpEvent{}, "Manage IP events")
+	WriteModelToFile(fo, models.Yara{}, "Yara")
 	defer fo.Close()
 
 }

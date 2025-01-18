@@ -48,6 +48,7 @@ var P0fResultTable = ksql.NewTable("p0f_result")
 var IpEventTable = ksql.NewTable("ip_event")
 var SessionTable = ksql.NewTable("session")
 var RequestDescriptionTable = ksql.NewTable("request_description")
+var YaraTable = ksql.NewTable("yara")
 
 type DatabaseClient interface {
 	Close()
@@ -68,6 +69,7 @@ type DatabaseClient interface {
 	SearchWhois(offset int64, limit int64, query string) ([]models.Whois, error)
 	SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error)
 	SearchContent(offset int64, limit int64, query string) ([]models.Content, error)
+	SearchYara(offset int64, limit int64, query string) ([]models.Yara, error)
 	SearchDownloads(offset int64, limit int64, query string) ([]models.Download, error)
 	SearchHoneypots(offset int64, limit int64, query string) ([]models.Honeypot, error)
 	SearchSession(offset int64, limit int64, query string) ([]models.Session, error)
@@ -157,21 +159,6 @@ func (d *KSQLClient) Close() {
 	d.db.Close()
 }
 
-func (d *KSQLClient) getTableNameForModel(dm models.DataModel) string {
-	name := util.GetStructName(dm)
-	switch name {
-	case "Application":
-		return "app"
-	case "Content":
-		return "content"
-	case "ContentRule":
-		return "content_rule"
-	default:
-		slog.Error("Don't know %s datamodel\n", slog.String("name", name))
-		return ""
-	}
-}
-
 func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	name := util.GetStructName(dm)
 
@@ -192,6 +179,7 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["IpEvent"] = &IpEventTable
 	sqlTable["Session"] = &SessionTable
 	sqlTable["RequestDescription"] = &RequestDescriptionTable
+	sqlTable["Yara"] = &YaraTable
 
 	table, ok := sqlTable[name]
 	if !ok {
@@ -354,6 +342,26 @@ func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]m
 	}
 
 	query, values, err := buildComposedQuery(params, "FROM content", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
+	if err != nil {
+		return rs, fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, &rs, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return rs, err
+}
+
+func (d *KSQLClient) SearchYara(offset int64, limit int64, query string) ([]models.Yara, error) {
+	var rs []models.Yara
+
+	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Yara{}))
+	if err != nil {
+		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	query, values, err := buildComposedQuery(params, "FROM yara", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
 	if err != nil {
 		return rs, fmt.Errorf("cannot build query: %s", err.Error())
 	}
@@ -696,6 +704,7 @@ type FakeDatabaseClient struct {
 	DataModelToReturn           models.DataModel
 	SessionToReturn             models.Session
 	RequestDescriptionsToReturn []models.RequestDescription
+	YarasToReturn               []models.Yara
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -736,6 +745,9 @@ func (f *FakeDatabaseClient) SearchEvents(offset int64, limit int64, query strin
 func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error) {
 	return f.ContentRulesToReturn, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) SearchYara(offset int64, limit int64, query string) ([]models.Yara, error) {
+	return f.YarasToReturn, f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) SearchSession(offset int64, limit int64, query string) ([]models.Session, error) {
 	return []models.Session{f.SessionToReturn}, f.ErrorToReturn
 }
@@ -753,7 +765,7 @@ func (f *FakeDatabaseClient) SearchApps(offset int64, limit int64, query string)
 	return []models.Application{f.ApplicationToReturn}, nil
 }
 func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query string) ([]models.Download, error) {
-	return f.DownloadsToReturn, nil
+	return f.DownloadsToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query string) ([]models.Honeypot, error) {
 	return []models.Honeypot{f.HoneypotToReturn}, f.HoneypotErrorToReturn

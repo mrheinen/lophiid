@@ -15,8 +15,9 @@ the search bar.
 | Keyword | Type | Description |
 | --- | --- | --- |
 | app_id | int64 | The App ID of the rule that matched this request |
-| base_hash | string | A base hash to find similar requests |
+| base_hash | string | A base hash to find roughly similar requests |
 | body |  | The request body |
+| cmp_hash | string | A hash to compare request across hosts |
 | content_dynamic | bool | A bool indicating if the Content is dynamic (script based) |
 | content_id | int64 | The Content ID that was served |
 | content_length | int64 | The Content-Length header value |
@@ -137,6 +138,8 @@ the search bar.
 | vt_analysis_undetected | int64 | Virus total results marked undetected |
 | vt_file_analysis_id | string | The virus total file analysis ID |
 | vt_url_analysis_id | string | The virus total URL analysis ID |
+| yara_last_scan | Time | Last time a yara scan ran |
+| yara_status | string | Yara scan status |
 
 
 ## Keywords for the Honeypots (model: Honeypot)
@@ -193,8 +196,30 @@ the search bar.
 | request_id | int64 | The ID of a request related to the event |
 | source | string | The source of the event |
 | source_ref | string | A reference related to the source of the event |
+| source_ref_type | string | The type of reference related to the source of the event |
 | subtype | string | The subtype of the event (e.g. RCE, LFI) |
 | type | string | The type of event (e.g. ATTACKED, CRAWLED) |
 | updated_at | Time | Last time the event was updated |
+
+
+## Keywords for the Yara (model: Yara)
+
+| Keyword | Type | Description |
+| --- | --- | --- |
+| author | string | The author of the yara entry |
+| created_at | Time | The date and time of creation |
+| date | string | The metadata date |
+| description | string | The description of the yara entry |
+| download_id | int64 | The ID of the download the yara entry belongs to |
+| eid | string | The metadata ID |
+| id | int64 | The ID of the yara entry |
+| identifier | string | The identifier of the yara entry |
+| malpedia_license | string | The malpedia license |
+| malpedia_reference | string | The malpedia link |
+| malpedia_sharing | string | The malpedia sharing tlp |
+| metadata | FlatArray[string] | The metadata of the yara entry |
+| reference | string | The metadata reference |
+| tags | FlatArray[string] | The tags of the yara entry |
+| updated_at | Time | The date and time of last update |
 
 

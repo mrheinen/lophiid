@@ -75,7 +75,6 @@ func main() {
 		<-sigc
 		slog.Info("Got signal to stop, please wait...")
 		*keepRunning = false
-		return
 	}()
 
 	llmClient := llm.NewOpenAILLMClientWithModel(cfg.AI.ApiKey, cfg.AI.ApiLocation, "", cfg.AI.Model)
@@ -83,12 +82,12 @@ func main() {
 	metricsRegistry := prometheus.NewRegistry()
 
 	http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
- go func() {
-     if err := http.ListenAndServe(cfg.AI.Triage.MetricsListenAddress, nil); err != nil {
-         slog.Error("Failed to start metrics server", "error", err)
-         os.Exit(1)
-     }
- }()
+	go func() {
+		if err := http.ListenAndServe(cfg.AI.Triage.MetricsListenAddress, nil); err != nil {
+			slog.Error("Failed to start metrics server", "error", err)
+			os.Exit(1)
+		}
+	}()
 
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
@@ -113,14 +112,15 @@ func main() {
 	myDescriber := describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics)
 
 	for {
-		if !*keepRunning {
-			slog.Info("Shutting down!")
-			return
-		}
 		cnt, err := myDescriber.GenerateLLMDescriptions(*batchSize)
 		if err != nil {
 			// We continue here to not stop the loop
 			slog.Error("error generating descriptions", slog.String("error", err.Error()))
+		}
+
+		if !*keepRunning {
+			slog.Info("Shutting down!")
+			return
 		}
 
 		// Only sleep when there were no descriptions at all.

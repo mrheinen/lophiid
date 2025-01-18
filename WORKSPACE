@@ -47,6 +47,34 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 load("//:deps.bzl", "go_dependencies")
 
+new_local_repository(
+    name = "yara_local_lib",
+    path = "/usr/local/lib/x86_64-linux-gnu/",
+    build_file_content = """
+cc_library(
+    name = "libs",
+    srcs = ["libyara_x_capi.so", "libyara_x.so"],
+    visibility = ["//visibility:public"],
+)
+""",
+)
+
+new_local_repository(
+    name = "yara_local_hdr",
+    path = "/usr/local/include/",
+    build_file_content = """
+
+cc_library(
+  name = "hdr",
+  srcs = ["yara_x.h"],
+  visibility = ["//visibility:public"],
+)
+""",
+)
+
+
+
+
 # gazelle:repository_macro deps.bzl%go_dependencies
 go_dependencies()
 

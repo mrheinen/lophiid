@@ -28,5 +28,5 @@ jobs:
       - name: Build
         run: bazel build //pkg/...
 
-      - name: Test
+      - name: Test bazel
         run: bazel test //pkg/...

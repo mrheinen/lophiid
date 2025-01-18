@@ -69,6 +69,17 @@ analysis:
   # get an event every ~1 hour.
   scan_monitor_interval: 1h
 
+yara:
+  log_file: /tmp/yara.log
+  log_level: debug
+  metrics_listen_address: 127.0.0.1:8997
+  # The prepare command will run with one parameter which is the file that will
+  # be scanned. This can be used to, for example, check if the file is packed
+  # (e.g. UPX) and unpack it. When used for unpacking then the unpacked output
+  # file needs to be <original_file>.unpacked
+  # prepare_command:  /path/to/unpack/script.sh
+
+
 virustotal:
   # Your virus total API key.
   api_key: AAAAAAAAAAAAAAAAAA

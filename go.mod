@@ -1,6 +1,6 @@
 module lophiid
 
-go 1.22.2
+go 1.22
 
 require (
 	github.com/blang/semver/v4 v4.0.0
@@ -23,12 +23,13 @@ require (
 	github.com/vingarcia/ksql/adapters/kpgx5 v1.12.3
 	golang.org/x/net v0.33.0
 	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.34.0
+	google.golang.org/protobuf v1.36.3
 	gopkg.in/yaml.v3 v3.0.1
 	mvdan.cc/xurls/v2 v2.5.0
 )
 
 require (
+	github.com/VirusTotal/yara-x/go v0.12.0 // indirect
 	github.com/alecthomas/kingpin/v2 v2.4.0 // indirect
 	github.com/alecthomas/units v0.0.0-20240626203959-61d1e3462e30 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

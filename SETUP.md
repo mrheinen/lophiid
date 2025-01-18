@@ -1,4 +1,8 @@
-#
+# IMPORTANT
+
+This software is in an early stage of development so if you run into ANY problems or have questions then please open an issue. I will follow up quickly
+and will help you out.
+
 
 # Setting up the backend and agents
 
@@ -9,6 +13,28 @@
 ##### Bazel
 
 You will need to have [bazel](https://bazel.build/) installed. Just grab the latest version from your OS distribution and install it.
+
+##### Yara-X
+
+Run the following command to install cargo-c
+
+```shell
+cargo install cargo-c
+```
+
+Now clone the YARA-X repository:
+
+```shell
+git clone https://github.com/VirusTotal/yara-x.git
+```
+
+Once cargo-c is installed, go to the directory of the YARA-X repository and run the following command as root:
+
+```shell
+cargo cinstall -p yara-x-capi --release
+```
+
+
 
 ##### Protobuf
 
@@ -192,6 +218,23 @@ Now you need to run the triage process:
 bazel build //cmd/triage:triage
 ./bazel-bin/triage/triage_/triage -c backend-config.yaml
 ```
+
+#### Setting up Yara scanning
+
+You can optionally setup automatic yara scanning of the malware that is
+collected. To do this, you need to run this command from the code root
+directory, where your backend-config.yaml is:
+```shell
+go run cmd/yara/main.go -m -r <path-to-yara-rules> -b 100
+```
+
+We use Yara-X so some older yara rules might potentially not work or
+need updating. The code simply ignores those rules (but does output an error on
+the screen).
+
+This process will regularly poll the database for new downloads and then runs
+the loaded rules against them. The results are stored in the database and
+visible in the UI (e.g. downloads tab).
 
 # Setting up the agent
 

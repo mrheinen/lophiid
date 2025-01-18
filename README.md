@@ -34,6 +34,7 @@ Key features:
 - AI analysis of attacks
 - Automatic tagging of requests and attacks to help triage
 - Automatically collects malware
+- Yara (yara-x) integration
 - Direct integration with VirusTotal
 - Ratelimiting / DoS protection
 - Exporting of rules for sharing with the community
