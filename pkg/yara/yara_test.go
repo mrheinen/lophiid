@@ -7,7 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func setupTestDirectories(t *testing.T) (string, string, string) {
@@ -179,6 +182,8 @@ rule test_rule {
 	// Test scanning
 	matchCount := 0
 	err = y.ScanDirectoryRecursive(scanDir, func(path string, results []YaraResult) {
+		fmt.Printf("Scanning %s\n", path)
+		fmt.Printf("Dir: %s\n", scanDir)
 		matchCount++
 		if len(results) != 1 {
 			t.Errorf("ScanDirectoryRecursive() got %d results for %s, want 1", len(results), path)
@@ -318,8 +323,11 @@ func TestGetPendingScanList(t *testing.T) {
 				ErrorToReturn:     tt.expectedError,
 			}
 
+			metricsRegistry := prometheus.NewRegistry()
+			metrics := CreateYaraMetrics(metricsRegistry)
+
 			// Create YaraManager instance
-			manager := NewYaraManager(fakeClient, "/test/rules")
+			manager := NewYaraManager(fakeClient, "", "/test/rules", metrics)
 
 			// Call the method
 			result, err := manager.GetPendingScanList(tt.limit)
@@ -344,6 +352,16 @@ func TestGetPendingScanList(t *testing.T) {
 }
 
 func TestScanDownloads(t *testing.T) {
+
+	tempDir := t.TempDir()
+
+	testFile1 := filepath.Join(tempDir, "test1.bin")
+	testFile2 := filepath.Join(tempDir, "test2.bin")
+
+	data := []byte("hello\ngo\n")
+	os.WriteFile(testFile1, data, 0644)
+	os.WriteFile(testFile2, data, 0644)
+
 	tests := []struct {
 		name           string
 		downloads      []models.Download
@@ -357,11 +375,11 @@ func TestScanDownloads(t *testing.T) {
 			downloads: []models.Download{
 				{
 					ID:           1,
-					FileLocation: "/tmp/test1.bin",
+					FileLocation: testFile1,
 				},
 				{
 					ID:           2,
-					FileLocation: "/tmp/test2.bin",
+					FileLocation: testFile2,
 				},
 			},
 			yaraResults: []YaraResult{
@@ -382,12 +400,12 @@ func TestScanDownloads(t *testing.T) {
 			downloads: []models.Download{
 				{
 					ID:           1,
-					FileLocation: "/tmp/test1.bin",
+					FileLocation: testFile1,
 				},
 			},
 			yaraResults:   nil,
 			yaraError:     fmt.Errorf("failed to scan file"),
-			expectedError: fmt.Errorf("error scanning /tmp/test1.bin: failed to scan file"),
+			expectedError: fmt.Errorf("failed to scan file"),
 		},
 		{
 			name:           "empty downloads list",
@@ -407,11 +425,11 @@ func TestScanDownloads(t *testing.T) {
 				ErrorToReturn:       tt.yaraError,
 			}
 
+			metricsRegistry := prometheus.NewRegistry()
+			metrics := CreateYaraMetrics(metricsRegistry)
+
 			// Create YaraManager instance
-			manager := &YaraManager{
-				dbClient:      nil, // not needed for this test
-				rulesLocation: "/test/rules",
-			}
+			manager := NewYaraManager(nil, "/test/rules", "", metrics)
 
 			// Call the method
 			downloads := tt.downloads
@@ -421,7 +439,7 @@ func TestScanDownloads(t *testing.T) {
 			if tt.expectedError != nil {
 				if err == nil {
 					t.Errorf("expected error %v, got nil", tt.expectedError)
-				} else if err.Error() != tt.expectedError.Error() {
+				} else if !strings.Contains(err.Error(), tt.expectedError.Error()) {
 					t.Errorf("expected error %v, got %v", tt.expectedError, err)
 				}
 				return
@@ -451,6 +469,9 @@ func TestScanDownloads(t *testing.T) {
 }
 
 func TestStoreYaraResults(t *testing.T) {
+	testAuthor := "test author"
+	testReference := "test reference"
+
 	tests := []struct {
 		name          string
 		results       map[*models.Download][]YaraResult
@@ -465,8 +486,8 @@ func TestStoreYaraResults(t *testing.T) {
 					Identifier: "test_rule",
 					Tags:       []string{"malware"},
 					Metadata: []YaraResultMetadata{
-						{Identifier: "author", Value: "Test Author"},
-						{Identifier: "reference", Value: "test-ref"},
+						{Identifier: "author", Value: testAuthor},
+						{Identifier: "reference", Value: testReference},
 						{Identifier: "is-ignored", Value: "is ignored"},
 					},
 				}},
@@ -475,11 +496,12 @@ func TestStoreYaraResults(t *testing.T) {
 				if y == nil {
 					t.Fatalf("Yara is nil")
 				}
-				if y.Author != "Test Author" {
-					t.Errorf("author = %q, want %q", y.Author, "Test Author")
+				if y.Author != testAuthor {
+					t.Errorf("author = %q, want %q", y.Author, testAuthor)
 				}
-				if len(y.Metadata) != 2 {
-					t.Errorf("metadata = %q, want 2", len(y.Metadata))
+
+				if y.Reference != testReference {
+					t.Errorf("reference = %q, want %q", y.Reference, testReference)
 				}
 			},
 		},

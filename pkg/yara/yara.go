@@ -118,6 +118,7 @@ func (y *YaraxWrapper) ScanDirectoryRecursive(dir string, callback func(string, 
 	}
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+
 		if err != nil {
 			return err
 		}
@@ -148,7 +149,7 @@ func (y *YaraxWrapper) ScanDirectoryRecursive(dir string, callback func(string, 
 func (y *YaraxWrapper) ScanFile(file string) ([]YaraResult, error) {
 	ret := []YaraResult{}
 
-	slog.Debug("scanning file", slog.String("file", file))
+	slog.Info("scanning file", slog.String("file", file))
 	if y.compiler == nil {
 		return ret, fmt.Errorf("compiler not initialized")
 	}
@@ -158,13 +159,13 @@ func (y *YaraxWrapper) ScanFile(file string) ([]YaraResult, error) {
 		slog.Info("Yara rules compiled", slog.Int("count", y.rules.Count()))
 	}
 
+	if y.scanner == nil {
+		y.scanner = yarax.NewScanner(y.rules)
+	}
+
 	data, err := os.ReadFile(file)
 	if err != nil {
 		return ret, fmt.Errorf("error reading file: %w", err)
-	}
-
-	if y.scanner == nil {
-		y.scanner = yarax.NewScanner(y.rules)
 	}
 
 	results, err := y.scanner.Scan(data)
