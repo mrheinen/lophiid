@@ -28,5 +28,8 @@ jobs:
       - name: Build
         run: bazel build //pkg/...
 
-      - name: Test
+      - name: Test bazel
         run: bazel test //pkg/...
+
+      - name: Test
+        run: go test lophiid/pkg/yara/...
