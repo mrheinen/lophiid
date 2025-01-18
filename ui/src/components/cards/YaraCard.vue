@@ -36,7 +36,6 @@
       </tbody>
     </table>
     <hr/>
-    <br/>
   </div>
 
 </template>
