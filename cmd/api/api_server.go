@@ -176,6 +176,7 @@ func main() {
 	r.HandleFunc("/events/segment", as.HandleSearchEvents).Methods("GET")
 
 	r.HandleFunc("/yara/bydownloadid", as.HandleGetYaraForDownload).Methods("POST")
+	r.HandleFunc("/yara/segment", as.HandleSearchYara).Methods("GET")
 
 	r.Use(as.AuthMW)
 

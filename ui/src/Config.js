@@ -14,6 +14,8 @@ export default {
   honeypotsSegmentLink: '/honeypot/:offset/:limit',
   storedqueryLink: '/query',
   storedquerySegmentLink: '/query/:offset/:limit',
+  yaraLink: '/yara',
+  yaraSegmentLink: '/yara/:offset/:limit',
   tagsLink: '/tag',
   datamodelDocLink: '/datamodel/doc',
   tagsSegmentLink: '/tag/:offset/:limit',
