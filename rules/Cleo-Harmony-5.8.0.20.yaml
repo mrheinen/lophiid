@@ -1,0 +1,81 @@
+app:
+    id: 162
+    name: Harmony
+    version: 5.8.0.20
+    vendor: Cleo
+    os: Windows
+    link: https://www.cleo.com/cleo-harmony
+    created_at: 2025-01-19T12:51:45.26679Z
+    updated_at: 2025-01-19T17:51:45.266727Z
+    ext_version: 0
+    ext_uuid: b843c7a6-96dc-460e-a608-3706d7d110f6
+    cves:
+        - CVE-2024-50623
+rules:
+    - id: 697
+      uri: /Synchronization
+      body: ""
+      method: ANY
+      port: 0
+      uri_matching: prefix
+      body_matching: none
+      content_id: 693
+      app_id: 162
+      app_uuid: b843c7a6-96dc-460e-a608-3706d7d110f6
+      content_uuid: c4bf639f-bd36-49b8-bb4b-a22ab09ec115
+      created_at: 2025-01-19T17:58:01.01618Z
+      updated_at: 2025-01-19T17:58:01.015993Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: c20d2d87-c4a5-414b-9313-1e6981e562ae
+      request_purpose: ATTACK
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 696
+      uri: /
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 692
+      app_id: 162
+      app_uuid: b843c7a6-96dc-460e-a608-3706d7d110f6
+      content_uuid: da6925a8-1015-40d0-b5db-602bb819ba70
+      created_at: 2025-01-19T17:53:46.385305Z
+      updated_at: 2025-01-19T17:53:46.385212Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 8d70fcd9-c454-4e63-a1c3-41eda88d2eb4
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 693
+      data: ZXJyb3I=
+      name: Harmony - /Synchronization
+      description: Exploit target
+      content_type: text/plain; charset=UTF-8
+      server: Cleo Harmony/5.8.0.20 (Windows Server 2016)
+      status_code: "200"
+      created_at: 2025-01-19T17:56:55.014983Z
+      updated_at: 2025-01-19T17:56:55.014842Z
+      ext_version: 0
+      ext_uuid: c4bf639f-bd36-49b8-bb4b-a22ab09ec115
+    - id: 692
+      data: PGh0bWw+PGhlYWQ+PHRpdGxlPk5vdCBGb3VuZDwvdGl0bGU+PC9oZWFkPjxib2R5PicvJyBub3QgZm91bmQ8L2JvZHk+PC9odG1sPg==
+      name: Harmony - /
+      description: 'Fetched from URL: https://example.com/'
+      content_type: text/html
+      server: Cleo Harmony/5.8.0.20 (Windows Server 2016)
+      status_code: "404"
+      headers:
+        - 'Content-Length: 76'
+      created_at: 2025-01-19T17:53:46.372268Z
+      updated_at: 2025-01-19T17:54:09.998111Z
+      ext_version: 0
+      ext_uuid: da6925a8-1015-40d0-b5db-602bb819ba70
