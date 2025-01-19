@@ -96,6 +96,7 @@ func (a *ApiServer) AuthMW(next http.Handler) http.Handler {
 
 		if key != a.apiKey {
 			slog.Error("Did not get a valid API key")
+			slog.Debug("Configured", "key", a.apiKey)
 			http.Error(w, "Authentication error", http.StatusForbidden)
 			return
 		}
