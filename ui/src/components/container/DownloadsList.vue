@@ -114,7 +114,7 @@
 </template>
 
 <script>
-import { dateToString } from './../../helpers.js';
+import { dateToString, sharedMixin } from './../../helpers.js';
 import DownloadsForm from "./DownloadsForm.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
@@ -123,6 +123,7 @@ export default {
     DataSearchBar,
   },
   inject: ["config"],
+  mixins: [sharedMixin],
   emits: ["require-auth"],
   data() {
     return {
@@ -194,35 +195,6 @@ export default {
         this.offset -= this.limit;
         this.loadDownloads(false);
       }
-    },
-    loadWhois(ip) {
-      fetch(this.config.backendAddress + "/whois/ip", {
-        method: "POST",
-        headers: {
-          "API-Key": this.$store.getters.apiToken,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: "ip=" + ip,
-      })
-        .then((response) => {
-          if (response.status == 403) {
-            this.$emit("require-auth");
-          } else {
-            return response.json();
-          }
-        })
-        .then((response) => {
-          if (response.status == this.config.backendResultNotOk) {
-            this.$toast.error(response.message);
-            this.selectedWhois = null;
-          } else {
-            if (response.data) {
-              this.selectedWhois = response.data;
-            } else {
-              this.selectedWhois = null;
-            }
-          }
-        });
     },
     loadDownloads(selectFirst) {
 
