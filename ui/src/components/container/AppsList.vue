@@ -153,9 +153,6 @@ export default {
         this.isSelectedId = id;
       }
     },
-    getFreshAppsLink() {
-      return this.config.appsLink + "/0/" + this.limit;
-    },
     getAppsLink() {
       let link = this.config.appsLink + "/" + this.offset + "/" + this.limit;
       if (this.query) {

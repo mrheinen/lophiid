@@ -94,7 +94,6 @@ export default {
     return {
       tags: [],
       selectedTag: null,
-      isSelectedId: 0,
       query: null,
       limit: 24,
       offset: 0,
@@ -143,7 +142,6 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedTag = selected;
-        this.isSelectedId = id;
       }
     },
     getFreshTagLink() {
