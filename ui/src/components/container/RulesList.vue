@@ -450,8 +450,6 @@ export default {
       this.offset = parseInt(this.$route.params.offset);
     }
 
-    this.selectedLimit = this.limit;
-
     if (this.$route.query.q) {
       this.$refs.searchBar.setQuery(this.$route.query.q);
       this.query = this.$route.query.q;
