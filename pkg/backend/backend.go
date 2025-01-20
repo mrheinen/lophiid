@@ -529,6 +529,8 @@ func HasParseableContent(fileUrl string, mime string) bool {
 	consumableContentTypes := map[string]bool{
 		"application/x-shellscript": true,
 		"application/x-sh":          true,
+		"application/x-perl":        true,
+		"text/x-shellscript":        true,
 		"text/x-sh":                 true,
 		"text/x-perl":               true,
 		"text/plain":                true,

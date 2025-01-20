@@ -20,6 +20,10 @@
               <th>Size byte</th>
               <td>{{ localDownload.size }}</td>
             </tr>
+            <tr v-if="localDownload.detected_content_type">
+              <th>Detected mime</th>
+              <td>{{ localDownload.detected_content_type }}</td>
+            </tr>
             <tr>
               <th>URL Original</th>
               <td>{{ localDownload.original_url }}</td>
@@ -36,8 +40,6 @@
                 Yes
               </td>
             </tr>
-
-
             <tr>
 
               <th>SHA 256</th>
