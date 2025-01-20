@@ -9,7 +9,7 @@
           :metaKeySelection="true"
           dataKey="id"
           showGridlines
-          compareSelectionBy="equals"
+          compareSelectionBy="deepEquals"
           v-model:selection="selectedQuery"
           selectionMode="single"
         >
@@ -92,8 +92,7 @@ export default {
   data() {
     return {
       queries: [],
-      selected: null,
-      isSelectedId: 0,
+      selectedQuery: null,
       query: null,
       limit: 24,
       selectedLimit: 21,
@@ -131,6 +130,7 @@ export default {
     },
     setSelected(id) {
       var selected = null;
+      console.log(id);
       for (var i = 0; i < this.queries.length; i++) {
         if (this.queries[i].id == id) {
           selected = this.queries[i];
@@ -142,24 +142,7 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedQuery = selected;
-        this.isSelectedId = id;
       }
-    },
-    getFreshQueryLink() {
-      return this.config.storedquerySegmentLink + "/0/" + this.limit;
-    },
-    getQueryLink() {
-      let link =
-        this.config.storedquerySegmentLink +
-        "/" +
-        this.offset +
-        "/" +
-        this.limit;
-      if (this.query) {
-        link += "?q=" + encodeURIComponent(this.query);
-      }
-
-      return link;
     },
     loadNext() {
       this.offset += this.limit;
@@ -230,6 +213,13 @@ export default {
   },
   beforeCreate() {
     this.selectedQuery = this.baseQuery;
+  },
+  watch: {
+    selectedQuery(test){
+      console.log(test);
+    },
+
+
   },
   created() {
     if (this.$route.params.limit) {
