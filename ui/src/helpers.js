@@ -53,3 +53,47 @@ export function dateToString(inDate) {
   const nd = new Date(Date.parse(inDate));
   return nd.toLocaleDateString("en-US", options);
 }
+
+export const sharedMixin = {
+  data: function () {
+    return {
+      selectedWhois: null,
+    }
+  },
+  methods: {
+
+    // LoadWhois loads the whois for IP.
+    //
+    // Emits: require-auth
+    // Sets:  this.selectedWhois
+    loadWhois(ip) {
+      fetch(this.config.backendAddress + "/whois/ip", {
+        method: "POST",
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "ip=" + ip,
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+            this.selectedWhois = null;
+          } else {
+            if (response.data) {
+              this.selectedWhois = response.data;
+            } else {
+              this.selectedWhois = null;
+            }
+          }
+        });
+    }
+  }
+};

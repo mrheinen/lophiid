@@ -6,16 +6,16 @@
     :style="{ width: '25rem' }"
   >
     <div class="flex justify-content-end gap-2">
-      <div>
-        <label class="label">Set the API key</label>
+      <div style="padding-right: 10px;">
         <InputText id="apiKey" type="text" v-model="apiKey" />
       </div>
-
-      <PrimeButton
-        type="button"
-        label="Close"
-        @click="apiTokenDialogVisible = false"
-      ></PrimeButton>
+      <div>
+        <PrimeButton
+          type="button"
+          label="Close"
+          @click="apiTokenDialogVisible = false"
+        ></PrimeButton>
+      </div>
     </div>
   </PrimeDialog>
 

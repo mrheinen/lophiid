@@ -17,7 +17,6 @@
         <label class="label">Description</label>
         <TextArea
           v-model="localQuery.description"
-          autoResize
           rows="4"
           cols="40"
         />
@@ -224,11 +223,7 @@ export default {
       this.localQuery.parsed.tags_to_apply = []
 
       if (this.localQuery.tags_to_apply) {
-        console.log("query", this.localQuery);
         this.localQuery.tags_to_apply.forEach((qtag) => {
-          console.log(qtag.tag_id)
-          console.log(this.tagPerIdMap.get(qtag.tag_id))
-
           this.localQuery.parsed.tags_to_apply.push(this.tagPerIdMap.get(qtag.tag_id));
         })
       }

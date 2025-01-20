@@ -53,7 +53,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit" @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -94,7 +94,6 @@ export default {
     return {
       tags: [],
       selectedTag: null,
-      isSelectedId: 0,
       query: null,
       limit: 24,
       offset: 0,
@@ -112,6 +111,10 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadTags(true, function () {});
+    },
     onUpdateTag(id) {
       const that = this;
       this.loadTags(true, function () {
@@ -139,7 +142,6 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedTag = selected;
-        this.isSelectedId = id;
       }
     },
     getFreshTagLink() {
@@ -235,12 +237,6 @@ export default {
     }
 
     this.selectedLimit = this.limit;
-  },
-  watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadTags(true, function () {});
-    }
   },
   mounted() {
 

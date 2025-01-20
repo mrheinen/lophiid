@@ -102,7 +102,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit" @change="onChangeLimit()" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -323,6 +323,10 @@ export default {
           this.appsLoading = false;
         });
     },
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadRules(true, function () {});
+    },
     loadRules(selectFirst, callback) {
       var url =
         this.config.backendAddress +
@@ -406,10 +410,6 @@ export default {
     },
   },
   watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadRules(true, function () {});
-    },
     isLoading(newVal) {
       if (newVal == true) {
         return;

@@ -85,7 +85,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit" @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -111,7 +111,8 @@
 </template>
 
 <script>
-import { dateToString } from './../../helpers.js';
+import { dateToString, sharedMixin } from './../../helpers.js';
+
 import RequestView from "./RequestView.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
@@ -121,6 +122,7 @@ export default {
   },
   emits: ["require-auth"],
   inject: ["config"],
+  mixins: [sharedMixin],
   data() {
     return {
       searchIsFocused: false,
@@ -128,7 +130,6 @@ export default {
       limit: 21,
       selectedRequest: null,
       selectedMetadata: [],
-      selectedWhois: null,
       selectedDescription: null,
       displayRequest: {},
       selectedLimit: 21,
@@ -141,6 +142,10 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadRequests(true);
+    },
     showPopover(event) {
       this.$refs.spop.show(event);
     },
@@ -195,16 +200,6 @@ export default {
     reloadRequests() {
       this.loadRequests(true);
     },
-    getRequestLink() {
-      let link =
-        this.config.requestsLink + "/" + this.offset + "/" + this.limit;
-      if (this.query) {
-        link += "?q=" + encodeURIComponent(this.query);
-      }
-
-      console.log(link);
-      return link;
-    },
     getFreshRequestLink() {
       return this.config.requestsLink + "/0/" + this.limit;
     },
@@ -247,39 +242,9 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedRequest = selected;
-        this.loadWhois(selected.source_ip);
         this.loadDescription(selected.cmp_hash);
         this.isSelectedId = id;
       }
-    },
-    loadWhois(ip) {
-      fetch(this.config.backendAddress + "/whois/ip", {
-        method: "POST",
-        headers: {
-          "API-Key": this.$store.getters.apiToken,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: "ip=" + ip,
-      })
-        .then((response) => {
-          if (response.status == 403) {
-            this.$emit("require-auth");
-          } else {
-            return response.json();
-          }
-        })
-        .then((response) => {
-          if (response.status == this.config.backendResultNotOk) {
-            this.$toast.error(response.message);
-            this.selectedWhois = null;
-          } else {
-            if (response.data) {
-              this.selectedWhois = response.data;
-            } else {
-              this.selectedWhois = null;
-            }
-          }
-        });
     },
     loadDescription(cmpHash) {
       if (cmpHash == "") {
@@ -314,8 +279,6 @@ export default {
           }
         });
     },
-
-
     loadMetadata(id) {
       fetch(this.config.backendAddress + "/meta/request", {
         method: "POST",
@@ -412,10 +375,6 @@ export default {
     },
   },
   watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadRequests(true);
-    },
     selectedRequest() {
       this.loadDescription(this.selectedRequest.cmp_hash);
       this.loadWhois(this.selectedRequest.source_ip);

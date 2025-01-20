@@ -9,7 +9,7 @@
           :metaKeySelection="true"
           dataKey="id"
           showGridlines
-          compareSelectionBy="equals"
+          compareSelectionBy="deepEquals"
           v-model:selection="selectedQuery"
           selectionMode="single"
         >
@@ -51,7 +51,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit"  @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -92,8 +92,7 @@ export default {
   data() {
     return {
       queries: [],
-      selected: null,
-      isSelectedId: 0,
+      selectedQuery: null,
       query: null,
       limit: 24,
       selectedLimit: 21,
@@ -111,6 +110,10 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadQueries(true, function () {});
+    },
     onUpdateQuery(id) {
       const that = this;
       this.loadQueries(true, function () {
@@ -127,6 +130,7 @@ export default {
     },
     setSelected(id) {
       var selected = null;
+      console.log(id);
       for (var i = 0; i < this.queries.length; i++) {
         if (this.queries[i].id == id) {
           selected = this.queries[i];
@@ -138,24 +142,7 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedQuery = selected;
-        this.isSelectedId = id;
       }
-    },
-    getFreshQueryLink() {
-      return this.config.storedquerySegmentLink + "/0/" + this.limit;
-    },
-    getQueryLink() {
-      let link =
-        this.config.storedquerySegmentLink +
-        "/" +
-        this.offset +
-        "/" +
-        this.limit;
-      if (this.query) {
-        link += "?q=" + encodeURIComponent(this.query);
-      }
-
-      return link;
     },
     loadNext() {
       this.offset += this.limit;
@@ -227,6 +214,13 @@ export default {
   beforeCreate() {
     this.selectedQuery = this.baseQuery;
   },
+  watch: {
+    selectedQuery(test){
+      console.log(test);
+    },
+
+
+  },
   created() {
     if (this.$route.params.limit) {
       this.limit = parseInt(this.$route.params.limit);
@@ -238,18 +232,13 @@ export default {
 
     this.selectedLimit = this.limit;
   },
-  watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadQueries(true, function () {});
-    }
-  },
   mounted() {
     if (this.$route.query.q) {
       this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadQueries(true, function () {});
     }
-    this.loadQueries(true, function () {});
   },
 };
 </script>

@@ -89,7 +89,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit" @change="onChangeLimit()" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -114,7 +114,7 @@
 </template>
 
 <script>
-import { dateToString } from './../../helpers.js';
+import { dateToString, sharedMixin } from './../../helpers.js';
 import DownloadsForm from "./DownloadsForm.vue";
 import DataSearchBar from "../DataSearchBar.vue";
 export default {
@@ -123,12 +123,12 @@ export default {
     DataSearchBar,
   },
   inject: ["config"],
+  mixins: [sharedMixin],
   emits: ["require-auth"],
   data() {
     return {
       downloads: [],
       selectedDownload: null,
-      selectedWhois: null,
       isSelectedId: 0,
       query: null,
       limit: 24,
@@ -148,6 +148,11 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadDownloads(true);
+    },
+
     performNewSearch(query) {
       this.query = query;
       this.offset = 0;
@@ -189,35 +194,6 @@ export default {
         this.offset -= this.limit;
         this.loadDownloads(false);
       }
-    },
-    loadWhois(ip) {
-      fetch(this.config.backendAddress + "/whois/ip", {
-        method: "POST",
-        headers: {
-          "API-Key": this.$store.getters.apiToken,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: "ip=" + ip,
-      })
-        .then((response) => {
-          if (response.status == 403) {
-            this.$emit("require-auth");
-          } else {
-            return response.json();
-          }
-        })
-        .then((response) => {
-          if (response.status == this.config.backendResultNotOk) {
-            this.$toast.error(response.message);
-            this.selectedWhois = null;
-          } else {
-            if (response.data) {
-              this.selectedWhois = response.data;
-            } else {
-              this.selectedWhois = null;
-            }
-          }
-        });
     },
     loadDownloads(selectFirst) {
 
@@ -320,10 +296,6 @@ export default {
     },
   },
   watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadDownloads(true);
-    },
     selectedDownload() {
       this.loadWhois(this.selectedDownload.ip);
     }
@@ -347,6 +319,8 @@ export default {
 
     // Note that setting selectedLimit also causes the data to be loaded.
     this.selectedLimit = this.limit;
+
+    this.loadDownloads(true);
   },
 
 };
