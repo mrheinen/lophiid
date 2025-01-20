@@ -5,7 +5,6 @@
     header="Set API token"
     :style="{ width: '25rem' }"
   >
-    <label class="label">Set the API key</label>
     <div class="flex justify-content-end gap-2">
       <div style="padding-right: 10px;">
         <InputText id="apiKey" type="text" v-model="apiKey" />
