@@ -129,7 +129,6 @@ export default {
     return {
       downloads: [],
       selectedDownload: null,
-      selectedWhois: null,
       isSelectedId: 0,
       query: null,
       limit: 24,

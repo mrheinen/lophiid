@@ -130,7 +130,6 @@ export default {
       limit: 21,
       selectedRequest: null,
       selectedMetadata: [],
-      selectedWhois: null,
       selectedDescription: null,
       displayRequest: {},
       selectedLimit: 21,

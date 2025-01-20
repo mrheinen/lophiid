@@ -55,6 +55,11 @@ export function dateToString(inDate) {
 }
 
 export const sharedMixin = {
+  data: function () {
+    return {
+      selectedWhois: null,
+    }
+  },
   methods: {
 
     // LoadWhois loads the whois for IP.
