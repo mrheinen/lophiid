@@ -62,7 +62,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit" @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -230,17 +230,13 @@ export default {
           this.isLoading = false;
         });
     },
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadApps(true, function () {});
+    },
   },
   beforeCreate() {
     this.selectedApp = this.baseApp;
-  },
-  watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      if (!this.isLoading) {
-        this.loadApps(true, function () {});
-      }
-    }
   },
   created() {
     if (this.$route.params.limit) {

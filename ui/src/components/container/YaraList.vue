@@ -60,6 +60,7 @@
               <div>
                 <FormSelect
                   v-model="selectedLimit"
+                  @change="onChangeLimit"
                   :options="limitOptions"
                   placeholder="Limit"
                   editable
@@ -111,6 +112,10 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadYaras(true, function () {});
+    },
     onUpdateQuery(id) {
       const that = this;
       this.loadYaras(true, function () {

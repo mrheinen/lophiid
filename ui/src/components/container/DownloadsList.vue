@@ -89,7 +89,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit" @change="onChangeLimit()" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -148,6 +148,11 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadDownloads(true);
+    },
+
     performNewSearch(query) {
       this.query = query;
       this.offset = 0;
@@ -320,10 +325,6 @@ export default {
     },
   },
   watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadDownloads(true);
-    },
     selectedDownload() {
       this.loadWhois(this.selectedDownload.ip);
     }
@@ -347,6 +348,8 @@ export default {
 
     // Note that setting selectedLimit also causes the data to be loaded.
     this.selectedLimit = this.limit;
+
+    this.loadDownloads(true);
   },
 
 };

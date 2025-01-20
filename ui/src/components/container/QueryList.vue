@@ -51,7 +51,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit"  @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -111,6 +111,10 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadQueries(true, function () {});
+    },
     onUpdateQuery(id) {
       const that = this;
       this.loadQueries(true, function () {
@@ -238,18 +242,13 @@ export default {
 
     this.selectedLimit = this.limit;
   },
-  watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadQueries(true, function () {});
-    }
-  },
   mounted() {
     if (this.$route.query.q) {
       this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadQueries(true, function () {});
     }
-    this.loadQueries(true, function () {});
   },
 };
 </script>

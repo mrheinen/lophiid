@@ -53,7 +53,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit" @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -112,6 +112,10 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadTags(true, function () {});
+    },
     onUpdateTag(id) {
       const that = this;
       this.loadTags(true, function () {
@@ -235,12 +239,6 @@ export default {
     }
 
     this.selectedLimit = this.limit;
-  },
-  watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadTags(true, function () {});
-    }
   },
   mounted() {
 

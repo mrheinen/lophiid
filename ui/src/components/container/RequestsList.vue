@@ -85,7 +85,7 @@
             </div>
             <div>
 
-            <FormSelect v-model="selectedLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
+            <FormSelect v-model="selectedLimit" @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
             </div>
             <div>
             <i
@@ -141,6 +141,10 @@ export default {
     };
   },
   methods: {
+    onChangeLimit() {
+      this.limit = this.selectedLimit
+      this.loadRequests(true);
+    },
     showPopover(event) {
       this.$refs.spop.show(event);
     },
@@ -412,10 +416,6 @@ export default {
     },
   },
   watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadRequests(true);
-    },
     selectedRequest() {
       this.loadDescription(this.selectedRequest.cmp_hash);
       this.loadWhois(this.selectedRequest.source_ip);
