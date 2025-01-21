@@ -21,21 +21,34 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"sync"
 )
 
 type Templator struct {
 	stringTagRegex *regexp.Regexp
 }
 
+var (
+	once          sync.Once
+	compiledRegex *regexp.Regexp
+)
+
 func NewTemplator() *Templator {
-	reg, err := regexp.Compile(`(%%STRING%%.+%%[0-9]+%%)`)
-	if err != nil {
-		slog.Error("failed to compile regex", slog.String("error", err.Error()))
+	once.Do(func() {
+		var err error
+		compiledRegex, err = regexp.Compile(`(%%STRING%%.+%%[0-9]+%%)`)
+		if err != nil {
+			slog.Error("failed to compile regex", slog.String("error", err.Error()))
+			return
+		}
+	})
+
+	if compiledRegex == nil {
 		return nil
 	}
 
 	return &Templator{
-		stringTagRegex: reg,
+		stringTagRegex: compiledRegex,
 	}
 }
 
