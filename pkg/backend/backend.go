@@ -931,7 +931,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		if err != nil {
 			slog.Error("error rendering template", slog.String("error", err.Error()))
 		} else {
-			fmt.Printf("newBody: %s\n", newBody)
 			res.Body = newBody
 		}
 	}
