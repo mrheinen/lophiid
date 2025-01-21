@@ -31,6 +31,7 @@ go_library(
         "//pkg/util",
         "//pkg/util/constants",
         "//pkg/util/decoding",
+        "//pkg/util/templator",
         "//pkg/vt",
         "//pkg/whois",
         "@com_github_prometheus_client_golang//prometheus",

@@ -49,6 +49,7 @@ import (
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
+	"lophiid/pkg/util/templator"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
 
@@ -920,6 +921,21 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	}
 
+	// Apply the templating and render the macros after the scripts have run. This
+	// allows scripts to also output macros.
+	templr := templator.NewTemplator()
+	if templr == nil {
+		slog.Error("templator is not initialized")
+	} else {
+		newBody, err := templr.RenderTemplate(res.Body)
+		if err != nil {
+			slog.Error("error rendering template", slog.String("error", err.Error()))
+		} else {
+			fmt.Printf("newBody: %s\n", newBody)
+			res.Body = newBody
+		}
+	}
+
 	// Append custom headers
 	res.Header = append(res.Header, &backend_service.KeyValue{
 		Key:   "Content-type",
@@ -937,9 +953,16 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			continue
 		}
 
+		headerValue := headerParts[1]
+		newHdr, err := templr.RenderTemplate([]byte(headerParts[1]))
+		if err != nil {
+			slog.Error("error rendering template for header", slog.String("error", err.Error()), slog.String("header", headerParts[1]))
+		} else {
+			headerValue = string(newHdr)
+		}
 		res.Header = append(res.Header, &backend_service.KeyValue{
 			Key:   headerParts[0],
-			Value: headerParts[1],
+			Value: headerValue,
 		})
 	}
 

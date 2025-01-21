@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "templator",
+    srcs = [
+        "random_string.go",
+        "templator.go",
+    ],
+    importpath = "lophiid/pkg/util/templator",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/util"],
+)
+
+go_test(
+    name = "templator_test",
+    srcs = [
+        "random_string_test.go",
+        "templator_test.go",
+    ],
+    embed = [":templator"],
+)
