@@ -22,11 +22,14 @@ import (
 	"log/slog"
 	"regexp"
 	"sync"
+	"time"
 )
 
 type Templator struct {
 	stringTagRegex *regexp.Regexp
 }
+
+const cookieExpiresDate = "%%COOKIE_EXP_DATE%%"
 
 var (
 	once          sync.Once
@@ -36,7 +39,7 @@ var (
 func NewTemplator() *Templator {
 	once.Do(func() {
 		var err error
-		compiledRegex, err = regexp.Compile(`(%%STRING%%.+%%[0-9]+%%)`)
+		compiledRegex, err = regexp.Compile(`(%%STRING%%[^%]+%%[0-9]+%%)`)
 		if err != nil {
 			slog.Error("failed to compile regex", slog.String("error", err.Error()))
 			return
@@ -52,30 +55,34 @@ func NewTemplator() *Templator {
 	}
 }
 
+// RenderTemplate renders a template by replacing the %% macros with their
+// relevant strings.
 func (t *Templator) RenderTemplate(template []byte) ([]byte, error) {
 	// extract string tags
-	if !bytes.Contains(template, []byte("%%STRING")) {
-		slog.Error("no string tags in template")
-		return template, nil
+	if bytes.Contains(template, []byte("%%STRING")) {
+		matches := t.stringTagRegex.FindAll(template, -1)
+		for _, match := range matches {
+			charsets, length := ParseCharacterSetTag(string(match))
+			if charsets == nil {
+				return nil, fmt.Errorf("invalid string tag: %s", match)
+			}
+
+			if length < 1 {
+				return nil, fmt.Errorf("invalid length for string tag: %s", match)
+			}
+
+			replacementValue, err := GenerateRandomString(charsets, length)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate random string: %w", err)
+			}
+
+			template = bytes.ReplaceAll(template, match, []byte(replacementValue))
+		}
 	}
 
-	matches := t.stringTagRegex.FindAll(template, -1)
-	for _, match := range matches {
-		charsets, length := ParseCharacterSetTag(string(match))
-		if charsets == nil {
-			return nil, fmt.Errorf("invalid string tag: %s", match)
-		}
-
-		if length < 1 {
-			return nil, fmt.Errorf("invalid length for string tag: %s", match)
-		}
-
-		replacementValue, err := GenerateRandomString(charsets, length)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate random string: %w", err)
-		}
-
-		template = bytes.ReplaceAll(template, match, []byte(replacementValue))
+	if bytes.Contains(template, []byte(cookieExpiresDate)) {
+		expString := CookieExpiresDate(time.Hour * 24)
+		template = bytes.ReplaceAll(template, []byte(cookieExpiresDate), []byte(expString))
 	}
 
 	return template, nil
