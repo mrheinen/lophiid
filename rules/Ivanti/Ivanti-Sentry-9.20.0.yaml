@@ -174,26 +174,26 @@ contents:
         - 'Vary: Accept-Encoding'
         - 'X-Xss-Protection: 1; mode=block'
         - 'Etag: W/"6730-1711517042000-gzip"'
-        - 'Set-Cookie: JSESSIONID=B2E1DB28F3C7239053EDED5C9F88949E; Path=/mics; Secure; HttpOnly;SameSite=lax'
+        - 'Set-Cookie: JSESSIONID=%%STRING%%A-Z0-9%%32%%;; Path=/mics; Secure; HttpOnly;SameSite=lax'
         - 'Strict-Transport-Security: max-age=31536000; includeSubDomains'
         - 'X-Frame-Options: SameOrigin'
         - 'Accept-Ranges: bytes'
       created_at: 2025-01-14T13:33:06.16229Z
-      updated_at: 2025-01-14T13:33:06.162095Z
+      updated_at: 2025-01-22T14:10:36.120941Z
       ext_version: 0
       ext_uuid: 0ef8c20a-2875-46fd-8f87-717d8a8a71cd
     - id: 685
-      data: PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDIgRm91bmQ8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxoMT5Gb3VuZDwvaDE+CjxwPlRoZSBkb2N1bWVudCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cHM6Ly8yMTcuMjQ0LjQuNTU6ODQ0My9taWNzL21pY3MuaHRtbCI+aGVyZTwvYT4uPC9wPgo8aHI+CjxhZGRyZXNzPkFwYWNoZSBTZXJ2ZXIgYXQgMjE3LjI0NC40LjU1IFBvcnQgODQ0MzwvYWRkcmVzcz4KPC9ib2R5PjwvaHRtbD4K
+      data: PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9JRVRGLy9EVEQgSFRNTCAyLjAvL0VOIj4KPGh0bWw+PGhlYWQ+Cjx0aXRsZT4zMDIgRm91bmQ8L3RpdGxlPgo8L2hlYWQ+PGJvZHk+CjxoMT5Gb3VuZDwvaDE+CjxwPlRoZSBkb2N1bWVudCBoYXMgbW92ZWQgPGEgaHJlZj0iL21pY3MvbWljcy5odG1sIj5oZXJlPC9hPi48L3A+Cjxocj4KPGFkZHJlc3M+QXBhY2hlIFNlcnZlciBhdCAxMjcuMC4wLjEgUG9ydCA4NDQzPC9hZGRyZXNzPgo8L2JvZHk+PC9odG1sPgo=
       name: Sentry - /
       description: 'Fetched from URL: https://example.com/'
       content_type: text/html; charset=iso-8859-1
       server: Apache
       status_code: "302"
       headers:
-        - 'Location: https://217.244.4.55:8443/mics/mics.html'
-        - 'Content-Length: 288'
+        - 'Location: /mics/mics.html'
+        - 'Content-Length: 260'
       created_at: 2025-01-14T13:33:06.082531Z
-      updated_at: 2025-01-14T13:33:06.082334Z
+      updated_at: 2025-01-22T14:12:07.535393Z
       ext_version: 0
       ext_uuid: 274503ee-a011-4bd9-bf57-4b2c30d384b5
     - id: 684
@@ -241,13 +241,13 @@ contents:
         - 'Pragma: no-cache'
         - 'Strict-Transport-Security: max-age=31536000; includeSubDomains'
         - 'Cache-Control: no-cache, no-store, must-revalidate'
-        - 'Set-Cookie: JSESSIONID=833BBE7A57A367F9B06CB8C1BDAEE492; Path=/mics; Secure; HttpOnly;SameSite=lax'
+        - 'Set-Cookie: JSESSIONID=%%STRING%%A-Z0-9%%32%%; Path=/mics; Secure; HttpOnly;SameSite=lax'
         - 'X-Frame-Options: SameOrigin'
         - 'X-Content-Type-Options: nosniff'
         - 'Vary: Accept-Encoding'
         - 'X-Xss-Protection: 1; mode=block'
       created_at: 2025-01-14T13:33:06.440186Z
-      updated_at: 2025-01-14T13:33:06.440103Z
+      updated_at: 2025-01-22T14:10:06.867379Z
       ext_version: 0
       ext_uuid: bd92dab8-a533-4c44-be97-6ceacbf7c1b4
     - id: 688
@@ -285,11 +285,11 @@ contents:
         - 'X-Content-Type-Options: nosniff'
         - 'Pragma: no-cache'
         - 'Accept-Ranges: bytes'
-        - 'Set-Cookie: JSESSIONID=1B97AEC24F722EDAC77853400E87AC73; Path=/mics; Secure; HttpOnly;SameSite=lax'
+        - 'Set-Cookie: JSESSIONID=%%STRING%%A-Z0-9%%32%%;; Path=/mics; Secure; HttpOnly;SameSite=lax'
         - 'X-Xss-Protection: 1; mode=block'
         - 'Strict-Transport-Security: max-age=31536000; includeSubDomains'
         - 'X-Frame-Options: SameOrigin'
       created_at: 2025-01-14T13:33:06.256115Z
-      updated_at: 2025-01-14T13:33:06.25603Z
+      updated_at: 2025-01-22T14:10:24.918757Z
       ext_version: 0
       ext_uuid: fa17cf26-f26c-47f4-a693-35894e2a4d98
