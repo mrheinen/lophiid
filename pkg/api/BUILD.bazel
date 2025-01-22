@@ -16,6 +16,7 @@ go_library(
         "//pkg/javascript",
         "//pkg/util",
         "//pkg/util/constants",
+        "//pkg/util/templator",
         "@com_github_google_uuid//:uuid",
         "@in_gopkg_yaml_v3//:yaml_v3",
     ],
