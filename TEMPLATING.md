@@ -53,4 +53,7 @@ Note that you do not need to escape the single - (but you can if you want to).
 
 ## Generating date string
 
-This is not implemented yet.
+### Cookie expiration date
+
+Use the macro %%COOKIE_EXP_DATE%% as a placeholder for the cookie expiration.
+This will be rendered into a date that is based on the current time + 24 hours.
