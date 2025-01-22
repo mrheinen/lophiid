@@ -253,7 +253,7 @@ func CalculateContentLength(content models.Content, renderedData []byte) error {
 			return fmt.Errorf("invalid header: %s", header)
 		}
 
-		if strings.ToLower(headerParts[0]) == "content-length" {
+		if strings.EqualFold(headerParts[0], "content-length") {
 			hLen, err := strconv.Atoi(headerParts[1])
 			if err != nil {
 				return fmt.Errorf("invalid content length: %s", headerParts[1])
