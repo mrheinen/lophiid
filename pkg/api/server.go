@@ -29,6 +29,7 @@ import (
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
+	"lophiid/pkg/util/templator"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -232,6 +233,41 @@ func (a *ApiServer) HandleDeleteContentRule(w http.ResponseWriter, req *http.Req
 	a.sendStatus(w, fmt.Sprintf("Deleted rule with ID: %s", id), ResultSuccess, nil)
 }
 
+func RenderTemplate(content models.Content) ([]byte, error) {
+	templr := templator.NewTemplator()
+	newData, err := templr.RenderTemplate(content.Data)
+	if err != nil {
+		return content.Data, fmt.Errorf("error rendering template: %s", err.Error())
+	}
+
+	return newData, nil
+}
+
+func CalculateContentLength(content models.Content, renderedData []byte) error {
+	cLen := len(renderedData)
+
+	// Check if there is a content length.
+	for _, header := range content.Headers {
+		headerParts := strings.SplitN(header, ": ", 2)
+		if len(headerParts) != 2 {
+			return fmt.Errorf("invalid header: %s", header)
+		}
+
+		if strings.ToLower(headerParts[0]) == "content-length" {
+			hLen, err := strconv.Atoi(headerParts[1])
+			if err != nil {
+				return fmt.Errorf("invalid content length: %s", headerParts[1])
+			}
+
+			if hLen != cLen {
+				return fmt.Errorf("content-length should be: %d", cLen)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.Request) {
 	var rb models.Content
 	rb.ID = 0
@@ -246,6 +282,17 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 
 	if rb.Name == "" || rb.ContentType == "" || rb.Server == "" {
 		a.sendStatus(w, "Empty parameters given.", ResultError, nil)
+		return
+	}
+
+	renderedData, err := RenderTemplate(rb)
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("template error: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	if err := CalculateContentLength(rb, renderedData); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 

@@ -842,3 +842,70 @@ func TestHandleReviewDescription(t *testing.T) {
 	})
 
 }
+
+func TestCalculateContentLength(t *testing.T) {
+	tests := []struct {
+		name        string
+		content     models.Content
+		renderedData []byte
+		wantErr     bool
+		errMsg      string
+	}{
+		{
+			name: "valid content length",
+			content: models.Content{
+				Headers: []string{"Content-Length: 5"},
+			},
+			renderedData: []byte("hello"),
+			wantErr:     false,
+		},
+		{
+			name: "invalid header format",
+			content: models.Content{
+				Headers: []string{"Content-Length"},
+			},
+			renderedData: []byte("hello"),
+			wantErr:     true,
+			errMsg:      "invalid header: Content-Length",
+		},
+		{
+			name: "invalid content length value",
+			content: models.Content{
+				Headers: []string{"Content-Length: abc"},
+			},
+			renderedData: []byte("hello"),
+			wantErr:     true,
+			errMsg:      "invalid content length: abc",
+		},
+		{
+			name: "content length mismatch",
+			content: models.Content{
+				Headers: []string{"Content-Length: 10"},
+			},
+			renderedData: []byte("hello"),
+			wantErr:     true,
+			errMsg:      "content-length should be: 5",
+		},
+		{
+			name: "no content length header",
+			content: models.Content{
+				Headers: []string{"Content-Type: text/plain"},
+			},
+			renderedData: []byte("hello"),
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := CalculateContentLength(tt.content, tt.renderedData)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CalculateContentLength() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && err != nil && err.Error() != tt.errMsg {
+				t.Errorf("CalculateContentLength() error message = %v, want %v", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}
