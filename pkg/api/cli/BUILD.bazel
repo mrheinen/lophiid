@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/api",
         "//pkg/database/models",
+        "//pkg/html",
         "//pkg/util",
     ],
 )
