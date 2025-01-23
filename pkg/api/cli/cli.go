@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/api"
 	"lophiid/pkg/database/models"
+	"lophiid/pkg/html"
 	"lophiid/pkg/util"
 	"net/http"
 	"net/url"
@@ -85,6 +86,20 @@ func (a *ApiCLI) FetchUrlAndCreateContentAndRule(appID int64, ports []int64, tar
 	if err != nil {
 		return fmt.Errorf("error fetching url to content: %w", err)
 	}
+
+	u, err := url.Parse(targetUrl)
+	if err != nil {
+		return fmt.Errorf("error parsing url: %w", err)
+	}
+
+	// Rewrite URLs so that they are relative. If happens a lot that the host will
+	// serve exact URLs and we don't want the copy to point to the original host.
+	result, err := html.MakeURLsRelative(content.Data, html.DefaultTagAttributes(), u.Host)
+	if err != nil {
+		return fmt.Errorf("error making URL relative: %w", err)
+	}
+
+	content.Data = result
 
 	return a.CreateContentAndRule(&apps[0], ports, &content, targetUrl)
 }
