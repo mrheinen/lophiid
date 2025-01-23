@@ -35,6 +35,19 @@ func DefaultTagAttributes() []TagAttribute {
 	return []TagAttribute{
 		{Tag: "img", Attribute: "src"},
 		{Tag: "script", Attribute: "src"},
+		{Tag: "form", Attribute: "action"},
+		{Tag: "frame", Attribute: "src"},
+		{Tag: "frame", Attribute: "longdesc"},
+		{Tag: "input", Attribute: "src"},
+		{Tag: "object", Attribute: "data"},
+		{Tag: "object", Attribute: "codebase"},
+		{Tag: "audio", Attribute: "src"},
+		{Tag: "object", Attribute: "codebase"},
+		{Tag: "image", Attribute: "href"},
+		{Tag: "object", Attribute: "codebase"},
+		{Tag: "link", Attribute: "href"},
+		{Tag: "button", Attribute: "formaction"},
+		{Tag: "embed", Attribute: "src"},
 	}
 }
 
