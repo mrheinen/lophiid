@@ -137,6 +137,7 @@ func (d *YaraManager) MarkDownloadsDone(downloads *[]models.Download) error {
 
 	for _, dl := range *downloads {
 		dl.YaraStatus = constants.YaraStatusTypeDone
+		dl.YaraLastScan = time.Now().UTC()
 		if err := d.dbClient.Update(&dl); err != nil {
 			slog.Error("Error updating download", slog.String("error", err.Error()))
 			return fmt.Errorf("error updating download: %w", err)

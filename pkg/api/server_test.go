@@ -845,11 +845,11 @@ func TestHandleReviewDescription(t *testing.T) {
 
 func TestCalculateContentLength(t *testing.T) {
 	tests := []struct {
-		name        string
-		content     models.Content
+		name         string
+		content      models.Content
 		renderedData []byte
-		wantErr     bool
-		errMsg      string
+		wantErr      bool
+		errMsg       string
 	}{
 		{
 			name: "valid content length",
@@ -857,7 +857,7 @@ func TestCalculateContentLength(t *testing.T) {
 				Headers: []string{"Content-Length: 5"},
 			},
 			renderedData: []byte("hello"),
-			wantErr:     false,
+			wantErr:      false,
 		},
 		{
 			name: "invalid header format",
@@ -865,8 +865,8 @@ func TestCalculateContentLength(t *testing.T) {
 				Headers: []string{"Content-Length"},
 			},
 			renderedData: []byte("hello"),
-			wantErr:     true,
-			errMsg:      "invalid header: Content-Length",
+			wantErr:      true,
+			errMsg:       "invalid header: Content-Length",
 		},
 		{
 			name: "invalid content length value",
@@ -874,8 +874,8 @@ func TestCalculateContentLength(t *testing.T) {
 				Headers: []string{"Content-Length: abc"},
 			},
 			renderedData: []byte("hello"),
-			wantErr:     true,
-			errMsg:      "invalid content length: abc",
+			wantErr:      true,
+			errMsg:       "invalid content length: abc",
 		},
 		{
 			name: "content length mismatch",
@@ -883,8 +883,8 @@ func TestCalculateContentLength(t *testing.T) {
 				Headers: []string{"Content-Length: 10"},
 			},
 			renderedData: []byte("hello"),
-			wantErr:     true,
-			errMsg:      "content-length should be: 5",
+			wantErr:      true,
+			errMsg:       "content-length should be: 5",
 		},
 		{
 			name: "no content length header",
@@ -892,7 +892,7 @@ func TestCalculateContentLength(t *testing.T) {
 				Headers: []string{"Content-Type: text/plain"},
 			},
 			renderedData: []byte("hello"),
-			wantErr:     false,
+			wantErr:      false,
 		},
 	}
 
@@ -905,6 +905,92 @@ func TestCalculateContentLength(t *testing.T) {
 			}
 			if tt.wantErr && err != nil && err.Error() != tt.errMsg {
 				t.Errorf("CalculateContentLength() error message = %v, want %v", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}
+
+func TestHandleUpdateSingleDownload(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          models.Download
+		dbError        error
+		expectedCode   int
+		expectedStatus string
+	}{
+		{
+			name: "successful update",
+			input: models.Download{
+				ID:        1,
+				RequestID: 100,
+				Size:      1024,
+				Port:      8080,
+				IP:        "192.168.1.1",
+			},
+			dbError:        nil,
+			expectedCode:   http.StatusOK,
+			expectedStatus: ResultSuccess,
+		},
+		{
+			name: "database error",
+			input: models.Download{
+				ID:        2,
+				RequestID: 200,
+			},
+			dbError:        errors.New("database error"),
+			expectedCode:   http.StatusOK,
+			expectedStatus: ResultError,
+		},
+		{
+			name:           "invalid json",
+			input:          models.Download{},
+			expectedCode:   http.StatusOK,
+			expectedStatus: ResultError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create fake database client
+			fd := database.FakeDatabaseClient{
+				ErrorToReturn: tt.dbError,
+			}
+
+			// Create API server with fake DB
+			server := NewApiServer(&fd, nil, "aaa")
+
+			// Create request body
+			var body io.Reader
+			if tt.name == "invalid json" {
+				body = strings.NewReader("{invalid json}")
+			} else {
+				jsonData, err := json.Marshal(tt.input)
+				if err != nil {
+					t.Fatalf("failed to marshal input: %v", err)
+				}
+				body = bytes.NewReader(jsonData)
+			}
+
+			// Create request
+			req := httptest.NewRequest(http.MethodPut, "/api/download", body)
+			w := httptest.NewRecorder()
+
+			// Call handler
+			server.HandleUpdateSingleDownload(w, req)
+
+			// Check response
+			var resp struct {
+				Status string `json:"status"`
+			}
+			if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+				t.Fatalf("failed to decode response: %v", err)
+			}
+
+			if w.Code != tt.expectedCode {
+				t.Errorf("expected status code %d, got %d", tt.expectedCode, w.Code)
+			}
+			if resp.Status != tt.expectedStatus {
+				t.Errorf("expected status %s, got %s", tt.expectedStatus, resp.Status)
 			}
 		})
 	}

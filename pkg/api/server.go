@@ -679,6 +679,26 @@ func (a *ApiServer) HandleUpsertSingleTag(w http.ResponseWriter, req *http.Reque
 	}
 }
 
+func (a *ApiServer) HandleUpdateSingleDownload(w http.ResponseWriter, req *http.Request) {
+	var rb models.Download
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&rb); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	err := a.dbc.Update(&rb)
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("unable to update download: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "Updated download", ResultSuccess, nil)
+}
+
 func (a *ApiServer) HandleDeleteStoredQuery(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
