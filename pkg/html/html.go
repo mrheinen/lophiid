@@ -23,6 +23,8 @@ import (
 	"regexp"
 )
 
+var tagPatterns = make(map[string]*regexp.Regexp)
+
 // TagAttribute represents a tag and its source attribute that needs URL processing
 type TagAttribute struct {
 	Tag       string
@@ -51,6 +53,13 @@ func DefaultTagAttributes() []TagAttribute {
 	}
 }
 
+func init() {
+	for _, ta := range DefaultTagAttributes() {
+		pattern := regexp.MustCompile(`<` + ta.Tag + `[^>]+` + ta.Attribute + `=['"]([^'"]+)['"]`)
+		tagPatterns[ta.Tag+ta.Attribute] = pattern
+	}
+}
+
 // MakeURLsRelative takes HTML content and makes URLs relative for specified tag attributes,
 // but only for URLs matching the specified host/ip.
 // It returns the modified HTML content and any error encountered.
@@ -59,9 +68,12 @@ func MakeURLsRelative(content []byte, tagAttrs []TagAttribute, targetHost string
 
 	// Process each tag-attribute pair
 	for _, ta := range tagAttrs {
-		// Create regex pattern for the current tag-attribute
-		// This matches both single and double quoted attribute values
-		pattern := regexp.MustCompile(`<` + ta.Tag + `[^>]+` + ta.Attribute + `=['"]([^'"]+)['"]`)
+		// Get or create the pattern for this tag-attribute pair
+		pattern, exists := tagPatterns[ta.Tag+ta.Attribute]
+		if !exists {
+			pattern = regexp.MustCompile(`<` + ta.Tag + `[^>]+` + ta.Attribute + `=['"]([^'"]+)['"]`)
+			tagPatterns[ta.Tag+ta.Attribute] = pattern
+		}
 
 		// Find all matches and process them
 		matches := pattern.FindAllSubmatch(result, -1)
