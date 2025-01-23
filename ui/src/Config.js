@@ -37,6 +37,9 @@ export default {
   ipEventSourceRefContentId: 'CONTENT_ID',
   ipEventSourceRefReqDescriptionId: 'REQUEST_DESCRIPTION_ID',
 
+  downloadYaraStatusPending: 'PENDING',
+  downloadYaraStatusDone: 'DONE',
+
 
   // There next 5 need to be in sync with the database enums.
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],

@@ -40,6 +40,21 @@
                 Yes
               </td>
             </tr>
+            <tr v-if="localDownload.yara_status">
+              <th>Yara status</th>
+              <td>
+                {{ localDownload.yara_status }}
+              </td>
+            </tr>
+            <tr v-if="localDownload.yara_last_scan">
+              <th>Yara last scan</th>
+              <td>
+                {{ yaraLastScanDate }}
+              </td>
+            </tr>
+
+
+
             <tr>
 
               <th>SHA 256</th>
@@ -62,49 +77,54 @@
     <div v-if="localDownload.vt_file_analysis_submitted">
       <FieldSet legend="VirusTotal results" :toggleable="false">
         <div>
-          <label class="label">Virus total results</label>
-          <table class="slightlyright">
-            <tbody>
-              <tr>
-                <th>Malicious</th>
-                <td style="color: red">
-                  {{ localDownload.vt_analysis_malicious }}
-                </td>
-              </tr>
-              <tr>
-                <th>Harmless</th>
-                <td>
-                  {{ localDownload.vt_analysis_harmless }}
-                </td>
-              </tr>
-              <tr>
-                <th>Suspicious</th>
-                <td>
-                  {{ localDownload.vt_analysis_suspicious }}
-                </td>
-              </tr>
-              <tr>
-                <th>Undetected</th>
-                <td>
-                  {{ localDownload.vt_analysis_undetected }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div v-if="localDownload.vt_file_analysis_result">
-            <label class="label">Virus total result sample</label>
-            <table class="slightlyright">
-              <tbody>
-                <tr
-                  v-for="res in localDownload.parsed.vt_file_analysis_result"
-                  :key="res"
-                >
-                  <th>{{ res.engine }}</th>
-                  <td>{{ res.result }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div style="margin: 0 auto;">
+            <div style="float: left;">
+              Scan results
+              <br/>
+              <table class="slightlylow">
+                <tbody>
+                  <tr>
+                    <th>Malicious</th>
+                    <td style="color: red">
+                      {{ localDownload.vt_analysis_malicious }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Harmless</th>
+                    <td>
+                      {{ localDownload.vt_analysis_harmless }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Suspicious</th>
+                    <td>
+                      {{ localDownload.vt_analysis_suspicious }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Undetected</th>
+                    <td>
+                      {{ localDownload.vt_analysis_undetected }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="margin-left: 200px;">
+              Scanner samples
+              <br/>
+              <table v-if="localDownload.vt_file_analysis_result" class="slightlylow">
+                <tbody>
+                  <tr
+                    v-for="res in localDownload.parsed.vt_file_analysis_result"
+                    :key="res"
+                  >
+                    <th>{{ res.engine }}</th>
+                    <td>{{ res.result }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </FieldSet>
@@ -153,11 +173,44 @@
     </PrimeTabs>
     </FieldSet>
 
+    <FieldSet legend="Actions" :toggleable="false">
+          <PrimeButton
+            icon="pi pi-check"
+            label="Rescan Yara"
+            @click="requireConfirmation($event)"
+            class="p-button-sm p-button-outlined">
+          </PrimeButton>
+
+    </FieldSet>
+  <ConfirmPopup group="headless">
+    <template #container="{ message, acceptCallback, rejectCallback }">
+      <div class="bg-gray-900 text-white border-round p-3">
+        <span>{{ message.message }}</span>
+        <div class="flex align-items-center gap-2 mt-3">
+          <PrimeButton
+            icon="pi pi-check"
+            label="Yes please!"
+            @click="acceptCallback"
+            class="p-button-sm p-button-outlined"
+          ></PrimeButton>
+          <PrimeButton
+            label="Cancel"
+            severity="secondary"
+            outlined
+            @click="rejectCallback"
+            class="p-button-sm p-button-text"
+          ></PrimeButton>
+        </div>
+      </div>
+    </template>
+  </ConfirmPopup>
+
+
 
 </template>
 
 <script>
-import { copyToClipboardHelper } from "../../helpers.js";
+import { dateToString, copyToClipboardHelper } from "../../helpers.js";
 import RawHttpCard from "../cards/RawHttpCard.vue";
 import YaraCard from "../cards/YaraCard.vue";
 
@@ -180,9 +233,56 @@ export default {
     };
   },
   methods: {
+
+    requireConfirmation(event) {
+      if (!this.localDownload.id) {
+        return;
+      }
+      this.$confirm.require({
+        target: event.currentTarget,
+        group: "headless",
+        message: "Rescan with yara rules ?",
+        accept: () => {
+          this.setDownloadToPending()
+        },
+        reject: () => {},
+      });
+    },
     copyToClipboard() {
       copyToClipboardHelper(this.$refs.sha256sum.value);
       this.$toast.info("Copied");
+    },
+    setDownloadToPending() {
+      this.localDownload.yara_status = this.config.downloadYaraStatusPending;
+      this.updateDownload();
+    },
+    updateDownload() {
+      const downloadToSubmit = Object.assign({}, this.localDownload);
+      // Remove the added fields.
+      delete downloadToSubmit.parsed;
+
+      fetch(this.config.backendAddress + "/downloads/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "API-Key": this.$store.getters.apiToken,
+        },
+        body: JSON.stringify(downloadToSubmit),
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            this.$toast.success("Download has been set to pending. Reload later.");
+          }
+        });
     },
     loadYaraForDownload(id) {
       fetch(this.config.backendAddress + "/yara/bydownloadid", {
@@ -265,6 +365,14 @@ export default {
       }
     },
   },
+  computed: {
+    yaraLastScanDate() {
+      if (this.localDownload) {
+        return dateToString(this.localDownload.yara_last_scan);
+      }
+      return "unknown";
+    },
+  },
   created() {},
 };
 </script>
@@ -289,8 +397,8 @@ pre.whois {
   white-space: pre !important;
 }
 
-.slightlyright {
-  margin-left: 15px;
+.slightlylow {
+  margin-top: 10px;
 }
 
 .app {
@@ -314,4 +422,5 @@ table th {
 table td {
   padding-right: 13px;
 }
+
 </style>

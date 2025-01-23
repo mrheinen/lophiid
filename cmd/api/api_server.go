@@ -153,6 +153,7 @@ func main() {
 	r.HandleFunc("/app/segment", as.HandleSearchApps).Methods("GET")
 
 	r.HandleFunc("/downloads/segment", as.HandleSearchDownloads).Methods("GET")
+	r.HandleFunc("/downloads/update", as.HandleUpdateSingleDownload).Methods("POST")
 
 	r.HandleFunc("/meta/request", as.HandleGetMetadataForRequest).Methods("POST")
 
