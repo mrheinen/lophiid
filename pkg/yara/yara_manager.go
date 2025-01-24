@@ -167,9 +167,12 @@ func (d *YaraManager) CreateLLMDescriptions(scanResults map[*models.Download][]Y
 			description := ""
 			for _, entry := range yr.Metadata {
 				if strings.ToLower(entry.Identifier) == "description" {
-					description = entry.Value.(string)
+					if strValue, ok := entry.Value.(string); ok {
+						description = strValue
+					} else {
+						slog.Warn("Invalid metadata value type", "identifier", entry.Identifier)
+					}
 				}
-
 			}
 			yaraOutput = fmt.Sprintf("\n%s\n%s, description = %s\n", yaraOutput, yr.Identifier, description)
 		}
