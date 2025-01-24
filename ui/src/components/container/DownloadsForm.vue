@@ -141,6 +141,9 @@
     </TabList>
         <TabPanels>
         <TabPanel value="1" v-if="localYara">
+        <div id="aisummary" v-if="localDownload.yara_description">
+          AI Summary: {{ localDownload.yara_description }}
+        </div>
           <YaraCard :data="localYara">
           </YaraCard>
         </TabPanel>
@@ -409,6 +412,10 @@ pre.whois {
 .description {
   width: 100%;
   height: 140px;
+}
+
+#aisummary {
+  padding-bottom: 20px;
 }
 
 .pointer {
