@@ -17,6 +17,7 @@
 package html
 
 import (
+	"lophiid/pkg/util"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,7 +45,11 @@ func TestExtractResourceLink(t *testing.T) {
 	} {
 		t.Run(test.description, func(t *testing.T) {
 			urls := ExtractResourceLinks(test.baseUrl, test.html)
-			assert.Equal(t, test.expectedUrls, urls, "Extracted URLs do not match expected")
+
+			if !util.AreSlicesEqual(urls, test.expectedUrls) {
+				t.Errorf("expected %+v, got %+v", test.expectedUrls, urls)
+			}
+
 		})
 	}
 }
