@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/backend"
 	"lophiid/pkg/database"
+	"lophiid/pkg/llm"
 	"lophiid/pkg/util"
 	"lophiid/pkg/yara"
 	"net/http"
@@ -103,7 +104,12 @@ func main() {
 		}
 	}()
 
-	mgr := yara.NewYaraManager(dbc, *rulesDir, cfg.Yara.PrepareCommand, metrics)
+	llmClient := llm.NewOpenAILLMClientWithModel(cfg.AI.ApiKey, cfg.AI.ApiLocation, "", cfg.AI.Model)
+	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
+	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Minute*3, 4)
+
+	mgr := yara.NewYaraManager(dbc, llmManager, *rulesDir, cfg.Yara.PrepareCommand, metrics)
 
 	yarax := yara.YaraxWrapper{}
 

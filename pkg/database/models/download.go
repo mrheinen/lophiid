@@ -54,6 +54,7 @@ type Download struct {
 	YaraStatus              string                   `ksql:"yara_status" json:"yara_status" doc:"Yara scan status"`
 	YaraLastScan            time.Time                `ksql:"yara_last_scan" json:"yara_last_scan" doc:"Last time a yara scan ran"`
 	YaraScannedUnpacked     bool                     `ksql:"yara_scanned_unpacked" json:"yara_scanned_unpacked" doc:"Whether yara scanned the unpacked file"`
+	YaraDescription         string                   `ksql:"yara_description" json:"yara_description" doc:"Yara LLM summary"`
 }
 
 func (c *Download) ModelID() int64 { return c.ID }

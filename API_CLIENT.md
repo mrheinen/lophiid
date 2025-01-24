@@ -8,7 +8,7 @@ and adding Content and Rules to it.
 The tool can be pointed to a URL (or a file with URLs) and it will fetch
 the content and stores it in a new Content entry in lophiid. While doing
 so it also prefers important headers such as Server and Last-Modified
-which mayh require specific values for some attackers to consider the
+which may require specific values for some attackers to consider the
 target real.
 
 A typical scenario for using this tool is when you found an interesting target
@@ -35,7 +35,7 @@ Here is an example for adding an app:
 
 ```shell
 $ bazel run //cmd/api_client:api_client -- \
-   -api-server http://127.0.0.1:8088 \  # This is the locaiton of the API server
+   -api-server http://127.0.0.1:8088 \  # This is the location of the API server
    -api-key ca357d9a-b98f-429c-83d7-e8088f69ba2f \ # This is the API key
    -app-name Big-IP \
    -app-vendor F5 \
@@ -126,7 +126,8 @@ allows you to do to the Rule or Content tab in the web UI to see what was
 created (and make any modifications if necessary).
 
 [!CAUTION]
-Always check the Content's that were created to see if there aren't any links/references to the original URL from which you fetched it.
+Always check the Content's that were created to see if there aren't any links/references to the original URL from which you fetched it. Also update cookies and CSRF tokens with random generated strings as defined in [TEMPLATING](./TEMPLATING.md)
+
 
 #### Validating the results
 

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
+	"lophiid/pkg/llm"
 	"lophiid/pkg/util/constants"
 	"os"
 	"os/exec"
@@ -14,19 +15,30 @@ import (
 
 const UnpackedExtension = ".unpacked"
 
+const LLMPrompt = `
+We used yara rules to scan a malware binary. Please analyze the output of the yara rules and provide me with a succint description of what the rules detected.
+Do not repeat the Yara rule names in this description.
+
+The output of the yara rules is below:
+
+%s
+`
+
 type YaraManager struct {
 	dbClient       database.DatabaseClient
 	rulesLocation  string
 	metrics        *YaraMetrics
 	prepareCommand string
+	llmManager     *llm.LLMManager
 }
 
-func NewYaraManager(dbClient database.DatabaseClient, rulesLocation string, prepareCommand string, metrics *YaraMetrics) *YaraManager {
+func NewYaraManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, rulesLocation string, prepareCommand string, metrics *YaraMetrics) *YaraManager {
 	return &YaraManager{
 		dbClient:       dbClient,
 		rulesLocation:  rulesLocation,
 		metrics:        metrics,
 		prepareCommand: prepareCommand,
+		llmManager:     llmManager,
 	}
 }
 
@@ -87,7 +99,8 @@ func (d *YaraManager) ScanDownloads(yw Yara, downloads *[]models.Download) (map[
 
 		d.metrics.scanFileDuration.Observe(time.Since(start).Seconds())
 
-		rets[&dl] = res
+		p := &(*downloads)[idx]
+		rets[p] = res
 	}
 
 	return rets, nil
@@ -146,6 +159,43 @@ func (d *YaraManager) MarkDownloadsDone(downloads *[]models.Download) error {
 	return nil
 }
 
+func (d *YaraManager) CreateLLMDescriptions(scanResults map[*models.Download][]YaraResult) (map[*models.Download][]YaraResult, error) {
+	// Create LLM descriptions.
+	for dl, res := range scanResults {
+		yaraOutput := ""
+		for _, yr := range res {
+			description := ""
+			for _, entry := range yr.Metadata {
+				if strings.ToLower(entry.Identifier) == "description" {
+					if strValue, ok := entry.Value.(string); ok {
+						description = strValue
+					} else {
+						slog.Warn("Invalid metadata value type", "identifier", entry.Identifier)
+					}
+				}
+			}
+			yaraOutput = fmt.Sprintf("\n%s\n%s, description = %s\n", yaraOutput, yr.Identifier, description)
+		}
+
+		// If there was no Yara output, continue.
+		if yaraOutput == "" {
+			continue
+		}
+
+		prompt := fmt.Sprintf("%s\n\n%s", LLMPrompt, yaraOutput)
+		result, err := d.llmManager.Complete(prompt, true)
+		if err != nil {
+			return scanResults, fmt.Errorf("error completing prompt: %w", err)
+		}
+
+		fmt.Printf("Description for %s:\n%s\n", dl.FileLocation, result)
+		dl.YaraDescription = result
+		scanResults[dl] = res
+	}
+
+	return scanResults, nil
+}
+
 func (d *YaraManager) ProcessDownloadsAndScan(batchSize int64) (int, error) {
 	pending, err := d.GetPendingScanList(batchSize)
 	if err != nil {
@@ -172,6 +222,11 @@ func (d *YaraManager) ProcessDownloadsAndScan(batchSize int64) (int, error) {
 	if len(scanResults) == 0 {
 		slog.Debug("No results found")
 		return len(pending), nil
+	}
+
+	scanResults, err = d.CreateLLMDescriptions(scanResults)
+	if err != nil {
+		return 0, fmt.Errorf("error creating LLM descriptions: %w", err)
 	}
 
 	if err = d.StoreYaraResults(scanResults); err != nil {

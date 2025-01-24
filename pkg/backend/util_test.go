@@ -20,6 +20,8 @@ package backend
 import (
 	"net"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 //		ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(v)
@@ -75,20 +77,10 @@ func TestConvertURLToIPBased(t *testing.T) {
 				return []net.IP{net.ParseIP(test.expectedIP)}, nil
 			})
 
-			if ipUrl != test.expectedUrl {
-				t.Errorf("expected %s, got %s", test.expectedUrl, ipUrl)
-			}
-
-			if ip != test.expectedIP {
-				t.Errorf("expected %s, got %s", test.expectedIP, ip)
-			}
-			if hostHeader != test.expectedHostHeader {
-				t.Errorf("expected %s, got %s", test.expectedHostHeader, hostHeader)
-			}
-
-			if err != test.expectedErr {
-				t.Errorf("expected %s, got %s", test.expectedErr, err)
-			}
+			assert.Equal(t, test.expectedUrl, ipUrl, "URL mismatch")
+			assert.Equal(t, test.expectedIP, ip, "IP mismatch")
+			assert.Equal(t, test.expectedHostHeader, hostHeader, "Host header mismatch")
+			assert.Equal(t, test.expectedErr, err, "Error mismatch")
 		})
 	}
 

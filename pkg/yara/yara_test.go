@@ -327,7 +327,7 @@ func TestGetPendingScanList(t *testing.T) {
 			metrics := CreateYaraMetrics(metricsRegistry)
 
 			// Create YaraManager instance
-			manager := NewYaraManager(fakeClient, "", "/test/rules", metrics)
+			manager := NewYaraManager(fakeClient, nil, "", "/test/rules", metrics)
 
 			// Call the method
 			result, err := manager.GetPendingScanList(tt.limit)
@@ -429,7 +429,7 @@ func TestScanDownloads(t *testing.T) {
 			metrics := CreateYaraMetrics(metricsRegistry)
 
 			// Create YaraManager instance
-			manager := NewYaraManager(nil, "/test/rules", "", metrics)
+			manager := NewYaraManager(nil, nil, "/test/rules", "", metrics)
 
 			// Call the method
 			downloads := tt.downloads

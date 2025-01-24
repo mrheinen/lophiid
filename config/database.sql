@@ -213,6 +213,7 @@ CREATE TABLE downloads (
   yara_status    YARA_STATUS_TYPE default 'UNKNOWN',
   yara_last_scan TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   yara_scanned_unpacked BOOLEAN default FALSE,
+  yara_description TEXT,
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
 );
 
@@ -395,6 +396,12 @@ CREATE INDEX session_ip ON session (
   active,
   ip
 );
+
+CREATE INDEX requests_cmp_ruleuuid_idx ON request (
+  time_received desc,
+  rule_uuid
+);
+
 
 CREATE INDEX requests_cmp_hash_idx ON request (
   time_received desc,
