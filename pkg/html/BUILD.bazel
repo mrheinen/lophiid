@@ -12,5 +12,8 @@ go_test(
     name = "html_test",
     srcs = ["scrape_test.go"],
     embed = [":html"],
-    deps = ["//pkg/util"],
+    deps = [
+        "//pkg/util",
+        "@com_github_stretchr_testify//assert",
+    ],
 )

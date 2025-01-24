@@ -17,9 +17,9 @@
 package html
 
 import (
-	"lophiid/pkg/util"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestExtractResourceLink(t *testing.T) {
@@ -42,13 +42,9 @@ func TestExtractResourceLink(t *testing.T) {
 			expectedUrls: []string{"http://example.org/foo.js", "http://example.org/aa"},
 		},
 	} {
-
 		t.Run(test.description, func(t *testing.T) {
 			urls := ExtractResourceLinks(test.baseUrl, test.html)
-
-			if !util.AreSlicesEqual(urls, test.expectedUrls) {
-				t.Errorf("expected %+v, got %+v", test.expectedUrls, urls)
-			}
+			assert.Equal(t, test.expectedUrls, urls, "Extracted URLs do not match expected")
 		})
 	}
 }
@@ -76,7 +72,6 @@ func TestNormalizeLink(t *testing.T) {
 			outputUrl:   "https://example.org",
 			expectError: false,
 		},
-
 		{
 			description: "relative url ok, no /",
 			inputUrl:    "aa",
@@ -128,24 +123,17 @@ func TestNormalizeLink(t *testing.T) {
 			expectErrorContains: "invalid scheme",
 		},
 	} {
-
 		t.Run(test.description, func(t *testing.T) {
-
 			resultUrl, err := normalizeLink(test.baseUrl, test.inputUrl)
-			if err != nil {
-				if test.expectError {
-					if !strings.Contains(err.Error(), test.expectErrorContains) {
-						t.Errorf("Expected error to contain %s", test.expectErrorContains)
-					}
-				} else {
-					t.Errorf("Unexpected error: %s", err)
-				}
+
+			if test.expectError {
+				assert.Error(t, err, "Expected an error but got none")
+				assert.Contains(t, err.Error(), test.expectErrorContains, "Error message does not contain expected text")
+			} else {
+				assert.NoError(t, err, "Got unexpected error")
 			}
 
-			if resultUrl != test.outputUrl {
-				t.Errorf("Expected %s, got %s", test.outputUrl, resultUrl)
-			}
-
+			assert.Equal(t, test.outputUrl, resultUrl, "Normalized URL does not match expected")
 		})
 	}
 }

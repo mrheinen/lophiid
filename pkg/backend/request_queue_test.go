@@ -19,25 +19,19 @@ package backend
 import (
 	"lophiid/pkg/database/models"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRequestQueue(t *testing.T) {
 	req := models.Request{}
 	q := RequestQueue{}
 
-	if q.Pop() != nil {
-		t.Error("Popping an empty queue did not yield nil")
-	}
+	assert.Nil(t, q.Pop(), "Popping an empty queue should yield nil")
 
 	q.Push(&req)
-	if q.Length() != 1 {
-		t.Errorf("expected length 1 but got %d", q.Length())
-	}
+	assert.Equal(t, 1, q.Length(), "Queue length should be 1 after pushing")
 
-	if q.Pop() != &req {
-		t.Error("Queued request is different")
-	}
-	if q.Length() != 0 {
-		t.Errorf("expected length 0 but got %d", q.Length())
-	}
+	assert.Equal(t, &req, q.Pop(), "Popped request should match pushed request")
+	assert.Equal(t, 0, q.Length(), "Queue should be empty after popping")
 }
