@@ -31,6 +31,7 @@ go_library(
         "//pkg/util",
         "//pkg/util/constants",
         "//pkg/util/decoding",
+        "//pkg/util/shell",
         "//pkg/util/templator",
         "//pkg/vt",
         "//pkg/whois",
