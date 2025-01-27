@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"regexp"
 	"strings"
 )
@@ -25,8 +26,8 @@ func NewExpander() *Expander {
 	}
 }
 
+// CleanupVariableValue removes quotes from a variable value.
 func CleanupVariableValue(vari string) string {
-
 	vari = strings.TrimSpace(vari)
 	if vari[0] == '\'' || vari[0] == '"' {
 		if len(vari) >= 4 {
@@ -37,6 +38,32 @@ func CleanupVariableValue(vari string) string {
 	return vari
 }
 
+// getCommandOutput returns the output of a shell command if is defined in the
+// commandOutputs map.
+func getCommandOutput(value string) (string, error) {
+	if len(value) < 4 {
+		return "", fmt.Errorf("value too short: %s", value)
+	}
+
+	command := value[2 : len(value)-1]
+
+	res, ok := commandOutputs[command]
+	if !ok {
+		return "", fmt.Errorf("unknown command: %s", command)
+	}
+
+	if len(res) == 1 {
+		return res[0], nil
+	}
+
+	// Return a random example.
+	randomIndex := rand.Intn(len(res))
+	return res[randomIndex], nil
+}
+
+// ExpandChunk receives a shell command chunk and expands variables. It also
+// registers new variables which are then used in future expansions.
+// Returns the expanded string.
 func (n Expander) ExpandChunk(chunk string) string {
 
 	// Try to resolve variables. This does not take quoting into account yet.
@@ -51,12 +78,23 @@ func (n Expander) ExpandChunk(chunk string) string {
 	match := n.compiledVarRegex.FindStringSubmatch(chunk)
 	if len(match) == 3 {
 		fmt.Println(match[1], match[2])
-		n.varMap[match[1]] = CleanupVariableValue(match[2])
+		if strings.HasPrefix(match[2], "$(") {
+			output, err := getCommandOutput(match[2])
+			if err != nil {
+				n.varMap[match[1]] = CleanupVariableValue(match[2])
+			} else {
+				n.varMap[match[1]] = output
+			}
+
+		} else {
+			n.varMap[match[1]] = CleanupVariableValue(match[2])
+		}
 	}
 
 	return chunk
 }
 
+// Expand reads a shell script chunk by chunk and expands variables.
 func (n *Expander) Expand(reader Iterator) []string {
 	outputBuffer := []string{}
 
