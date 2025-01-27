@@ -29,6 +29,11 @@ func NewExpander() *Expander {
 // CleanupVariableValue removes quotes from a variable value.
 func CleanupVariableValue(vari string) string {
 	vari = strings.TrimSpace(vari)
+
+	if len(vari) == 0 {
+		return vari
+	}
+
 	if vari[0] == '\'' || vari[0] == '"' {
 		if len(vari) >= 4 {
 			vari = vari[1 : len(vari)-1]
