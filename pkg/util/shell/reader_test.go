@@ -37,11 +37,10 @@ func TestFileIterator(t *testing.T) {
 			numberOfIts:    4,
 			expectedResult: []string{"a", "b=\"a"},
 		},
-
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
-			fi := FileIterator{fileData: test.fileData}
+			fi := ScriptIterator{fileData: test.fileData}
 
 			result := []string{}
 			for i := 0; i < test.numberOfIts; i++ {

@@ -25,13 +25,12 @@ type Iterator interface {
 	Next() (string, bool)
 }
 
-type FileIterator struct {
+type ScriptIterator struct {
 	fileData []byte
-	fileSize int
 	index    int
 }
 
-func (f *FileIterator) ReadFile(file string) error {
+func (f *ScriptIterator) FromFile(file string) error {
 	if _, err := os.Stat(file); err != nil {
 		return fmt.Errorf("file not accessible: %w", err)
 	}
@@ -42,11 +41,16 @@ func (f *FileIterator) ReadFile(file string) error {
 	}
 
 	f.fileData = data
-	f.fileSize = len(data)
 	return nil
 }
 
-func (f *FileIterator) Next() (string, bool) {
+func (f *ScriptIterator) FromBuffer(buffer []byte) error {
+	f.fileData = buffer
+	return nil
+}
+
+
+func (f *ScriptIterator) Next() (string, bool) {
 	if f.fileData == nil {
 		return "", false
 	}

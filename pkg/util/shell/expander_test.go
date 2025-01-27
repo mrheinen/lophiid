@@ -11,8 +11,8 @@ func TestExpandVariables(t *testing.T) {
 
 	exp := NewExpander()
 
-	rdr := FileIterator{}
-	rdr.fileData = []byte("AAAA=123\n$AAAA $AAAA")
+	rdr := ScriptIterator{}
+	rdr.FromBuffer([]byte("AAAA=123\n$AAAA $AAAA"))
 
 	res := exp.Expand(&rdr)
 
@@ -72,8 +72,8 @@ done`),
 		t.Run(test.description, func(t *testing.T) {
 
 			exp := NewExpander()
-			rdr := FileIterator{}
-			rdr.fileData = test.fileData
+			rdr := ScriptIterator{}
+			rdr.FromBuffer(test.fileData)
 
 			res := exp.Expand(&rdr)
 
