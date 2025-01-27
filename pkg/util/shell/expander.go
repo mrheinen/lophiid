@@ -69,7 +69,7 @@ func getCommandOutput(value string) (string, error) {
 // ExpandChunk receives a shell command chunk and expands variables. It also
 // registers new variables which are then used in future expansions.
 // Returns the expanded string.
-func (n Expander) ExpandChunk(chunk string) string {
+func (n *Expander) ExpandChunk(chunk string) string {
 
 	// Try to resolve variables. This does not take quoting into account yet.
 	if strings.Contains(chunk, "$") {
