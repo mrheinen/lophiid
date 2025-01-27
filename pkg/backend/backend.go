@@ -49,6 +49,7 @@ import (
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
+	"lophiid/pkg/util/shell"
 	"lophiid/pkg/util/templator"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
@@ -584,9 +585,23 @@ func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo m
 		return false
 	}
 
+	// Expand the file if possible.
+	exp := shell.NewExpander()
+	itr := shell.ScriptIterator{}
+	itr.FromBuffer(fileContent)
+
+	expandedContent := exp.Expand(&itr)
+
 	linksMap := make(map[string]struct{})
 	lx := extractors.NewURLExtractor(linksMap)
 	lx.ParseString(string(fileContent))
+
+	beforeLen := len(linksMap)
+	lx.ParseString(strings.Join(expandedContent, "\n"))
+
+	if len(linksMap) > beforeLen {
+		slog.Debug("extracted more links from expanded payload", slog.Int("before", beforeLen), slog.Int("after", len(linksMap)))
+	}
 
 	if len(linksMap) > maxUrlsToExtractForDownload {
 		slog.Warn("content got too many URLs", slog.String("url", dInfo.OriginalUrl), slog.Int("url_count", len(linksMap)))
