@@ -61,7 +61,6 @@ type DatabaseClient interface {
 	GetAppByID(id int64) (models.Application, error)
 	SearchApps(offset int64, limit int64, query string) ([]models.Application, error)
 	GetContentByID(id int64) (models.Content, error)
-	GetContentRuleByID(id int64) (models.ContentRule, error)
 	GetP0fResultByIP(ip string, querySuffix string) (models.P0fResult, error)
 	GetRequestByID(id int64) (models.Request, error)
 	SearchEvents(offset int64, limit int64, query string) ([]models.IpEvent, error)
