@@ -4,8 +4,10 @@ go_library(
     name = "database",
     srcs = [
         "database.go",
+        "fake_database.go",
         "hashing.go",
         "query.go",
+        "search_config.go",
     ],
     importpath = "lophiid/pkg/database",
     visibility = ["//visibility:public"],

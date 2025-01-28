@@ -194,23 +194,6 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	}
 }
 
-func (a *ApiServer) HandleGetSingleContentRule(w http.ResponseWriter, req *http.Request) {
-	id := req.URL.Query().Get("id")
-	intID, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-
-	cr, err := a.dbc.GetContentRuleByID(intID)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-
-	a.sendStatus(w, "", ResultSuccess, []models.ContentRule{cr})
-}
-
 func (a *ApiServer) HandleDeleteContentRule(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -366,23 +349,6 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 		a.sendStatus(w, "Updated content", ResultSuccess, []models.DataModel{&rb})
 		return
 	}
-}
-
-func (a *ApiServer) HandleGetSingleContent(w http.ResponseWriter, req *http.Request) {
-	id := req.URL.Query().Get("id")
-	intID, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-
-	cts, err := a.dbc.GetContentByID(intID)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
-
-	a.sendStatus(w, "", ResultSuccess, []models.Content{cts})
 }
 
 func (a *ApiServer) HandleDeleteContent(w http.ResponseWriter, req *http.Request) {

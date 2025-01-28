@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -61,7 +61,6 @@ type DatabaseClient interface {
 	GetAppByID(id int64) (models.Application, error)
 	SearchApps(offset int64, limit int64, query string) ([]models.Application, error)
 	GetContentByID(id int64) (models.Content, error)
-	GetContentRuleByID(id int64) (models.ContentRule, error)
 	GetP0fResultByIP(ip string, querySuffix string) (models.P0fResult, error)
 	GetRequestByID(id int64) (models.Request, error)
 	SearchEvents(offset int64, limit int64, query string) ([]models.IpEvent, error)
@@ -257,6 +256,33 @@ func (d *KSQLClient) GetRequestByID(id int64) (models.Request, error) {
 	return rs, err
 }
 
+// Search performs a generic search operation using the provided configuration
+func (d *KSQLClient) Search(offset int64, limit int64, query string, config SearchConfig, result interface{}) error {
+	params, err := ParseQuery(query, config.AllowedFields)
+	if err != nil {
+		return fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+	}
+
+	queryStart := fmt.Sprintf("FROM %s", config.TableName)
+
+	queryEnd := ""
+	if config.OrderBy != "" {
+		queryEnd += fmt.Sprintf(" ORDER BY %s", config.OrderBy)
+	}
+	queryEnd += fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit)
+
+	query, values, err := buildComposedQuery(params, queryStart, queryEnd)
+	if err != nil {
+		return fmt.Errorf("cannot build query: %s", err.Error())
+	}
+	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
+	start := time.Now()
+	err = d.db.Query(d.ctx, result, query, values...)
+	elapsed := time.Since(start)
+	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
+	return err
+}
+
 func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]models.Request, error) {
 	var rs []models.Request
 
@@ -334,315 +360,119 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 }
 
 func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]models.Content, error) {
-	var rs []models.Content
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Content{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM content", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.Content
+	err := d.Search(offset, limit, query, contentConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchYara(offset int64, limit int64, query string) ([]models.Yara, error) {
-	var rs []models.Yara
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Yara{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM yara", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.Yara
+	err := d.Search(offset, limit, query, yaraConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error) {
-	var rs []models.ContentRule
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.ContentRule{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM (SELECT * FROM content_rule ", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d) AS subq ORDER BY app_id", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.ContentRule
+	err := d.Search(offset, limit, query, contentRulesConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchEvents(offset int64, limit int64, query string) ([]models.IpEvent, error) {
-	var rs []models.IpEvent
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.IpEvent{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM ip_event", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.IpEvent
+	err := d.Search(offset, limit, query, eventsConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchSession(offset int64, limit int64, query string) ([]models.Session, error) {
-	var rs []models.Session
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Session{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM session", fmt.Sprintf("ORDER BY started_at DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.Session
+	err := d.Search(offset, limit, query, sessionConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error) {
-	var rs []models.RequestDescription
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.RequestDescription{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM request_description", fmt.Sprintf("ORDER BY created_at DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.RequestDescription
+	err := d.Search(offset, limit, query, requestDescriptionConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchApps(offset int64, limit int64, query string) ([]models.Application, error) {
-	var rs []models.Application
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Application{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM app", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.Application
+	err := d.Search(offset, limit, query, appsConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchDownloads(offset int64, limit int64, query string) ([]models.Download, error) {
-	var rs []models.Download
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Download{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	// Important: the order by last seen is something that the Virustotal manager
-	// depends on to return the newest entry.
-	query, values, err := buildComposedQuery(params, "FROM downloads", fmt.Sprintf("ORDER BY last_seen_at DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.Download
+	err := d.Search(offset, limit, query, downloadsConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchHoneypots(offset int64, limit int64, query string) ([]models.Honeypot, error) {
-	var rs []models.Honeypot
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Honeypot{}))
+	var result []models.Honeypot
+	err := d.Search(offset, limit, query, honeypotConfig, &result)
 	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+		return result, err
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM honeypot", fmt.Sprintf("ORDER BY last_checkin DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-
-	var ret []models.Honeypot
+	// Post-process honeypot results to add request counts
 	type Count struct {
 		Count int64 `ksql:"cnt"`
 	}
-	for _, h := range rs {
+	for i := range result {
 		var cnt Count
-		err = d.db.QueryOne(d.ctx, &cnt, "SELECT COUNT(*) as cnt FROM request WHERE honeypot_ip = $1 AND time_received >= date_trunc('day', current_date - interval '1'day);", h.IP)
+		err = d.db.QueryOne(d.ctx, &cnt,
+			"SELECT COUNT(*) as cnt FROM request WHERE honeypot_ip = $1 AND time_received >= date_trunc('day', current_date - interval '1'day);",
+			result[i].IP)
 		if err != nil {
-			return rs, fmt.Errorf("error fetching count: %w", err)
+			return result, fmt.Errorf("error fetching count: %w", err)
 		}
-
-		h.RequestsCountLastDay = cnt.Count
-		ret = append(ret, h)
+		result[i].RequestsCountLastDay = cnt.Count
 	}
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return ret, err
+	return result, nil
 }
 
 func (d *KSQLClient) SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error) {
-	var rs []models.StoredQuery
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.StoredQuery{}))
+	var result []models.StoredQuery
+	err := d.Search(offset, limit, query, storedQueryConfig, &result)
 	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
+		return result, err
 	}
 
-	query, values, err := buildComposedQuery(params, "FROM stored_query", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-
-	// For each query, add the tags to the query entry.
-	var retQueries []models.StoredQuery
-	for _, qEntry := range rs {
-		tags, err := d.SearchTagPerQuery(0, 100, fmt.Sprintf("query_id:%d", qEntry.ID))
+	// Post-process stored query results to add tags
+	for i := range result {
+		tags, err := d.SearchTagPerQuery(0, 100, fmt.Sprintf("query_id:%d", result[i].ID))
 		if err != nil {
-			return rs, fmt.Errorf("cannot get tags for query: %s", err.Error())
+			return result, fmt.Errorf("cannot get tags for query: %s", err.Error())
 		}
-
-		qEntry.TagsToApply = append(qEntry.TagsToApply, tags...)
-		retQueries = append(retQueries, qEntry)
+		result[i].TagsToApply = append(result[i].TagsToApply, tags...)
 	}
-
-	return retQueries, err
+	return result, nil
 }
 
 func (d *KSQLClient) SearchTags(offset int64, limit int64, query string) ([]models.Tag, error) {
-	var rs []models.Tag
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Tag{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM tag", fmt.Sprintf("ORDER BY updated_at DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.Tag
+	err := d.Search(offset, limit, query, tagsConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchWhois(offset int64, limit int64, query string) ([]models.Whois, error) {
-	var rs []models.Whois
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.Whois{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM whois", fmt.Sprintf("ORDER BY id DESC OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.Whois
+	err := d.Search(offset, limit, query, whoisConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error) {
-	var rs []models.TagPerQuery
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.TagPerQuery{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM tag_per_query", fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.TagPerQuery
+	err := d.Search(offset, limit, query, tagPerQueryConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) SearchTagPerRequest(offset int64, limit int64, query string) ([]models.TagPerRequest, error) {
-	var rs []models.TagPerRequest
-
-	params, err := ParseQuery(query, getDatamodelDatabaseFields(models.TagPerRequest{}))
-	if err != nil {
-		return rs, fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
-	}
-
-	query, values, err := buildComposedQuery(params, "FROM tag_per_request", fmt.Sprintf(" OFFSET %d LIMIT %d", offset, limit))
-	if err != nil {
-		return rs, fmt.Errorf("cannot build query: %s", err.Error())
-	}
-	slog.Debug("Running query", slog.String("query", query), slog.Int("values", len(values)))
-	start := time.Now()
-	err = d.db.Query(d.ctx, &rs, query, values...)
-	elapsed := time.Since(start)
-	slog.Debug("query took", slog.String("elapsed", elapsed.String()))
-	return rs, err
+	var result []models.TagPerRequest
+	err := d.Search(offset, limit, query, tagPerRequestConfig, &result)
+	return result, err
 }
 
-// GetTagPerRequestFullForRequest returns a TagPerRequestFull struct which
-// contains a join of the TagPerRequest and Tag structs.
 func (d *KSQLClient) GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error) {
 	var md []models.TagPerRequestFull
 	err := d.db.Query(d.ctx, &md, "FROM tag_per_request JOIN tag ON tag.id = tag_per_request.tag_id AND tag_per_request.request_id = $1", id)
@@ -664,139 +494,4 @@ func (d *KSQLClient) GetContentByID(id int64) (models.Content, error) {
 		return ct, fmt.Errorf("found no content for ID: %d", id)
 	}
 	return ct, err
-}
-
-func (d *KSQLClient) GetContentRuleByID(id int64) (models.ContentRule, error) {
-	cr := models.ContentRule{}
-	err := d.db.QueryOne(d.ctx, &cr, "FROM content_rule WHERE id = $1", id)
-	return cr, err
-}
-
-func (d *KSQLClient) DeleteContentRule(id int64) error {
-	return d.db.Delete(d.ctx, ContentRuleTable, id)
-}
-
-// FakeDatabaseClient is a struct specifically for testing users of the
-// DatabaseClient interface
-type FakeDatabaseClient struct {
-	ContentIDToReturn           int64
-	ContentsToReturn            map[int64]models.Content
-	ErrorToReturn               error
-	ContentRuleIDToReturn       int64
-	ContentRulesToReturn        []models.ContentRule
-	RequestsToReturn            []models.Request
-	RequestToReturn             models.Request
-	DownloadsToReturn           []models.Download
-	ApplicationToReturn         models.Application
-	HoneypotToReturn            models.Honeypot
-	HoneypotErrorToReturn       error
-	QueriesToReturn             []models.StoredQuery
-	QueriesToReturnError        error
-	TagPerQueryReturn           []models.TagPerQuery
-	TagPerQueryReturnError      error
-	WhoisModelsToReturn         []models.Whois
-	WhoisErrorToReturn          error
-	LastDataModelSeen           interface{}
-	LastExternalDataModelSeen   interface{}
-	P0fResultToReturn           models.P0fResult
-	P0fErrorToReturn            error
-	IpEventToReturn             models.IpEvent
-	DataModelToReturn           models.DataModel
-	SessionToReturn             models.Session
-	RequestDescriptionsToReturn []models.RequestDescription
-	YarasToReturn               []models.Yara
-}
-
-func (f *FakeDatabaseClient) Close() {}
-func (f *FakeDatabaseClient) GetContentRuleByID(id int64) (models.ContentRule, error) {
-	return f.ContentRulesToReturn[0], f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetContentByID(id int64) (models.Content, error) {
-	ct, ok := f.ContentsToReturn[id]
-	if !ok {
-		return ct, fmt.Errorf("not found")
-	}
-	return ct, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) Insert(dm models.DataModel) (models.DataModel, error) {
-	f.LastDataModelSeen = dm
-	return dm, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) InsertExternalModel(dm models.ExternalDataModel) (models.DataModel, error) {
-	f.LastExternalDataModelSeen = dm
-	return dm, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) Update(dm models.DataModel) error {
-	f.LastDataModelSeen = dm
-	return f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) Delete(dm models.DataModel) error {
-	return f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error) {
-	return []models.RequestMetadata{}, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, query string) ([]models.Request, error) {
-	return f.RequestsToReturn, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchEvents(offset int64, limit int64, query string) ([]models.IpEvent, error) {
-	return []models.IpEvent{f.IpEventToReturn}, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error) {
-	return f.ContentRulesToReturn, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchYara(offset int64, limit int64, query string) ([]models.Yara, error) {
-	return f.YarasToReturn, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchSession(offset int64, limit int64, query string) ([]models.Session, error) {
-	return []models.Session{f.SessionToReturn}, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchContent(offset int64, limit int64, query string) ([]models.Content, error) {
-	var ret []models.Content
-	for _, v := range f.ContentsToReturn {
-		ret = append(ret, v)
-	}
-	return ret, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) GetAppByID(id int64) (models.Application, error) {
-	return f.ApplicationToReturn, nil
-}
-func (f *FakeDatabaseClient) SearchApps(offset int64, limit int64, query string) ([]models.Application, error) {
-	return []models.Application{f.ApplicationToReturn}, nil
-}
-func (f *FakeDatabaseClient) SearchDownloads(offset int64, limit int64, query string) ([]models.Download, error) {
-	return f.DownloadsToReturn, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchHoneypots(offset int64, limit int64, query string) ([]models.Honeypot, error) {
-	return []models.Honeypot{f.HoneypotToReturn}, f.HoneypotErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error) {
-	return f.QueriesToReturn, f.QueriesToReturnError
-}
-func (f *FakeDatabaseClient) SearchTags(offset int64, limit int64, query string) ([]models.Tag, error) {
-	return []models.Tag{}, nil
-}
-func (f *FakeDatabaseClient) SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error) {
-	return f.TagPerQueryReturn, f.TagPerQueryReturnError
-}
-func (f *FakeDatabaseClient) SearchTagPerRequest(offset int64, limit int64, query string) ([]models.TagPerRequest, error) {
-	return []models.TagPerRequest{}, nil
-}
-func (f *FakeDatabaseClient) GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error) {
-	return []models.TagPerRequest{}, nil
-}
-func (f *FakeDatabaseClient) GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error) {
-	return []models.TagPerRequestFull{}, nil
-}
-func (f *FakeDatabaseClient) GetP0fResultByIP(ip string, querySuffix string) (models.P0fResult, error) {
-	return f.P0fResultToReturn, f.P0fErrorToReturn
-}
-func (f *FakeDatabaseClient) GetRequestByID(id int64) (models.Request, error) {
-	return f.RequestToReturn, f.ErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchWhois(offset int64, limit int64, query string) ([]models.Whois, error) {
-	return f.WhoisModelsToReturn, f.WhoisErrorToReturn
-}
-func (f *FakeDatabaseClient) SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error) {
-	return f.RequestDescriptionsToReturn, f.ErrorToReturn
 }

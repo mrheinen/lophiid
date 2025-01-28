@@ -127,13 +127,11 @@ func main() {
 
 	r := mux.NewRouter()
 	// All content endpoints.
-	r.HandleFunc("/content/single", as.HandleGetSingleContent).Methods("GET")
 	r.HandleFunc("/content/upsert", as.HandleUpsertSingleContent).Methods("POST")
 	r.HandleFunc("/content/delete", as.HandleDeleteContent).Methods("POST")
 	r.HandleFunc("/content/segment", as.HandleSearchContent).Methods("GET")
 
 	// All rules endpoints.
-	r.HandleFunc("/contentrule/single", as.HandleGetSingleContentRule).Methods("GET")
 	r.HandleFunc("/contentrule/upsert", as.HandleUpsertSingleContentRule).Methods("POST")
 	r.HandleFunc("/contentrule/delete", as.HandleDeleteContentRule).Methods("POST")
 	r.HandleFunc("/contentrule/segment", as.HandleSearchContentRules).Methods("GET")
