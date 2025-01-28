@@ -8,7 +8,6 @@ go_library(
         "hashing.go",
         "query.go",
         "search_config.go",
-        "stat_client.go",
     ],
     importpath = "lophiid/pkg/database",
     visibility = ["//visibility:public"],
