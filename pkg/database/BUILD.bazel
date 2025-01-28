@@ -7,6 +7,7 @@ go_library(
         "fake_database.go",
         "hashing.go",
         "query.go",
+        "search_config.go",
         "stat_client.go",
     ],
     importpath = "lophiid/pkg/database",
