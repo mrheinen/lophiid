@@ -6,6 +6,7 @@ go_library(
         "database.go",
         "fake_database.go",
         "hashing.go",
+        "queries.go",
         "query.go",
         "search_config.go",
     ],

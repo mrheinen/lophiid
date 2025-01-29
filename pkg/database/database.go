@@ -80,6 +80,7 @@ type DatabaseClient interface {
 	GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error)
 	GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error)
+	SimpleQuery(query string, result interface{}) (interface{}, error)
 }
 
 // Helper function to get database field names.
@@ -254,6 +255,11 @@ func (d *KSQLClient) GetRequestByID(id int64) (models.Request, error) {
 	var rs models.Request
 	err := d.db.QueryOne(d.ctx, &rs, "FROM request WHERE id = $1", id)
 	return rs, err
+}
+
+func (d *KSQLClient) SimpleQuery(query string, result interface{}) (interface{}, error) {
+	err := d.db.Query(d.ctx, result, query)
+	return result, err
 }
 
 // Search performs a generic search operation using the provided configuration

@@ -214,6 +214,7 @@ CREATE TABLE downloads (
   yara_last_scan TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   yara_scanned_unpacked BOOLEAN default FALSE,
   yara_description TEXT,
+  source_download_id INT default 0,
   CONSTRAINT fk_request_id FOREIGN KEY(request_id) REFERENCES request(id)
 );
 
@@ -351,7 +352,6 @@ CREATE TABLE ip_event (
   updated_at             TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
-
 GRANT ALL PRIVILEGES ON content TO lo;
 GRANT ALL PRIVILEGES ON content_id_seq TO lo;
 GRANT ALL PRIVILEGES ON content_rule TO lo;
@@ -390,7 +390,6 @@ GRANT ALL PRIVILEGES ON yara TO lo;
 GRANT ALL PRIVILEGES ON yara_id_seq TO lo;
 
 
-
 CREATE INDEX session_ip ON session (
   started_at desc,
   active,
@@ -400,6 +399,10 @@ CREATE INDEX session_ip ON session (
 CREATE INDEX requests_cmp_ruleuuid_idx ON request (
   time_received desc,
   rule_uuid
+);
+
+CREATE INDEX requests_per_created_at ON request (
+  created_at desc
 );
 
 
