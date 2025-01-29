@@ -170,6 +170,8 @@ func (a *ApiServer) HandleGetGlobalStatistics(w http.ResponseWriter, req *http.R
 		return
 	}
 
+	a.statsMutex.Lock()
+	defer a.statsMutex.Unlock()
 	a.sendStatus(w, "", ResultSuccess, a.globalStats)
 }
 
