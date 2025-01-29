@@ -129,6 +129,15 @@ export default {
             },
           ],
         },
+
+        {
+          label: "Stats",
+          icon: "pi pi-chart-bar",
+          command: () => {
+            this.$router.push(this.config.statsLink);
+          },
+        },
+
       ],
     };
   },

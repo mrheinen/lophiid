@@ -1,0 +1,326 @@
+<template>
+  <div class="flex flex-row">
+    <div class="basis-1/5"></div>
+    <div class="basis-3/5" style="margin-left: 15px">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="card">
+          <PrimeChart
+          type="line"
+          :data="rpmChartData"
+          :options="chartOptions2"
+          class="h-[30rem]"
+          />
+        </div>
+
+        <div class="card">
+          <PrimeChart
+          type="line"
+          :data="rpdChartData"
+          :options="chartOptions"
+          class="h-[30rem]"
+          />
+        </div>
+
+        <div class="card">
+          <PrimeChart
+          type="line"
+          :data="dpdChartData"
+          :options="chartOptions2"
+          class="h-[30rem]"
+          />
+        </div>
+
+        <div class="card">
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="card">
+              <PrimeChart type="doughnut" :data="pieChartData"
+              :options="pieChartOptions" class="" />
+            </div>
+            <div class="card">
+              World
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="basis-1/5"></div>
+  </div>
+</template>
+
+<script>
+export default {
+  components: {},
+  emits: ["require-auth"],
+  inject: ["config"],
+  data() {
+    return {
+      isLoading: false,
+      chartData: null,
+      chartOptions: null,
+      chartOptions2: null,
+      pieChartOptions: null,
+      pieChartData: null,
+      rpdChartData: null, // Requests per day
+      rpmChartData: null, // Requests per month
+      dpdChartData: null, // Downloads per day
+      stats: null,
+      baseDataSet: {
+        labels: [],
+        datasets: [
+          {
+            label: "",
+            data: [],
+            fill: false,
+            tension: 0.4,
+          },
+        ],
+      },
+    };
+  },
+  methods: {
+    loadStats() {
+      this.isLoading = true;
+      var url = this.config.backendAddress + "/stats/global";
+
+      fetch(url, {
+        headers: {
+          "API-Key": this.$store.getters.apiToken,
+        },
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+            return null;
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (!response) {
+            this.isLoading = false;
+            return;
+          }
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            if (response.data) {
+              this.stats = response.data;
+              console.log(this.stats);
+            }
+          }
+          this.isLoading = false;
+        });
+    },
+
+    setRPDChartData() {
+      const documentStyle = getComputedStyle(document.documentElement);
+
+      var newStats = {
+        labels: [],
+        datasets: [
+          {
+            label: "",
+            data: [],
+            fill: true,
+            tension: 0.1,
+            borderColor: documentStyle.getPropertyValue('--p-gray-500'),
+            backgroundColor: 'rgba(107, 114, 128, 0.2)',
+          },
+        ],
+      }
+
+      for (const entry of this.stats.requests_per_day) {
+        newStats.labels.push(entry.day);
+        newStats.datasets[0].data.push(entry.total_entries);
+      }
+
+      newStats.labels = newStats.labels.reverse();
+      newStats.datasets[0].data = newStats.datasets[0].data.reverse();
+
+      newStats.datasets[0].label = "Requests per day";
+      newStats.datasets[0].border =
+        documentStyle.getPropertyValue("--p-cyan-500");
+      this.rpdChartData = newStats;
+    },
+    setRPMChartData() {
+      const documentStyle = getComputedStyle(document.documentElement);
+      var newStats = {
+        labels: [],
+        datasets: [
+          {
+            label: "",
+            data: [],
+            fill: false,
+            tension: 0.1,
+          },
+        ],
+      }
+
+      for (const entry of this.stats.requests_per_month) {
+        newStats.labels.push(entry.month);
+        newStats.datasets[0].data.push(entry.total_entries);
+      }
+
+      newStats.labels = newStats.labels.reverse();
+      newStats.datasets[0].data = newStats.datasets[0].data.reverse();
+
+      newStats.datasets[0].label = "Requests per month";
+      newStats.datasets[0].border =
+        documentStyle.getPropertyValue("--p-cyan-500");
+      this.rpmChartData = newStats;
+    },
+    setDPDChartData() {
+      const documentStyle = getComputedStyle(document.documentElement);
+      var newStats = {
+        labels: [],
+        datasets: [
+          {
+            label: "",
+            data: [],
+            fill: false,
+            tension: 0.1,
+          },
+        ],
+      }
+
+      for (const entry of this.stats.downloads_per_day) {
+        newStats.labels.push(entry.day);
+        newStats.datasets[0].data.push(entry.total_entries);
+      }
+
+      newStats.labels = newStats.labels.reverse();
+      newStats.datasets[0].data = newStats.datasets[0].data.reverse();
+
+      newStats.datasets[0].label = "New downloads per day";
+      newStats.datasets[0].border =
+        documentStyle.getPropertyValue("--p-cyan-500");
+      this.dpdChartData = newStats;
+    },
+
+    setPieChartData() {
+      const documentStyle = getComputedStyle(document.body);
+      var newData = {
+                labels: [],
+                datasets: [
+                    {
+                        data: [],
+                        backgroundColor: [documentStyle.getPropertyValue('--p-cyan-500'), documentStyle.getPropertyValue('--p-orange-500'), documentStyle.getPropertyValue('--p-gray-500')],
+                        hoverBackgroundColor: [documentStyle.getPropertyValue('--p-cyan-400'), documentStyle.getPropertyValue('--p-orange-400'), documentStyle.getPropertyValue('--p-gray-400')]
+                    }
+                ]
+            };
+
+      for (const entry of this.stats.methods_last_24_hours) {
+        newData.labels.push(entry.method);
+        newData.datasets[0].data.push(entry.total_entries);
+      }
+
+      this.pieChartData = newData;
+
+    },
+    setChartOptions() {
+      const documentStyle = getComputedStyle(document.documentElement);
+      const textColor = documentStyle.getPropertyValue("--p-text-color");
+      const textColorSecondary = documentStyle.getPropertyValue(
+        "--p-text-muted-color"
+      );
+      const surfaceBorder = documentStyle.getPropertyValue(
+        "--p-content-border-color"
+      );
+
+      return {
+        maintainAspectRatio: false,
+        aspectRatio: 0.6,
+        plugins: {
+          legend: {
+            labels: {
+              color: textColor,
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: textColorSecondary,
+            },
+            grid: {
+              color: surfaceBorder,
+            },
+          },
+          y: {
+            suggestedMin: 0,
+            ticks: {
+              color: textColorSecondary,
+            },
+            grid: {
+              color: surfaceBorder,
+            },
+          },
+        },
+      };
+    },
+
+    setPieChartOptions() {
+      const documentStyle = getComputedStyle(document.documentElement);
+      const textColor = documentStyle.getPropertyValue('--p-text-color');
+
+      return {
+        plugins: {
+          legend: {
+            labels: {
+              cutout: '60%',
+              color: textColor
+            }
+          }
+        }
+      };
+    },
+  },
+  beforeCreate() {},
+  created() {},
+  watch: {
+    stats() {
+      this.setRPDChartData();
+      this.setRPMChartData();
+      this.setDPDChartData();
+      this.setPieChartData();
+    },
+  },
+  mounted() {
+    this.loadStats();
+    this.chartOptions = this.setChartOptions();
+    this.chartOptions2 = this.setChartOptions();
+    this.pieChartOptions = this.setPieChartOptions();
+  },
+};
+</script>
+
+<style scoped>
+#date {
+  width: 170px;
+}
+.table tr.is-selected {
+  background-color: #4e726d;
+}
+table {
+  width: 100%;
+}
+
+td {
+  font-size: 13px;
+}
+
+i.pi-style {
+  font-size: 2rem;
+  color: #00d1b2;
+}
+
+i.pi-style-right {
+  float: right;
+}
+
+.p-inputtext {
+  width: 100%;
+}
+</style>

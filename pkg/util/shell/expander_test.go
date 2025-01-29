@@ -134,3 +134,49 @@ func TestGetCommandOutput(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanupVariableValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "string with single quotes",
+			input:    "'test value'",
+			expected: "test value",
+		},
+		{
+			name:     "string with double quotes",
+			input:    "\"test value\"",
+			expected: "test value",
+		},
+		{
+			name:     "string without quotes",
+			input:    "test value",
+			expected: "test value",
+		},
+		{
+			name:     "string with whitespace",
+			input:    "  test value  ",
+			expected: "test value",
+		},
+		{
+			name:     "short quoted string",
+			input:    "'a'",
+			expected: "'a'",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := CleanupVariableValue(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

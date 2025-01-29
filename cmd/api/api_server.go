@@ -123,6 +123,8 @@ func main() {
 	dbc := database.NewKSQLClient(&db)
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, nil, javascript.CreateGoJaMetrics(reg))
 	as := api.NewApiServer(dbc, jRunner, id.String())
+	as.Start()
+	defer as.Stop()
 	defer dbc.Close()
 
 	r := mux.NewRouter()
@@ -176,6 +178,8 @@ func main() {
 
 	r.HandleFunc("/yara/bydownloadid", as.HandleGetYaraForDownload).Methods("POST")
 	r.HandleFunc("/yara/segment", as.HandleSearchYara).Methods("GET")
+
+	r.HandleFunc("/stats/global", as.HandleGetGlobalStatistics).Methods("GET")
 
 	r.Use(as.AuthMW)
 

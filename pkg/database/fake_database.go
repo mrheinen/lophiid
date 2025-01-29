@@ -50,6 +50,7 @@ type FakeDatabaseClient struct {
 	SessionToReturn             models.Session
 	RequestDescriptionsToReturn []models.RequestDescription
 	YarasToReturn               []models.Yara
+	SimpleQueryResult           interface{}
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -144,4 +145,7 @@ func (f *FakeDatabaseClient) SearchWhois(offset int64, limit int64, query string
 }
 func (f *FakeDatabaseClient) SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error) {
 	return f.RequestDescriptionsToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SimpleQuery(query string, result interface{}) (interface{}, error) {
+	return f.SimpleQueryResult, f.ErrorToReturn
 }

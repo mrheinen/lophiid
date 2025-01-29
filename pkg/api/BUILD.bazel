@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "generic_client.go",
         "server.go",
+        "stats.go",
     ],
     importpath = "lophiid/pkg/api",
     visibility = ["//visibility:public"],

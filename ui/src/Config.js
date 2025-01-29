@@ -17,6 +17,7 @@ export default {
   yaraLink: '/yara',
   yaraSegmentLink: '/yara/:offset/:limit',
   tagsLink: '/tag',
+  statsLink: '/stats',
   datamodelDocLink: '/datamodel/doc',
   tagsSegmentLink: '/tag/:offset/:limit',
   requestsSegmentLink: '/requests/:offset/:limit',

@@ -1,6 +1,8 @@
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 
+import './index.css'
+
 // Allow toast messages.
 import ToastPlugin from 'vue-toast-notification';
 import 'vue-toast-notification/dist/theme-bootstrap.css';
@@ -17,6 +19,7 @@ import QueryList from './components/container/QueryList.vue';
 import EventsList from './components/container/EventsList.vue';
 import TagList from './components/container/TagList.vue';
 import YaraList from './components/container/YaraList.vue';
+import GlobalStats from './components/container/GlobalStats.vue';
 import PrimeVue from './../node_modules/primevue/config';
 
 import CodeMirror from './../node_modules/vue-codemirror';
@@ -54,6 +57,7 @@ const router = createRouter({
     {path: Config.eventSegmentLink, component: EventsList },
     {path: Config.yaraLink, component: YaraList },
     {path: Config.yaraSegmentLink, component: YaraList },
+    {path: Config.statsLink, component: GlobalStats },
   ]
 });
 
@@ -84,6 +88,8 @@ import Tab from './../node_modules/primevue/tab';
 import TabPanels from './../node_modules/primevue/tabpanels';
 import TabPanel from './../node_modules/primevue/tabpanel';
 import ConfirmationService from './../node_modules/primevue/confirmationservice';
+import Chart from './../node_modules/primevue/chart';
+
 
 
 import Material from '@primevue/themes/material';
@@ -117,6 +123,7 @@ app.component('DataSkeleton', Skeleton);
 app.component('IconField', IconField);
 app.component('InputIcon', InputIcon);
 app.component('PopOver', PopOver);
+app.component('PrimeChart', Chart);
 app.use(hljsVuePlugin);
 app.use(router);
 app.use(store);

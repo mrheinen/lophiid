@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -34,6 +34,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,9 +42,12 @@ import (
 )
 
 type ApiServer struct {
-	dbc     database.DatabaseClient
-	jRunner javascript.JavascriptRunner
-	apiKey  string
+	dbc         database.DatabaseClient
+	jRunner     javascript.JavascriptRunner
+	globalStats *GlobalStatisticsResult
+	statsMutex  sync.Mutex
+	statsChan   chan bool
+	apiKey      string
 }
 
 type HttpResult struct {
@@ -82,11 +86,47 @@ type StoredQueryJSON struct {
 }
 
 func NewApiServer(dbc database.DatabaseClient, jRunner javascript.JavascriptRunner, apiKey string) *ApiServer {
+
 	return &ApiServer{
-		dbc,
-		jRunner,
-		apiKey,
+		dbc:       dbc,
+		jRunner:   jRunner,
+		apiKey:    apiKey,
+		statsChan: make(chan bool),
 	}
+}
+
+// Start starts the API server and will start a background routine that will
+// update the global statistics at a fixed interval.
+func (a *ApiServer) Start() {
+
+	statsTicker := time.NewTicker(time.Minute * 60)
+	go func() {
+
+		globalStats, _ := GetGlobalStatistics(a.dbc)
+		a.globalStats = &globalStats
+
+		for {
+			select {
+			case <-a.statsChan:
+				statsTicker.Stop()
+				return
+			case <-statsTicker.C:
+				newGlobalStats, err := GetGlobalStatistics(a.dbc)
+				if err != nil {
+					slog.Error("failed to get global stats", "error", err)
+				}
+
+				a.statsMutex.Lock()
+				a.globalStats = &newGlobalStats
+				a.statsMutex.Unlock()
+			}
+		}
+	}()
+
+}
+
+func (a *ApiServer) Stop() {
+	a.statsChan <- true
 }
 
 // Auth middleware will compare the clients API key with the one that was used
@@ -121,6 +161,18 @@ func (a *ApiServer) sendStatus(w http.ResponseWriter, msg string, result string,
 		slog.Error("encoding error", "error", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (a *ApiServer) HandleGetGlobalStatistics(w http.ResponseWriter, req *http.Request) {
+
+	if a.globalStats == nil {
+		a.sendStatus(w, "No stats loaded", ResultError, nil)
+		return
+	}
+
+	a.statsMutex.Lock()
+	defer a.statsMutex.Unlock()
+	a.sendStatus(w, "", ResultSuccess, a.globalStats)
 }
 
 func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *http.Request) {
