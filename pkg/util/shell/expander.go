@@ -30,11 +30,12 @@ func NewExpander() *Expander {
 func CleanupVariableValue(vari string) string {
 	vari = strings.TrimSpace(vari)
 
-	if len(vari) == 0 {
+	if len(vari) < 2 {
 		return vari
 	}
 
-	if vari[0] == '\'' || vari[0] == '"' {
+	lastChar := vari[len(vari)-1]
+	if (vari[0] == '\'' && lastChar == '\'') || (vari[0] == '"' && lastChar == '"') {
 		if len(vari) >= 4 {
 			vari = vari[1 : len(vari)-1]
 		}
@@ -70,6 +71,9 @@ func getCommandOutput(value string) (string, error) {
 // registers new variables which are then used in future expansions.
 // Returns the expanded string.
 func (n *Expander) ExpandChunk(chunk string) string {
+	if n == nil || n.compiledVarRegex == nil {
+		return chunk
+	}
 
 	// Try to resolve variables. This does not take quoting into account yet.
 	if strings.Contains(chunk, "$") {
@@ -81,8 +85,7 @@ func (n *Expander) ExpandChunk(chunk string) string {
 
 	// Try to find variable definitions.
 	match := n.compiledVarRegex.FindStringSubmatch(chunk)
-	if len(match) == 3 {
-		fmt.Println(match[1], match[2])
+	if len(match) >= 3 {
 		if strings.HasPrefix(match[2], "$(") {
 			output, err := getCommandOutput(match[2])
 			if err != nil {
@@ -90,7 +93,6 @@ func (n *Expander) ExpandChunk(chunk string) string {
 			} else {
 				n.varMap[match[1]] = output
 			}
-
 		} else {
 			n.varMap[match[1]] = CleanupVariableValue(match[2])
 		}
@@ -101,6 +103,10 @@ func (n *Expander) ExpandChunk(chunk string) string {
 
 // Expand reads a shell script chunk by chunk and expands variables.
 func (n *Expander) Expand(reader Iterator) []string {
+	if n == nil || reader == nil {
+		return nil
+	}
+
 	outputBuffer := []string{}
 
 	for {
@@ -111,13 +117,19 @@ func (n *Expander) Expand(reader Iterator) []string {
 
 		// Handle for loops
 		if strings.HasPrefix(chunk, "for") {
-			// for VARIABLE in 1 2 3 4 5
 			parts := strings.SplitN(chunk, " ", 4)
+			if len(parts) < 4 {
+				slog.Error("invalid for loop syntax", slog.String("chunk", chunk))
+				if !hasMore {
+					break
+				}
+				continue
+			}
+
 			variableName := parts[1]
 			variableValues := CleanupVariableValue(parts[3])
 
 			for {
-
 				var nextChunk string
 				nextChunk, hasMore = reader.Next()
 				if nextChunk == "done" || !hasMore {
