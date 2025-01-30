@@ -6,7 +6,7 @@
     :style="{ width: '25rem' }"
   >
     <div class="flex justify-content-end gap-2">
-      <div style="padding-right: 10px;">
+      <div style="padding-right: 10px">
         <InputText id="apiKey" type="text" v-model="apiKey" />
       </div>
       <div>
@@ -19,14 +19,11 @@
     </div>
   </PrimeDialog>
 
-  <div class="columns">
-    <div class="column is-full">
+  <div class="grid grid-flow-row auto-rows-auto">
+    <div style="">
       <vue-nav-bar> </vue-nav-bar>
     </div>
-  </div>
-
-  <div class="columns">
-    <div class="column is-full">
+    <div style="margin-top: 20px; margin-left: 15px">
       <!-- use key below to let the page re-render when the API key changes -->
       <router-view
         :key="apiKey + $route.path"
@@ -81,12 +78,26 @@ export default {
 </script>
 
 <style>
+html {
+  font-family: "Roboto", sans-serif;
+}
+
+body {
+  font-family: "Roboto", sans-serif;
+}
+
 .mright {
   margin-right: 10px;
 }
 
+.mleft {
+  margin-left: 15px;
+  margin-right: 30px;
+}
+
 th {
   color: #616060 !important;
+  text-align: left;
 }
 
 td {
@@ -108,6 +119,11 @@ tr {
 label {
   color: #616060 !important;
   margin-top: 0.5em;
+
+  color: #363636;
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .linkpointer {

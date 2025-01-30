@@ -1,6 +1,6 @@
 <template>
   <div>
-    <pre v-on:focus="$event.target.select()" ref="rawhttp" class="rawhttp">{{ data }}
+    <pre v-on:focus="$event.target.select()" ref="rawhttp" class="rawhttp text-wrap">{{ data }}
     </pre>
     <br />
     <div style="float: right">
@@ -50,8 +50,6 @@ export default {
 
 <style scoped>
 pre.rawhttp {
-  max-height: 400px;
-  max-width: 640px;
   overflow: auto;
   background-color: #eeeeee;
   word-break: normal !important;

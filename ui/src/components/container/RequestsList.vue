@@ -1,7 +1,7 @@
 <template>
-  <div class="columns">
-    <div class="column is-three-fifths" style="margin-left: 15px">
-      <div class="card">
+  <div class="grid grid-rows-1 grid-cols-5 gap-4">
+    <div class="col-span-3" style="mleft">
+      <div class="rounded overflow-hidden shadow-lg">
         <DataTable
           :value="requests"
           tableStyle="min-width: 50rem"
@@ -99,7 +99,7 @@
         </DataTable>
       </div>
     </div>
-    <div class="column restricted-width mright">
+    <div class="col-span-2">
       <request-view v-if="selectedRequest"
         :request="selectedRequest"
         :metadata="selectedMetadata"

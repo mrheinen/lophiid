@@ -1,5 +1,5 @@
 <template>
-  <div class="card">
+  <div class="rounded overflow-hidden shadow-lg">
     <FieldSet legend="Import app with rules" :toggleable="false">
      <p>Select a yaml file to import an app with all it's rules and contents.</p>
      <p>You should only import trusted files and verify them manually before importing them.</p>

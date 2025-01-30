@@ -23,9 +23,9 @@ import GlobalStats from './components/container/GlobalStats.vue';
 import PrimeVue from './../node_modules/primevue/config';
 
 import CodeMirror from './../node_modules/vue-codemirror';
-//import javascript from './../node_modules/@codemirror/lang-javascript';
 
-import './../node_modules/bulma/css/bulma.css';
+import './../node_modules/@fontsource/roboto/index.css';
+//import './../node_modules/bulma/css/bulma.css';
 import './../node_modules/primeicons/primeicons.css';
 import './../node_modules/highlight.js/styles/stackoverflow-light.css'
 import './../node_modules/highlight.js/lib/common';
