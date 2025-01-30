@@ -19,7 +19,7 @@
     </div>
   </PrimeDialog>
 
-  <div class="grid grid-flow-row auto-rows-auto">
+  <div class="grid grid-flow-row auto-rows-auto grow-0">
     <div style="">
       <vue-nav-bar> </vue-nav-bar>
     </div>
@@ -129,4 +129,5 @@ label {
 .linkpointer {
   cursor: pointer !important;
 }
+
 </style>
