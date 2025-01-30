@@ -59,10 +59,10 @@ ORDER BY day DESC;
 
 const QueryCountMethodsLast24Hours = `
 SELECT
-    TO_CHAR(DATE_TRUNC('day', created_at), 'YYYY-MM-DD') AS day,
     COUNT(method) as total_entries, method
 FROM request
-WHERE created_at >= DATE_TRUNC('day', CURRENT_DATE - INTERVAL '24 hours')
-GROUP BY day, method
-ORDER BY day DESC;
+WHERE created_at >= NOW() - INTERVAL '24 hours'
+    AND created_at < NOW()
+GROUP BY  method
+ORDER BY total_entries DESC;
 `
