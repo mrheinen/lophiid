@@ -30,7 +30,7 @@ var dirToScan = flag.String("d", "", "Directory to scan")
 var runManager = flag.Bool("m", false, "Run the manager")
 var dbUrl = flag.String("u", "", "Database URL")
 var configFile = flag.String("c", "backend-config.yaml", "Location of the config")
-var keepRunning = flag.Bool("k", true, "Whether to keep running continuously")
+var keepRunning = flag.Bool("k", false, "Whether to keep running continuously")
 var batchSize = flag.Int64("b", 30, "Amount of downloads to process at once")
 
 func main() {
@@ -95,14 +95,16 @@ func main() {
 
 	metricsRegistry := prometheus.NewRegistry()
 	metrics := yara.CreateYaraMetrics(metricsRegistry)
+	if *keepRunning {
+		http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
+		go func() {
+			if err := http.ListenAndServe(cfg.Yara.MetricsListenAddress, nil); err != nil {
+				slog.Error("Failed to start metrics server", "error", err)
+				os.Exit(1)
+			}
+		}()
 
-	http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
-	go func() {
-		if err := http.ListenAndServe(cfg.Yara.MetricsListenAddress, nil); err != nil {
-			slog.Error("Failed to start metrics server", "error", err)
-			os.Exit(1)
-		}
-	}()
+	}
 
 	llmClient := llm.NewOpenAILLMClientWithModel(cfg.AI.ApiKey, cfg.AI.ApiLocation, "", cfg.AI.Model)
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
