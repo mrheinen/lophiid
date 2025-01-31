@@ -1,5 +1,5 @@
 <template>
-  <div class="card" style="margin-left: 10px">
+  <div class="card" style="">
     <MenuBar :model="items">
       <template #start>
         <img src="@/assets/logo.png" width="112" height="28" />

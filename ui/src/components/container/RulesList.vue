@@ -12,12 +12,9 @@
       @require-auth="$emit('require-auth')"
     ></AppForm>
   </PrimeDialog>
-
-  <div class="columns">
-    <div class="column is-three-fifths" style="margin-left: 15px">
-
-
-      <div class="card">
+  <div class="grid grid-rows-1 grid-cols-5 gap-4">
+    <div class="col-span-3" style="mleft">
+      <div class="rounded overflow-hidden shadow-lg">
         <DataTable
           :value="appRules"
           tableStyle="min-width: 50rem"
@@ -116,7 +113,7 @@
         </DataTable>
       </div>
     </div>
-    <div class="column mright">
+    <div class="colspan-2">
       <rule-form
         @update-rule="onUpdatedRule"
         @delete-rule="reloadRules()"

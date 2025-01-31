@@ -115,8 +115,9 @@ pkg/database/database.go to see what kind of attributes are available.
 In addition the following methods are added in the Javascript layer (and so not
 visible in the Response struct):
 
- * SetBody(string) - This will set the respose body to the given value.
- * GetBody() - This will return the body as a string.
+ * setBody(string) - This will set the respose body to the given value.
+ * setBody() - This will return the body as a string.
+ * setHeader(string, string) - This will set the given header
 
 These two are necessary because the body is stored in []bytes which is hard to
 handle in Javascript.
@@ -286,7 +287,7 @@ Get the stderr output of the command.
 
 ## LLM access
 
-### util.responder.Respond(resType, promptInput, template) string
+### util.responder.respond(resType, promptInput, template) string
 
 Gives access to the LLM responder. For resType, you can currently only use
 COMMAND_INJECTION. For promptInput use one or more commands (separated by ;).
@@ -308,7 +309,7 @@ Here is an example usage:
   // than embedding an entire response here in the script.
   template = util.database.getContentById(42)
 
-  res = util.responder.Respond('COMMAND_INJECTION', commands, template.getData())
+  res = util.responder.respond('COMMAND_INJECTION', commands, template.getData())
   if (res == "") {
     // it failed
   }

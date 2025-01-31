@@ -3,8 +3,8 @@
     <input type="hidden" name="id" v-model="localRule.id" />
     <div>
       <FieldSet legend="Settings" :toggleable="false">
-        <div class="columns">
-          <div class="column">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="">
             <div>
               <label class="label">URI match string</label>
               <InputText
@@ -15,7 +15,7 @@
               />
             </div>
           </div>
-          <div class="column">
+          <div class="">
             <div class="field">
               <label class="label">URI matching method</label>
               <FormSelect
@@ -28,10 +28,8 @@
               />
             </div>
           </div>
-        </div>
 
-        <div class="columns">
-          <div class="column">
+          <div class="">
             <div>
               <label class="label">Request body match string</label>
               <InputText
@@ -42,7 +40,7 @@
               />
             </div>
           </div>
-          <div class="column">
+          <div class="">
             <div class="field">
               <label class="label">Body matching method</label>
               <FormSelect
@@ -55,12 +53,20 @@
               />
             </div>
           </div>
-        </div>
 
-        <div class="columns">
-          <div class="column">
+          <div class="">
             <div>
-              <label class="label">Content ID</label>
+              <label class="label"
+                >Content ID &nbsp;
+                <i
+                  @click="onContentFormOpen()"
+                  class="pi pi-plus-circle pointer"
+                ></i>
+                &nbsp;
+                <a :href="config.contentLink + '?q=id:' + localRule.content_id">
+                  <i class="pi pi-external-link pointer"></i>
+                </a>
+              </label>
               <InputNumber
                 v-model="localRule.content_id"
                 inputId="minmax"
@@ -68,20 +74,16 @@
                 :min="0"
                 :max="65535"
               />
-              &nbsp;
-              <i
-                @click="onContentFormOpen()"
-                class="pi pi-plus-circle pointer"
-              ></i>
-              &nbsp;
-              <a :href="config.contentLink + '?q=id:' + localRule.content_id">
-                <i class="pi pi-external-link pointer"></i>
-              </a>
             </div>
           </div>
-          <div class="column">
+          <div class="">
             <div>
-              <label class="label">App ID</label>
+              <label class="label"
+                >App ID &nbsp;<i
+                  @click="onAppFormOpen()"
+                  class="pi pi-plus-circle pointer"
+                ></i>
+              </label>
               <FormSelect
                 v-model="localRule.app_id"
                 :options="appValues"
@@ -90,15 +92,10 @@
                 placeholder="Select app"
                 class="w-full md:w-14rem"
               />
-
-              &nbsp;
-              <i @click="onAppFormOpen()" class="pi pi-plus-circle pointer"></i>
             </div>
           </div>
-        </div>
 
-        <div class="columns">
-          <div class="column">
+          <div class="">
             <div>
               <label class="label">Port</label>
               <InputNumber
@@ -110,7 +107,7 @@
               />
             </div>
           </div>
-          <div class="column">
+          <div class="">
             <div class="field">
               <label class="label">Request purpose</label>
               <FormSelect
@@ -123,10 +120,8 @@
               />
             </div>
           </div>
-        </div>
 
-        <div class="columns">
-          <div class="column">
+          <div class="">
             <div>
               <label class="label">HTTP method</label>
               <FormSelect
@@ -138,7 +133,7 @@
               />
             </div>
           </div>
-          <div class="column">
+          <div class="">
             <div>
               <label class="label">UUID</label>
               <InputText
@@ -150,10 +145,8 @@
               />
             </div>
           </div>
-        </div>
 
-        <div class="columns">
-          <div class="column">
+          <div class="">
             <div>
               <label class="label">Responder (optional)</label>
               <FormSelect
@@ -165,7 +158,7 @@
               />
             </div>
           </div>
-          <div class="column">
+          <div class="">
             <div>
               <label class="label">Responder regex</label>
               <InputText
@@ -176,10 +169,8 @@
               />
             </div>
           </div>
-        </div>
 
-        <div class="columns">
-          <div class="column">
+          <div class="">
             <div>
               <label class="label">Responder decoder</label>
               <FormSelect
@@ -191,25 +182,31 @@
               />
             </div>
           </div>
-          <div class="column">
-            <label class="label">Misc options</label>
-            <div>
-              <CheckBox
-                inputId="alert"
-                v-model="localRule.alert"
-                :binary="true"
-              />
-              <label for="alert">Alert</label>
-            </div>
 
-            <div>
-              <CheckBox
-                inputId="enabled"
-                v-model="localRule.enabled"
-                :binary="true"
-              />
-              <label for="enabled">Enable</label>
-            </div>
+          <div>
+            <label class="label">Misc options</label>
+            <table>
+              <tr>
+                <th>Alert</th>
+                <td>
+                  <CheckBox
+                    inputId="alert"
+                    v-model="localRule.alert"
+                    :binary="true"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <th>Enable</th>
+                <td>
+                  <CheckBox
+                    inputId="enabled"
+                    v-model="localRule.enabled"
+                    :binary="true"
+                  />
+                </td>
+              </tr>
+            </table>
           </div>
         </div>
         <br />
@@ -273,7 +270,7 @@ export default {
     return {
       localRule: {
         uri_matching: "exact",
-        body_matching: "exact",
+        body_matching: "none",
         method: "ANY",
       },
       appValues: [],
@@ -301,10 +298,13 @@ export default {
     },
     resetForm() {
       this.localRule = {
-        uri_matching: "none",
+        uri_matching: "exact",
         body_matching: "none",
         method: "ANY",
         request_purpose: "UNKNOWN",
+        responder: "NONE",
+        responder_decoder: "NONE",
+        enabled: true,
       };
     },
     submitForm() {
@@ -427,6 +427,10 @@ export default {
 textarea {
   width: 100%;
   height: 400px;
+}
+
+.p-select {
+  width: 100%;
 }
 
 .pointer {

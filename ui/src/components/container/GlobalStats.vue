@@ -3,7 +3,7 @@
     <div class="basis-1/5"></div>
     <div class="basis-3/5" style="margin-left: 15px">
       <div class="grid grid-cols-2 gap-4">
-        <div class="card">
+        <div class="rounded overflow-hidden shadow-lg">
           <PrimeChart
           type="line"
           :data="rpmChartData"
@@ -12,7 +12,7 @@
           />
         </div>
 
-        <div class="card">
+        <div class="rounded overflow-hidden shadow-lg">
           <PrimeChart
           type="line"
           :data="rpdChartData"
@@ -21,7 +21,7 @@
           />
         </div>
 
-        <div class="card">
+        <div class="rounded overflow-hidden shadow-lg">
           <PrimeChart
           type="line"
           :data="dpdChartData"
@@ -30,14 +30,14 @@
           />
         </div>
 
-        <div class="card">
+        <div class="rounded overflow-hidden shadow-lg">
 
           <div class="grid grid-cols-2 gap-4">
-            <div class="card">
+            <div class="rounded overflow-hidden shadow-lg">
               <PrimeChart type="doughnut" :data="pieChartData"
               :options="pieChartOptions" class="" />
             </div>
-            <div class="card">
+            <div class="rounded overflow-hidden shadow-lg">
               World
             </div>
           </div>
@@ -199,14 +199,15 @@ export default {
     },
 
     setPieChartData() {
-      const documentStyle = getComputedStyle(document.body);
       var newData = {
                 labels: [],
                 datasets: [
                     {
                         data: [],
-                        backgroundColor: [documentStyle.getPropertyValue('--p-cyan-500'), documentStyle.getPropertyValue('--p-orange-500'), documentStyle.getPropertyValue('--p-gray-500')],
-                        hoverBackgroundColor: [documentStyle.getPropertyValue('--p-cyan-400'), documentStyle.getPropertyValue('--p-orange-400'), documentStyle.getPropertyValue('--p-gray-400')]
+                        backgroundColor: ['#8ec07c', '#458588', '#d79921',
+                          '#cc241d', '#3c3836', '#fe8019'],
+                        hoverBackgroundColor: ['#8ec07c', '#458588', '#d79921',
+                          '#cc241d', '#3c3836', '#fe8019'],
                     }
                 ]
             };

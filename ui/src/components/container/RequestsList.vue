@@ -1,7 +1,7 @@
 <template>
-  <div class="columns">
-    <div class="column is-three-fifths" style="margin-left: 15px">
-      <div class="card">
+  <div class="grid grid-rows-1 grid-cols-5 gap-4">
+    <div class="col-span-3" style="mleft">
+      <div class="rounded overflow-hidden shadow-lg">
         <DataTable
           :value="requests"
           tableStyle="min-width: 50rem"
@@ -22,7 +22,10 @@
           </template>
           <template #empty>No data matched. </template>
           <template #loading>Loading request data. Please wait. </template>
-          <DataColumn field="parsed.received_at" header="Date" style="width: 15%"
+          <DataColumn
+            field="parsed.received_at"
+            header="Date"
+            style="width: 11%"
           >
           </DataColumn>
 
@@ -30,8 +33,7 @@
           </DataColumn>
           <DataColumn field="method" header="Method" style="width: 5%">
           </DataColumn>
-          <DataColumn field="parsed.uri" header="URI">
-          </DataColumn>
+          <DataColumn field="parsed.uri" header="URI"> </DataColumn>
           <DataColumn field="source_ip" header="Source" style="width: 10%">
             <template #body="slotProps">
               <a
@@ -49,7 +51,8 @@
             <template #body="slotProps">
               <a
                 :href="
-                  config.rulesLink + '?uri=' +
+                  config.rulesLink +
+                  '?uri=' +
                   encodeURIComponent(slotProps.data.uri) +
                   '&method=' +
                   slotProps.data.method
@@ -70,37 +73,45 @@
             </template>
           </DataColumn>
           <template #footer>
-
             <div class="flex justify-between items-center">
-            <div>
-            <i
-              v-if="offset > 0"
-              @click="loadPrevRequests()"
-              class="pi pi-arrow-left pi-style"
-            ></i>
-            <i
-              v-if="offset == 0"
-              class="pi pi-arrow-left pi-style-disabled"
-            ></i>
-            </div>
-            <div>
-
-            <FormSelect v-model="selectedLimit" @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
-            </div>
-            <div>
-            <i
-              v-if="requests.length == limit"
-              @click="loadNextRequests()"
-              class="pi pi-arrow-right pi-style pi-style-right"
-            ></i>
-            </div>
+              <div>
+                <i
+                  v-if="offset > 0"
+                  @click="loadPrevRequests()"
+                  class="pi pi-arrow-left pi-style"
+                ></i>
+                <i
+                  v-if="offset == 0"
+                  class="pi pi-arrow-left pi-style-disabled"
+                ></i>
+              </div>
+              <div>
+                <FormSelect
+                  v-model="selectedLimit"
+                  @change="onChangeLimit"
+                  :options="limitOptions"
+                  placeholder="Limit"
+                  editable
+                  checkmark
+                  :highlightOnSelect="false"
+                  class="w-full md:w-56"
+                />
+              </div>
+              <div>
+                <i
+                  v-if="requests.length == limit"
+                  @click="loadNextRequests()"
+                  class="pi pi-arrow-right pi-style pi-style-right"
+                ></i>
+              </div>
             </div>
           </template>
         </DataTable>
       </div>
     </div>
-    <div class="column restricted-width mright">
-      <request-view v-if="selectedRequest"
+    <div class="col-span-2">
+      <request-view
+        v-if="selectedRequest"
         :request="selectedRequest"
         :metadata="selectedMetadata"
         :whois="selectedWhois"
@@ -111,7 +122,7 @@
 </template>
 
 <script>
-import { dateToString, sharedMixin } from './../../helpers.js';
+import { dateToString, sharedMixin } from "./../../helpers.js";
 
 import RequestView from "./RequestView.vue";
 import DataSearchBar from "../DataSearchBar.vue";
@@ -143,7 +154,7 @@ export default {
   },
   methods: {
     onChangeLimit() {
-      this.limit = this.selectedLimit
+      this.limit = this.selectedLimit;
       this.loadRequests(true);
     },
     showPopover(event) {
@@ -356,8 +367,7 @@ export default {
               newReq.parsed.received_at = dateToString(newReq.time_received);
               var maxUriLength = 75;
               if (newReq.uri.length > maxUriLength) {
-                newReq.parsed.uri =
-                  newReq.uri.slice(0, maxUriLength) + "...";
+                newReq.parsed.uri = newReq.uri.slice(0, maxUriLength) + "...";
               } else {
                 newReq.parsed.uri = newReq.uri;
               }

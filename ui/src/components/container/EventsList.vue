@@ -1,9 +1,9 @@
 <template>
-  <div class="columns">
-    <div class="column is-three-fifths" style="margin-left: 15px">
 
+  <div class="grid grid-rows-1 grid-cols-5 gap-4">
+    <div class="col-span-3" style="mleft">
 
-      <div class="card">
+      <div class="rounded overflow-hidden shadow-lg">
         <DataTable
           :value="events"
           tableStyle="min-width: 50rem"
@@ -102,7 +102,7 @@
     </div>
 
 
-    <div class="column mright" >
+    <div class="col-span-2" >
       <events-form
         @update-query="onUpdateEvent"
         @require-auth="$emit('require-auth')"

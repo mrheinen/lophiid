@@ -1,7 +1,8 @@
 <template>
-  <div>
-    <pre v-on:focus="$event.target.select()" ref="rawhttp" class="rawhttp">{{ data }}
-    </pre>
+  <div class="overflow-auto">
+    <div v-on:focus="$event.target.select()" ref="rawhttp" class="rawhttp">
+      {{ data }}
+    </div>
     <br />
     <div style="float: right">
       <i
@@ -49,11 +50,10 @@ export default {
 </script>
 
 <style scoped>
-pre.rawhttp {
-  max-height: 400px;
-  max-width: 640px;
+div.rawhttp {
   overflow: auto;
   background-color: #eeeeee;
+  max-width: 100%;
   word-break: normal !important;
   word-wrap: normal !important;
   white-space: pre !important;
