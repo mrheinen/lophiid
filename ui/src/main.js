@@ -25,6 +25,7 @@ import PrimeVue from './../node_modules/primevue/config';
 import CodeMirror from './../node_modules/vue-codemirror';
 
 import './../node_modules/@fontsource/roboto/index.css';
+import './../node_modules/@fontsource/source-sans-pro/400.css';
 //import './../node_modules/bulma/css/bulma.css';
 import './../node_modules/primeicons/primeicons.css';
 import './../node_modules/highlight.js/styles/stackoverflow-light.css'

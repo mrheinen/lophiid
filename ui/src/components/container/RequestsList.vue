@@ -25,7 +25,7 @@
           <DataColumn
             field="parsed.received_at"
             header="Date"
-            style="width: 15%"
+            style="width: 11%"
           >
           </DataColumn>
 
@@ -507,6 +507,4 @@ input.p-select-label {
 .flex {
   display: flex;
 }
-
-
 </style>
