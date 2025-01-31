@@ -1,0 +1,124 @@
+app:
+    id: 168
+    name: ThinkPHP
+    version: "2.1"
+    vendor: ThinkPHP
+    os: Linux
+    link: https://github.com/vulhub/vulhub/tree/master/thinkphp/2-rce
+    created_at: 2025-01-31T08:29:12.032206Z
+    updated_at: 2025-01-31T15:54:27.867271Z
+    ext_version: 0
+    ext_uuid: 390e3d11-d62f-4126-b726-95baca43ce62
+    cves: []
+rules:
+    - id: 788
+      uri: /Public/Css/common.css
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 786
+      app_id: 168
+      app_uuid: 390e3d11-d62f-4126-b726-95baca43ce62
+      content_uuid: a194f9b4-2b3e-4869-b4dd-c82d20282f4f
+      created_at: 2025-01-31T15:55:39.960329Z
+      updated_at: 2025-01-31T15:55:39.960313Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 343af1af-0549-4eb3-86f8-ce1898d45c30
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 787
+      uri: /
+      body: ""
+      method: GET
+      port: 0
+      uri_matching: exact
+      body_matching: none
+      content_id: 785
+      app_id: 168
+      app_uuid: 390e3d11-d62f-4126-b726-95baca43ce62
+      content_uuid: 0c4ea2f8-aa65-46d1-b1a5-c61dc020ce86
+      created_at: 2025-01-31T15:55:39.956451Z
+      updated_at: 2025-01-31T15:55:39.956434Z
+      alert: false
+      enabled: true
+      ext_version: 0
+      ext_uuid: 0efefb69-5130-4966-906d-80fb3b66dfa8
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 786
+      uri: ${@eval($_GET[1])}&1=system
+      body: ""
+      method: ANY
+      port: 0
+      uri_matching: contains
+      body_matching: none
+      content_id: 784
+      app_id: 168
+      app_uuid: 390e3d11-d62f-4126-b726-95baca43ce62
+      content_uuid: 429fcc55-cb71-48ce-a008-bf319b857a82
+      created_at: 2025-01-31T13:29:23.194209Z
+      updated_at: 2025-01-31T13:52:24.696394Z
+      alert: true
+      enabled: true
+      ext_version: 0
+      ext_uuid: 851b09d0-78d7-47d8-ae1c-39b7d9ce78fb
+      request_purpose: ATTACK
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 785
+      data: PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9XM0MvL0RURCBIVE1MIDQuMCBUcmFuc2l0aW9uYWwvL0VOIj4NCjxodG1sPg0KIDxoZWFkPg0KICA8bWV0YSBodHRwLWVxdWl2PSJDb250ZW50LVR5cGUiIGNvbnRlbnQ9InRleHQvaHRtbDsgY2hhcnNldD11dGYtOCI+DQogIDx0aXRsZT5UaGlua1BIUOekuuS+i++8mkhlbGxvLFRoaW5rUEhQPC90aXRsZT4NCjxsaW5rIHJlbD0nc3R5bGVzaGVldCcgdHlwZT0ndGV4dC9jc3MnIGhyZWY9Jy9QdWJsaWMvQ3NzL2NvbW1vbi5jc3MnPg0KIDwvaGVhZD4NCiA8Ym9keT4NCiA8ZGl2IGNsYXNzPSJtYWluIj4NCiA8aDI+VGhpbmtQSFDnpLrkvovkuYtIZWxsbyxUaGlua1BIUDwvaDI+DQrmnIDnroDljZXnmoTnpLrkvovjgIINCiA8dGFibGUgIGNlbGxwYWRkaW5nPTMgY2VsbHNwYWNpbmc9Mz4NCiAgPHRyPg0KCTx0ZD48ZGl2IGNsYXNzPSJyZXN1bHQiPkhlbGxvLFRoaW5rUEhQPC9kaXY+PC90ZD4NCiA8L3RyPg0KIDx0cj4NCgk8dGQ+PGhyPiDnpLrkvovmupDnoIE8YnIvPuaOp+WItuWZqEluZGV4QWN0aW9u57G7PGJyLz48Y29kZT48c3BhbiBzdHlsZT0iY29sb3I6ICMwMDAwMDAiPgo8c3BhbiBzdHlsZT0iY29sb3I6ICMwMDAwQkIiPiZsdDs/cGhwDTxiciAvPjwvc3Bhbj48c3BhbiBzdHlsZT0iY29sb3I6ICMwMDc3MDAiPmNsYXNzJm5ic3A7PC9zcGFuPjxzcGFuIHN0eWxlPSJjb2xvcjogIzAwMDBCQiI+SW5kZXhBY3Rpb24mbmJzcDs8L3NwYW4+PHNwYW4gc3R5bGU9ImNvbG9yOiAjMDA3NzAwIj5leHRlbmRzJm5ic3A7PC9zcGFuPjxzcGFuIHN0eWxlPSJjb2xvcjogIzAwMDBCQiI+QWN0aW9uPC9zcGFuPjxzcGFuIHN0eWxlPSJjb2xvcjogIzAwNzcwMCI+ew08YnIgLz4mbmJzcDsmbmJzcDsmbmJzcDsmbmJzcDtwdWJsaWMmbmJzcDtmdW5jdGlvbiZuYnNwOzwvc3Bhbj48c3BhbiBzdHlsZT0iY29sb3I6ICMwMDAwQkIiPmluZGV4PC9zcGFuPjxzcGFuIHN0eWxlPSJjb2xvcjogIzAwNzcwMCI+KCkmbmJzcDt7DTxiciAvPiZuYnNwOyZuYnNwOyZuYnNwOyZuYnNwOyZuYnNwOyZuYnNwOyZuYnNwOyZuYnNwOzwvc3Bhbj48c3BhbiBzdHlsZT0iY29sb3I6ICMwMDAwQkIiPiR0aGlzPC9zcGFuPjxzcGFuIHN0eWxlPSJjb2xvcjogIzAwNzcwMCI+LSZndDs8L3NwYW4+PHNwYW4gc3R5bGU9ImNvbG9yOiAjMDAwMEJCIj5hc3NpZ248L3NwYW4+PHNwYW4gc3R5bGU9ImNvbG9yOiAjMDA3NzAwIj4oPC9zcGFuPjxzcGFuIHN0eWxlPSJjb2xvcjogI0REMDAwMCI+J2hlbGxvJzwvc3Bhbj48c3BhbiBzdHlsZT0iY29sb3I6ICMwMDc3MDAiPiw8L3NwYW4+PHNwYW4gc3R5bGU9ImNvbG9yOiAjREQwMDAwIj4nSGVsbG8sVGhpbmtQSFAnPC9zcGFuPjxzcGFuIHN0eWxlPSJjb2xvcjogIzAwNzcwMCI+KTsNPGJyIC8+Jm5ic3A7Jm5ic3A7Jm5ic3A7Jm5ic3A7Jm5ic3A7Jm5ic3A7Jm5ic3A7Jm5ic3A7PC9zcGFuPjxzcGFuIHN0eWxlPSJjb2xvcjogIzAwMDBCQiI+JHRoaXM8L3NwYW4+PHNwYW4gc3R5bGU9ImNvbG9yOiAjMDA3NzAwIj4tJmd0Ozwvc3Bhbj48c3BhbiBzdHlsZT0iY29sb3I6ICMwMDAwQkIiPmRpc3BsYXk8L3NwYW4+PHNwYW4gc3R5bGU9ImNvbG9yOiAjMDA3NzAwIj4oKTsNPGJyIC8+Jm5ic3A7Jm5ic3A7Jm5ic3A7Jm5ic3A7fQ08YnIgLz59DTxiciAvPjwvc3Bhbj48c3BhbiBzdHlsZT0iY29sb3I6ICMwMDAwQkIiPj8mZ3Q7PC9zcGFuPgo8L3NwYW4+CjwvY29kZT4JPC90ZD4NCiA8L3RyPg0KIDwvdGFibGU+DQo8L2Rpdj4NCiA8L2JvZHk+DQo8L2h0bWw+
+      name: ThinkPHP - /
+      description: 'Fetched from URL: http://example.com/'
+      content_type: text/html; charset=utf-8
+      server: Apache/2.4.10 (Debian)
+      status_code: "200"
+      headers:
+        - 'Set-Cookie: PHPSESSID=bce41b16d5d210ea7625d721b91c2964; path=/'
+        - 'Cache-Control: private'
+        - 'Pragma: no-cache'
+        - 'Vary: Accept-Encoding'
+        - 'X-Powered-By: ThinkPHP2.1'
+      created_at: 2025-01-31T15:55:39.95409Z
+      updated_at: 2025-01-31T15:55:39.954022Z
+      ext_version: 0
+      ext_uuid: 0c4ea2f8-aa65-46d1-b1a5-c61dc020ce86
+    - id: 784
+      name: ThinkPHP 2.x exploit response script
+      description: https://github.com/vulhub/vulhub/tree/master/thinkphp/2-rce
+      content_type: text/html; charset=UTF-8
+      server: Apache
+      status_code: "200"
+      script: "  function __validate() {                                                         \n    // Cannot be used due to llm usage.\n    return \"\"\n  }                                                                               \n                                                                                  \n  function createResponse() {\n    // URI decode so we can parse out the commands.\n    const uri = util.encoding.uri.decode(request.uri);\n    const uriRegex = /@eval\\(\\$_GET\\[1\\]\\)}&1=system\\('([^']+)'\\)/;                     \n    const res = uri.match(uriRegex);                                      \n                                                                                  \n    if (!res || res.length != 2) {                                                \n      return \"uri regex did not match\";                                           \n      response.setBody(\"ok\");\n    }                                                                             \n\n    // Now we got the command so we're going to give it to the LLM in order to get\n    // a realistic output. Now in the example we saw in the wild the command was just an echo\n    // but this makes the script future proves as the LLM supports almost infinite commands.\n    var command = res[1];\n    var llmRes = util.responder.respond('COMMAND_INJECTION', command, \"\")\n    if (llmRes == \"\") {\n      return \"could not complete command: \" + command;\n      response.setBody(\"ok\");\n    }\n\n    util.log.debug('the LLM response as: ' + llmRes);\n    \n    // Check if the response looks like a header. If it does, also set the header in the response.\n    const headerRegex = /([A-Za-z0-9_\\-]+):\\s+(.*)/;\n\n    var headerRes = llmRes.match(headerRegex);\n\n    if (headerRes && headerRes.length == 3) {\n      response.addHeader(headerRes[1], headerRes[2]);\n    }\n    \n    response.setBody(llmRes);                                                        \n    return \"\"                                                                     \n  }   "
+      created_at: 2025-01-31T13:44:12.58932Z
+      updated_at: 2025-01-31T15:51:30.981648Z
+      ext_version: 0
+      ext_uuid: 429fcc55-cb71-48ce-a008-bf319b857a82
+    - id: 786
+      data: PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9IiI+CiAgPGhlYWQ+CiAgICA8bWV0YSBjaGFyc2V0PSJ1dGYtOCI+CiAgICA8bWV0YSBodHRwLWVxdWl2PSJYLVVBLUNvbXBhdGlibGUiIGNvbnRlbnQ9IklFPWVkZ2UiPgogICAgPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEuMCI+CiAgICA8dGl0bGU+VnVlIEFwcDwvdGl0bGU+CiAgPHNjcmlwdCBkZWZlciBzcmM9Ii9qcy9jaHVuay12ZW5kb3JzLmpzIj48L3NjcmlwdD48c2NyaXB0IGRlZmVyIHNyYz0iL2pzL2FwcC5qcyI+PC9zY3JpcHQ+PC9oZWFkPgogIDxib2R5PgogICAgPGRpdiBpZD0iYXBwIj48L2Rpdj4KICA8L2JvZHk+CjwvaHRtbD4K
+      name: ThinkPHP - /Public/Css/common.css
+      description: 'Fetched from URL: http://example.com/Public/Css/common.css'
+      content_type: text/html; charset=utf-8
+      server: Apache
+      status_code: "200"
+      headers:
+        - 'X-Powered-By: Express'
+        - 'Accept-Ranges: bytes'
+        - 'Etag: W/"17a-GBiPmmDiNRSXo6CIf02N8kDLsEs"'
+        - 'Vary: Accept-Encoding'
+        - 'Content-Length: 378'
+        - 'Connection: keep-alive'
+        - 'Keep-Alive: timeout=5'
+      created_at: 2025-01-31T15:55:39.959385Z
+      updated_at: 2025-01-31T15:55:39.959368Z
+      ext_version: 0
+      ext_uuid: a194f9b4-2b3e-4869-b4dd-c82d20282f4f
