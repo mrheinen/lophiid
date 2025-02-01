@@ -5,41 +5,42 @@
       <div class="grid grid-cols-2 gap-4">
         <div class="rounded overflow-hidden shadow-lg">
           <PrimeChart
-          type="line"
-          :data="rpmChartData"
-          :options="chartOptions2"
-          class="h-[30rem]"
+            type="line"
+            :data="rpmChartData"
+            :options="chartOptions2"
+            class="h-[30rem]"
           />
         </div>
 
         <div class="rounded overflow-hidden shadow-lg">
           <PrimeChart
-          type="line"
-          :data="rpdChartData"
-          :options="chartOptions"
-          class="h-[30rem]"
+            type="line"
+            :data="rpdChartData"
+            :options="chartOptions"
+            class="h-[30rem]"
           />
         </div>
 
         <div class="rounded overflow-hidden shadow-lg">
           <PrimeChart
-          type="line"
-          :data="dpdChartData"
-          :options="chartOptions2"
-          class="h-[30rem]"
+            type="line"
+            :data="dpdChartData"
+            :options="chartOptions2"
+            class="h-[30rem]"
           />
         </div>
 
         <div class="rounded overflow-hidden shadow-lg">
-
           <div class="grid grid-cols-2 gap-4">
             <div class="rounded overflow-hidden shadow-lg">
-              <PrimeChart type="doughnut" :data="pieChartData"
-              :options="pieChartOptions" class="" />
+              <PrimeChart
+                type="doughnut"
+                :data="pieChartData"
+                :options="pieChartOptions"
+                class=""
+              />
             </div>
-            <div class="rounded overflow-hidden shadow-lg">
-              World
-            </div>
+            <div class="rounded overflow-hidden shadow-lg">World</div>
           </div>
         </div>
       </div>
@@ -124,11 +125,11 @@ export default {
             data: [],
             fill: true,
             tension: 0.1,
-            borderColor: documentStyle.getPropertyValue('--p-gray-500'),
-            backgroundColor: 'rgba(107, 114, 128, 0.2)',
+            borderColor: documentStyle.getPropertyValue("--p-gray-500"),
+            backgroundColor: "rgba(107, 114, 128, 0.2)",
           },
         ],
-      }
+      };
 
       for (const entry of this.stats.requests_per_day) {
         newStats.labels.push(entry.day);
@@ -151,11 +152,13 @@ export default {
           {
             label: "",
             data: [],
-            fill: false,
+            fill: true,
             tension: 0.1,
+            borderColor: documentStyle.getPropertyValue("--p-gray-500"),
+            backgroundColor: "rgba(107, 114, 128, 0.2)",
           },
         ],
-      }
+      };
 
       for (const entry of this.stats.requests_per_month) {
         newStats.labels.push(entry.month);
@@ -178,11 +181,13 @@ export default {
           {
             label: "",
             data: [],
-            fill: false,
+            fill: true,
             tension: 0.1,
+            borderColor: documentStyle.getPropertyValue('--p-gray-500'),
+            backgroundColor: 'rgba(107, 114, 128, 0.2)',
           },
         ],
-      }
+      };
 
       for (const entry of this.stats.downloads_per_day) {
         newStats.labels.push(entry.day);
@@ -200,17 +205,29 @@ export default {
 
     setPieChartData() {
       var newData = {
-                labels: [],
-                datasets: [
-                    {
-                        data: [],
-                        backgroundColor: ['#8ec07c', '#458588', '#d79921',
-                          '#cc241d', '#3c3836', '#fe8019'],
-                        hoverBackgroundColor: ['#8ec07c', '#458588', '#d79921',
-                          '#cc241d', '#3c3836', '#fe8019'],
-                    }
-                ]
-            };
+        labels: [],
+        datasets: [
+          {
+            data: [],
+            backgroundColor: [
+              "#8ec07c",
+              "#458588",
+              "#d79921",
+              "#cc241d",
+              "#3c3836",
+              "#fe8019",
+            ],
+            hoverBackgroundColor: [
+              "#8ec07c",
+              "#458588",
+              "#d79921",
+              "#cc241d",
+              "#3c3836",
+              "#fe8019",
+            ],
+          },
+        ],
+      };
 
       for (const entry of this.stats.methods_last_24_hours) {
         newData.labels.push(entry.method);
@@ -218,7 +235,6 @@ export default {
       }
 
       this.pieChartData = newData;
-
     },
     setChartOptions() {
       const documentStyle = getComputedStyle(document.documentElement);
@@ -264,17 +280,17 @@ export default {
 
     setPieChartOptions() {
       const documentStyle = getComputedStyle(document.documentElement);
-      const textColor = documentStyle.getPropertyValue('--p-text-color');
+      const textColor = documentStyle.getPropertyValue("--p-text-color");
 
       return {
         plugins: {
           legend: {
             labels: {
-              cutout: '60%',
-              color: textColor
-            }
-          }
-        }
+              cutout: "60%",
+              color: textColor,
+            },
+          },
+        },
       };
     },
   },
