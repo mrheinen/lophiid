@@ -25,7 +25,7 @@
           <DataColumn
             field="parsed.received_at"
             header="Date"
-            style="width: 11%"
+            style="width: 14%"
           >
           </DataColumn>
 

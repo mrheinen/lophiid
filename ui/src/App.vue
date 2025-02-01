@@ -79,11 +79,25 @@ export default {
 
 <style>
 html {
-  font-family: "Roboto", sans-serif;
+  font-size: 0.75rem;
 }
 
-body {
-  font-family: "Roboto", sans-serif;
+a:link {
+  text-decoration: none;
+  color: #2112b7;
+}
+
+a:visited {
+  text-decoration: none !important;
+  color: #2112b7;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+a:active {
+  text-decoration: underline;
 }
 
 .mright {
@@ -102,10 +116,6 @@ th {
 
 td {
   text-align: left;
-}
-
-tr {
-  font-size: 13px;
 }
 
 .myMard {
@@ -130,4 +140,9 @@ label {
   cursor: pointer !important;
 }
 
+.p-datatable-row-selected {
+  /* background-color: #f7f6eb !important; */
+  color: black !important;
+  border-color: black !important;
+}
 </style>
