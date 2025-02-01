@@ -137,7 +137,6 @@ export default {
             this.$router.push(this.config.statsLink);
           },
         },
-
       ],
     };
   },
@@ -147,5 +146,9 @@ export default {
 <style scoped>
 .router-link-active {
   font-weight: bold;
+}
+
+.ml-2 {
+  font-size: 21px;
 }
 </style>
