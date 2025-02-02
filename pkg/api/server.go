@@ -166,7 +166,7 @@ func (a *ApiServer) sendStatus(w http.ResponseWriter, msg string, result string,
 func (a *ApiServer) HandleGetGlobalStatistics(w http.ResponseWriter, req *http.Request) {
 
 	if a.globalStats == nil {
-		a.sendStatus(w, "No stats loaded", ResultError, nil)
+		a.sendStatus(w, "Stats not loaded yet, please refresh in a minute", ResultError, nil)
 		return
 	}
 
