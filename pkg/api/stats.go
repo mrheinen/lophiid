@@ -48,11 +48,18 @@ type MethodCountResult struct {
 	Method       string `ksql:"method" json:"method"`
 }
 
+type MalwareCountResult struct {
+	TotalEntries int    `ksql:"total_entries" json:"total_entries"`
+	Type         string `ksql:"type" json:"type"`
+	SubType      string `ksql:"subtype" json:"subtype"`
+}
+
 type GlobalStatisticsResult struct {
 	RequestsPerMonth   []RequestsPerMonthResult `json:"requests_per_month"`
 	RequestsPerDay     []RequestsPerDayResult   `json:"requests_per_day"`
 	DownloadsPerDay    []DownloadsPerDayResult  `json:"downloads_per_day"`
 	MethodsLast24Hours []MethodCountResult      `json:"methods_last_24_hours"`
+	MalwareLast24Hours []MalwareCountResult     `json:"malware_last_24_hours"`
 }
 
 func GetGlobalStatistics(dbc database.DatabaseClient) (GlobalStatisticsResult, error) {
@@ -76,6 +83,11 @@ func GetGlobalStatistics(dbc database.DatabaseClient) (GlobalStatisticsResult, e
 	_, err = dbc.SimpleQuery(database.QueryCountMethodsLast24Hours, &finalResult.MethodsLast24Hours)
 	if err != nil {
 		return finalResult, fmt.Errorf("failed to get methods count last 24 hours: %w", err)
+	}
+
+	_, err = dbc.SimpleQuery(database.QueryCountMalwareHosted24Hours, &finalResult.MalwareLast24Hours)
+	if err != nil {
+		return finalResult, fmt.Errorf("failed to get malware count last 24 hours: %w", err)
 	}
 
 	return finalResult, nil

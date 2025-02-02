@@ -33,14 +33,24 @@
         <div class="rounded overflow-hidden shadow-lg">
           <div class="grid grid-cols-2 gap-4">
             <div class="rounded overflow-hidden shadow-lg">
+              Method count last 24 hours
               <PrimeChart
                 type="doughnut"
-                :data="pieChartData"
+                :data="methodPieChartData"
                 :options="pieChartOptions"
                 class=""
               />
             </div>
-            <div class="rounded overflow-hidden shadow-lg">World</div>
+
+            <div class="rounded overflow-hidden shadow-lg">
+              Unique malware URLs seen last 24 hours
+              <PrimeChart
+                type="doughnut"
+                :data="malwarePieChartData"
+                :options="pieChartOptions"
+                class=""
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -61,7 +71,8 @@ export default {
       chartOptions: null,
       chartOptions2: null,
       pieChartOptions: null,
-      pieChartData: null,
+      methodPieChartData: null,
+      malwarePieChartData: null,
       rpdChartData: null, // Requests per day
       rpmChartData: null, // Requests per month
       dpdChartData: null, // Downloads per day
@@ -203,7 +214,7 @@ export default {
       this.dpdChartData = newStats;
     },
 
-    setPieChartData() {
+    setMethodPieChartData() {
       var newData = {
         labels: [],
         datasets: [
@@ -234,8 +245,39 @@ export default {
         newData.datasets[0].data.push(entry.total_entries);
       }
 
-      this.pieChartData = newData;
+      this.methodPieChartData = newData;
     },
+
+    setMalwarePieChartData() {
+      var newData = {
+        labels: [],
+        datasets: [
+          {
+            data: [],
+            backgroundColor: [
+              "#d79921",
+              "#cc241d",
+            ],
+            hoverBackgroundColor: [
+              "#d79921",
+              "#cc241d",
+            ],
+          },
+        ],
+      };
+
+      for (const entry of this.stats.malware_last_24_hours) {
+        if (entry.subtype == "MALWARE_NEW") {
+          newData.labels.push("New");
+        } else {
+          newData.labels.push("Old");
+        }
+        newData.datasets[0].data.push(entry.total_entries);
+      }
+
+      this.malwarePieChartData = newData;
+    },
+
     setChartOptions() {
       const documentStyle = getComputedStyle(document.documentElement);
       const textColor = documentStyle.getPropertyValue("--p-text-color");
@@ -301,7 +343,8 @@ export default {
       this.setRPDChartData();
       this.setRPMChartData();
       this.setDPDChartData();
-      this.setPieChartData();
+      this.setMethodPieChartData();
+      this.setMalwarePieChartData()
     },
   },
   mounted() {

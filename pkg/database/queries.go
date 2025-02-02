@@ -66,3 +66,13 @@ WHERE created_at >= NOW() - INTERVAL '24 hours'
 GROUP BY  method
 ORDER BY total_entries DESC;
 `
+
+const QueryCountMalwareHosted24Hours = `
+SELECT
+    COUNT(*) as total_entries, type, subtype
+FROM ip_event
+WHERE created_at >= NOW() - INTERVAL '24 hours'
+    AND created_at < NOW() AND type = 'HOSTED_MALWARE'
+GROUP BY  type, subtype
+ORDER BY total_entries DESC;
+`
