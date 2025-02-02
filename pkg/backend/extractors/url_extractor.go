@@ -39,27 +39,45 @@ func ExtractUrls(data string) []string {
 	// Add regexes for URLs that have no scheme. Specifically also for commands
 	// like curl 1.1.1.1/sh
 
+	var urlSplitStrings = []string{";", "+", "${IFS}"}
+
 	ip := urlIPReg.FindAllString(data, -1)
 	sc := urlStrictReg.FindAllString(data, -1)
 
 	retmap := make(map[string]bool)
 	var ret []string
 	for _, entry := range append(ip, sc...) {
-		if strings.Contains(entry, ";") {
-			parts := strings.Split(entry, ";")
-			entry = parts[0]
+
+		for _, spStr := range urlSplitStrings {
+			if strings.Contains(entry, spStr) {
+				parts := strings.SplitN(entry, spStr, 2)
+				entry = parts[0]
+			}
 		}
-		if strings.Contains(entry, "+") {
-			parts := strings.Split(entry, "+")
-			entry = parts[0]
-		}
+
+		// Cleanup the URL
 		centry := strings.TrimSpace(entry)
+		centry = RemoveHangingQuotes(centry)
+
 		if _, ok := retmap[centry]; !ok {
 			retmap[centry] = true
 			ret = append(ret, centry)
 		}
+
 	}
 	return ret
+}
+
+func RemoveHangingQuotes(url string) string {
+	if url[0] == '"' || url[0] == '\'' {
+		url = url[1:]
+	}
+
+	if url[len(url)-1] == '"' || url[len(url)-1] == '\'' {
+		url = url[:len(url)-1]
+	}
+
+	return url
 }
 
 type URLExtractor struct {
