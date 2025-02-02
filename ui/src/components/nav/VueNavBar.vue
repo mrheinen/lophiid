@@ -43,65 +43,73 @@ export default {
     return {
       items: [
         {
-          label: "Content",
-          icon: "pi pi-book",
-          command: () => {
-            this.$router.push(this.config.contentLink);
-          },
-        },
-        {
           separator: true,
         },
         {
           label: "Requests",
-          icon: "pi pi-database",
+          icon: "ico pi pi-database",
           command: () => {
             this.$router.push(this.config.requestsLink);
           },
         },
         {
-          label: "Rules",
-          icon: "pi pi-directions",
-          command: () => {
-            this.$router.push(this.config.rulesLink);
-          },
-        },
-        {
-          label: "Apps",
-          icon: "pi pi-box",
-          command: () => {
-            this.$router.push(this.config.appsLink);
-          },
-        },
-        {
           label: "Honeypots",
-          icon: "pi pi-eye",
+          icon: "ico pi pi-eye",
           command: () => {
             this.$router.push(this.config.honeypotsLink);
           },
         },
         {
           label: "Events",
-          icon: "pi pi-server",
+          icon: "ico pi pi-server",
           command: () => {
             this.$router.push(this.config.eventLink);
           },
         },
 
         {
+          label: "Simulate",
+          icon: "ico pi pi-link",
+          items: [
+            {
+              label: "Content",
+              icon: "ico pi pi-book",
+              command: () => {
+                this.$router.push(this.config.contentLink);
+              },
+            },
+
+            {
+              label: "Rules",
+              icon: "ico pi pi-directions",
+              command: () => {
+                this.$router.push(this.config.rulesLink);
+              },
+            },
+            {
+              label: "Apps",
+              icon: "ico pi pi-box",
+              command: () => {
+                this.$router.push(this.config.appsLink);
+              },
+            },
+          ],
+        },
+
+        {
           label: "Malware",
-          icon: "pi pi-exclamation-triangle",
+          icon: "ico pi pi-exclamation-triangle",
           items: [
             {
               label: "Yara",
-              icon: "pi pi-list",
+              icon: "ico pi pi-list",
               command: () => {
                 this.$router.push(this.config.yaraLink);
               },
             },
             {
               label: "Downloads",
-              icon: "pi pi-download",
+              icon: "ico pi pi-download",
               command: () => {
                 this.$router.push(this.config.downloadsLink);
               },
@@ -111,18 +119,18 @@ export default {
 
         {
           label: "Queries",
-          icon: "pi pi-search",
+          icon: "ico pi pi-search",
           items: [
             {
               label: "Manage queries",
-              icon: "pi pi-search",
+              icon: "ico pi pi-search",
               command: () => {
                 this.$router.push(this.config.storedqueryLink);
               },
             },
             {
               label: "Manage labels",
-              icon: "pi pi-tag",
+              icon: "ico pi pi-tag",
               command: () => {
                 this.$router.push(this.config.tagsLink);
               },
@@ -132,12 +140,11 @@ export default {
 
         {
           label: "Stats",
-          icon: "pi pi-chart-bar",
+          icon: "ico pi pi-chart-bar",
           command: () => {
             this.$router.push(this.config.statsLink);
           },
         },
-
       ],
     };
   },
@@ -147,5 +154,13 @@ export default {
 <style scoped>
 .router-link-active {
   font-weight: bold;
+}
+
+.ml-2 {
+  font-size: 21px;
+}
+
+.ico {
+  font-size: 18px;
 }
 </style>
