@@ -39,7 +39,7 @@ func ExtractUrls(data string) []string {
 	// Add regexes for URLs that have no scheme. Specifically also for commands
 	// like curl 1.1.1.1/sh
 
-	var urlSplitStrings = []string{";", "+", "${IFS}"}
+	var urlSplitStrings = []string{";", "+", "${IFS}", "$IFS"}
 
 	ip := urlIPReg.FindAllString(data, -1)
 	sc := urlStrictReg.FindAllString(data, -1)
