@@ -17,7 +17,6 @@
 package extractors
 
 import (
-	"log/slog"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
@@ -58,7 +57,7 @@ func ExtractUrls(data string) []string {
 
 		// Cleanup the URL
 		centry := strings.TrimSpace(entry)
-		centry = RemoveHangingQuotes(centry)
+		centry = RemoveLingeringQuotes(centry)
 
 		if _, ok := retmap[centry]; !ok {
 			retmap[centry] = true
@@ -69,21 +68,9 @@ func ExtractUrls(data string) []string {
 	return ret
 }
 
-func RemoveHangingQuotes(url string) string {
-	if len(url) < 2 {
-		slog.Debug("URL too short", slog.String("url", url))
-		return url
-	}
-
-	if url[0] == '"' || url[0] == '\'' {
-		url = url[1:]
-	}
-
-	if url[len(url)-1] == '"' || url[len(url)-1] == '\'' {
-		url = url[:len(url)-1]
-	}
-
-	return url
+func RemoveLingeringQuotes(url string) string {
+	url = strings.TrimPrefix(strings.TrimPrefix(url, "\""), "'")
+	return strings.TrimSuffix(strings.TrimSuffix(url, "\""), "'")
 }
 
 type URLExtractor struct {
