@@ -69,15 +69,9 @@ func ExtractUrls(data string) []string {
 }
 
 func RemoveHangingQuotes(url string) string {
-	if url[0] == '"' || url[0] == '\'' {
-		url = url[1:]
-	}
-
-	if url[len(url)-1] == '"' || url[len(url)-1] == '\'' {
-		url = url[:len(url)-1]
-	}
-
-	return url
+  url = strings.TrimPrefix(strings.TrimPrefix(url, "\""), "'")
+  url = strings.TrimSuffix(strings.TrimSuffix(url, "\""), "'")
+  return url
 }
 
 type URLExtractor struct {
