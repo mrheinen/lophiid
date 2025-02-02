@@ -17,6 +17,7 @@
 package extractors
 
 import (
+	"log/slog"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
@@ -69,6 +70,11 @@ func ExtractUrls(data string) []string {
 }
 
 func RemoveHangingQuotes(url string) string {
+	if len(url) < 2 {
+		slog.Debug("URL too short", slog.String("url", url))
+		return url
+	}
+
 	if url[0] == '"' || url[0] == '\'' {
 		url = url[1:]
 	}
