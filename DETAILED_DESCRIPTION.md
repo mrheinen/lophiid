@@ -18,15 +18,11 @@ before the backend server acts on the change due to caching (for performance).
 The CLI and UI use HTTPS with an API key to interact with the API server.
 
 The honeypots are super simple agents and rely on the backend for almost
-anything. One special case is that the backend can tell a honeypot for download
-malware from an HTTP endpoint that was previously extracted from a request that
-hit that same honeypot. The honeypot in this case will download the malware and
-send it to the backend using gRPC.
+anything. Two special cases are that the backend can tell the honeypot to send
+an ICMP ping package to a host and the backend can tell the honeypot to download
+malware. All this communication is done via gRPC.
 
-AI is used for analysing incoming requests. The AI determines if the request is
-malicous, what attack is exploited, what application is targetted and creates a
-description of the attack/request. AI can also be used to responds to RCE and
-code injection attacks where the AI will help generate a realistic response.
+AI is used for analysing incoming requests and generating realistic responses.
 
 ## Rule based content serving
 
@@ -36,7 +32,9 @@ before the content is served.
 
 If the request matches multiple rules then each time the same request is seen
 (and this can be across multiple honeypots, as longs as the source IP is the
-same) a previously not served content is served. If one of the not served content has the same application ID as a rule that was served prior to the attacker then this rule will get priority.
+same) a previously not served content is served. If one of the not served
+content has the same application ID as a rule that was served prior to
+the attacker then this rule will get priority.
 
 Now "content" can be static but it can also be a script (JavaScript). If it's a
 script than then that script gets executed and gets access to the matching
@@ -45,6 +43,11 @@ honeypot needs to send back.  For example, some payloads want the target to echo
 a random string and so the script could parse the string from the request and
 echo it back to the requester.  More information about scripted responses found
 [here](./SCRIPTING.md).
+
+Last but not least, there is some templating funtionalities with macros that
+allow random strings to be generated for things like session cookies and csrf
+tokens.  Having these static is often a dead give away to attackers that they
+deal with a honeypot.
 
 When a request matches no rule at all then the honeypot will send a
 default response which is configurable per honeypot.
@@ -63,6 +66,12 @@ the honeypots. The downloaded content is uploaded and scanned with VirusTotal
 
 More information about payload fetching can be found here: [Payload fetching](./PAYLOAD_FETCHING.md)
 
+The backend also looks for ping requests that are send by an attacker. These may
+seem innocent but are occasionally uses in high profile attacks where the
+attacker monitors DNS lookups and incoming ICMP to see if a payload executed. If
+a ping command is detected then the backend will tell the origin honeypot to
+perform the ping request. This is done using raw sockets.
+
 Additionally the backend will perform whois lookups of the source IPs and also,
 if configured, collects OS fingerprinting information from p0f instances running
 on the honeypot systems. All this information is available in the UI.
@@ -73,7 +82,7 @@ Lophiid can use a local running LLM for three purposes:
 
 - Generating realistic responses
 - Triaging the incoming requests
-- Summarizing Yara findings
+- Creating summaries
 
 Small descriptions are below but for more information about the AI integration, look at [./AI.md](./AI.md).
 ### Generating realistic responses
@@ -89,7 +98,7 @@ typical honeypot responses thata have only a few hardcoded responses.
 
 NOTE: This is a very experimental feature. Be aware that using AI-generated responses in a honeypot system may have security implications. Use with caution and ensure you understand the risks before enabling this feature in a production environment.
 
-#### Triaging incoming requests
+### Triaging incoming requests
 
 When enabled, a local LLM will be used to triage incoming requests. The AI will
 try to determine for each request whether it is malicious, what type of weakness
@@ -99,6 +108,12 @@ the attack which makes it easier for humans to review it in the web UI.
 
 NOTE: This is a very experimental feature. Be aware that using AI-generated responses in a honeypot system may have security implications. Use with caution and ensure you understand the risks before enabling this feature in a production environment.
 
+### Creating summaries
+
+Lophiid uses Yara rules to analyze malware. These rules can sometimes create a
+lot of output and we use the LLM to summarize this output in the UI.
+Additionally the LLM is used to summarize each request and provides a
+description about whether the request is malicious and what its purpose is.
 
 ## Queries and labels
 
@@ -125,6 +140,17 @@ Below is an example page of the UI:
 
 ![Requests overview](./images/screenshot-requests-wget.png)
 
-The CLI is currently very limited but can be used to easily copy content (and
+The CLI is currently limited but can be used to easily copy content (and
 create rules for) of public web sites. More information about how to use the CLI
 can be found [here](./API_CLIENT.md).
+
+## Yara scanning
+
+Yara scanning is done by a separate process and optional. The process monitors
+the malware downloads entries in the database and will scan each malware entry
+with the configured yara rules. The results are then stored in the database and
+surfaced in the UI.
+
+Because yara rules can be noisy, we use the LLM to make small summaries from all
+the yara rule output. These are also stored in the database and surfaced in the
+UI.

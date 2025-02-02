@@ -33,7 +33,7 @@ Key features:
 - UI with comprehensive search
 - AI analysis of attacks
 - Automatic tagging of requests and attacks to help triage
-- Automatically collects malware
+- Automatically malware collection and storage
 - Yara (yara-x) integration
 - Direct integration with VirusTotal
 - Ratelimiting / DoS protection
@@ -45,8 +45,21 @@ Running lophiid is already very interesting and you'll collect a lot of threat
 information. The project is still in an early phase of development though and
 large changes are still to be expected in the near future.
 
-Interested ? Head over to the [detailed description](./DETAILED_DESCRIPTION.md)
-to learn more about what Lophiid can do.
+For more information check out the [Detailed Description](./DETAILED_DESCRIPTION.md) document and get started with the
+[Setup](./SETUP.md) guide.
+
+Don't hesitate to reach out to niels.heinen{at}gmail.com for any assistance.
+
+# Screenshots
+
+Requests page overview which shows all the requests that honeypots are getting.
+![Requests overview](./images/screenshot-requests-wget.png)
+
+The downloads page shows information about all the downloaded payloads which
+were obtained via attacks. The payloads themselves are also stored locally in
+the malware directory (configurable via the backend config).
+![Downloads page](./images/screenshot-payloads.png)
+
 
 # Contributing
 
@@ -55,8 +68,8 @@ regularly check the [CONTRIBUTING.md](./CONTRIBUTING.md) for general guidelines
 
 # Documentation
 
-* [Detailed description](./DETAILED_DESCRIPTION.md)
 * [Setup guide](./SETUP.md)
+* [Detailed Description](./DETAILED_DESCRIPTION.md)
 * [Screenshots](./SCREENSHOTS.md)
 * [Scripted responses](./SCRIPTING.md)
 * [API cli client usage](./API_CLIENT.md)
