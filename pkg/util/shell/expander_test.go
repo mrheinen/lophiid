@@ -1,7 +1,7 @@
 package shell
 
 import (
-	"fmt"
+	"lophiid/pkg/util"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,21 +9,40 @@ import (
 
 func TestExpandVariables(t *testing.T) {
 
-	exp := NewExpander()
+	for _, test := range []struct {
+		description    string
+		inputBuffer    []byte
+		expectedOutput []string
+	}{
+		{
+			description:    "simple variable declaration",
+			inputBuffer:    []byte("AAA=123\n$AAA $AAA"),
+			expectedOutput: []string{"AAA=123", "123 123"},
+		},
+		{
+			description:    "Common env variables",
+			inputBuffer:    []byte("$HOME\n$USER"),
+			expectedOutput: []string{"/root", "root"},
+		},
+	} {
 
-	rdr := ScriptIterator{}
-	rdr.FromBuffer([]byte("AAAA=123\n$AAAA $AAAA"))
+		t.Run(test.description, func(t *testing.T) {
 
-	res := exp.Expand(&rdr)
+			exp := NewExpander()
+			rdr := ScriptIterator{}
+			rdr.FromBuffer(test.inputBuffer)
 
-	fmt.Printf("%s\n", res)
+			res := exp.Expand(&rdr)
 
-	if len(res) != 2 {
-		t.Errorf("2, got %d", len(res))
-	}
+			if len(res) != len(test.expectedOutput) {
+				t.Fatalf("expected %d, got %d", len(test.expectedOutput), len(res))
+			}
 
-	if res[1] != "123 123" {
-		t.Errorf("123 123, got %s", res[0])
+			if !util.AreSlicesEqual(res, test.expectedOutput) {
+				t.Errorf("expected %s, got %s", test.expectedOutput, res)
+			}
+
+		})
 	}
 }
 
