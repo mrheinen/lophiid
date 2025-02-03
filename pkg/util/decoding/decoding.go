@@ -26,6 +26,34 @@ import (
 	"strings"
 )
 
+// Decode form fields. Look if there is a URL, parse it and decode that as well.
+// This supports cases where there is a body with a URL that is encoded for the
+// backend.
+func DecodedAndProcessFormValues(vals url.Values) []string {
+	returnList := []string{}
+
+	for _, values := range vals {
+		for _, p := range values {
+			returnList = append(returnList, DecodeURLOrEmptyString(p, false))
+
+			if strings.HasPrefix(p, "http") {
+				u, err := url.Parse(p)
+				if err != nil {
+					continue
+				}
+
+				newVals, err := url.ParseQuery(u.RawQuery)
+				if err != nil {
+					continue
+				}
+
+				returnList = append(returnList, DecodedAndProcessFormValues(newVals)...)
+			}
+		}
+	}
+	return returnList
+}
+
 // StringsFromRequest function will iterate over the request and collect strings
 // from varies HTTP fields. It will also decode and parse data where necessary
 // so that only strings of interest for finding metadata are returned. E.g.
@@ -37,24 +65,21 @@ func StringsFromRequest(req *models.Request) []string {
 	if strings.Contains(req.Raw, "application/x-www-form-urlencoded") {
 		body := string(req.Body)
 		params, err := url.ParseQuery(body)
+		// If we could not parse it or if the body doesn't look like form data at
+		// all then we will just add the body (after decoding it).
 		if err != nil || !isFormUrlEncoded(body) {
 			res = append(res, DecodeURLOrEmptyString(body, false))
 		} else {
-			for _, values := range params {
-				for _, p := range values {
-					res = append(res, DecodeURLOrEmptyString(p, false))
-				}
-			}
+			res = append(res, DecodedAndProcessFormValues(params)...)
 		}
 	} else {
 		params, err := url.ParseQuery(string(req.Body))
 		// Still try to parse as parameters.
-		if err == nil && len(params) > 2 {
-			for _, values := range params {
-				for _, p := range values {
-					res = append(res, DecodeURLOrEmptyString(p, false))
-				}
-			}
+		// If we were able to parse it AND if we have parameters then we will add
+		// the decoded values of these parameters. In other case we just add the
+		// body as is.
+		if err == nil && len(params) > 1 {
+			res = append(res, DecodedAndProcessFormValues(params)...)
 		} else {
 			res = append(res, string(req.Body))
 		}

