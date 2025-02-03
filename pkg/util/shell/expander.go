@@ -20,9 +20,23 @@ func NewExpander() *Expander {
 		return nil
 	}
 
+	// Return the expander. WE prepopulate the variable map with several
+	// environment variables that scripts can expect to be present already.
 	return &Expander{
 		compiledVarRegex: compiledRegex,
-		varMap:           make(map[string]string),
+		varMap: map[string]string{
+			"USER":            "root",
+			"USERNAME":        "root",
+			"LOGNAME":         "root",
+			"EDITOR":          "vi",
+			"DISPLAY":         ":0",
+			"HOME":            "/root",
+			"PWD":             "/tmp",
+			"SHELL":           "/bin/bash",
+			"SSH_AUTH_SOCKET": "SSH_AUTH_SOCK=/run/user/0/gnupg/S.gpg-agent.ssh",
+			"PATH":            "/usr/local/bin:/usr/bin:/bin:/usr/sbin",
+			"HOSTNAME":        "localhost",
+		},
 	}
 }
 
