@@ -47,15 +47,13 @@
           </DataColumn>
           <DataColumn field="app_version" header="App version" style="width: 15%">
           </DataColumn>
+          <DataColumn field="app_id" header="App ID" style="width: 7%">
+          </DataColumn>
+
+
           <DataColumn field="method" header="Method" style="width: 6%">
           </DataColumn>
           <DataColumn field="parsed.uri_body" header="Uri / Body">
-          </DataColumn>
-
-          <DataColumn header="Port" style="width: 8%">
-            <template #body="slotProps">
-              {{ slotProps.data.port == 0 ? "Any" : slotProps.data.port }}
-            </template>
           </DataColumn>
           <DataColumn header="Content ID" style="width: 8%">
             <template #body="slotProps">

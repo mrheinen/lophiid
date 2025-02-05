@@ -60,17 +60,17 @@ func GetDefaultBackendConfig() Config {
 
 func TestGetMatchedRuleBasic(t *testing.T) {
 	bunchOfRules := []models.ContentRule{
-		{ID: 1, AppID: 1, Method: "ANY", Port: 80, Uri: "/42", UriMatching: "exact", ContentID: 42},
-		{ID: 3, AppID: 2, Method: "GET", Port: 80, Uri: "/prefix", UriMatching: "prefix", ContentID: 43},
-		{ID: 4, AppID: 3, Method: "GET", Port: 80, Uri: "contains", UriMatching: "contains", ContentID: 44},
-		{ID: 5, AppID: 4, Method: "GET", Port: 80, Uri: "suffix", UriMatching: "suffix", ContentID: 45},
-		{ID: 6, AppID: 4, Method: "GET", Port: 80, Uri: "^/a[8-9/]*", UriMatching: "regex", ContentID: 46},
-		{ID: 7, AppID: 7, Method: "GET", Port: 443, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
-		{ID: 8, AppID: 8, Method: "GET", Port: 8888, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
-		{ID: 9, AppID: 9, Method: "GET", Port: 80, Body: "woohoo", BodyMatching: "exact", ContentID: 42},
-		{ID: 10, AppID: 9, Method: "GET", Port: 80, Body: "/etc/passwd", BodyMatching: "contains", ContentID: 42},
-		{ID: 11, AppID: 9, Method: "GET", Port: 80, Uri: "/pppaaattthhh", UriMatching: "exact", Body: "/etc/hosts", BodyMatching: "contains", ContentID: 42},
-		{ID: 12, AppID: 4, Method: "POST", Port: 80, Uri: "suffix", UriMatching: "suffix", ContentID: 77},
+		{ID: 1, AppID: 1, Method: "ANY", Ports: []int{80}, Uri: "/42", UriMatching: "exact", ContentID: 42},
+		{ID: 3, AppID: 2, Method: "GET", Ports: []int{80}, Uri: "/prefix", UriMatching: "prefix", ContentID: 43},
+		{ID: 4, AppID: 3, Method: "GET", Ports: []int{80}, Uri: "contains", UriMatching: "contains", ContentID: 44},
+		{ID: 5, AppID: 4, Method: "GET", Ports: []int{80}, Uri: "suffix", UriMatching: "suffix", ContentID: 45},
+		{ID: 6, AppID: 4, Method: "GET", Ports: []int{80}, Uri: "^/a[8-9/]*", UriMatching: "regex", ContentID: 46},
+		{ID: 7, AppID: 7, Method: "GET", Ports: []int{443}, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
+		{ID: 8, AppID: 8, Method: "GET", Ports: []int{8888}, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
+		{ID: 9, AppID: 9, Method: "GET", Ports: []int{80}, Body: "woohoo", BodyMatching: "exact", ContentID: 42},
+		{ID: 10, AppID: 9, Method: "GET", Ports: []int{80}, Body: "/etc/passwd", BodyMatching: "contains", ContentID: 42},
+		{ID: 11, AppID: 9, Method: "GET", Ports: []int{80}, Uri: "/pppaaattthhh", UriMatching: "exact", Body: "/etc/hosts", BodyMatching: "contains", ContentID: 42},
+		{ID: 12, AppID: 4, Method: "POST", Ports: []int{80}, Uri: "suffix", UriMatching: "suffix", ContentID: 77},
 	}
 
 	for _, test := range []struct {

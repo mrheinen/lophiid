@@ -97,13 +97,12 @@
 
           <div class="">
             <div>
-              <label class="label">Port</label>
-              <InputNumber
-                v-model="localRule.port"
-                inputId="minmax"
-                :useGrouping="false"
-                :min="0"
-                :max="65535"
+              <label class="label">Ports</label>
+              <InputText
+                placeholder="Comma separated"
+                id="ports"
+                type="text"
+                v-model="localRule.parsed.port_field"
               />
             </div>
           </div>
@@ -272,6 +271,10 @@ export default {
         uri_matching: "exact",
         body_matching: "none",
         method: "ANY",
+        ports: [],
+        parsed: {
+          port_field: "",
+        }
       },
       appValues: [],
     };
@@ -305,10 +308,27 @@ export default {
         responder: "NONE",
         responder_decoder: "NONE",
         enabled: true,
+        ports: [],
+        parsed: {
+          port_field: "",
+
+        },
       };
     },
     submitForm() {
       const ruleToSubmit = Object.assign({}, this.localRule);
+
+      ruleToSubmit.ports = [];
+      for (let port of ruleToSubmit.parsed.port_field.split(",")) {
+        var intPort = parseInt(port);
+
+        if (intPort < 0 || intPort > 65535) {
+          this.$toast.error("Invalid port: " + port);
+        } else {
+          ruleToSubmit.ports.push(intPort);
+        }
+      }
+
       delete ruleToSubmit.parsed;
       delete ruleToSubmit.app_version;
       delete ruleToSubmit.app_name;
@@ -402,6 +422,10 @@ export default {
   watch: {
     rule() {
       this.localRule = Object.assign({}, this.rule);
+      this.localRule.parsed = {};
+      if (this.localRule.ports) {
+        this.localRule.parsed.port_field = this.localRule.ports.join(",");
+      }
     },
     contentid() {
       if (this.contentid > 0) {
