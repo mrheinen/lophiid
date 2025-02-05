@@ -279,9 +279,20 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session) (models.ContentRule, error) {
 	var matchedRules []models.ContentRule
 	for _, rule := range rules {
-		// Port 0 means any port.
-		if rule.Port != 0 && rule.Port != req.Port {
-			continue
+
+		if len(rule.Ports) != 0 {
+			found := false
+			for _, port := range rule.Ports {
+				if int64(port) == req.Port {
+					found = true
+				}
+			}
+
+			// This means ports were specified but none matched the request. In that
+			// case we can continue the search.
+			if !found {
+				continue
+			}
 		}
 
 		if rule.Method != "ANY" && rule.Method != req.Method {
