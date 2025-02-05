@@ -98,7 +98,7 @@ CREATE TABLE content_rule (
   method          METHOD_TYPE,
   content_id      INT NOT NULL,
   port            INT NOT NULL DEFAULT 0,
-  ports           INT ARRAY,
+  ports           INT ARRAY DEFAULT '{}',
   app_id          INT DEFAULT 0,
   app_uuid        VARCHAR(36) default '',
   content_uuid        VARCHAR(36) default '',
