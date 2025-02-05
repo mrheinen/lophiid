@@ -16,7 +16,11 @@
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+)
 
 // The request purpose for the ContentRule needs to be kept in sync with the
 // database REQUEST_PURPOSE type.
@@ -28,15 +32,16 @@ const (
 )
 
 type ContentRule struct {
-	ID           int64  `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
-	Uri          string `ksql:"uri" json:"uri"           doc:"The URI matching string"`
-	Body         string `ksql:"body" json:"body"         doc:"The body matching string"`
-	Method       string `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
-	Port         int64  `ksql:"port" json:"port"         doc:"The TCP port the rue matches on."`
-	UriMatching  string `ksql:"uri_matching" json:"uri_matching" yaml:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
-	BodyMatching string `ksql:"body_matching" json:"body_matching" yaml:"body_matching" doc:"The body matching method"`
-	ContentID    int64  `ksql:"content_id" json:"content_id" yaml:"content_id" doc:"The ID of the Content this rule serves"`
-	AppID        int64  `ksql:"app_id" json:"app_id"         yaml:"app_id" doc:"The ID of the application for which this rule is"`
+	ID           int64                 `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
+	Uri          string                `ksql:"uri" json:"uri"           doc:"The URI matching string"`
+	Body         string                `ksql:"body" json:"body"         doc:"The body matching string"`
+	Method       string                `ksql:"method" json:"method"     doc:"The HTTP method the rule matches on"`
+	Port         int64                 `ksql:"port" json:"port"         doc:"The TCP port the rule matches on (deprecated)"`
+	Ports        pgtype.FlatArray[int] `ksql:"ports" json:"ports" doc:"The TCP ports the rule matches on"`
+	UriMatching  string                `ksql:"uri_matching" json:"uri_matching" yaml:"uri_matching"   doc:"The URI matching method (exact, regex, ..)"`
+	BodyMatching string                `ksql:"body_matching" json:"body_matching" yaml:"body_matching" doc:"The body matching method"`
+	ContentID    int64                 `ksql:"content_id" json:"content_id" yaml:"content_id" doc:"The ID of the Content this rule serves"`
+	AppID        int64                 `ksql:"app_id" json:"app_id"         yaml:"app_id" doc:"The ID of the application for which this rule is"`
 	// The content and app UUID are only set on imported rules.
 	AppUuid     string    `ksql:"app_uuid" json:"app_uuid" yaml:"app_uuid" doc:"The external UUID of the related app"`
 	ContentUuid string    `ksql:"content_uuid" json:"content_uuid" yaml:"content_uuid" doc:"The external UUID of the related content"`
