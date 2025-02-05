@@ -164,16 +164,13 @@ func (a *ApiServer) sendStatus(w http.ResponseWriter, msg string, result string,
 }
 
 func (a *ApiServer) HandleGetGlobalStatistics(w http.ResponseWriter, req *http.Request) {
-
 	a.statsMutex.Lock()
+	defer a.statsMutex.Unlock()
 	if a.globalStats == nil {
-		a.statsMutex.Unlock()
 		a.sendStatus(w, "Stats not loaded yet, please refresh in a minute", ResultError, nil)
 		return
 	}
 
-	a.statsMutex.Lock()
-	defer a.statsMutex.Unlock()
 	a.sendStatus(w, "", ResultSuccess, a.globalStats)
 }
 
