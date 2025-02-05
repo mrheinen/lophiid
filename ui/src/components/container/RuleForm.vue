@@ -320,7 +320,13 @@ export default {
 
       ruleToSubmit.ports = [];
       for (let port of ruleToSubmit.parsed.port_field.split(",")) {
-        ruleToSubmit.ports.push(parseInt(port));
+        var intPort = parseInt(port);
+
+        if (intPort < 0 || intPort > 65535) {
+          this.$toast.error("Invalid port: " + port);
+        } else {
+          ruleToSubmit.ports.push(intPort);
+        }
       }
 
       delete ruleToSubmit.parsed;
