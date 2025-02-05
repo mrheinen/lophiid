@@ -285,6 +285,7 @@ func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.R
 			for _, port := range rule.Ports {
 				if int64(port) == req.Port {
 					found = true
+					break
 				}
 			}
 
