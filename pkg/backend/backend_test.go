@@ -315,6 +315,83 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	}
 }
 
+func TestGetMatchedRulePortPrioritization(t *testing.T) {
+	// Create test rules with and without ports
+	rules := []models.ContentRule{
+		{
+			ID:          44,
+			Uri:         "/test",
+			Method:      "GET",
+			UriMatching: "exact",
+			AppID:       66,
+		},
+		{
+			ID:          45,
+			Uri:         "/test",
+			Method:      "GET",
+			Ports:       pgtype.FlatArray[int]{80, 443},
+			UriMatching: "exact",
+			AppID:       65,
+		},
+	}
+
+	req := &models.Request{
+		ID:       123,
+		Method:   "GET",
+		Uri:      "/test",
+		SourceIP: "192.168.1.1",
+		Port:     80,
+	}
+
+	// Create session and server
+	sess := models.NewSession()
+
+	fdbc := &database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	fakeLimiter := ratelimit.FakeRateLimiter{
+		BoolToReturn:  true,
+		ErrorToReturn: nil,
+	}
+
+	sMetrics := session.CreateSessionMetrics(reg)
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	fIpMgr := analysis.FakeIpEventManager{}
+	fakeRes := &responder.FakeResponder{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
+
+	s := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
+
+	// Test that rule with ports gets priority
+	matchedRule, err := s.GetMatchedRule(rules, req, sess)
+	if err != nil {
+		t.Fatalf("GetMatchedRule returned error: %v", err)
+	}
+	if matchedRule.ID != 45 {
+		t.Errorf("Expected rule with ports (ID 45) to be matched, got ID %d", matchedRule.ID)
+	}
+
+	// Mark rule with ports as served
+	sess.ServedRuleWithContent(45, matchedRule.ContentID)
+
+	// Test that rule without ports is selected when rule with ports is served
+	matchedRule, err = s.GetMatchedRule(rules, req, sess)
+	if err != nil {
+		t.Fatalf("GetMatchedRule returned error: %v", err)
+	}
+	if matchedRule.ID != 44 {
+		t.Errorf("Expected rule without ports (ID 44) to be matched, got ID %d", matchedRule.ID)
+	}
+}
+
 func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
@@ -325,18 +402,19 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	}
 	reg := prometheus.NewRegistry()
 	bMetrics := CreateBackendMetrics(reg)
-
 	fakeLimiter := ratelimit.FakeRateLimiter{
 		BoolToReturn:  true,
 		ErrorToReturn: nil,
 	}
-	fIpMgr := analysis.FakeIpEventManager{}
-	fakeRes := &responder.FakeResponder{}
+
 	sMetrics := session.CreateSessionMetrics(reg)
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	fIpMgr := analysis.FakeIpEventManager{}
+	fakeRes := &responder.FakeResponder{}
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
+
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
 		Request: &backend_service.HttpRequest{
@@ -974,6 +1052,7 @@ func TestSendStatus(t *testing.T) {
 			}
 			fIpMgr := analysis.FakeIpEventManager{}
 			fakeRes := &responder.FakeResponder{}
+
 			sMetrics := session.CreateSessionMetrics(reg)
 			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
@@ -1023,6 +1102,7 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	fakeJrunner := javascript.FakeJavascriptRunner{}
 	alertManager := alerting.NewAlertManager(42)
 	whoisManager := whois.FakeRdapManager{}
+
 	queryRunner := FakeQueryRunner{
 		ErrorToReturn: nil,
 	}
@@ -1043,6 +1123,7 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
+
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
 	statusRequest := backend_service.StatusRequest{

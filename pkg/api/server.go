@@ -164,16 +164,13 @@ func (a *ApiServer) sendStatus(w http.ResponseWriter, msg string, result string,
 }
 
 func (a *ApiServer) HandleGetGlobalStatistics(w http.ResponseWriter, req *http.Request) {
-
 	a.statsMutex.Lock()
+	defer a.statsMutex.Unlock()
 	if a.globalStats == nil {
-		a.statsMutex.Unlock()
 		a.sendStatus(w, "Stats not loaded yet, please refresh in a minute", ResultError, nil)
 		return
 	}
 
-	a.statsMutex.Lock()
-	defer a.statsMutex.Unlock()
 	a.sendStatus(w, "", ResultSuccess, a.globalStats)
 }
 
@@ -192,6 +189,13 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	if rb.ContentID == 0 || rb.AppID == 0 || (rb.Uri == "" && rb.Body == "") {
 		a.sendStatus(w, "Empty parameters given", ResultError, nil)
 		return
+	}
+
+	for _, p := range rb.Ports {
+  if p < 0 || p > 65535 {
+      a.sendStatus(w, fmt.Sprintf("Invalid port number %d: must be between 0 and 65535", p), ResultError, nil)
+      return
+  }
 	}
 
 	// If we have no reference to the content UUID yet, fetch the content and take
