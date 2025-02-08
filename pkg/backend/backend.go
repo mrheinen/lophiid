@@ -343,9 +343,21 @@ func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.R
 	}
 
 	var matchedRule models.ContentRule
-
 	if len(unservedRules) > 0 {
-		matchedRule = unservedRules[rand.Int()%len(unservedRules)]
+		// Rules with ports get priority.
+		foundPortRule := false
+		for _, rule := range unservedRules {
+			if len(rule.Ports) > 0 {
+				foundPortRule = true
+				matchedRule = rule
+				break
+			}
+		}
+
+		if !foundPortRule {
+			matchedRule = unservedRules[rand.Int()%len(unservedRules)]
+		}
+
 	} else {
 		// In this case all rule content combinations have been served at least
 		// once to this target. We send a random one.
