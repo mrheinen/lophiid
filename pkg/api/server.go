@@ -191,6 +191,13 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		return
 	}
 
+	for _, p := range rb.Ports {
+		if p < 0 || p > 65535 {
+			a.sendStatus(w, "Port must be between 0 and 65535", ResultError, nil)
+			return
+		}
+	}
+
 	// If we have no reference to the content UUID yet, fetch the content and take
 	// the UUID from it.
 	if rb.ContentUuid == "" {

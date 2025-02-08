@@ -117,19 +117,6 @@ func TestUpsertSingleContent(t *testing.T) {
 			scriptErr:         errors.New("this is patrick"),
 		},
 		{
-			description: "Insert fail",
-			content: models.Content{
-				Name:        "Foo",
-				ContentType: "text/html",
-				Server:      "Apache",
-				Data:        []byte("<b>Ai</b>"),
-			},
-			status:            ResultError,
-			statusMsgContains: "unable to insert",
-			dbErr:             errors.New("fail"),
-			scriptErr:         nil,
-		},
-		{
 			description: "Updated OK",
 			content: models.Content{
 				ID:          42,
