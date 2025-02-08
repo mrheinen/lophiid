@@ -26,6 +26,7 @@ go_library(
 go_test(
     name = "api_test",
     srcs = [
+        "content_rule_test.go",
         "generic_client_test.go",
         "server_test.go",
     ],
