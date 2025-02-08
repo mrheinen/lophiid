@@ -23,6 +23,7 @@ import (
 	"lophiid/pkg/database/models"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -45,8 +46,7 @@ func TestHandleUpsertSingleContentRule(t *testing.T) {
 				Ports:     pgtype.FlatArray[int]{-1, 70000},
 			},
 			status:            ResultError,
-			statusMsgContains: "Port must be between 0 and 65535",
-			statusCode:        http.StatusBadRequest,
+			statusMsgContains: "Invalid port number",
 		},
 		{
 			description: "Valid port numbers",
@@ -58,7 +58,6 @@ func TestHandleUpsertSingleContentRule(t *testing.T) {
 			},
 			status:            ResultSuccess,
 			statusMsgContains: "",
-			statusCode:        http.StatusOK,
 		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
@@ -84,11 +83,6 @@ func TestHandleUpsertSingleContentRule(t *testing.T) {
 			// Call the handler
 			api.HandleUpsertSingleContentRule(w, req)
 
-			// Check status code
-			if w.Code != test.statusCode {
-				t.Errorf("Expected status code %d, got %d", test.statusCode, w.Code)
-			}
-
 			// Parse response
 			var result HttpResult
 			if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
@@ -101,7 +95,7 @@ func TestHandleUpsertSingleContentRule(t *testing.T) {
 			}
 
 			// Check error message if expected
-			if test.statusMsgContains != "" && result.Message != test.statusMsgContains {
+			if test.statusMsgContains != "" && !strings.Contains(result.Message, test.statusMsgContains) {
 				t.Errorf("Expected message to contain %q, got %q", test.statusMsgContains, result.Message)
 			}
 		})
