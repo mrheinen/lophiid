@@ -96,7 +96,8 @@ type SecureBackendClient struct {
 
 // tokenAuth is a basic token authenticator.
 type tokenAuth struct {
-	token string
+	token  string
+	secure bool
 }
 
 func (t tokenAuth) GetRequestMetadata(ctx context.Context, in ...string) (map[string]string, error) {
@@ -105,8 +106,8 @@ func (t tokenAuth) GetRequestMetadata(ctx context.Context, in ...string) (map[st
 	}, nil
 }
 
-func (tokenAuth) RequireTransportSecurity() bool {
-	return true
+func (t tokenAuth) RequireTransportSecurity() bool {
+	return t.secure
 }
 
 func (c *SecureBackendClient) Connect(connectString string, authToken string) error {
@@ -135,7 +136,8 @@ func (c *SecureBackendClient) Connect(connectString string, authToken string) er
 	c.clientConnect, err = grpc.Dial(connectString,
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 		grpc.WithPerRPCCredentials(tokenAuth{
-			token: authToken,
+			token:  authToken,
+			secure: true,
 		}),
 	)
 
@@ -181,7 +183,8 @@ func (c *InsecureBackendClient) Connect(connectString string, authToken string) 
 	var err error = nil
 	c.clientConnect, err = grpc.Dial(connectString, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithPerRPCCredentials(tokenAuth{
-			token: authToken,
+			token:  authToken,
+			secure: false,
 		}))
 	if err != nil {
 		return err

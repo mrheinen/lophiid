@@ -139,7 +139,7 @@ func main() {
 		slog.Info("Creating insecure backend client.", slog.String("server", cfg.BackendClient.BackendAddress))
 		c = &backend.InsecureBackendClient{}
 		if err := c.Connect(net.JoinHostPort(cfg.BackendClient.BackendAddress, fmt.Sprintf("%d", cfg.BackendClient.BackendPort)), cfg.BackendClient.AuthToken); err != nil {
-			log.Fatalf("%s", err)
+			log.Fatalf("Could not connect: %s", err)
 		}
 	}
 

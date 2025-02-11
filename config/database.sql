@@ -3,8 +3,8 @@ CREATE DATABASE lophiid;
 
 \connect lophiid
 
--- IMPORTANT: UNCOMMENT THE LINE BELOW AND CHANGE THE PASSWORD
--- CREATE USER lo WITH PASSWORD 'CHANGE_ME_TO_SOMETHING_GOOD';
+-- IMPORTANT: CHANGE THE PASSWORD
+CREATE USER lo WITH PASSWORD 'CHANGE_ME_TO_SOMETHING_GOOD';
 
 CREATE TYPE MATCHING_TYPE AS ENUM ('none', 'exact', 'prefix', 'suffix', 'contains', 'regex');
 CREATE TYPE METHOD_TYPE AS ENUM ('GET', 'POST', 'HEAD', 'TRACE', 'OPTIONS', 'DELETE', 'PUT', 'ANY');
@@ -23,7 +23,7 @@ CREATE TABLE content (
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   ext_version     INT DEFAULT 1,
-  ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
+  ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid()
 );
 
 CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_PING', 'PAYLOAD_LINK', 'PAYLOAD_TCP_LINK', 'PAYLOAD_NETCAT', 'SCRIPT_RESPONSE_BODY', 'DECODED_STRING_BASE64', 'DECODED_STRING_UNICODE');
@@ -66,7 +66,7 @@ CREATE TABLE request (
   session_id      INT NOT NULL default 0,
   app_id          INT NOT NULL default 0,
   rule_id         INT NOT NULL DEFAULT 0,
-  rule_uuid       VARCHAR(36) default '',
+  rule_uuid       VARCHAR(36) default ''
 );
 
 CREATE TABLE request_description (
@@ -106,7 +106,7 @@ CREATE TABLE content_rule (
   request_purpose   REQUEST_PURPOSE default 'UNKNOWN',
   ext_version  INT DEFAULT 1,
   ext_uuid        VARCHAR(36) NOT NULL DEFAULT gen_random_uuid(),
-  responder       RESPONDER_TYPE default 'UNKNOWN',
+  responder       RESPONDER_TYPE default 'NONE',
   responder_regex VARCHAR(1024) default '',
   responder_decoder RESPONDER_DECODER_TYPE default 'NONE',
   enabled         BOOL DEFAULT TRUE,
@@ -149,7 +149,7 @@ CREATE TABLE honeypot (
   version            VARCHAR(64) NOT NULL DEFAULT '',
   auth_token         VARCHAR(64) NOT NULL DEFAULT '',
   last_checkin       TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  default_content_id INT NOT NULL DEFAULT 0
+  default_content_id INT NOT NULL DEFAULT 0,
   ports              INT ARRAY,
   ssl_ports          INT ARRAY,
   cves            VARCHAR(15) ARRAY
