@@ -80,6 +80,7 @@ yara:
   # prepare_command:  /path/to/unpack/script.sh
 
 
+  # Virustotal is optional but highly recommended.
 virustotal:
   # Your virus total API key.
   api_key: AAAAAAAAAAAAAAAAAA
