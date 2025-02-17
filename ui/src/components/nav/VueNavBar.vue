@@ -1,6 +1,6 @@
 <template>
   <div class="card" style="">
-    <MenuBar :model="items">
+    <MenuBar :model="items" :pt="{ root: 'shadow-md shadow-stone-500/50' }">
       <template #start>
         <img src="@/assets/logo.png" width="112" height="28" />
       </template>
