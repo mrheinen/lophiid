@@ -175,9 +175,8 @@
 <script>
 import RawHttpCard from "../cards/RawHttpCard.vue";
 import RequestTable from "../cards/RequestDetailsTable.vue";
-import InfoCard from "../cards/InfoCard.vue";
 export default {
-  components: { RawHttpCard, RequestTable, InfoCard },
+  components: { RawHttpCard, RequestTable },
   props: ["request", "metadata", "whois", "description"],
   inject: ["config"],
   data() {
