@@ -1,9 +1,20 @@
 <template>
-  <div class="rounded overflow-hidden shadow-lg rcard">
-    <div class="text-xl rcardlabel">
-      <slot name="label">{{ mylabel }}</slot>
+  <div style="margin-top: 20px">
+    <div
+      class="static rounded overflow-visible shadow-md shadow-stone-500/50 rcard"
+    >
+      <div
+        class="relative z-40 -top-5 left-0 ps-4 bg-white rounded border text-xl max-w-3/10"
+        style="border-color: #cbd5e1"
+      >
+        <slot name="label">
+          <p class="font-mono text-2xl antialiased font-medium">
+            {{ mylabel }}
+          </p>
+        </slot>
+      </div>
+      <slot></slot>
     </div>
-    <slot></slot>
   </div>
 </template>
 
@@ -20,16 +31,12 @@ export default {
 
 <style scoped>
 .rcard {
-  margin-bottom: 30px;
+  background-color: white;
   border-width: 1px 1px 0 1px;
   border-color: #cbd5e1;
   margin-right: 15px;
+  margin-bottom: 40px;
   padding-left: 10px;
   padding-bottom: 10px;
-}
-
-.rcardlabel {
-  position: relative;
-  margin-bottom: 10px;
 }
 </style>

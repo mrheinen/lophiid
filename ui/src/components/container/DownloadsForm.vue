@@ -1,86 +1,89 @@
 <template>
   <div>
     <input type="hidden" name="id" v-model="localDownload.id" />
-      <FieldSet legend="Download details" :toggleable="false">
-        <table>
-          <tbody>
-            <tr>
-              <th>First seen</th>
-              <td>{{ localDownload.parsed.created_at }}</td>
-            </tr>
-            <tr>
-              <th>Last seen</th>
-              <td>{{ localDownload.parsed.last_seen_at }}</td>
-            </tr>
-            <tr>
-              <th>Times seen</th>
-              <td>{{ localDownload.times_seen }}</td>
-            </tr>
-            <tr>
-              <th>Size byte</th>
-              <td>{{ localDownload.size }}</td>
-            </tr>
-            <tr v-if="localDownload.detected_content_type">
-              <th>Detected mime</th>
-              <td>{{ localDownload.detected_content_type }}</td>
-            </tr>
-            <tr>
-              <th>URL Original</th>
-              <td>{{ localDownload.original_url }}</td>
-            </tr>
-            <tr v-if="localDownload.original_url != localDownload.used_url">
-              <th>URL Used</th>
-              <td>
-                {{ localDownload.used_url }} (Host: {{ localDownload.host }})
-              </td>
-            </tr>
-            <tr v-if="localDownload.yara_scanned_unpacked == true">
-              <th>Binary was packed</th>
-              <td>
-                Yes
-              </td>
-            </tr>
-            <tr v-if="localDownload.yara_status">
-              <th>Yara status</th>
-              <td>
-                {{ localDownload.yara_status }}
-              </td>
-            </tr>
-            <tr v-if="localDownload.yara_last_scan">
-              <th>Yara last scan</th>
-              <td>
-                {{ yaraLastScanDate }}
-              </td>
-            </tr>
+    <div>
+      <InfoCard mylabel="Malware details">
+        <template #default>
+          <table>
+            <tbody>
+              <tr>
+                <th>First seen</th>
+                <td>{{ localDownload.parsed.created_at }}</td>
+              </tr>
+              <tr>
+                <th>Last seen</th>
+                <td>{{ localDownload.parsed.last_seen_at }}</td>
+              </tr>
+              <tr>
+                <th>Times seen</th>
+                <td>{{ localDownload.times_seen }}</td>
+              </tr>
+              <tr>
+                <th>Size byte</th>
+                <td>{{ localDownload.size }}</td>
+              </tr>
+              <tr v-if="localDownload.detected_content_type">
+                <th>Detected mime</th>
+                <td>{{ localDownload.detected_content_type }}</td>
+              </tr>
+              <tr>
+                <th>URL Original</th>
+                <td>{{ localDownload.original_url }}</td>
+              </tr>
+              <tr v-if="localDownload.original_url != localDownload.used_url">
+                <th>URL Used</th>
+                <td>
+                  {{ localDownload.used_url }} (Host: {{ localDownload.host }})
+                </td>
+              </tr>
+              <tr v-if="localDownload.yara_scanned_unpacked == true">
+                <th>Binary was packed</th>
+                <td>Yes</td>
+              </tr>
+              <tr v-if="localDownload.yara_status">
+                <th>Yara status</th>
+                <td>
+                  {{ localDownload.yara_status }}
+                </td>
+              </tr>
+              <tr v-if="localDownload.yara_last_scan">
+                <th>Yara last scan</th>
+                <td>
+                  {{ yaraLastScanDate }}
+                </td>
+              </tr>
 
+              <tr>
+                <th>SHA 256</th>
+                <td>
+                  <input
+                    :value="localDownload.sha256sum"
+                    ref="sha256sum"
+                    type="hidden"
+                  />
 
-
-            <tr>
-
-              <th>SHA 256</th>
-              <td>
-                <input :value="localDownload.sha256sum" ref="sha256sum" type="hidden" />
-
-                {{ localDownload.parsed.sha256sum }}
-                <i
-                  @click="copyToClipboard()"
-                  title="copy to clipboard"
-                  class="pi pi-copy pointer"
-                ></i>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </FieldSet>
+                  {{ localDownload.parsed.sha256sum }}
+                  <i
+                    @click="copyToClipboard()"
+                    title="copy to clipboard"
+                    class="pi pi-copy pointer"
+                  ></i>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </template>
+      </InfoCard>
     </div>
-    <br />
-    <div v-if="localDownload.vt_file_analysis_submitted">
-      <FieldSet legend="VirusTotal results" :toggleable="false">
+  </div>
+  <div v-if="localDownload.vt_file_analysis_submitted">
+    <InfoCard mylabel="VirusTotal details">
+      <template #default>
         <div>
-          <div style="margin: 0 auto;">
-            <div style="float: left;">
+          <div class="grid grid-cols-2">
+            <div>
               Scan results
-              <br/>
+              <br />
               <table class="slightlylow">
                 <tbody>
                   <tr>
@@ -110,10 +113,10 @@
                 </tbody>
               </table>
             </div>
-            <div style="margin-left: 200px;">
+            <div v-if="localDownload.vt_file_analysis_result">
               Scanner samples
-              <br/>
-              <table v-if="localDownload.vt_file_analysis_result" class="slightlylow">
+              <br />
+              <table class="slightlylow" >
                 <tbody>
                   <tr
                     v-for="res in localDownload.parsed.vt_file_analysis_result"
@@ -127,64 +130,68 @@
             </div>
           </div>
         </div>
-      </FieldSet>
-    </div>
+      </template>
+    </InfoCard>
+  </div>
 
-    <br />
-
-    <FieldSet legend="Context" :toggleable="false">
-    <PrimeTabs v-model:value="activeTab">
-    <TabList>
-        <PrimeTab value="0">HTTP Request</PrimeTab>
-        <PrimeTab value="1" v-if="localYara">Yara result</PrimeTab>
-        <PrimeTab value="2" v-if="localWhois">Whois</PrimeTab>
-    </TabList>
+  <InfoCard mylabel="Context">
+    <template #default>
+      <PrimeTabs v-model:value="activeTab">
+        <TabList>
+          <PrimeTab value="0">HTTP Request</PrimeTab>
+          <PrimeTab value="1" v-if="localYara">Yara result</PrimeTab>
+          <PrimeTab value="2" v-if="localWhois">Whois</PrimeTab>
+        </TabList>
         <TabPanels>
-        <TabPanel value="1" v-if="localYara">
-        <div id="aisummary" v-if="localDownload.yara_description">
-          AI Summary: {{ localDownload.yara_description }}
-        </div>
-          <YaraCard :data="localYara">
-          </YaraCard>
-        </TabPanel>
-        <TabPanel value="0">
-          <RawHttpCard
-            v-if="localDownload.raw_http_response"
-            label="HTTP response headers"
-            :data="localDownload.raw_http_response"
-          ></RawHttpCard>
-        </TabPanel>
-        <TabPanel value="2" v-if="localWhois">
-          <table v-if="localWhois.country">
-            <tbody>
-              <tr>
-                <th>Country</th>
-                <td>
-                  {{ localWhois.country }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <br />
+          <TabPanel value="1" v-if="localYara">
+            <div id="aisummary" v-if="localDownload.yara_description">
+              AI Summary: {{ localDownload.yara_description }}
+            </div>
+            <YaraCard :data="localYara"> </YaraCard>
+          </TabPanel>
+          <TabPanel value="0">
+            <RawHttpCard
+              v-if="localDownload.raw_http_response"
+              label="HTTP response headers"
+              :data="localDownload.raw_http_response"
+            ></RawHttpCard>
+          </TabPanel>
+          <TabPanel value="2" v-if="localWhois">
+            <table v-if="localWhois.country">
+              <tbody>
+                <tr>
+                  <th>Country</th>
+                  <td>
+                    {{ localWhois.country }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <br />
 
-          <pre v-if="localWhois.data" class="whois">{{ localWhois.data }}</pre>
-          <pre v-if="localWhois.rdap_string" class="whois">{{
-            localWhois.rdap_string
-          }}</pre>
-        </TabPanel>
-    </TabPanels>
-    </PrimeTabs>
-    </FieldSet>
+            <pre v-if="localWhois.data" class="whois">{{
+              localWhois.data
+            }}</pre>
+            <pre v-if="localWhois.rdap_string" class="whois">{{
+              localWhois.rdap_string
+            }}</pre>
+          </TabPanel>
+        </TabPanels>
+      </PrimeTabs>
+    </template>
+  </InfoCard>
 
-    <FieldSet legend="Actions" :toggleable="false">
-          <PrimeButton
-            icon="pi pi-check"
-            label="Rescan Yara"
-            @click="requireConfirmation($event)"
-            class="p-button-sm p-button-outlined">
-          </PrimeButton>
-
-    </FieldSet>
+  <InfoCard mylabel="Actions">
+    <template #default>
+      <PrimeButton
+        icon="pi pi-check"
+        label="Rescan Yara"
+        @click="requireConfirmation($event)"
+        class="p-button-sm p-button-outlined"
+      >
+      </PrimeButton>
+    </template>
+  </InfoCard>
   <ConfirmPopup group="headless">
     <template #container="{ message, acceptCallback, rejectCallback }">
       <div class="bg-gray-900 text-white border-round p-3">
@@ -207,9 +214,6 @@
       </div>
     </template>
   </ConfirmPopup>
-
-
-
 </template>
 
 <script>
@@ -236,7 +240,6 @@ export default {
     };
   },
   methods: {
-
     requireConfirmation(event) {
       if (!this.localDownload.id) {
         return;
@@ -246,7 +249,7 @@ export default {
         group: "headless",
         message: "Rescan with yara rules ?",
         accept: () => {
-          this.setDownloadToPending()
+          this.setDownloadToPending();
         },
         reject: () => {},
       });
@@ -283,7 +286,9 @@ export default {
           if (response.status == this.config.backendResultNotOk) {
             this.$toast.error(response.message);
           } else {
-            this.$toast.success("Download has been set to pending. Reload later.");
+            this.$toast.success(
+              "Download has been set to pending. Reload later."
+            );
           }
         });
     },
@@ -429,5 +434,4 @@ table th {
 table td {
   padding-right: 13px;
 }
-
 </style>
