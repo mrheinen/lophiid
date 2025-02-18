@@ -748,6 +748,8 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 		return retResponse, status.Errorf(codes.Internal, "creating file: %s", err)
 	}
 
+	defer outFileHandle.Close()
+
 	bytesWritten, err := io.Copy(outFileHandle, bytes.NewReader(req.GetInfo().GetData()))
 	if err != nil {
 		return retResponse, status.Errorf(codes.Internal, "writing file: %s", err)
