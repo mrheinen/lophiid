@@ -253,8 +253,8 @@ func (v *VTBackgroundManager) GetEventsForDownload(dl *models.Download, isNew bo
 	return finalRet
 }
 
-// Prefered engines for which we store the results for displaying in the UI
-var PreferedFileResultEngines = []string{"Fortinet", "Avast", "BitDefender", "Microsoft", "McAfee", "TrendMicro"}
+// Preferred engines for which we store the results for displaying in the UI
+var PreferredFileResultEngines = []string{"Fortinet", "Avast", "BitDefender", "Microsoft", "McAfee", "TrendMicro"}
 
 func (v *VTBackgroundManager) GetFileAnalysis() error {
 	dls, err := v.dbClient.SearchDownloads(0, 10, "vt_file_analysis_done:false")
@@ -288,8 +288,8 @@ func (v *VTBackgroundManager) GetFileAnalysis() error {
 			}
 		}
 
-		// Append only the results from our prefered engines.
-		for _, en := range PreferedFileResultEngines {
+		// Append only the results from our preferred engines.
+		for _, en := range PreferredFileResultEngines {
 			if result, ok := cRes.Data.Attributes.Results[en]; ok && result.Result != "" {
 				newResult := fmt.Sprintf("%s: %s", en, result.Result)
 				dl.VTFileAnalysisResult = append(dl.VTFileAnalysisResult, newResult)

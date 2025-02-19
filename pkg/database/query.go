@@ -46,7 +46,7 @@ type SearchRequestsParam struct {
 // quotes. Quotes should be used when there is a space in the value.
 //
 // The separator between the keyword and value indicates what kind of matching
-// is wanted. The supported seperators are:
+// is wanted. The supported separators are:
 //
 //	:    - match exactly
 //	>    - greater than
@@ -180,7 +180,7 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 		case '>':
 			whereType = GREATER_THAN
 		default:
-			return ret, fmt.Errorf("unknown seperator %c", separator)
+			return ret, fmt.Errorf("unknown separator %c", separator)
 		}
 
 		currentParams = append(currentParams, SearchRequestsParam{
@@ -253,7 +253,7 @@ func getWhereClause(index int, s *SearchRequestsParam) (string, error) {
 }
 
 // buildComposedQuery creates a query from the given array of parameters arrays.
-// Each seperate parameter array is treated as a subquery and they are combined
+// Each separate parameter array is treated as a subquery and they are combined
 // with OR.
 func buildComposedQuery(params [][]SearchRequestsParam, queryPrefix string, querySuffix string) (string, []interface{}, error) {
 	baseQuery := queryPrefix

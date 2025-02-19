@@ -13,7 +13,7 @@ AI assisted triage is currently limited to the following:
 For each request a unique CmpHash hash is created that uses all request fields except
 for the Host: header and some commonly changed parameters such as "user" and
 "password".  This hash is intended to be the same for the same request across
-multiple hosts and the excluded paramaters are specifically for keeping
+multiple hosts and the excluded parameters are specifically for keeping
 bruteforce noise down.
 
 For every unique CmpHash, and this means each unique request, the backend
