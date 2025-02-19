@@ -20,6 +20,7 @@ import EventsList from './components/container/EventsList.vue';
 import TagList from './components/container/TagList.vue';
 import YaraList from './components/container/YaraList.vue';
 import GlobalStats from './components/container/GlobalStats.vue';
+import InfoCard from './components/cards/InfoCard.vue';
 import PrimeVue from './../node_modules/primevue/config';
 
 import CodeMirror from './../node_modules/vue-codemirror';
@@ -93,7 +94,27 @@ import Chart from './../node_modules/primevue/chart';
 
 
 
-import Material from '@primevue/themes/material';
+import Lara from '@primevue/themes/lara';
+import { definePreset } from '@primevue/themes';
+
+
+const MyPreset = definePreset(Lara, {
+    semantic: {
+        primary: {
+            50: '{amber.50}',
+            100: '{amber.100}',
+            200: '{amber.200}',
+            300: '{amber.300}',
+            400: '{amber.400}',
+            500: '{amber.500}',
+            600: '{amber.600}',
+            700: '{amber.700}',
+            800: '{amber.800}',
+            900: '{amber.900}',
+            950: '{amber.950}'
+        }
+    }
+});
 
 
 const app = createApp(App);
@@ -125,12 +146,13 @@ app.component('IconField', IconField);
 app.component('InputIcon', InputIcon);
 app.component('PopOver', PopOver);
 app.component('PrimeChart', Chart);
+app.component('InfoCard', InfoCard);
 app.use(hljsVuePlugin);
 app.use(router);
 app.use(store);
 app.use(PrimeVue, {
     theme: {
-        preset: Material
+        preset: MyPreset
     }
 });
 app.use(ToastPlugin);
