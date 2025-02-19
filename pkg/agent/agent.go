@@ -270,11 +270,19 @@ func (a *Agent) DownloadToBuffer(request *backend_service.CommandDownloadFile) (
 
 	rawRespBytes, err := httputil.DumpResponse(resp, false)
 	if err != nil {
-		slog.Debug("could no dump raw response", slog.String("error", err.Error()))
+		slog.Debug("could not dump raw response", slog.String("error", err.Error()), slog.String("response", fmt.Sprintf("%+v", resp)))
 		// We allow this error and do not return here. The raw response really is
 		// optional and not worth do ditch all the other information for.
 	} else {
-		downloadInfo.RawHttpResponse = string(rawRespBytes)
+		// We have this issue where sometimes the data is empty. Do a check here and
+		// log when it happens.
+		if rawRespBytes == nil {
+			slog.Debug("raw response dump is nil", slog.String("response", fmt.Sprintf("%+v", resp)))
+		} else if len(rawRespBytes) == 0 {
+			slog.Debug("raw response dump is empty", slog.String("response", fmt.Sprintf("%+v", resp)))
+		} else {
+			downloadInfo.RawHttpResponse = string(rawRespBytes)
+		}
 	}
 
 	respBytes, err := io.ReadAll(resp.Body)
