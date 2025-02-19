@@ -19,11 +19,11 @@ package extractors
 import (
 	"encoding/base64"
 	"lophiid/pkg/database/models"
-	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 var base64Reg = regexp.MustCompile(`([a-zA-Z0-9=/+]*)`)
@@ -99,7 +99,7 @@ func (b *Base64Extractor) FindAndAdd(data string) int64 {
 		decoded, err := base64.StdEncoding.DecodeString(v)
 		if err == nil {
 			// Finally check if the string is ascii or not.
-			if !b.asciiOnly || util.IsStringASCII(string(decoded)) {
+			if !b.asciiOnly || utf8.Valid(decoded) {
 				b.result[v] = decoded
 
 				for _, ex := range b.subExtractors {

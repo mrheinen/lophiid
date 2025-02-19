@@ -36,6 +36,14 @@
                   {{ localDownload.used_url }} (Host: {{ localDownload.host }})
                 </td>
               </tr>
+              <tr>
+                <th>Download honeypot</th>
+                <td>{{ localDownload.honeypot_ip }}</td>
+              </tr>
+              <tr>
+                <th>Local file</th>
+                <td>{{ localDownload.file_location }}</td>
+              </tr>
               <tr v-if="localDownload.yara_scanned_unpacked == true">
                 <th>Binary was packed</th>
                 <td>Yes</td>
@@ -116,7 +124,7 @@
             <div v-if="localDownload.vt_file_analysis_result">
               Scanner samples
               <br />
-              <table class="slightlylow" >
+              <table class="slightlylow">
                 <tbody>
                   <tr
                     v-for="res in localDownload.parsed.vt_file_analysis_result"

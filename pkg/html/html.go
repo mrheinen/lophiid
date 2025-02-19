@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"sync"
 )
 
-var tagPatterns = make(map[string]*regexp.Regexp)
+var tagPatterns sync.Map
 
 // TagAttribute represents a tag and its source attribute that needs URL processing
 type TagAttribute struct {
@@ -56,7 +57,7 @@ func DefaultTagAttributes() []TagAttribute {
 func init() {
 	for _, ta := range DefaultTagAttributes() {
 		pattern := regexp.MustCompile(`<` + ta.Tag + `[^>]+` + ta.Attribute + `=['"]([^'"]+)['"]`)
-		tagPatterns[ta.Tag+ta.Attribute] = pattern
+		tagPatterns.Store(ta.Tag+ta.Attribute, pattern)
 	}
 }
 
@@ -69,10 +70,13 @@ func MakeURLsRelative(content []byte, tagAttrs []TagAttribute, targetHost string
 	// Process each tag-attribute pair
 	for _, ta := range tagAttrs {
 		// Get or create the pattern for this tag-attribute pair
-		pattern, exists := tagPatterns[ta.Tag+ta.Attribute]
+		patternVal, exists := tagPatterns.Load(ta.Tag + ta.Attribute)
+		var pattern *regexp.Regexp
 		if !exists {
 			pattern = regexp.MustCompile(`<` + ta.Tag + `[^>]+` + ta.Attribute + `=['"]([^'"]+)['"]`)
-			tagPatterns[ta.Tag+ta.Attribute] = pattern
+			tagPatterns.Store(ta.Tag+ta.Attribute, pattern)
+		} else {
+			pattern = patternVal.(*regexp.Regexp)
 		}
 
 		// Find all matches and process them
