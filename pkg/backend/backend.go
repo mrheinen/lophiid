@@ -689,6 +689,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	dInfo.TimesSeen = 1
 	dInfo.LastSeenAt = time.Now()
 	dInfo.YaraStatus = "PENDING"
+	dInfo.RawHttpResponse = req.GetInfo().GetRawHttpResponse()
 
 	s.metrics.downloadResponseTime.Observe(req.GetInfo().GetDurationSec())
 
@@ -699,7 +700,12 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 		dm.LastRequestID = req.RequestId
 		dm.LastSeenAt = time.Now()
 		// Set to the latest HTTP response.
-		dm.RawHttpResponse = req.GetInfo().GetRawHttpResponse()
+
+		if req.GetInfo().GetRawHttpResponse() != "" {
+			dm.RawHttpResponse = req.GetInfo().GetRawHttpResponse()
+		} else {
+			slog.Debug("No HTTP response found for URL upload", slog.String("url", req.GetInfo().GetOriginalUrl()), slog.String("honeypot_ip", req.GetInfo().GetHoneypotIp()))
+		}
 
 		if err = s.dbClient.Update(&dm); err != nil {
 			slog.Warn("could not update", slog.String("error", err.Error()))

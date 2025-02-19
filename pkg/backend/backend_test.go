@@ -1199,6 +1199,7 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 				TimesSeen:            1,
 				VTAnalysisMalicious:  1,
 				VTAnalysisSuspicious: 0,
+				RawHttpResponse:      "old data",
 			},
 		},
 	}
@@ -1227,12 +1228,13 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	uploadRequest := backend_service.UploadFileRequest{
 		RequestId: 42,
 		Info: &backend_service.DownloadInfo{
-			HostHeader:  "example.org",
-			ContentType: "text/html",
-			HoneypotIp:  "1.1.1.1",
-			OriginalUrl: "http://example.org/foo.sh",
-			Url:         "http://127.0.0.1/foo.sh",
-			Data:        []byte("extract this http://example.org/boo and ignore this http://www.google.com/foobar.sh"),
+			HostHeader:      "example.org",
+			ContentType:     "text/html",
+			HoneypotIp:      "1.1.1.1",
+			OriginalUrl:     "http://example.org/foo.sh",
+			Url:             "http://127.0.0.1/foo.sh",
+			Data:            []byte("extract this http://example.org/boo and ignore this http://www.google.com/foobar.sh"),
+			RawHttpResponse: "this is raw data",
 		},
 	}
 
@@ -1248,6 +1250,10 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	downloadEntry := fdbc.LastDataModelSeen.(*models.Download)
 	if downloadEntry.TimesSeen != 2 {
 		t.Errorf("expected times seen to be %d, got %d", 2, downloadEntry.TimesSeen)
+	}
+
+	if downloadEntry.RawHttpResponse != "this is raw data" {
+		t.Errorf("expected raw response to be %s, got %s", "this is raw data", downloadEntry.RawHttpResponse)
 	}
 
 	if len(fIpMgr.Events) != 2 {

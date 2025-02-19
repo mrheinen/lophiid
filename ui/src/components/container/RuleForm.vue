@@ -319,13 +319,16 @@ export default {
       const ruleToSubmit = Object.assign({}, this.localRule);
 
       ruleToSubmit.ports = [];
-      for (let port of ruleToSubmit.parsed.port_field.split(",")) {
-        var intPort = parseInt(port);
+      if (ruleToSubmit.parsed.port_field != "") {
 
-        if (intPort < 0 || intPort > 65535) {
-          this.$toast.error("Invalid port: " + port);
-        } else {
-          ruleToSubmit.ports.push(intPort);
+        for (let port of ruleToSubmit.parsed.port_field.split(",")) {
+          var intPort = parseInt(port);
+
+          if (intPort < 0 || intPort > 65535) {
+            this.$toast.error("Invalid port: " + port);
+          } else {
+            ruleToSubmit.ports.push(intPort);
+          }
         }
       }
 
@@ -423,7 +426,7 @@ export default {
     rule() {
       this.localRule = Object.assign({}, this.rule);
       this.localRule.parsed = {};
-      if (this.localRule.ports) {
+      if (this.localRule.ports && this.localRule.ports != "") {
         this.localRule.parsed.port_field = this.localRule.ports.join(",");
       }
     },
