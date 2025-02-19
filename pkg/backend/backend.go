@@ -689,6 +689,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	dInfo.TimesSeen = 1
 	dInfo.LastSeenAt = time.Now()
 	dInfo.YaraStatus = "PENDING"
+	dInfo.RawHttpResponse = req.GetInfo().GetRawHttpResponse()
 
 	s.metrics.downloadResponseTime.Observe(req.GetInfo().GetDurationSec())
 
