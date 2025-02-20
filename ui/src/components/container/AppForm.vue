@@ -8,7 +8,10 @@
   <div v-if="localApp">
     <input type="hidden" name="id" v-model="localApp.id" />
     <div>
-    <FieldSet legend="Settings" :toggleable="false">
+
+    <InfoCard mylabel="Settings">
+    <template #default>
+
       <div>
         <label class="label">Name</label>
         <InputText
@@ -113,7 +116,8 @@
       @click="showImportForm()"
       label="Import"
     ></PrimeButton>
-    </FieldSet>
+    </template>
+    </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">

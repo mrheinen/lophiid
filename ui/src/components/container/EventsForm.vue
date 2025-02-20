@@ -2,7 +2,9 @@
   <div>
     <input type="hidden" name="id" v-model="localEvent.id" />
     <div>
-      <FieldSet legend="Event details" :toggleable="false">
+
+      <InfoCard mylabel="Event details">
+      <template #default>
         <table>
           <tbody>
             <tr>
@@ -32,8 +34,8 @@
 
           </tbody>
         </table>
-
-      </FieldSet>
+      </template>
+      </InfoCard>
     </div>
   </div>
 </template>

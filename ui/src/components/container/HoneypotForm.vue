@@ -2,96 +2,100 @@
   <div>
     <input type="hidden" name="id" v-model="localHoneypot.id" />
     <div>
-    <FieldSet legend="Settings" :toggleable="false">
-      <div>
-        <label class="label">IP</label>
-        <InputText
+
+      <InfoCard mylabel="Settings">
+      <template #default>
+
+        <div>
+          <label class="label">IP</label>
+          <InputText
           id="title"
           type="text"
           placeholder=""
           v-model="localHoneypot.ip"
-        />
-      </div>
+          />
+        </div>
 
-      <div>
-        <label class="label">Default Content ID</label>
-        <InputNumber
+        <div>
+          <label class="label">Default Content ID</label>
+          <InputNumber
           v-model="localHoneypot.default_content_id"
           inputId="minmax"
           :useGrouping="false"
           :min="0"
           :max="65535"
-        />
-     &nbsp;
-      </div>
+          />
+          &nbsp;
+        </div>
 
-      <div class="field">
-        <label class="label">Authentication token</label>
-        <InputText
+        <div class="field">
+          <label class="label">Authentication token</label>
+          <InputText
           id="auth-token"
           type="text"
           placeholder=""
           v-model="localHoneypot.auth_token"
-        />
-      </div>
+          />
+        </div>
 
 
-      <div v-if="localPorts" class="field">
-        <label class="label">HTTP Ports</label>
+        <div v-if="localPorts" class="field">
+          <label class="label">HTTP Ports</label>
 
-        {{ localPorts }}
-      </div>
+          {{ localPorts }}
+        </div>
 
-      <div v-if="localSSLPorts" class="field">
-        <label class="label">HTTPS Ports</label>
+        <div v-if="localSSLPorts" class="field">
+          <label class="label">HTTPS Ports</label>
 
-        {{ localSSLPorts }}
-      </div>
+          {{ localSSLPorts }}
+        </div>
 
 
 
-      <br/>
-    <PrimeButton
-      :label="localHoneypot.id > 0 ? 'Submit' : 'Add'"
-      @click="submitForm()"
-    >
-    </PrimeButton>
-    &nbsp;
-    <PrimeButton
-      severity="secondary"
-      label="New"
-      @click="resetForm()"
-    ></PrimeButton>
-    &nbsp;
-    <PrimeButton
-      severity="danger"
-      @click="requireConfirmation($event)"
-      label="Delete"
-    ></PrimeButton>
-    </FieldSet>
+        <br/>
+        <PrimeButton
+        :label="localHoneypot.id > 0 ? 'Submit' : 'Add'"
+        @click="submitForm()"
+        >
+        </PrimeButton>
+        &nbsp;
+        <PrimeButton
+        severity="secondary"
+        label="New"
+        @click="resetForm()"
+        ></PrimeButton>
+        &nbsp;
+        <PrimeButton
+        severity="danger"
+        @click="requireConfirmation($event)"
+        label="Delete"
+        ></PrimeButton>
+      </template>
+      </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">
-      <template #container="{ message, acceptCallback, rejectCallback }">
-        <div class="bg-gray-900 text-white border-round p-3">
-          <span>{{ message.message }}</span>
-          <div class="flex align-items-center gap-2 mt-3">
-            <PrimeButton
-              icon="pi pi-check"
-              label="Save"
-              @click="acceptCallback"
-              class="p-button-sm p-button-outlined"
-            ></PrimeButton>
-            <PrimeButton
-              label="Cancel"
-              severity="secondary"
-              outlined
-              @click="rejectCallback"
-              class="p-button-sm p-button-text"
-            ></PrimeButton>
-          </div>
+    <template #container="{ message, acceptCallback, rejectCallback }">
+      <div class="bg-gray-900 text-white border-round p-3">
+        <span>{{ message.message }}</span>
+        <div class="flex align-items-center gap-2 mt-3">
+          <PrimeButton
+          icon="pi pi-check"
+          label="Save"
+          @click="acceptCallback"
+          class="p-button-sm p-button-outlined"
+          ></PrimeButton>
+          <PrimeButton
+          label="Cancel"
+          severity="secondary"
+          outlined
+          @click="rejectCallback"
+          class="p-button-sm p-button-text"
+          ></PrimeButton>
         </div>
-      </template>
+      </div>
+    </template>
     </ConfirmPopup>
   </div>
 </template>

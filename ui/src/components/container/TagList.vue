@@ -66,7 +66,7 @@
         </DataTable>
       </div>
     </div>
-    <div class="colspan-2">
+    <div class="col-span-2">
       <tag-form
         @update-tag="onUpdateTag"
         @delete-tag="onDeleteTag"

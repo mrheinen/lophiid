@@ -75,7 +75,7 @@
         </DataTable>
       </div>
     </div>
-    <div class="colspan-2">
+    <div class="col-span-2">
       <honey-form
         @update-honeypot="onUpdateHoneypot"
         @delete-honeypot="onDeleteHoneypot"

@@ -81,7 +81,7 @@
         </DataTable>
       </div>
     </div>
-    <div class="colspan-2">
+    <div class="col-span-2">
       <YaraForm :yara="selectedYara"></YaraForm>
     </div>
   </div>
