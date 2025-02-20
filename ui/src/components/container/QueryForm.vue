@@ -2,7 +2,9 @@
   <div>
     <input type="hidden" name="id" v-model="localQuery.id" />
     <div>
-    <FieldSet legend="Settings" :toggleable="false">
+
+    <InfoCard mylabel="Settings">
+    <template #default>
       <div>
         <label class="label">Query</label>
         <InputText
@@ -49,7 +51,8 @@
       @click="requireConfirmation($event)"
       label="Delete"
     ></PrimeButton>
-    </FieldSet>
+    </template>
+    </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">

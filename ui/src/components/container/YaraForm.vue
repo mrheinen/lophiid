@@ -2,12 +2,15 @@
   <div>
     <input type="hidden" name="id" v-model="localYara.id" />
     <div>
-      <FieldSet legend="Settings" :toggleable="false">
+
+    <InfoCard mylabel="Information">
+    <template #default>
         <div>
           <label class="label">Yara Result</label>
           <YaraCard :data="localYaraArray"> </YaraCard>
         </div>
-      </FieldSet>
+    </template>
+    </InfoCard>
     </div>
   </div>
 </template>

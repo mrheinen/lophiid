@@ -67,7 +67,7 @@
         </DataTable>
       </div>
     </div>
-    <div class="colspan-2">
+    <div class="col-span-2">
       <query-form
         @update-query="onUpdateQuery"
         @delete-query="onDeleteQuery"

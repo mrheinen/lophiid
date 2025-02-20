@@ -1,14 +1,15 @@
 <template>
   <div>
     <input type="hidden" name="id" v-model="localContent.id" />
-    <FieldSet legend="Required fields" :toggleable="false">
+    <InfoCard mylabel="Required fields">
+    <template #default>
       <div>
         <label class="label">Title</label>
         <InputText
-          id="title"
-          type="text"
-          placeholder="Small summary"
-          v-model="localContent.name"
+        id="title"
+        type="text"
+        placeholder="Small summary"
+        v-model="localContent.name"
         />
       </div>
 
@@ -18,17 +19,17 @@
           v-model="localContent.description"
           rows="4"
           cols="40"
-        />
+          />
       </div>
 
       <div>
         <label class="label">UUID</label>
         <InputText
-          id="uuid"
-          type="text"
-          disabled
-          placeholder="The UUID of the content"
-          v-model="localContent.ext_uuid"
+        id="uuid"
+        type="text"
+        disabled
+        placeholder="The UUID of the content"
+        v-model="localContent.ext_uuid"
         />
       </div>
 
@@ -38,29 +39,31 @@
       <div v-if="scriptMode">
         <label class="label">Content Script</label>
         <codemirror
-          v-model="localContent.script"
-          :style="{ height: '400px' }"
-          :extensions="extensions"
+        v-model="localContent.script"
+        :style="{ height: '400px' }"
+        :extensions="extensions"
         ></codemirror>
       </div>
 
       <br />
       <br />
       <PrimeButton
-        severity="secondary"
-        :label="scriptMode ? 'Exit script Mode' : 'Enter script mode'"
-        @click="scriptMode = !scriptMode"
+      severity="secondary"
+      :label="scriptMode ? 'Exit script Mode' : 'Enter script mode'"
+      @click="scriptMode = !scriptMode"
       ></PrimeButton>
-    </FieldSet>
+    </template>
+    </InfoCard>
 
-    <FieldSet legend="Extra options" :toggleable="true" :collapsed="true">
+    <InfoCard mylabel="Extra options">
+    <template #default>
       <div>
         <label class="label">HTTP status code</label>
         <FormSelect
-          v-model="localContent.status_code"
-          :options="config.statusCodeValues"
-          optionLabel="label"
-          optionValue="value"
+        v-model="localContent.status_code"
+        :options="config.statusCodeValues"
+        optionLabel="label"
+        optionValue="value"
         />
       </div>
 
@@ -68,9 +71,9 @@
         <label class="label">Content type</label>
         <div class="flex justify-content-center">
           <AutoComplete
-            v-model="localContent.content_type"
-            :suggestions="contentTypeItems"
-            @complete="contentTypeSearch"
+          v-model="localContent.content_type"
+          :suggestions="contentTypeItems"
+          @complete="contentTypeSearch"
           />
         </div>
       </div>
@@ -79,9 +82,9 @@
         <label class="label">Web server</label>
         <div class="flex justify-content-center">
           <AutoComplete
-            v-model="localContent.server"
-            :suggestions="serverItems"
-            @complete="serverSearch"
+          v-model="localContent.server"
+          :suggestions="serverItems"
+          @complete="serverSearch"
           />
         </div>
       </div>
@@ -92,58 +95,59 @@
           v-model="customHeaders"
           rows="4"
           cols="40"
-        />
+          />
       </div>
 
       <div v-if="!scriptMode">
         <label class="label">Data</label>
         <TextArea v-model="localContent.data" rows="20" cols="70" />
       </div>
-    </FieldSet>
+    </template>
+    </InfoCard>
     <br />
 
     <div class="button-group">
-    <PrimeButton
+      <PrimeButton
       :label="localContent.id > 0 ? 'Submit' : 'Add'"
       @click.prevent="submitForm()
       "
-    >
-    </PrimeButton>
-    &nbsp;
-    <PrimeButton
+      >
+      </PrimeButton>
+      &nbsp;
+      <PrimeButton
       severity="secondary"
       label="New"
       @click="resetForm()"
-    ></PrimeButton>
-    &nbsp;
-    <PrimeButton
+      ></PrimeButton>
+      &nbsp;
+      <PrimeButton
       severity="danger"
       @click="requireConfirmation($event)"
       label="Delete"
-    ></PrimeButton>
+      ></PrimeButton>
     </div>
   </div>
   <ConfirmPopup group="headless">
-    <template #container="{ message, acceptCallback, rejectCallback }">
-      <div class="bg-gray-900 text-white border-round p-3">
-        <span>{{ message.message }}</span>
-        <div class="flex align-items-center gap-2 mt-3">
-          <PrimeButton
-            icon="pi pi-check"
-            label="Save"
-            @click="acceptCallback"
-            class="p-button-sm p-button-outlined"
-          ></PrimeButton>
-          <PrimeButton
-            label="Cancel"
-            severity="secondary"
-            outlined
-            @click="rejectCallback"
-            class="p-button-sm p-button-text"
-          ></PrimeButton>
-        </div>
+  <template #container="{ message, acceptCallback, rejectCallback }">
+    <div class="bg-gray-900 text-white border-round p-3">
+      <span>{{ message.message }}</span>
+      <div class="flex align-items-center gap-2 mt-3">
+        <PrimeButton
+        icon="pi pi-check"
+        label="Save"
+        @click="acceptCallback"
+        class="p-button-sm p-button-outlined"
+        ></PrimeButton>
+        <PrimeButton
+        label="Cancel"
+        severity="secondary"
+        outlined
+        @click="rejectCallback"
+        class="p-button-sm p-button-text"
+        ></PrimeButton>
       </div>
-    </template>
+    </div>
+  </template>
   </ConfirmPopup>
 </template>
 

@@ -2,7 +2,9 @@
   <div>
     <input type="hidden" name="id" v-model="localRule.id" />
     <div>
-      <FieldSet legend="Settings" :toggleable="false">
+
+    <InfoCard mylabel="Settings">
+    <template #default>
         <div class="grid grid-cols-2 gap-4">
           <div class="">
             <div>
@@ -226,7 +228,8 @@
           @click="requireConfirmation($event)"
           label="Delete"
         ></PrimeButton>
-      </FieldSet>
+    </template>
+    </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">
