@@ -708,7 +708,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 		}
 
 		if err = s.dbClient.Update(&dm); err != nil {
-			slog.Warn("could not update", slog.String("error", err.Error()))
+			slog.Warn("could not update", slog.String("error", err.Error()), slog.String("url", req.GetInfo().GetOriginalUrl()))
 		}
 
 		// If the existing uploaded file was found malicious then we will generate
