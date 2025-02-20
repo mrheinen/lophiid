@@ -42,7 +42,7 @@ func ExtractResourceLinks(baseUrl string, htmlContent string) []string {
 		"audio":  {"src"},    // Audio sources
 		"input":  {"src"},    // Input element sources
 		"iframe": {"src"},    // Embedded content
-		"frame":  {"src"},    // Embedded content
+		"frame": {"src"},     // Embedded content
 	}
 
 	doc, err := html.Parse(strings.NewReader(htmlContent))
@@ -124,22 +124,30 @@ func normalizeLink(baseUrl string, link string) (string, error) {
 	}
 
 	if link == "" {
-		return "", errors.New("normalizeLink: ignoring empty link")
+		return "", errors.New("ignoring empty link")
 	}
 
 	scheme := getSchemeFromUrl(link)
 	if scheme != "" {
-		switch scheme {
-		case "http:", "https:":
+		if scheme != "http:" && scheme != "https:" {
+			return "", fmt.Errorf("invalid scheme: %s", scheme)
+		} else {
 			return link, nil
-		default:
-			return "", fmt.Errorf("normalizeLink: invalid scheme: %s", scheme)
 		}
 	}
 
 	if strings.HasPrefix(link, "//") {
 		baseScheme := getSchemeFromUrl(baseUrl)
 		return baseScheme + link, nil
+	}
+
+	if link[0] == '/' {
+		parsedUrl, err := url.Parse(baseUrl)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse link: %s", link)
+		}
+
+		return fmt.Sprintf("%s://%s%s", parsedUrl.Scheme, parsedUrl.Host, link), nil
 	}
 
 	urlPath, err := toUrlPath(baseUrl)
