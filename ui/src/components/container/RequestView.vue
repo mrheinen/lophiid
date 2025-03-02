@@ -270,14 +270,8 @@ export default {
         }
       }
     },
-    request() {
-      this.localBase64Metadata = [];
-      this.localLinkMetadata = [];
-      this.localTCPMetadata = [];
-      this.localNetcatMetadata = [];
-      this.localUnicodeMetadata = [];
-    },
     metadata() {
+      this.localMetadata = [];
       this.localBase64Metadata = [];
       this.localLinkMetadata = [];
       this.localTCPMetadata = [];
