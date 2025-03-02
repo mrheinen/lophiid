@@ -239,9 +239,6 @@ export default {
     },
     setSelectedReq(id) {
       var selected = null;
-      this.selectedMetadata = [];
-      this.loadMetadata(id);
-
       for (var i = 0; i < this.requests.length; i++) {
         if (this.requests[i].id == id) {
           selected = this.requests[i];
@@ -253,7 +250,6 @@ export default {
         console.log("error: could not find ID: " + id);
       } else {
         this.selectedRequest = selected;
-        this.loadDescription(selected.cmp_hash);
         this.isSelectedId = id;
       }
     },
@@ -291,6 +287,7 @@ export default {
         });
     },
     loadMetadata(id) {
+      this.selectedMetadata = [];
       fetch(this.config.backendAddress + "/meta/request", {
         method: "POST",
         headers: {
@@ -386,6 +383,7 @@ export default {
   },
   watch: {
     selectedRequest() {
+      this.loadMetadata(this.selectedRequest.id);
       this.loadDescription(this.selectedRequest.cmp_hash);
       this.loadWhois(this.selectedRequest.source_ip);
     },
