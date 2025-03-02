@@ -383,9 +383,11 @@ export default {
   },
   watch: {
     selectedRequest() {
-      this.loadMetadata(this.selectedRequest.id);
-      this.loadDescription(this.selectedRequest.cmp_hash);
-      this.loadWhois(this.selectedRequest.source_ip);
+      if (this.selectedRequest) {
+        this.loadMetadata(this.selectedRequest.id);
+        this.loadDescription(this.selectedRequest.cmp_hash);
+        this.loadWhois(this.selectedRequest.source_ip);
+      }
     },
   },
   created() {
