@@ -104,3 +104,64 @@ func TestStringMapCacheDoesNotExpire(t *testing.T) {
 		t.Errorf("expected 0, got %d", rc)
 	}
 }
+
+func TestStringMapCacheCheck(t *testing.T) {
+	c := NewStringMapCache[string]("test", time.Second*0)
+	testKey := "127.0.0.1"
+
+	// Store a test value
+	c.Store(testKey, "22")
+
+	// Test successful check with callback returning true
+	result, err := c.Check(testKey, func(data string) bool {
+		return data == "22"
+	})
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+	if !result {
+		t.Errorf("expected callback to return true, got false")
+	}
+
+	// Test successful check with callback returning false
+	result, err = c.Check(testKey, func(data string) bool {
+		return data == "wrong-value"
+	})
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+	if result {
+		t.Errorf("expected callback to return false, got true")
+	}
+
+	// Test check with non-existent key
+	nonExistentKey := "non-existent-key"
+	result, err = c.Check(nonExistentKey, func(data string) bool {
+		return true
+	})
+	if err == nil {
+		t.Errorf("expected error for non-existent key, got none")
+	}
+	if result {
+		t.Errorf("expected result to be false for non-existent key, got true")
+	}
+
+	// Test check with more complex logic in callback
+	c.Store("key1", "value1")
+	c.Store("key2", "value2")
+	
+	var capturedValue string
+	result, err = c.Check("key1", func(data string) bool {
+		capturedValue = data
+		return len(data) >= 6
+	})
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+	if !result {
+		t.Errorf("expected callback to return true (len >= 6), got false")
+	}
+	if capturedValue != "value1" {
+		t.Errorf("expected captured value to be 'value1', got '%s'", capturedValue)
+	}
+}

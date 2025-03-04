@@ -96,6 +96,21 @@ func (r *StringMapCache[T]) Replace(key string, data T) error {
 	return nil
 }
 
+// Check will lock the entry for `key` and will give run callback on the entry.
+// This is useful if you want to check something in the map while having the
+// lock.
+func (r *StringMapCache[T]) Check(key string, callback func(T) bool) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	entry, ok := r.entries[key]
+	if !ok {
+		return false, fmt.Errorf("no entry for key %s", key)
+	}
+
+	return callback(entry.Data), nil
+}
+
 func (r *StringMapCache[T]) Get(key string) (*T, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
