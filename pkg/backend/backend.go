@@ -144,7 +144,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	}
 }
 
-func (s *BackendServer) ScheduleDownloadOfPayload(honeypotIP string, originalUrl string, targetIP string, targetUrl string, hostHeader string, requestID int64) bool {
+func (s *BackendServer) ScheduleDownloadOfPayload(sourceIP string, honeypotIP string, originalUrl string, targetIP string, targetUrl string, hostHeader string, requestID int64) bool {
 
 	_, err := s.downloadsCache.Get(originalUrl)
 	if err == nil {
@@ -163,6 +163,7 @@ func (s *BackendServer) ScheduleDownloadOfPayload(honeypotIP string, originalUrl
 		UserAgent:   userAgent,
 		OriginalUrl: originalUrl,
 		Ip:          targetIP,
+		SourceIp:    sourceIP,
 	})
 	s.downloadQueueMu.Unlock()
 	return true
@@ -658,7 +659,7 @@ func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo m
 				continue
 			}
 
-			s.ScheduleDownloadOfPayload(dInfo.HoneypotIP, k, ip, ipBasedUrl, hostHeader, dInfo.RequestID)
+			s.ScheduleDownloadOfPayload(dInfo.SourceIP, dInfo.HoneypotIP, k, ip, ipBasedUrl, hostHeader, dInfo.RequestID)
 		}
 	}
 	return true
@@ -683,6 +684,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	dInfo.DetectedContentType = req.GetInfo().GetDetectedContentType()
 	dInfo.OriginalUrl = req.GetInfo().GetOriginalUrl()
 	dInfo.RequestID = req.RequestId
+	dInfo.SourceIP = req.GetInfo().GetSourceIp()
 	dInfo.IP = req.GetInfo().GetIp()
 	dInfo.HoneypotIP = req.GetInfo().GetHoneypotIp()
 	dInfo.LastRequestID = req.RequestId
@@ -1141,7 +1143,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 				if err != nil {
 					slog.Warn("error converting URL", slog.String("url", m.Data), slog.String("error", err.Error()))
 				} else {
-					s.ScheduleDownloadOfPayload(req.HoneypotIP, m.Data, ip, ipBasedUrl, hostHeader, dm.ModelID())
+					s.ScheduleDownloadOfPayload(req.SourceIP, req.HoneypotIP, m.Data, ip, ipBasedUrl, hostHeader, dm.ModelID())
 					downloadsScheduled += 1
 				}
 			} else {

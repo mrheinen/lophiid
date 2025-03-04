@@ -187,6 +187,7 @@ CREATE TABLE downloads (
   used_url        VARCHAR(2048),
   ip              VARCHAR(52),
   honeypot_ip     VARCHAR(52) default '',
+  source_ip       VARCHAR(52) default '',
   host            VARCHAR(1024),
   content_type    VARCHAR(256),
   detected_content_type VARCHAR(256),

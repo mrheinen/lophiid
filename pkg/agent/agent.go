@@ -243,6 +243,7 @@ func (a *Agent) DownloadToBuffer(request *backend_service.CommandDownloadFile) (
 		HostHeader:  request.HostHeader,
 		Url:         request.Url,
 		UserAgent:   request.UserAgent,
+		SourceIp:    request.SourceIp,
 	}
 
 	startTime := time.Now()
