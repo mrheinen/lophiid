@@ -34,6 +34,7 @@ type Download struct {
 	OriginalUrl             string                   `ksql:"original_url" json:"original_url" doc:"Original download URL"`
 	UsedUrl                 string                   `ksql:"used_url" json:"used_url" doc:"Actually used download URL"`
 	IP                      string                   `ksql:"ip" json:"ip" doc:"Download server IP"`
+	SourceIP                string                   `ksql:"source_ip" json:"source_ip" doc:"IP of the client that made the request"`
 	HoneypotIP              string                   `ksql:"honeypot_ip" json:"honeypot_ip" doc:"Honeypot IP used for download"`
 	SHA256sum               string                   `ksql:"sha256sum" json:"sha256sum" doc:"SHA256 sum of the download"`
 	Host                    string                   `ksql:"host" json:"host" doc:"The Host header value used in downloading"`

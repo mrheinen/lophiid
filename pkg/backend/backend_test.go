@@ -551,11 +551,12 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
-	ret := b.ScheduleDownloadOfPayload("1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
+	sourceIP := "1.2.3.4"
+	ret := b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
 	if ret != true {
 		t.Errorf("expected true but got %t", ret)
 	}
-	ret = b.ScheduleDownloadOfPayload("1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
+	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
 	if ret != false {
 		t.Errorf("expected false but got %t", ret)
 	}

@@ -34,6 +34,7 @@ message DownloadInfo {
   string ip = 9;
   string honeypot_ip = 10;
   string detected_content_type = 11;
+  string source_ip = 12;
 }
 
 message UploadFileRequest {
@@ -66,6 +67,7 @@ message CommandDownloadFile {
   int64 request_id = 4;
   string original_url = 5;
   string ip = 6;
+  string source_ip = 7;
 }
 
 message CommandPingAddress {
