@@ -52,6 +52,8 @@ type Config struct {
 		Advanced struct {
 			ContentCacheDuration       time.Duration `fig:"content_cache_duration" default:"30m"`
 			DownloadCacheDuration      time.Duration `fig:"download_cache_duration" default:"5m"`
+			// Max downloads per IP per every 5 minutes
+			MaxDownloadsPerIP          int           `fig:"max_downloads_per_ip" default:"50"`
 			PingCacheDuration          time.Duration `fig:"ping_cache_duration" default:"5m"`
 			QueriesRunnerInterval      time.Duration `fig:"stored_queries_run_interval" default:"1h"`
 			RequestsQueueSize          int           `fig:"requests_queue_size" default:"500"`

@@ -72,32 +72,34 @@ type ReqQueueEntry struct {
 
 type BackendServer struct {
 	backend_service.BackendServiceServer
-	dbClient        database.DatabaseClient
-	jRunner         javascript.JavascriptRunner
-	qRunner         QueryRunner
-	qRunnerChan     chan bool
-	vtMgr           vt.VTManager
-	whoisMgr        whois.RdapManager
-	alertMgr        *alerting.AlertManager
-	safeRules       *SafeRules
-	maintenanceChan chan bool
-	reqsProcessChan chan bool
-	reqsQueue       chan ReqQueueEntry
-	sessionCache    *util.StringMapCache[models.ContentRule]
-	downloadQueue   map[string][]backend_service.CommandDownloadFile
-	downloadQueueMu sync.Mutex
-	downloadsCache  *util.StringMapCache[time.Time]
-	pingQueue       map[string][]backend_service.CommandPingAddress
-	pingQueueMu     sync.Mutex
-	pingsCache      *util.StringMapCache[time.Time]
-	metrics         *BackendMetrics
-	rateLimiter     ratelimit.RateLimiter
-	ipEventManager  analysis.IpEventManager
-	config          Config
-	llmResponder    responder.Responder
-	sessionMgr      session.SessionManager
-	describer       describer.DescriberClient
-	hCache          *util.StringMapCache[models.Honeypot]
+	dbClient            database.DatabaseClient
+	jRunner             javascript.JavascriptRunner
+	qRunner             QueryRunner
+	qRunnerChan         chan bool
+	vtMgr               vt.VTManager
+	whoisMgr            whois.RdapManager
+	alertMgr            *alerting.AlertManager
+	safeRules           *SafeRules
+	maintenanceChan     chan bool
+	reqsProcessChan     chan bool
+	reqsQueue           chan ReqQueueEntry
+	sessionCache        *util.StringMapCache[models.ContentRule]
+	downloadQueue       map[string][]backend_service.CommandDownloadFile
+	downloadQueueMu     sync.Mutex
+	downloadsCache      *util.StringMapCache[time.Time]
+	downloadsIPCounts   *util.StringMapCache[int64]
+	downloadsIPCountsMu sync.Mutex
+	pingQueue           map[string][]backend_service.CommandPingAddress
+	pingQueueMu         sync.Mutex
+	pingsCache          *util.StringMapCache[time.Time]
+	metrics             *BackendMetrics
+	rateLimiter         ratelimit.RateLimiter
+	ipEventManager      analysis.IpEventManager
+	config              Config
+	llmResponder        responder.Responder
+	sessionMgr          session.SessionManager
+	describer           describer.DescriberClient
+	hCache              *util.StringMapCache[models.Honeypot]
 }
 
 // NewBackendServer creates a new instance of the backend server.
@@ -108,6 +110,11 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	// we get a request with the same download (payload URL) within that time
 	// window then we will not download it again.
 	dCache := util.NewStringMapCache[time.Time]("download_cache", config.Backend.Advanced.DownloadCacheDuration)
+	// Set up the counters for downloads per IP. This is a very basic way of
+	// limiting the amount of downloads an IP can make per 5 minutes.
+	dIPCount := util.NewStringMapCache[int64]("download_ip_counters", time.Minute*5)
+	dIPCount.Start()
+
 	// Same for the ping cache.
 	pCache := util.NewStringMapCache[time.Time]("ping_cache", config.Backend.Advanced.PingCacheDuration)
 
@@ -117,39 +124,55 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	hCache.Start()
 
 	return &BackendServer{
-		dbClient:        c,
-		jRunner:         jRunner,
-		qRunner:         qRunner,
-		qRunnerChan:     make(chan bool),
-		alertMgr:        alertMgr,
-		vtMgr:           vtManager,
-		whoisMgr:        wManager,
-		safeRules:       &SafeRules{},
-		maintenanceChan: make(chan bool),
-		reqsProcessChan: make(chan bool),
-		reqsQueue:       make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
-		downloadQueue:   make(map[string][]backend_service.CommandDownloadFile),
-		downloadsCache:  dCache,
-		pingQueue:       make(map[string][]backend_service.CommandPingAddress),
-		pingsCache:      pCache,
-		sessionCache:    sCache,
-		metrics:         metrics,
-		config:          config,
-		rateLimiter:     rateLimiter,
-		ipEventManager:  ipEventManager,
-		llmResponder:    llmResponder,
-		sessionMgr:      sessionMgr,
-		describer:       describer,
-		hCache:          hCache,
+		dbClient:            c,
+		jRunner:             jRunner,
+		qRunner:             qRunner,
+		qRunnerChan:         make(chan bool),
+		alertMgr:            alertMgr,
+		vtMgr:               vtManager,
+		whoisMgr:            wManager,
+		safeRules:           &SafeRules{},
+		maintenanceChan:     make(chan bool),
+		reqsProcessChan:     make(chan bool),
+		reqsQueue:           make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
+		downloadQueue:       make(map[string][]backend_service.CommandDownloadFile),
+		downloadsCache:      dCache,
+		downloadsIPCounts:   dIPCount,
+		downloadsIPCountsMu: sync.Mutex{},
+		pingQueue:           make(map[string][]backend_service.CommandPingAddress),
+		pingsCache:          pCache,
+		sessionCache:        sCache,
+		metrics:             metrics,
+		config:              config,
+		rateLimiter:         rateLimiter,
+		ipEventManager:      ipEventManager,
+		llmResponder:        llmResponder,
+		sessionMgr:          sessionMgr,
+		describer:           describer,
+		hCache:              hCache,
 	}
 }
 
 func (s *BackendServer) ScheduleDownloadOfPayload(sourceIP string, honeypotIP string, originalUrl string, targetIP string, targetUrl string, hostHeader string, requestID int64) bool {
-
 	_, err := s.downloadsCache.Get(originalUrl)
 	if err == nil {
 		slog.Debug("skipping download as it is in the cache", slog.String("url", originalUrl))
 		return false
+	}
+
+	s.downloadsIPCountsMu.Lock()
+	defer s.downloadsIPCountsMu.Unlock()
+
+	val, err := s.downloadsIPCounts.Get(sourceIP)
+	if err != nil {
+		s.downloadsIPCounts.Store(sourceIP, 1)
+	} else {
+		*val = *val + 1
+		s.downloadsIPCounts.Replace(sourceIP, *val)
+		if *val > int64(s.config.Backend.Advanced.MaxDownloadsPerIP) {
+			slog.Debug("skipping download as IP is over the limit", slog.String("url", originalUrl), slog.String("ip", sourceIP))
+			return false
+		}
 	}
 
 	slog.Debug("adding URL to cache", slog.String("original_url", originalUrl))

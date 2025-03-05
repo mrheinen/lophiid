@@ -549,16 +549,49 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
+	// Create a custom config with a lower MaxDownloadsPerIP for testing
+	config := GetDefaultBackendConfig()
+	config.Backend.Advanced.MaxDownloadsPerIP = 3
+
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, config)
 
 	sourceIP := "1.2.3.4"
+
+	// Test 1: First download should succeed
 	ret := b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
 	if ret != true {
 		t.Errorf("expected true but got %t", ret)
 	}
+
+	// Test 2: Same URL should be rejected (already in cache)
 	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
 	if ret != false {
 		t.Errorf("expected false but got %t", ret)
+	}
+
+	// Test 3: Different URL from same IP should succeed (count = 2)
+	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example2.org", "2.2.2.2", "http://4.4.4.4", "example2.org", 43)
+	if ret != true {
+		t.Errorf("expected true but got %t", ret)
+	}
+
+	// Test 4: Another URL from same IP should succeed (count = 3)
+	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example3.org", "2.2.2.2", "http://4.4.4.4", "example3.org", 44)
+	if ret != true {
+		t.Errorf("expected true but got %t", ret)
+	}
+
+	// Test 5: One more URL from same IP should fail (count = 4, MaxDownloadsPerIP = 3)
+	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example5.org", "2.2.2.2", "http://4.4.4.4", "example5.org", 46)
+	if ret != false {
+		t.Errorf("expected false (IP over limit) but got %t", ret)
+	}
+
+	// Test 6: Different IP should succeed regardless of previous IP's limit
+	differentIP := "5.6.7.8"
+	ret = b.ScheduleDownloadOfPayload(differentIP, "1.1.1.1", "http://example6.org", "2.2.2.2", "http://4.4.4.4", "example6.org", 47)
+	if ret != true {
+		t.Errorf("expected true for different IP but got %t", ret)
 	}
 }
 
@@ -1122,7 +1155,6 @@ func TestSendStatusSendsCommands(t *testing.T) {
 
 	sMetrics := session.CreateSessionMetrics(reg)
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
