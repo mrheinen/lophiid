@@ -149,5 +149,10 @@ func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, 
 		return "", fmt.Errorf("ChatCompletion error: %v", err)
 	}
 
-	return resp.Choices[0].Message.Content, nil
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("chat returned nothing: %v", err)
+	} else {
+		return resp.Choices[0].Message.Content, nil
+	}
+
 }
