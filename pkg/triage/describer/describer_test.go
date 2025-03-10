@@ -73,6 +73,29 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 			expectedEvents: 1,
 		},
 		{
+			name:      "trims json code block markers with malicious content",
+			workCount: 1,
+			descriptions: []models.RequestDescription{
+				{
+					ExampleRequestID: 43,
+					TriageStatus:     constants.TriageStatusTypePending,
+				},
+			},
+			requests: []models.Request{
+				{
+					ID:      43,
+					Uri:     "/test",
+					CmpHash: "hash2",
+					Raw:     "GET /test HTTP/1.1",
+					RuleID:  0,
+				},
+			},
+			llmResponse:    "```json\n{\"description\":\"Malicious request\",\"vulnerability_type\":\"sql_injection\",\"application\":\"web\",\"malicious\":\"yes\"}\n```",
+			expectedCount:  1,
+			expectError:    false,
+			expectedEvents: 1,
+		},
+		{
 			name:           "no pending descriptions",
 			workCount:      1,
 			descriptions:   []models.RequestDescription{},
