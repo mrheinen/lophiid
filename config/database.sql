@@ -403,6 +403,11 @@ CREATE INDEX requests_cmp_ruleuuid_idx ON request (
   rule_uuid
 );
 
+CREATE INDEX requests_starred_idx ON request (
+  starred
+);
+
+
 CREATE INDEX requests_per_created_at ON request (
   created_at desc
 );
