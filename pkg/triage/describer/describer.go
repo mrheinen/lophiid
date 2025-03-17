@@ -134,6 +134,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 	for prompt, completion := range result {
 		var llmResult LLMResult
 
+		completion = strings.TrimSpace(completion)
 		completion = strings.TrimPrefix(completion, "```json")
 		completion = strings.TrimSuffix(completion, "```")
 
