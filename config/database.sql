@@ -60,6 +60,7 @@ CREATE TABLE request (
   honeypot_ip     VARCHAR(40),
   starred         BOOL default FALSE,
   content_dynamic BOOL default FALSE,
+  has_malware     BOOL default FALSE,
   base_hash       VARCHAR(64) DEFAULT '',
   cmp_hash        VARCHAR(64) DEFAULT '',
   content_id      INT,
