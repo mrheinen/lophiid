@@ -21,7 +21,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	github.com/vingarcia/ksql v1.12.3
 	github.com/vingarcia/ksql/adapters/kpgx5 v1.12.3
-	golang.org/x/net v0.33.0
+	golang.org/x/net v0.36.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.36.3
 	gopkg.in/yaml.v3 v3.0.1
