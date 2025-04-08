@@ -135,8 +135,8 @@ func (a *ApiServer) AuthMW(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.Header.Get("API-Key")
 
-		if key != a.apiKey {
-			slog.Error("Did not get a valid API key")
+		if subtle.ConstantTimeCompare([]byte(key), []byte(a.apiKey)) != 1 {
+			slog.Error("Did not get a valid API key. ")
 			http.Error(w, "Authentication error", http.StatusForbidden)
 			return
 		}
