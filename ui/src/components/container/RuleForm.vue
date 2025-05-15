@@ -322,7 +322,7 @@ export default {
       const ruleToSubmit = Object.assign({}, this.localRule);
 
       ruleToSubmit.ports = [];
-      if (ruleToSubmit.parsed.port_field != "") {
+      if (ruleToSubmit.parsed.port_field && ruleToSubmit.parsed.port_field != "") {
 
         for (let port of ruleToSubmit.parsed.port_field.split(",")) {
           var intPort = parseInt(port);
