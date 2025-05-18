@@ -937,6 +937,10 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	}
 
+	if matchedRule.Block {
+		return nil, status.Errorf(codes.PermissionDenied, "Rule blocks request")
+	}
+
 	sReq.ContentID = matchedRule.ContentID
 	sReq.RuleID = matchedRule.ID
 	sReq.AppID = matchedRule.AppID

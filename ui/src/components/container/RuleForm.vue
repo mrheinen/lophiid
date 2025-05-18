@@ -207,6 +207,16 @@
                   />
                 </td>
               </tr>
+              <tr>
+                <th>Block</th>
+                <td>
+                  <CheckBox
+                    inputId="block"
+                    v-model="localRule.block"
+                    :binary="true"
+                  />
+                </td>
+              </tr>
             </table>
           </div>
         </div>
@@ -311,6 +321,7 @@ export default {
         responder: "NONE",
         responder_decoder: "NONE",
         enabled: true,
+        block: false,
         ports: [],
         parsed: {
           port_field: "",
