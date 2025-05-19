@@ -191,10 +191,21 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		log.Printf("unable to process request: %+v", err)
 
 		if st, ok := status.FromError(err); ok {
-			if st.Code() == codes.ResourceExhausted {
-				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte("<html></html>"))
-				return
+			switch st.Code() {
+				case codes.PermissionDenied:
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte("<html></html>"))
+					return
+
+				case codes.ResourceExhausted:
+					w.WriteHeader(http.StatusServiceUnavailable)
+					w.Write([]byte("<html></html>"))
+					return
+
+				default:
+					w.WriteHeader(http.StatusNotFound)
+					w.Write([]byte("<html></html>"))
+					return
 			}
 		} else {
 			w.WriteHeader(http.StatusOK)
