@@ -110,9 +110,111 @@ func TestCatchAllResourceExhausted(t *testing.T) {
 	res := w.Result()
 	defer res.Body.Close()
 
-	// Verify status code is 404
+	// Verify status code is 503 - Service Unavailable
+	if res.StatusCode != http.StatusServiceUnavailable {
+		t.Errorf("expected status code %d, got %d", http.StatusServiceUnavailable, res.StatusCode)
+	}
+
+	// Verify response body
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("reading response body: %s", err)
+	}
+
+	expectedBody := "<html></html>"
+	if string(data) != expectedBody {
+		t.Errorf("expected body %q, got %q", expectedBody, string(data))
+	}
+}
+
+func TestCatchAllPermissionDenied(t *testing.T) {
+	listenAddr := "127.0.0.1:8888"
+
+	// Create a backend client that returns a PermissionDenied error
+	bc := backend.FakeBackendClient{
+		HandleProbeReturnError: status.Error(codes.PermissionDenied, "Rule blocks request"),
+	}
+
+	// Create server and test request
+	s := NewHttpServer(&bc, listenAddr, "127.0.0.1")
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+	s.catchAll(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	// Verify status code is 403 - Forbidden
+	if res.StatusCode != http.StatusForbidden {
+		t.Errorf("expected status code %d, got %d", http.StatusForbidden, res.StatusCode)
+	}
+
+	// Verify response body
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("reading response body: %s", err)
+	}
+
+	expectedBody := "<html></html>"
+	if string(data) != expectedBody {
+		t.Errorf("expected body %q, got %q", expectedBody, string(data))
+	}
+}
+
+func TestCatchAllDefaultError(t *testing.T) {
+	listenAddr := "127.0.0.1:8888"
+
+	// Create a backend client that returns an Unavailable error (not specifically handled)
+	bc := backend.FakeBackendClient{
+		HandleProbeReturnError: status.Error(codes.Unavailable, "Service unavailable"),
+	}
+
+	// Create server and test request
+	s := NewHttpServer(&bc, listenAddr, "127.0.0.1")
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+	s.catchAll(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	// Verify status code is 404 - Not Found (default case)
 	if res.StatusCode != http.StatusNotFound {
 		t.Errorf("expected status code %d, got %d", http.StatusNotFound, res.StatusCode)
+	}
+
+	// Verify response body
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Errorf("reading response body: %s", err)
+	}
+
+	expectedBody := "<html></html>"
+	if string(data) != expectedBody {
+		t.Errorf("expected body %q, got %q", expectedBody, string(data))
+	}
+}
+
+func TestCatchAllNonStatusError(t *testing.T) {
+	listenAddr := "127.0.0.1:8888"
+
+	// Create a backend client that returns a non-status error
+	bc := backend.FakeBackendClient{
+		HandleProbeReturnError: fmt.Errorf("regular error, not a status error"),
+	}
+
+	// Create server and test request
+	s := NewHttpServer(&bc, listenAddr, "127.0.0.1")
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+	s.catchAll(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	// Verify status code is 200 - OK (for non-status errors)
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected status code %d, got %d", http.StatusOK, res.StatusCode)
 	}
 
 	// Verify response body

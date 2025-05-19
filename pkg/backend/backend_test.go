@@ -44,6 +44,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/vingarcia/ksql"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func GetContextWithAuthMetadata() context.Context {
@@ -679,9 +681,10 @@ func TestHandleProbe(t *testing.T) {
 			},
 		},
 		ContentRulesToReturn: []models.ContentRule{
-			{ID: 1, AppID: 42, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-			{ID: 2, AppID: 42, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-			{ID: 3, AppID: 1, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
+			{ID: 1, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			{ID: 2, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			{ID: 3, AppID: 1, Block: false, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
+			{ID: 4, AppID: 5, Block: true, Method: "GET", Port: 80, Uri: "/blocked", UriMatching: "exact", ContentID: 42},
 		},
 	}
 
@@ -845,6 +848,44 @@ func TestHandleProbe(t *testing.T) {
 		if fIpMgr.Events[0].SourceRef != fmt.Sprintf("%d", testSessionId) {
 			t.Fatalf("expected %d, got %s", testSessionId, fIpMgr.Events[0].SourceRef)
 		}
+	})
+
+	t.Run("rule blocks request", func(t *testing.T) {
+		// Reset limiter for this test
+		fakeLimiter.BoolToReturn = true
+		fakeLimiter.ErrorToReturn = nil
+
+		// Set request URI to match our blocking rule
+		probeReq.RequestUri = "/blocked"
+		probeReq.Request.ParsedUrl.Path = "/blocked"
+
+		// Call HandleProbe and verify it returns a PermissionDenied error
+		res, err := b.HandleProbe(ctx, &probeReq)
+
+		// Check that we got the expected error
+		if res != nil {
+			t.Errorf("Expected nil response but got: %v", res)
+		}
+
+		if err == nil {
+			t.Errorf("Expected error but got none")
+		}
+
+		// Check for the specific error code and message
+		statusErr, ok := status.FromError(err)
+		if !ok {
+			t.Errorf("Expected gRPC status error but got: %v", err)
+		}
+
+		if statusErr.Code() != codes.PermissionDenied {
+			t.Errorf("Expected PermissionDenied error but got: %v", statusErr.Code())
+		}
+
+		if statusErr.Message() != "Rule blocks request" {
+			t.Errorf("Expected 'Rule blocks request' in error message but got: %s", statusErr.Message())
+		}
+
+		// No request should be added to the queue for blocked requests
 	})
 }
 
