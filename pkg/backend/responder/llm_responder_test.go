@@ -87,7 +87,7 @@ func TestCommandInjection(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			metrics := llm.CreateLLMMetrics(reg)
 			cache := util.NewStringMapCache[string]("foo", time.Minute)
-			lm := llm.NewLLMManager(&lmClient, cache, metrics, time.Minute, 5)
+			lm := llm.NewLLMManager(&lmClient, cache, metrics, time.Minute, 5, "", "")
 
 			responder := NewLLMResponder(lm, 50)
 			ret, err := responder.Respond(constants.ResponderTypeCommandInjection, test.commandPrompt, test.template)

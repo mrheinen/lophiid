@@ -35,10 +35,12 @@ type LLMClient interface {
 
 type MockLLMClient struct {
 	CompletionToReturn string
+	LastReceivedPrompt string
 	ErrorToReturn      error
 }
 
 func (m *MockLLMClient) Complete(ctx context.Context, prompt string) (string, error) {
+	m.LastReceivedPrompt = prompt
 	return m.CompletionToReturn, m.ErrorToReturn
 }
 

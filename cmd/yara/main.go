@@ -109,7 +109,7 @@ func main() {
 	llmClient := llm.NewOpenAILLMClientWithModel(cfg.AI.ApiKey, cfg.AI.ApiLocation, "", cfg.AI.Model)
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Minute*3, 4)
+	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Minute*3, 4, cfg.AI.PromptPrefix, cfg.AI.PromptSuffix)
 
 	mgr := yara.NewYaraManager(dbc, llmManager, *rulesDir, cfg.Yara.PrepareCommand, metrics)
 

@@ -47,7 +47,7 @@ func main() {
 
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Second*time.Duration(*timeoutSec), 5)
+	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Second*time.Duration(*timeoutSec), 5, "", "")
 	llmResponder := responder.NewLLMResponder(llmManager, *maxInputLength)
 	startTime := time.Now()
 
