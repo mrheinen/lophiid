@@ -19,6 +19,7 @@ package llm
 import (
 	"errors"
 	"lophiid/pkg/util"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ func TestComplete(t *testing.T) {
 
 	metrics := CreateLLMMetrics(pReg)
 
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, "", "")
 	res, err := lm.Complete("aaaa", true)
 
 	if err != nil {
@@ -46,6 +47,55 @@ func TestComplete(t *testing.T) {
 	}
 }
 
+func TestCompleteWithPrefix(t *testing.T) {
+	testPrefix := "PREFIX"
+	testCompletionString := "completion"
+	client := MockLLMClient{CompletionToReturn: testCompletionString, ErrorToReturn: nil}
+	pCache := util.NewStringMapCache[string]("", time.Second)
+	pReg := prometheus.NewRegistry()
+
+	metrics := CreateLLMMetrics(pReg)
+
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, testPrefix, "")
+	res, err := lm.Complete("aaaa", true)
+
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if res != testCompletionString {
+		t.Errorf("expected %s, got %s", testCompletionString, res)
+	}
+
+	if !strings.HasPrefix(client.LastReceivedPrompt, testPrefix) {
+		t.Errorf("expected prompt to start with %s, got %s", testPrefix, client.LastReceivedPrompt)
+	}
+}
+func TestCompleteWithSuffix(t *testing.T) {
+	testSuffix := "SUFFIX"
+	testCompletionString := "completion"
+	client := MockLLMClient{CompletionToReturn: testCompletionString, ErrorToReturn: nil}
+	pCache := util.NewStringMapCache[string]("", time.Second)
+	pReg := prometheus.NewRegistry()
+
+	metrics := CreateLLMMetrics(pReg)
+
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, "", testSuffix)
+	res, err := lm.Complete("aaaa", true)
+
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	if res != testCompletionString {
+		t.Errorf("expected %s, got %s", testCompletionString, res)
+	}
+
+	if !strings.HasSuffix(client.LastReceivedPrompt, testSuffix) {
+		t.Errorf("expected prompt to start with %s, got %s", testSuffix, client.LastReceivedPrompt)
+	}
+}
+
 func TestCompleteErrorCounted(t *testing.T) {
 	testCompletionString := "completion"
 	client := MockLLMClient{CompletionToReturn: testCompletionString, ErrorToReturn: errors.New("beh")}
@@ -54,7 +104,7 @@ func TestCompleteErrorCounted(t *testing.T) {
 
 	metrics := CreateLLMMetrics(pReg)
 
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, "", "")
 	_, err := lm.Complete("aaaa", true)
 
 	if err == nil {
@@ -74,7 +124,7 @@ func TestCompleteMultiple(t *testing.T) {
 	pReg := prometheus.NewRegistry()
 
 	metrics := CreateLLMMetrics(pReg)
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5)
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, "", "")
 
 	prompts := []string{"aaaa", "bbbb"}
 	resMap, err := lm.CompleteMultiple(prompts, true)

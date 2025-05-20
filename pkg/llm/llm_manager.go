@@ -33,16 +33,20 @@ type LLMManager struct {
 	pCache            *util.StringMapCache[string]
 	metrics           *LLMMetrics
 	completionTimeout time.Duration
+	promptPrefix      string
+	promptSuffix      string
 	multiplePoolSize  int
 }
 
-func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metrics *LLMMetrics, completionTimeout time.Duration, poolSize int) *LLMManager {
+func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metrics *LLMMetrics, completionTimeout time.Duration, poolSize int, promptPrefix string, promptSuffix string) *LLMManager {
 	return &LLMManager{
 		client:            client,
 		pCache:            pCache,
 		metrics:           metrics,
 		completionTimeout: completionTimeout,
 		multiplePoolSize:  poolSize,
+		promptPrefix:      promptPrefix,
+		promptSuffix:      promptSuffix,
 	}
 }
 
@@ -89,7 +93,7 @@ func (l *LLMManager) Complete(prompt string, cacheResult bool) (string, error) {
 	defer cancel()
 
 	start := time.Now()
-	retStr, err := l.client.Complete(ctx, prompt)
+	retStr, err := l.client.Complete(ctx, fmt.Sprintf("%s%s%s", l.promptPrefix, prompt, l.promptSuffix))
 
 	if err != nil {
 		slog.Error("error completing prompt", slog.String("prompt", prompt), slog.String("error", err.Error()))
