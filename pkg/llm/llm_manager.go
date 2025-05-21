@@ -36,9 +36,10 @@ type LLMManager struct {
 	promptPrefix      string
 	promptSuffix      string
 	multiplePoolSize  int
+	stripThinking     bool
 }
 
-func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metrics *LLMMetrics, completionTimeout time.Duration, poolSize int, promptPrefix string, promptSuffix string) *LLMManager {
+func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metrics *LLMMetrics, completionTimeout time.Duration, poolSize int, stripThinking bool, promptPrefix string, promptSuffix string) *LLMManager {
 	return &LLMManager{
 		client:            client,
 		pCache:            pCache,
@@ -47,6 +48,7 @@ func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metric
 		multiplePoolSize:  poolSize,
 		promptPrefix:      promptPrefix,
 		promptSuffix:      promptSuffix,
+		stripThinking:     stripThinking,
 	}
 }
 
@@ -102,6 +104,11 @@ func (l *LLMManager) Complete(prompt string, cacheResult bool) (string, error) {
 	}
 
 	l.metrics.llmQueryResponseTime.Observe(time.Since(start).Seconds())
+
+	if l.stripThinking {
+		retStr = util.RemoveThinkingFromResponse(retStr)
+	}
+
 	if cacheResult {
 		l.pCache.Store(prompt, retStr)
 	}

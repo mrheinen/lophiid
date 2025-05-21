@@ -7,6 +7,7 @@ go_library(
         "compare.go",
         "contains.go",
         "general.go",
+        "llm.go",
         "logging.go",
         "net.go",
         "queue.go",
@@ -28,6 +29,7 @@ go_test(
     srcs = [
         "command_test.go",
         "general_test.go",
+        "llm_test.go",
         "net_test.go",
         "string_map_cache_test.go",
         "versioning_test.go",

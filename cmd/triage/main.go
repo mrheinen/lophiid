@@ -91,7 +91,7 @@ func main() {
 
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Minute*3, 4, cfg.AI.PromptPrefix, cfg.AI.PromptSuffix)
+	llmManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Minute*3, 4, true, cfg.AI.PromptPrefix, cfg.AI.PromptSuffix)
 
 	db, err := kpgx.New(context.Background(), cfg.Backend.Database.Url,
 		ksql.Config{

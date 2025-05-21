@@ -130,6 +130,7 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 				llmMetrics,
 				time.Second*10,
 				5,
+				true,
 				"",
 				"",
 			)

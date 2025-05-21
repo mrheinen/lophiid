@@ -206,7 +206,7 @@ func main() {
 		}
 		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
 		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-		llmManager := llm.NewLLMManager(&llmClient, pCache, llmMetrics, cfg.AI.LLMCompletionTimeout, cfg.AI.LLMConcurrentRequests, cfg.AI.PromptPrefix, cfg.AI.PromptSuffix)
+		llmManager := llm.NewLLMManager(&llmClient, pCache, llmMetrics, cfg.AI.LLMCompletionTimeout, cfg.AI.LLMConcurrentRequests, true, cfg.AI.PromptPrefix, cfg.AI.PromptSuffix)
 
 		if cfg.AI.EnableResponder {
 			slog.Info("Creating responder")
