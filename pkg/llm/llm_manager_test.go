@@ -35,7 +35,7 @@ func TestComplete(t *testing.T) {
 
 	metrics := CreateLLMMetrics(pReg)
 
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, "", "")
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, false, "", "")
 	res, err := lm.Complete("aaaa", true)
 
 	if err != nil {
@@ -56,7 +56,7 @@ func TestCompleteWithPrefix(t *testing.T) {
 
 	metrics := CreateLLMMetrics(pReg)
 
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, testPrefix, "")
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, false, testPrefix, "")
 	res, err := lm.Complete("aaaa", true)
 
 	if err != nil {
@@ -80,7 +80,7 @@ func TestCompleteWithSuffix(t *testing.T) {
 
 	metrics := CreateLLMMetrics(pReg)
 
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, "", testSuffix)
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, false, "", testSuffix)
 	res, err := lm.Complete("aaaa", true)
 
 	if err != nil {
@@ -104,7 +104,7 @@ func TestCompleteErrorCounted(t *testing.T) {
 
 	metrics := CreateLLMMetrics(pReg)
 
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, "", "")
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, false, "", "")
 	_, err := lm.Complete("aaaa", true)
 
 	if err == nil {
@@ -124,7 +124,7 @@ func TestCompleteMultiple(t *testing.T) {
 	pReg := prometheus.NewRegistry()
 
 	metrics := CreateLLMMetrics(pReg)
-	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, "", "")
+	lm := NewLLMManager(&client, pCache, metrics, time.Hour, 5, false, "", "")
 
 	prompts := []string{"aaaa", "bbbb"}
 	resMap, err := lm.CompleteMultiple(prompts, true)
@@ -141,5 +141,44 @@ func TestCompleteMultiple(t *testing.T) {
 		if resMap[p] != testCompletionString {
 			t.Errorf("expected %s, got %s", testCompletionString, resMap[p])
 		}
+	}
+}
+
+func TestCompleteWithStripThinking(t *testing.T) {
+	// Create a response with thinking tags that should be stripped
+	responseWithThinking := "I'm thinking about this...\n</think>\nHere is the actual response"
+	expectedResult := "Here is the actual response"
+
+	// Create separate cache and clients for each test to avoid interference
+	// Client for testing with stripThinking=true
+	clientWithStrip := MockLLMClient{CompletionToReturn: responseWithThinking, ErrorToReturn: nil}
+	pCacheWithStrip := util.NewStringMapCache[string]("", time.Second)
+	pReg := prometheus.NewRegistry()
+	metrics := CreateLLMMetrics(pReg)
+
+	// Create an LLMManager with stripThinking set to true
+	lm := NewLLMManager(&clientWithStrip, pCacheWithStrip, metrics, time.Hour, 5, true, "", "")
+	res, err := lm.Complete("test prompt", true)
+
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
+	// Verify that the thinking section was removed
+	if res != expectedResult {
+		t.Errorf("expected %q after stripping thinking, got %q", expectedResult, res)
+	}
+
+	// Create a separate client for testing without stripping thinking
+	clientNoStrip := MockLLMClient{CompletionToReturn: responseWithThinking, ErrorToReturn: nil}
+	pCacheNoStrip := util.NewStringMapCache[string]("", time.Second)
+	
+	// Create an LLMManager with stripThinking set to false
+	lmNoStrip := NewLLMManager(&clientNoStrip, pCacheNoStrip, metrics, time.Hour, 5, false, "", "")
+	resNoStrip, _ := lmNoStrip.Complete("test prompt", true)
+
+	// Verify that the thinking section was preserved
+	if resNoStrip != responseWithThinking {
+		t.Errorf("expected original response %q when not stripping thinking, got %q", responseWithThinking, resNoStrip)
 	}
 }
