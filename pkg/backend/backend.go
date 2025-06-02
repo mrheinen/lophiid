@@ -903,7 +903,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 		s.ipEventManager.AddEvent(evt)
 
-		slog.Debug("ratelimiter blocked request", slog.String("ip", sReq.SourceIP), slog.String("honeypoyt", sReq.HoneypotIP), slog.String("error", err.Error()))
+		slog.Debug("ratelimiter blocked request", slog.String("ip", sReq.SourceIP), slog.String("honeypot", sReq.HoneypotIP), slog.String("error", err.Error()))
 		return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
 	}
 
