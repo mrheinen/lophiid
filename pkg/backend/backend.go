@@ -903,7 +903,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 		s.ipEventManager.AddEvent(evt)
 
-		slog.Debug("ratelimiter blocked request", slog.String("error", err.Error()))
+		slog.Debug("ratelimiter blocked request", slog.String("ip", sReq.SourceIP), slog.String("honeypot", sReq.HoneypotIP), slog.String("error", err.Error()))
 		return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
 	}
 
@@ -964,6 +964,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	slog.Debug("Fetching content", slog.Int64("content_id", matchedRule.ContentID))
 	content, err := s.dbClient.GetContentByID(matchedRule.ContentID)
 	if err != nil {
+		slog.Error("error getting content", slog.String("honeypot", sReq.HoneypotIP), slog.Int64("content_id", matchedRule.ContentID), slog.String("error", err.Error()))
 		return nil, status.Errorf(codes.Unavailable, "fetching content ID %d: %s", matchedRule.ContentID, err)
 	}
 

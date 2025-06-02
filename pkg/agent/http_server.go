@@ -19,7 +19,6 @@ package agent
 import (
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"lophiid/backend_service"
 	"lophiid/pkg/backend"
@@ -188,24 +187,24 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.client.HandleProbeRequest(pr)
 	if err != nil {
-		log.Printf("unable to process request: %+v", err)
+		slog.Error("unable to process request", slog.String("error", err.Error()))
 
 		if st, ok := status.FromError(err); ok {
 			switch st.Code() {
-				case codes.PermissionDenied:
-					w.WriteHeader(http.StatusForbidden)
-					w.Write([]byte("<html></html>"))
-					return
+			case codes.PermissionDenied:
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte("<html></html>"))
+				return
 
-				case codes.ResourceExhausted:
-					w.WriteHeader(http.StatusServiceUnavailable)
-					w.Write([]byte("<html></html>"))
-					return
+			case codes.ResourceExhausted:
+				w.WriteHeader(http.StatusServiceUnavailable)
+				w.Write([]byte("<html></html>"))
+				return
 
-				default:
-					w.WriteHeader(http.StatusNotFound)
-					w.Write([]byte("<html></html>"))
-					return
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("<html></html>"))
+				return
 			}
 		} else {
 			w.WriteHeader(http.StatusOK)

@@ -49,6 +49,7 @@ type FakeDatabaseClient struct {
 	DataModelToReturn           models.DataModel
 	SessionToReturn             models.Session
 	RequestDescriptionsToReturn []models.RequestDescription
+	MetadataToReturn            []models.RequestMetadata
 	YarasToReturn               []models.Yara
 	SimpleQueryResult           interface{}
 }
@@ -80,7 +81,7 @@ func (f *FakeDatabaseClient) Delete(dm models.DataModel) error {
 	return f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error) {
-	return []models.RequestMetadata{}, f.ErrorToReturn
+	return f.MetadataToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchRequests(offset int64, limit int64, query string) ([]models.Request, error) {
 	return f.RequestsToReturn, f.ErrorToReturn
