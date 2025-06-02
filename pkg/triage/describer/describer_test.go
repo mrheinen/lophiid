@@ -19,6 +19,7 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 		workCount      int64
 		descriptions   []models.RequestDescription
 		requests       []models.Request
+		metadata       []models.RequestMetadata
 		llmResponse    string
 		llmError       error
 		updateErr      error
@@ -103,6 +104,36 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 			expectError:    false,
 			expectedEvents: 0,
 		},
+		{
+			name:      "with base64 metadata",
+			workCount: 1,
+			descriptions: []models.RequestDescription{
+				{
+					ExampleRequestID: 44,
+					TriageStatus:     constants.TriageStatusTypePending,
+				},
+			},
+			requests: []models.Request{
+				{
+					ID:      44,
+					Uri:     "/test-base64",
+					CmpHash: "hash3",
+					Raw:     "GET /test-base64 HTTP/1.1",
+					RuleID:  0,
+				},
+			},
+			metadata: []models.RequestMetadata{
+				{
+					RequestID: 44,
+					Type:      constants.ExtractorTypeBase64,
+					Data:      "Decoded base64 content for testing",
+				},
+			},
+			llmResponse:    `{"description":"Test with base64 data","vulnerability_type":"base64_injection","application":"web","malicious":"yes"}`,
+			expectedCount:  1,
+			expectError:    false,
+			expectedEvents: 1,
+		},
 	}
 
 	reg := prometheus.NewRegistry()
@@ -114,6 +145,7 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 			mockDB := &database.FakeDatabaseClient{
 				RequestDescriptionsToReturn: tt.descriptions,
 				RequestsToReturn:            tt.requests,
+				MetadataToReturn:            tt.metadata,
 				ErrorToReturn:               tt.updateErr,
 			}
 

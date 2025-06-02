@@ -59,13 +59,21 @@ type LLMResult struct {
 const LLMSystemPrompt = `
 Analyze the provided HTTP request. Your response needs to be a raw JSON object that is not formatted for displaying, without any text outside the JSON, that has the following keys:
 
-description: One paragraph describing the intent of the request, if it is malicious and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports.
+description: One or two paragraphs describing the intent of the request, if it is malicious and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports.
 malicious: Use the string "yes" if the request is malicious. Else "no".
 vulnerability_type: A string containing the Mitre CWE ID, starting with "CWE-" for the main weakness being exploited. Use an empty string if you don't know.
 application: A string with the targetted application/device name. An empty string if you don't know.
 cve: The relevant CVE if you know what vulnerability is exploited. An empty string if you don't know.
 
 The request was:
+`
+
+const LLMBase64MetaPrompt = `
+
+That was the request. Now the following information was found in the base64 encoded string that is in the request. We decoded it for you so you have a better understanding of that the request and this payload are trying to achieve:
+
+%s
+
 `
 
 func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
@@ -105,13 +113,30 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 			continue
 		}
 
+		base64data := ""
+		mds, err := b.dbClient.GetMetadataByRequestID(desc.ExampleRequestID)
+		if len(mds) > 1 {
+
+			for _, md := range mds {
+				if md.Type == constants.ExtractorTypeBase64 {
+					base64data = md.Data
+				}
+			}
+
+		}
+
 		if len(reqs) == 0 {
 			slog.Error("failed to get request", slog.Int64("id", desc.ExampleRequestID))
 			continue
 		}
 
 		slog.Debug("Describing request for URI", slog.String("uri", reqs[0].Uri), slog.String("hash", reqs[0].CmpHash))
+
 		prompt := fmt.Sprintf("%s\n%s", LLMSystemPrompt, reqs[0].Raw)
+		if base64data != "" {
+			prompt = fmt.Sprintf("%s\n%s\n%s\n%s", LLMSystemPrompt, reqs[0].Raw, LLMBase64MetaPrompt, base64data)
+		}
+
 		prompts = append(prompts, prompt)
 
 		promptMap[prompt] = &QueueEntry{
