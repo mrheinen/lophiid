@@ -113,21 +113,25 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 			continue
 		}
 
-		base64data := ""
-		mds, err := b.dbClient.GetMetadataByRequestID(desc.ExampleRequestID)
-		if len(mds) > 1 {
-
-			for _, md := range mds {
-				if md.Type == constants.ExtractorTypeBase64 {
-					base64data = md.Data
-				}
-			}
-
-		}
-
 		if len(reqs) == 0 {
 			slog.Error("failed to get request", slog.Int64("id", desc.ExampleRequestID))
 			continue
+		}
+
+		base64data := ""
+		mds, err := b.dbClient.GetMetadataByRequestID(desc.ExampleRequestID)
+		if err != nil {
+			slog.Error("failed to get metadata", slog.Int64("id", desc.ExampleRequestID), slog.String("error", err.Error()))
+			continue
+		}
+
+		for _, md := range mds {
+			if md.Type == constants.ExtractorTypeBase64 {
+				// If there are multiple, we want to take the longest string
+				if len(md.Data) > len(base64data) {
+					base64data = md.Data
+				}
+			}
 		}
 
 		slog.Debug("Describing request for URI", slog.String("uri", reqs[0].Uri), slog.String("hash", reqs[0].CmpHash))
