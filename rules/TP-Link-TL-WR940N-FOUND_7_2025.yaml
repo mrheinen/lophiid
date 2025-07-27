@@ -1,0 +1,339 @@
+app:
+    id: 174
+    name: TL-WR940N
+    version: FOUND:7/2025
+    vendor: TP-Link
+    os: Linux
+    link: https://www.cve.org/CVERecord?id=CVE-2023-33538
+    created_at: 2025-07-27T14:12:16.453977Z
+    updated_at: 2025-07-27T14:12:16.453854Z
+    ext_version: 0
+    ext_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+    cves:
+        - CVE-2023-33538
+rules:
+    - id: 912
+      uri: /login/loginButton.png
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 908
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: dd78367c-9ec0-452a-95db-c6db9f89b6d8
+      created_at: 2025-07-27T14:12:24.933697Z
+      updated_at: 2025-07-27T14:12:24.933632Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: ce2f8f6d-94a0-457b-b20c-89cc5a3155a1
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 911
+      uri: /login/input-box.png
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 907
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: 58305597-4241-4f2f-b497-699b0ebb976e
+      created_at: 2025-07-27T14:12:24.641955Z
+      updated_at: 2025-07-27T14:12:24.641776Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: e92a4690-f77c-4d95-9508-4c4ab527135a
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 910
+      uri: /login/password.png
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 906
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: 8ed05a56-0804-4902-8e1f-d85a6aea392d
+      created_at: 2025-07-27T14:12:24.374405Z
+      updated_at: 2025-07-27T14:12:24.37423Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 3c16af70-48e3-455c-a3ed-2e78f9a99dc0
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 909
+      uri: /login/username.png
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 905
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: cbd71f35-2a46-4222-b1fc-8e7adac67c6e
+      created_at: 2025-07-27T14:12:24.127138Z
+      updated_at: 2025-07-27T14:12:24.127083Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: c867e9dc-b76f-4d12-b80b-ed2bda5fe03c
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 908
+      uri: /login/top-right.png
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 904
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: 5d287592-ed40-4531-b68c-af21e407ae2d
+      created_at: 2025-07-27T14:12:23.867478Z
+      updated_at: 2025-07-27T14:12:23.867382Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 8f6b57d4-f7e9-4522-8340-04dfcc2042a2
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 907
+      uri: /login/logo.png
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 903
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: f2209064-b0aa-465a-99b2-4d8567679394
+      created_at: 2025-07-27T14:12:23.640668Z
+      updated_at: 2025-07-27T14:12:23.640535Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 8baff5dc-388f-4deb-a0ef-ac8ed67edb5a
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 906
+      uri: /login/login.css
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 902
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: 69b1a692-ff09-4489-95d9-037f1d918354
+      created_at: 2025-07-27T14:12:23.39259Z
+      updated_at: 2025-07-27T14:12:23.392518Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 45f8e309-3ed5-4b71-aa11-4ba5f5d86282
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 905
+      uri: /login/encrypt.js
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 901
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: 3d41ac18-5b91-4902-80b9-1095dfd28506
+      created_at: 2025-07-27T14:12:23.142093Z
+      updated_at: 2025-07-27T14:12:23.141988Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 91974c7b-f9b2-4ae6-b7e4-e2e3dcea6b0f
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 904
+      uri: /
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 900
+      app_id: 174
+      app_uuid: 6524c1d3-f1c3-47d4-8c0b-29e96e68d96b
+      content_uuid: 1f2b7edf-4a50-4fbf-8b3c-c2eddf4cfd2d
+      created_at: 2025-07-27T14:12:22.899295Z
+      updated_at: 2025-07-27T14:12:22.899219Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 28fa6a41-01f7-475e-9f1b-fda56ee9cff7
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 902
+      data: PGhyPjxoMT48Qj5Zb3UgaGF2ZSBubyBhdXRob3JpdHkgdG8gYWNjZXNzIHRoaXMgcm91dGVyITwvQj48L2gxPjxocj4=
+      name: TL-WR940N - /login/login.css
+      description: 'Fetched from URL: http://example.com/login/login.css'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:23.36624Z
+      updated_at: 2025-07-27T14:12:23.366092Z
+      ext_version: 0
+      ext_uuid: 69b1a692-ff09-4489-95d9-037f1d918354
+    - id: 901
+      data: PGhyPjxoMT48Qj5Zb3UgaGF2ZSBubyBhdXRob3JpdHkgdG8gYWNjZXNzIHRoaXMgcm91dGVyITwvQj48L2gxPjxocj4=
+      name: TL-WR940N - /login/encrypt.js
+      description: 'Fetched from URL: http://example.com/login/encrypt.js'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:23.116281Z
+      updated_at: 2025-07-27T14:12:23.116188Z
+      ext_version: 0
+      ext_uuid: 3d41ac18-5b91-4902-80b9-1095dfd28506
+    - id: 908
+      data: PGhyPjxoMT48Qj5Zb3UgaGF2ZSBubyBhdXRob3JpdHkgdG8gYWNjZXNzIHRoaXMgcm91dGVyITwvQj48L2gxPjxocj4=
+      name: TL-WR940N - /login/loginButton.png
+      description: 'Fetched from URL: http://example.com/login/loginButton.png'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:24.896523Z
+      updated_at: 2025-07-27T14:12:24.896298Z
+      ext_version: 0
+      ext_uuid: dd78367c-9ec0-452a-95db-c6db9f89b6d8
+    - id: 907
+      data: PGhyPjxoMT48Qj5Zb3UgaGF2ZSBubyBhdXRob3JpdHkgdG8gYWNjZXNzIHRoaXMgcm91dGVyITwvQj48L2gxPjxocj4=
+      name: TL-WR940N - /login/input-box.png
+      description: 'Fetched from URL: http://example.com/login/input-box.png'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:24.609886Z
+      updated_at: 2025-07-27T14:12:24.609678Z
+      ext_version: 0
+      ext_uuid: 58305597-4241-4f2f-b497-699b0ebb976e
+    - id: 906
+      data: PGhyPjxoMT48Qj5Zb3UgaGF2ZSBubyBhdXRob3JpdHkgdG8gYWNjZXNzIHRoaXMgcm91dGVyITwvQj48L2gxPjxocj4=
+      name: TL-WR940N - /login/password.png
+      description: 'Fetched from URL: http://example.com/login/password.png'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:24.346602Z
+      updated_at: 2025-07-27T14:12:24.34649Z
+      ext_version: 0
+      ext_uuid: 8ed05a56-0804-4902-8e1f-d85a6aea392d
+    - id: 905
+      data: PGhyPjxoMT48Qj5Zb3UgaGF2ZSBubyBhdXRob3JpdHkgdG8gYWNjZXNzIHRoaXMgcm91dGVyITwvQj48L2gxPjxocj4=
+      name: TL-WR940N - /login/username.png
+      description: 'Fetched from URL: http://example.com/login/username.png'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:24.101293Z
+      updated_at: 2025-07-27T14:12:24.101204Z
+      ext_version: 0
+      ext_uuid: cbd71f35-2a46-4222-b1fc-8e7adac67c6e
+    - id: 904
+      data: PGhyPjxoMT48Qj5Zb3UgaGF2ZSBubyBhdXRob3JpdHkgdG8gYWNjZXNzIHRoaXMgcm91dGVyITwvQj48L2gxPjxocj4=
+      name: TL-WR940N - /login/top-right.png
+      description: 'Fetched from URL: http://example.com/login/top-right.png'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:23.840385Z
+      updated_at: 2025-07-27T14:12:23.840276Z
+      ext_version: 0
+      ext_uuid: 5d287592-ed40-4531-b68c-af21e407ae2d
+    - id: 903
+      data: PGhyPjxoMT48Qj5Zb3UgaGF2ZSBubyBhdXRob3JpdHkgdG8gYWNjZXNzIHRoaXMgcm91dGVyITwvQj48L2gxPjxocj4=
+      name: TL-WR940N - /login/logo.png
+      description: 'Fetched from URL: http://example.com/login/logo.png'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:23.614907Z
+      updated_at: 2025-07-27T14:12:23.614843Z
+      ext_version: 0
+      ext_uuid: f2209064-b0aa-465a-99b2-4d8567679394
+    - id: 900
+      data: PCFET0NUWVBFIGh0bWw+CjxNRVRBIGh0dHAtZXF1aXY9Q29udGVudC1UeXBlIGNvbnRlbnQ9InRleHQvaHRtbDsgY2hhcnNldD1pc28tODg1OS0xIj4KPEhUTUw+CjxIRUFEPjxUSVRMRT5UTC1XUjk0ME48L1RJVExFPgo8TUVUQSBodHRwLWVxdWl2PVByYWdtYSBjb250ZW50PW5vLWNhY2hlPgo8TUVUQSBodHRwLWVxdWl2PUV4cGlyZXMgY29udGVudD0id2VkLCAyNiBGZWIgMTk5NyAwODoyMTo1NyBHTVQiPgo8U0NSSVBUIGxhbmd1YWdlPSJqYXZhc2NyaXB0IiB0eXBlPSJ0ZXh0L2phdmFzY3JpcHQiPjwhLS0KLy8tLT48L1NDUklQVD4KPCFET0NUWVBFIGh0bWw+CjxTQ1JJUFQgbGFuZ3VhZ2U9ImphdmFzY3JpcHQiIHR5cGU9InRleHQvamF2YXNjcmlwdCI+CnZhciBodHRwQXV0RXJyb3JBcnJheSA9IG5ldyBBcnJheSgKMywgMSwgIi8vIiwgMCwwICk7CjwvU0NSSVBUPgo8IURPQ1RZUEUgaHRtbD4KPFNDUklQVCBsYW5ndWFnZT0iamF2YXNjcmlwdCIgdHlwZT0idGV4dC9qYXZhc2NyaXB0Ij4KdmFyIGZyYW1lUXJQYXJhID0gbmV3IEFycmF5KAowLAowLDAgKTsKPC9TQ1JJUFQ+CjwhRE9DVFlQRSBodG1sPgo8U0NSSVBUIGxhbmd1YWdlPSJqYXZhc2NyaXB0IiB0eXBlPSJ0ZXh0L2phdmFzY3JpcHQiPgp2YXIgZnJhbWVOb3RlVFBsb2dpbiA9IG5ldyBBcnJheSgKMCwKImh0dHA6Ly93d3cudHBsaW5rbG9naW4ubmV0IiwKMCwwICk7CjwvU0NSSVBUPgoKPFNDUklQVCBsYW5ndWFnZT0iamF2YXNjcmlwdCIgdHlwZT0idGV4dC9qYXZhc2NyaXB0Ij4KaWYod2luZG93LnBhcmVudCAhPSB3aW5kb3cpCnsKCWRvY3VtZW50LmNvb2tpZSA9ICJBdXRob3JpemF0aW9uPTtwYXRoPS8iOwkKCXdpbmRvdy5wYXJlbnQubG9jYXRpb24uaHJlZiA9IGh0dHBBdXRFcnJvckFycmF5WzJdOwp9CjwvU0NSSVBUPgo8c2NyaXB0IHR5cGU9InRleHQvamF2YXNjcmlwdCIgc3JjPSIuLi9sb2dpbi9lbmNyeXB0LmpzIiAvPjwvc2NyaXB0Pgo8bGluayByZWw9InN0eWxlc2hlZXQiICB0eXBlPSJ0ZXh0L2NzcyIgIGhyZWY9Ii4uL2xvZ2luL2xvZ2luLmNzcyI+PC9saW5rPgo8c2NyaXB0IHR5cGU9InRleHQvamF2YXNjcmlwdCI+CmZ1bmN0aW9uIENoZWNrVXNlclBzd0NoYXJzKHN6VmFsdWUpCnsKCXZhciByZWcgPSAvXltceDIxLVx4N2VdKyQvOwkKCWlmKChzelZhbHVlLmxlbmd0aCA+IDApICYmIHJlZy50ZXN0KHN6VmFsdWUpKQoJewoJCXJldHVybiB0cnVlOwoJfQkKCXJldHVybiBmYWxzZTsKfQoKZnVuY3Rpb24gQ2hlY2tVc2VyUHN3SW52YWxpZCgpCnsKCXZhciB1c2VyTmFtZSA9ICQoInVzZXJOYW1lIik7Cgl2YXIgcGNQYXNzd29yZCA9ICQoInBjUGFzc3dvcmQiKTsJCgkKCWlmKCFDaGVja1VzZXJQc3dDaGFycyh1c2VyTmFtZS52YWx1ZSkpCgl7CgkJdXNlck5hbWUuc2VsZWN0KCk7CgkJdXNlck5hbWUuZm9jdXMoKTsKCQlyZXR1cm4gZmFsc2U7CQoJfQoJCglpZighQ2hlY2tVc2VyUHN3Q2hhcnMocGNQYXNzd29yZC52YWx1ZSkpCgl7CgkJcGNQYXNzd29yZC5zZWxlY3QoKTsKCQlwY1Bhc3N3b3JkLmZvY3VzKCk7CgkJcmV0dXJuIGZhbHNlOwkKCX0KCQoJcmV0dXJuIHRydWU7Cn0KCmZ1bmN0aW9uIFJlc2V0VXNlclBzdyhlbGVtZW50TmFtZSkKewoJJChlbGVtZW50TmFtZSkudmFsdWUgPSAiIjsKCSQoZWxlbWVudE5hbWUpLmZvY3VzKCk7Cn0KCmZ1bmN0aW9uIFBDV2luKGV2ZW50KQp7CQoJaWYgKGV2ZW50LmtleUNvZGUgPT0gMTMpCgl7CgkJUENTdWJXaW4oKTsKCX0KfQoKZnVuY3Rpb24gUENTdWJXaW4oKQp7CglpZigoaHR0cEF1dEVycm9yQXJyYXlbMF0gPT0gMikgfHwgKGh0dHBBdXRFcnJvckFycmF5WzBdID09IDMpKQoJewoJCWlmKHRydWUgPT0gQ2hlY2tVc2VyUHN3SW52YWxpZCgpKQoJCXsKCQkJdmFyIHVzZXJuYW1lID0gJCgidXNlck5hbWUiKS52YWx1ZTsJCQkJCgkJCXZhciBwYXNzd29yZCA9ICQoInBjUGFzc3dvcmQiKS52YWx1ZTsJCgkJCWlmKGh0dHBBdXRFcnJvckFycmF5WzFdID09IDEpCgkJCXsKCQkJCXBhc3N3b3JkID0gaGV4X21kNSgkKCJwY1Bhc3N3b3JkIikudmFsdWUpOwkKCQkJfQkJCQoJCQl2YXIgYXV0aCA9ICJCYXNpYyAiKyBCYXNlNjRFbmNvZGluZyh1c2VybmFtZSArICI6IiArIHBhc3N3b3JkKTsKCQkJZG9jdW1lbnQuY29va2llID0gIkF1dGhvcml6YXRpb249Iitlc2NhcGUoYXV0aCkrIjtwYXRoPS8iOwoJCQkvL2xvY2F0aW9uLmhyZWYgPSIvdXNlclJwbS9Mb2dpblJwbS5odG0/U2F2ZT1TYXZlIjsKCQkJJCgibG9naW5Gb3JtIikuc3VibWl0KCk7CgkJCXJldHVybiB0cnVlOwoJCX0KCQllbHNlCgkJewoJCQkkKCJub3RlIikuaW5uZXJIVE1MID0gIk5PVEU6IjsKCQkJJCgidGlwIikuaW5uZXJIVE1MID0gIlVzZXJuYW1lIGFuZCBwYXNzd29yZCBjYW4gY29udGFpbiBiZXR3ZWVuIDEgLSAxNSBjaGFyYWN0ZXJzIGFuZCBtYXkgbm90IGluY2x1ZGUgc3BhY2VzLiI7CQoJCX0KCX0KCXJldHVybiBmYWxzZTsKfQoKZnVuY3Rpb24gdyhzdHIpCnsKCWRvY3VtZW50LndyaXRlKHN0cik7Cn0KCmZ1bmN0aW9uICQoaWQpCnsKCXJldHVybiBkb2N1bWVudC5nZXRFbGVtZW50QnlJZChpZCk7Cn0KCmZ1bmN0aW9uIHNldEVsZW1lbnRTdHlsZShiU2hvdykKewoJdmFyIHVuTGkgPSAkKCJ1bkxpIik7Cgl2YXIgcHdMaSA9ICQoInB3TGkiKTsKCXZhciB1c2VyTmFtZSA9ICQoInVzZXJOYW1lIik7Cgl2YXIgcGNQYXNzd29yZCA9ICQoInBjUGFzc3dvcmQiKTsKCXZhciBsb2dpbkJ0biA9ICQoImxvZ2luQnRuIik7CgoJaWYoYlNob3cpCgl7CgkJJCgidXNlck5hbWUiKS5zdHlsZS5kaXNwbGF5ID0gIiI7CgkJJCgicGNQYXNzd29yZCIpLnN0eWxlLmRpc3BsYXkgPSAiIjsKCi8vCQnmlrBWSeS4reayoeW/heimgei/meagt+iuvue9rmJhY2tncm91bmQKLy8JCXBjUGFzc3dvcmQub25mb2N1cyA9IGZ1bmN0aW9uKCl7Ci8vCQkJcHdMaS5zdHlsZS5iYWNrZ3JvdW5kID0gInVybCguLi9sb2dpbi9sb2dpblB3ZEgucG5nKSI7Ci8vCQl9OwovLwkJcGNQYXNzd29yZC5vbmJsdXIgPSBmdW5jdGlvbigpewovLwkJCXB3TGkuc3R5bGUuYmFja2dyb3VuZCA9ICJ1cmwoLi4vbG9naW4vbG9naW5Qd2QucG5nKSI7Ci8vCQl9OwovLwovLwkJdXNlck5hbWUub25mb2N1cyA9IGZ1bmN0aW9uKCl7Ci8vCQkJdW5MaS5zdHlsZS5iYWNrZ3JvdW5kID0gInVybCguLi9sb2dpbi9sb2dpblVzZXJILnBuZykiOwovLwkJfTsKLy8JCXVzZXJOYW1lLm9uYmx1ciA9IGZ1bmN0aW9uKCl7Ci8vCQkJdW5MaS5zdHlsZS5iYWNrZ3JvdW5kID0gInVybCguLi9sb2dpbi9sb2dpblVzZXIucG5nKSI7Ci8vCQl9OwovLwovLwkJbG9naW5CdG4ub25tb3VzZW92ZXIgPSBmdW5jdGlvbigpewovLwkJCWxvZ2luQnRuLnN0eWxlLmJhY2tncm91bmQgPSAidXJsKC4uL2xvZ2luL2xvZ2luQnRuSC5wbmcpIjsKLy8JCX07Ci8vCQlsb2dpbkJ0bi5vbm1vdXNlb3V0ID0gZnVuY3Rpb24oKXsKLy8JCQlsb2dpbkJ0bi5zdHlsZS5iYWNrZ3JvdW5kID0gInVybCguLi9sb2dpbi9sb2dpbkJ0bi5wbmcpIjsKLy8JCX07CgoJCSQoInVzZXJOYW1lIikuZm9jdXMoKTsKCX0KCWVsc2UKCXsKCQkkKCJ1c2VyTmFtZSIpLnN0eWxlLmRpc3BsYXkgPSAibm9uZSI7CgkJJCgicGNQYXNzd29yZCIpLnN0eWxlLmRpc3BsYXkgPSAibm9uZSI7Cgl9Cn0KCmZ1bmN0aW9uIHBhZ2VMb2FkKCkKewoJdmFyIGNvdW50ID0gMTQsIHRpcCA9ICQoInRpcCIpLCBub3RlID0gJCgibm90ZSIpOwkKCXZhciBtaW4gPSAwLCBzZWMgPSAwOwoJZG9jdW1lbnQuY29va2llID0gIkF1dGhvcml6YXRpb249O3BhdGg9LyI7CQoJCQoJaWYod2luZG93LnBhcmVudCAhPSB3aW5kb3cpCgl7CgkJd2luZG93LnBhcmVudC5sb2NhdGlvbi5yZWxvYWQoKTsKCX0KCXZhciBFcnJOdW0gPSBodHRwQXV0RXJyb3JBcnJheVswXTsgCglzd2l0Y2goRXJyTnVtKQoJewoJCWNhc2UgMDoKCQkJbm90ZS5pbm5lckhUTUwgPSAiTk9URToiOwoJCQl0aXAuaW5uZXJIVE1MID0gIlRoZSByb3V0ZXIgYWxsb3dzIG9ubHkgb25lIGFkbWluaXN0cmF0b3IgdG8gbG9naW4gYXQgdGhlIHNhbWUgdGltZSwgcGxlYXNlIHRyeSBhZ2FpbiBsYXRlci4iOwkKCQkJc2V0RWxlbWVudFN0eWxlKGZhbHNlKTsKCQlicmVhazsKCQljYXNlIDE6CQoJCQlub3RlLmlubmVySFRNTCA9ICJOT1RFOiI7CgkJCXRpcC5pbm5lckhUTUwgPSAiWW91IGhhdmUgZXhjZWVkZWQgdGVuIGF0dGVtcHRzLCBwbGVhc2UgdHJ5IGFnYWluIGFmdGVyIHR3byBob3Vycy4iOwkKCQkJc2V0RWxlbWVudFN0eWxlKGZhbHNlKTsKCQlicmVhazsKCQljYXNlIDI6CgkJCW5vdGUuaW5uZXJIVE1MID0gIk5PVEU6IjsKCQkJdGlwLmlubmVySFRNTCA9ICJUaGUgdXNlcm5hbWUgb3IgcGFzc3dvcmQgaXMgaW5jb3JyZWN0LCBwbGVhc2UgaW5wdXQgYWdhaW4uIjsKCQkJc2V0RWxlbWVudFN0eWxlKHRydWUpOwoJCWJyZWFrOwoJCWNhc2UgMzoKCQlkZWZhdWx0OgoJCQl0aXAuaW5uZXJIVE1MID0gIiI7CgkJCW5vdGUuaW5uZXJIVE1MID0gIiI7CgkJCXNldEVsZW1lbnRTdHlsZSh0cnVlKTsKCQlicmVhazsKCX0KfQo8L3NjcmlwdD4KPC9oZWFkPgo8Ym9keSBvbmtleXByZXNzPSJQQ1dpbihldmVudCkiIG9ubG9hZD0icGFnZUxvYWQoKSI+Cgk8ZGl2IGNsYXNzPSJ0b3BMb2dvIiBpZD0idG9wTG9nbyI+Cgk8dGFibGUgY2VsbHNwYWNpbmc9MCB3aWR0aD0iMTAwJSI+CiAgICAgICAgPHRyPgogICAgICAgICAgICA8dGQ+CiAgICAgICAgICAgICAgICA8dGFibGUgYm9yZGVyPSIwIiBjZWxsc3BhY2luZz0iMCIgd2lkdGg9IjEwMCUiPgogICAgICAgICAgICAgICAgICAgIDx0cj4KICAgICAgICAgICAgICAgICAgICAgICAgPHRkIGlkPSJmaXJzdC10ZCI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8YSBPbkNsaWNrPSJyZXR1cm4gTmV3VygpOyIgb25Nb3VzZU92ZXI9InJldHVybiBTaG93VXJsKCk7IiBvbk1vdXNlT3V0PSJyZXR1cm4gRXJhc2VVcmwoKTsiPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxpbWcgc3JjPSIuLi9sb2dpbi9sb2dvLnBuZyI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L2E+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvdGQ+CiAgICAgICAgICAgICAgICAgICAgICAgIDx0ZCBpZD0ic2Vjb25kLXRkIj4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDx0YWJsZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8dHI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDx0ZCBjbGFzcz0ic3R5bGUxIj40NTBNIFdpcmVsZXNzIE4gUm91dGVyPC90ZD4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3RyPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDx0cj4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPHRkIGNsYXNzPSJzdHlsZTIiPk1vZGVsIE5vLiBUTC1XUjk0ME48L3RkPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvdHI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3RhYmxlPgogICAgICAgICAgICAgICAgICAgICAgICA8L3RkPgoJCQkJCQk8dGQgaWQ9InRoaXJkLXRkIj4KCQkJCQkJCTxpbWcgc3JjPSIuLi9sb2dpbi90b3AtcmlnaHQucG5nIj4KCQkJCQkJPC90ZD4KICAgICAgICAgICAgICAgICAgICA8L3RyPgogICAgICAgICAgICAgICAgPC90YWJsZT4KICAgICAgICAgICAgPC90ZD4KICAgICAgICA8L3RyPgogICAgICAgIDwhLS08dHI+LS0+CiAgICAgICAgICAgIDwhLS08dGQ+LS0+CiAgICAgICAgICAgICAgICA8IS0tPElNRyBoZWlnaHQ9MyBzcmM9Ii4uL2ltYWdlcy90b3AyLmpwZyIgd2lkdGg9IjEwMCUiIGFsaWduPXRvcCBib3JkZXI9MD4tLT4KICAgICAgICAgICAgPCEtLTwvdGQ+LS0+CiAgICAgICAgPCEtLTwvdHI+LS0+CiAgICA8L3RhYmxlPgoJPC9kaXY+Cgk8ZGl2IGNsYXNzPSJsb2dpbkJveCIgaWQ9ImxvZ2luQm94Ij4KCQk8ZGl2IGNsYXNzPSJub3RlRGl2Ij4KCQkJPHNwYW4gaWQ9Im5vdGUiPjwvc3Bhbj4KCQkJPHNwYW4gaWQ9InRpcCI+PC9zcGFuPgoJCTwvZGl2PgoJCTxkaXYgY2xhc3M9InBhbmVsVGhyZSIgYWxpZ249ImNlbnRlciI+CgkJCTxkaXYgYWxpZ249ImNlbnRlciIgY2xhc3M9InBpY0RpdiIgYWxpZ249ImNlbnRlciI+CgkJCQk8dWw+CgkJCQkJPGxpIGlkPSJ1bkxpIiBjbGFzcz0idW5MaSI+PGltZyBzcmM9Ii4uL2xvZ2luL3VzZXJuYW1lLnBuZyI+PGlucHV0IGNsYXNzPSJ0ZXh0IiBpZD0idXNlck5hbWUiIHR5cGU9InRleHQiIG1heGxlbmd0aD0iMTUiIHBsYWNlaG9sZGVyPSJVc2VybmFtZSIgLz48L2xpPgoJCQkJCTxsaSBjbGFzcz0iYmxhbmsiPjwvbGk+CgkJCQkJPGxpIGlkPSJwd0xpIiBjbGFzcz0icHdMaSI+PGltZyBzcmM9Ii4uL2xvZ2luL3Bhc3N3b3JkLnBuZyI+PGlucHV0IGNsYXNzPSJ0ZXh0IiBpZD0icGNQYXNzd29yZCIgdHlwZT0icGFzc3dvcmQiIG1heGxlbmd0aD0iMTUiIHBsYWNlaG9sZGVyPSJQYXNzd29yZCIvPjwvbGk+CgkJCQk8L3VsPgoJCQkJPGxhYmVsIGlkPSJsb2dpbkJ0biIgY2xhc3M9ImxvZ2luQnRuIiBvbmNsaWNrPSJQQ1N1YldpbigpIi8+PHNwYW4+TG9naW48L3NwYW4+PC9sYWJlbD4KCQkJPC9kaXY+CgkJPC9kaXY+Cgk8L2Rpdj4KCTxkaXYgaWQ9ImZyYW1lUXJDb2RlIj4KCTxmb3JtIGFjdGlvbj0iL3VzZXJScG0vTG9naW5ScG0uaHRtIiBtZXRob2Q9ImdldCIgaWQ9ImxvZ2luRm9ybSIgZW5jdHlwZT0ibXVsdGlwYXJ0L2Zvcm0tZGF0YSI+CgkJPGlucHV0IHR5cGU9ImhpZGRlbiIgdmFsdWU9IlNhdmUiIG5hbWU9IlNhdmUiIC8+Cgk8L2Zvcm0+Cgk8U0NSSVBUIHR5cGU9InRleHQvamF2YXNjcmlwdCI+CgkJaWYoIGZyYW1lUXJQYXJhWzBdID09IDEgKQoJCXsKCQkJZG9jdW1lbnQud3JpdGUoIjxpZnJhbWUgbmFtZT1cInFyRnJhbWVcIiBtYXJnaW5XaWR0aD0wIG1hcmdpbkhlaWdodD0wIGZyYW1lQm9yZGVyPScwJyBzcmM9XCIuLi9sb2dpbi9xcl9sb2dpbi5odG1cIiBub1Jlc2l6ZSBzY3JvbGxpbmc9bm8gZnJhbWVTcGFjaW5nPTAgaWQ9XCJxckZyYW1lXCIgc3R5bGU9XCJwb3NpdGlvbjphYnNvbHV0ZTtib3R0b206MDt3aWR0aDoxMDAlO1wiPjwvaWZyYW1lPiIpOwoJCX0KCTwvU0NSSVBUPgoJPC9kaXY+CjxTQ1JJUFQgdHlwZT0idGV4dC9qYXZhc2NyaXB0Ij4KCWlmKCBmcmFtZU5vdGVUUGxvZ2luWzBdID09IDEgKQoJewoJCWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJ0b3BMb2dvIikuc3R5bGUuZGlzcGxheSA9ICJub25lIjsKCQlkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgibG9naW5Cb3giKS5zdHlsZS5kaXNwbGF5ID0gIm5vbmUiOwoJCWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCJmcmFtZVFyQ29kZSIpLnN0eWxlLmRpc3BsYXkgPSAibm9uZSI7CgkJd2luZG93LmxvY2F0aW9uLmhyZWY9Jy4uL2xvZ2luL2RvbWFpbi1yZWRpcmVjdC9kb21haW4tcmVkaXJlY3QuaHRtP29sZHVybD0nK2ZyYW1lTm90ZVRQbG9naW5bMV07Cgl9CjwvU0NSSVBUPgo8L2JvZHk+CjwvaHRtbD4K
+      name: TL-WR940N - /
+      description: 'Fetched from URL: http://example.com/'
+      content_type: text/html
+      server: Router Webserver
+      status_code: "200"
+      headers:
+        - 'Www-Authenticate: Basic realm="TP-Link Wireless N Router WR940N"'
+      created_at: 2025-07-27T14:12:22.870887Z
+      updated_at: 2025-07-27T14:13:18.32304Z
+      ext_version: 0
+      ext_uuid: 1f2b7edf-4a50-4fbf-8b3c-c2eddf4cfd2d
