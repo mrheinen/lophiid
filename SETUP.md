@@ -67,6 +67,11 @@ This will take care of downloading all the remaining dependencies and build the 
 If you are unfamilair with bazel, you can find the binary at ./bazel-bin/cmd/backend/backend_/backend
 
 ### Build the agent
+First make sure that libmagic is installed:
+
+```shell
+sudo apt-get install libmagic-dev
+```
 
 Build the agent using the following command:
 
