@@ -32,7 +32,7 @@ to highlight potentially interesting requests.
 
 #### Enabling
 Configure the backend with the parameters of the AI. This is documented in the
-[example config](./backend-config.yaml) in the AI section. In the config set
+[example config](./config/backend-config.yaml) in the AI section. In the config set
 "enable_describer" to true or 1.
 Make sure the (local) LLM is running and that the lophiid backend was restarted with the new config.
 
@@ -70,7 +70,7 @@ integration but that is currently beyond the scope of this document.
 To enable AI support for a content rule you need to do the following:
 
  * Configure the backend with the parameters of the AI. This is documented in
-   the [example config](./backend-config.yaml). Make sure the local LLM is
+   the [example config](./config/backend-config.yaml). Make sure the local LLM is
    running and that the lophiid backend was restarted with the new config.
  * Select a "responder" in the Responder field of the rule. You need to select a
    responder that matches with the type of vulnerability being exploited.
