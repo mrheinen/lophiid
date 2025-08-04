@@ -1,0 +1,3 @@
+# Force use of WORKSPACE file instead of MODULE.bazel for compatibility
+common --enable_bzlmod=false
+common --enable_workspace

@@ -131,9 +131,15 @@ func (a *ApiServer) Stop() {
 }
 
 // Auth middleware will compare the clients API key with the one that was used
-// to create the API server instance.
+// to create the API server instance. Skips authentication for certain paths.
 func (a *ApiServer) AuthMW(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip authentication for health check endpoint
+		if r.URL.Path == "/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		key := r.Header.Get("API-Key")
 
 		if subtle.ConstantTimeCompare([]byte(key), []byte(a.apiKey)) != 1 {

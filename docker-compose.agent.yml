@@ -1,0 +1,59 @@
+# Remote Agent Deployment
+# This deploys a single agent that connects to a remote backend infrastructure
+#
+# Usage:
+# 1. Generate agent certificates: ./scripts/setup-agent-certs.sh <backend-ip> <agent-ip>
+# 2. Copy the generated agent-<name>/ directory to the agent machine
+# 3. On agent machine: docker compose up -d
+# 4. Register agent in backend UI with the auth token from .env.agent
+#
+# The agent will:
+# - Connect to backend gRPC server for instructions
+# - Serve honeypot HTTP/HTTPS traffic
+# - Report attacks back to backend
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: lophiid-agent
+    env_file:
+      - .env.agent
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./certs:/app/certs:ro
+      - ./data/logs/agent:/app/logs
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+      - "981:981"
+      - "1311:1311"
+      - "8243:8243"
+      - "8333:8333"
+      - "8443:8443"
+      - "8448:8448"
+      - "8843:8843"
+    restart: unless-stopped
+    # Enable ICMP capabilities for ping functionality
+    cap_add:
+      - NET_RAW
+    sysctls:
+      - net.ipv4.ping_group_range=0 2147483647
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+
+# Note: Using bind mounts for logs instead of named volumes for proper permissions
+
+# Agent network (standalone deployment)
+networks:
+  default:
+    name: lophiid-agent-network
+    driver: bridge

@@ -1,0 +1,46 @@
+# Certificate management for Lophiid
+# This extends the main docker-compose.yml with certificate generation
+version: '3.8'
+
+services:
+  # Certificate generation and management
+  certbot:
+    image: certbot/dns-cloudflare:latest
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./certs:/etc/letsencrypt
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - LOPHIID_CERT_DOMAIN=${LOPHIID_CERT_DOMAIN}
+      - LOPHIID_CERT_EMAIL=${LOPHIID_CERT_EMAIL}
+    entrypoint: sh
+    command: 
+      - -c
+      - |
+        echo "dns_cloudflare_api_token = $$CLOUDFLARE_API_TOKEN" > /tmp/cloudflare.ini
+        chmod 600 /tmp/cloudflare.ini
+        certbot certonly --dns-cloudflare \
+          --dns-cloudflare-credentials /tmp/cloudflare.ini \
+          --email "$$LOPHIID_CERT_EMAIL" \
+          --agree-tos --non-interactive \
+          --domains "$$LOPHIID_CERT_DOMAIN" \
+          --cert-name lophiid-backend \
+          --verbose
+    profiles:
+      - certs
+
+  # Local CA and self-signed certificate generation fallback
+  cert-generator:
+    image: alpine:latest
+    volumes:
+      - ./certs:/certs
+      - ./scripts/docker-generate-certs.sh:/generate-certs.sh:ro
+    environment:
+      - DOMAIN=${LOPHIID_CERT_DOMAIN:-localhost}
+      - COUNTRY=${LOPHIID_CERT_COUNTRY:-US}
+      - STATE=${LOPHIID_CERT_STATE:-CA}
+      - LOCATION=${LOPHIID_CERT_LOCATION:-San Francisco}
+      - ORG=${LOPHIID_CERT_ORG:-Lophiid}
+    command: sh /generate-certs.sh
+    profiles:
+      - local-certs

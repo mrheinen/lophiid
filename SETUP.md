@@ -1,330 +1,390 @@
-# IMPORTANT
+# Lophiid Setup Guide
 
-This software is in an early stage of development so if you run into ANY problems or have questions then please open an issue. I will follow up quickly
-and will help you out.
+Lophiid is a distributed honeypot system with a centralized backend and remote agents. This guide covers Docker-based deployment.
 
+## Prerequisites
 
-# Setting up the backend and agents
+- Docker and Docker Compose installed
+- User added to docker group: `sudo usermod -aG docker $USER` (restart session after)
+- At least 8GB RAM available for Docker builds (Yara-X compilation is memory intensive)
 
-## Building the source
+## Architecture Overview
 
-#### Install dependencies
+### Backend Infrastructure (One Server)
+- **Backend**: gRPC server on port 8080 (for agent connections)
+- **API**: REST API on port 9999 (for UI)
+- **UI**: Web interface on port 9888
+- **PostgreSQL**: Database on port 5432
 
-##### Bazel
+### Remote Agents (Multiple Honeypot Machines)
+- **HTTP Honeypot**: Ports 80, 8000, 8001, 8002
+- **HTTPS Honeypot**: Ports 443, 981, 1311, 8243, 8333, 8443, 8448, 8843
+- **gRPC Client**: Connects to backend:8080
+- **Authentication**: Each agent uses unique 64-character hex auth token
 
-You will need to have [bazel](https://bazel.build/) installed. Just grab the latest version from your OS distribution and install it.
+## Deployment Steps
 
-##### Yara-X
+### Development vs Production
 
-Run the following command to install cargo-c
+**Development Deployment:**
+- Uses self-signed certificates
+- Suitable for testing and internal networks
+- Quick setup with IP addresses
 
-```shell
-cargo install cargo-c
+**Production Deployment:**
+- Uses Let's Encrypt certificates via Cloudflare DNS
+- Requires domain name and Cloudflare API token
+- Provides trusted HTTPS certificates for UI, API, and domain-based agents
+- Includes nginx reverse proxy for SSL termination
+- Automatic HTTP to HTTPS redirect
+
+### Step 1: Generate Backend Certificates
+
+#### Development Setup
+
+For development or testing environments:
+
+```bash
+# Generate certificates for your backend server
+./scripts/setup-backend-certs.sh <your-server-ip>
+
+# Example:
+./scripts/setup-backend-certs.sh 192.168.1.100
 ```
 
-Now clone the YARA-X repository:
+#### Production Setup
 
-```shell
-git clone https://github.com/VirusTotal/yara-x.git
+For production environments with domain names:
+
+```bash
+# First, configure Cloudflare API credentials in .env.backend
+nano .env.backend
 ```
 
-Once cargo-c is installed, go to the directory of the YARA-X repository and run the following command as root:
-
-```shell
-cargo cinstall -p yara-x-capi --release
+Add these production settings:
+```env
+# Cloudflare API Configuration (for Let's Encrypt certificates)
+CLOUDFLARE_API_TOKEN=your-cloudflare-api-token
+LOPHIID_CERT_DOMAIN=your-domain.com
+LOPHIID_CERT_EMAIL=your-email@domain.com
 ```
 
+Then generate certificates with production mode:
+```bash
+# Generate production certificates with Let's Encrypt
+./scripts/setup-backend-certs.sh your-domain.com production
 
-
-##### Protobuf
-
-Before you can build, you will need to compile some protobuffers by running a script. For this to work, you need protobuf-compiler installed. On Debian and Ubuntu, you do this with:
-
-```shell
-sudo apt-get install protobuf-compiler
+# Example:
+./scripts/setup-backend-certs.sh honeypot.mydomain.com production
 ```
 
-### Build the protobufs
+**Cloudflare Setup Requirements:**
+1. Domain managed by Cloudflare DNS
+2. Cloudflare API token with Zone:Read and Zone:Edit permissions
+3. Email address for Let's Encrypt registration
 
-The gRPC services are defined in the backend_service.proto. Build these with the following command:
+The script creates:
+- CA certificate in `certs/ca/ca-cert.pem` (for internal gRPC)
+- Server certificates in `certs/server/` (for internal gRPC)
+- Let's Encrypt certificates in `certs/live/lophiid-backend/` (for public HTTPS)
 
-```shell
+**Certificate Usage:**
+- **Backend/API HTTPS**: Uses Let's Encrypt certificates via nginx reverse proxy
+- **Agent HTTPS honeypots**: Automatically use Let's Encrypt when agent has domain name
+- **Internal gRPC**: Uses self-signed certificates (backend ↔ agent communication)
+
+### Step 2: Configure Environment Variables
+
+**CRITICAL**: Edit `.env.backend` before starting services:
+
+```bash
+# Edit backend configuration
+nano .env.backend
+```
+
+**Required changes:**
+```env
+# Change default passwords
+POSTGRES_PASSWORD=your-secure-password
+API_KEY=your-secure-api-key
+
+# Update shared database URL with new password (used by all services)
+LOPHIID_DATABASE_URL=postgres://lophiid:your-secure-password@postgres:5432/lophiid
+
+# IMPORTANT: Set UI access address (replace with your server IP/domain)
+VUE_APP_BACKEND_ADDRESS=http://192.168.1.100:9999
+```
+
+### Step 3: Start Backend Infrastructure
+
+```bash
+# Start all backend services
+docker compose up -d
+
+# Verify services are running
+docker compose ps
+docker compose logs -f backend
+```
+
+Access the UI at: `http://your-server-ip:9888`
+
+### Step 4: Generate Agent Deployment Packages
+
+```bash
+# Create agent deployment package
+./scripts/setup-agent-certs.sh <backend-ip> <agent-ip> [agent-name]
+
+# Examples:
+./scripts/setup-agent-certs.sh 192.168.1.100 192.168.1.200 web-server
+./scripts/setup-agent-certs.sh backend.mydomain.com 203.0.113.50 honeypot-1
+```
+
+This creates a complete deployment directory `agent-<name>/` containing:
+- Agent certificates
+- `docker-compose.yml` (agent configuration)
+- `.env.agent` (environment variables)
+- `Dockerfile.agent`
+
+### Step 5: Deploy Remote Agents
+
+```bash
+# Copy deployment package to agent machine
+scp -r agent-<name>/ user@<agent-ip>:~/
+
+# On agent machine:
+ssh user@<agent-ip>
+cd ~/agent-<name>/
+docker compose up -d
+
+# Verify agent is running
+docker compose ps
+docker compose logs -f agent
+```
+
+### Step 6: Register Agents in UI
+
+1. Access backend UI at `http://backend-ip:9888`
+2. Navigate to **Honeypots** section
+3. Click **Add Honeypot**
+4. Enter:
+   - **IP Address**: The agent machine's public IP
+   - **Auth Token**: Found in the agent's `.env.agent` file as `LOPHIID_BACKEND_CLIENT_AUTH_TOKEN`
+
+### Step 7: Verify Deployment
+
+```bash
+# Test honeypot response
+curl http://<agent-ip>:8000/
+
+# Check backend logs for agent connection
+docker compose logs backend | grep "status: updated honeypot"
+
+# View attacks in UI at http://<backend-ip>:9888
+```
+
+## Complete Deployment Examples
+
+### Development Example
+Complete development setup on local network:
+```bash
+# 1. Generate development certificates
+./scripts/setup-backend-certs.sh 192.168.1.100
+
+# 2. Configure .env.backend (update passwords and UI address)
+nano .env.backend
+# Update: POSTGRES_PASSWORD, API_KEY, LOPHIID_DATABASE_URL, VUE_APP_BACKEND_ADDRESS
+
+# 3. Start backend
+docker compose up -d
+
+# 4. Generate agent package
+./scripts/setup-agent-certs.sh 192.168.1.100 192.168.1.101 dev-agent
+
+# 5. Deploy agent
+scp -r agent-dev-agent/ user@192.168.1.101:~/
+ssh user@192.168.1.101 'cd agent-dev-agent && docker compose up -d'
+
+# 6. Register agent in UI and verify
+```
+
+### Production Example
+Complete production setup with domain name:
+```bash
+# 1. Configure Cloudflare credentials in .env.backend
+nano .env.backend
+# Add: CLOUDFLARE_API_TOKEN, LOPHIID_CERT_DOMAIN, LOPHIID_CERT_EMAIL
+
+# 2. Generate production certificates with Let's Encrypt
+./scripts/setup-backend-certs.sh honeypot.mydomain.com production
+
+# 3. Update .env.backend (passwords, domain-based UI address)
+nano .env.backend
+# Set: VUE_APP_BACKEND_ADDRESS=https://honeypot.mydomain.com
+
+# 4. Start backend infrastructure with production config
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# 5. Generate and deploy agents
+./scripts/setup-agent-certs.sh honeypot.mydomain.com 203.0.113.50 web-honeypot-1
+scp -r agent-web-honeypot-1/ user@203.0.113.50:~/
+ssh user@203.0.113.50 'cd agent-web-honeypot-1 && docker compose up -d'
+
+# 6. Register agents in UI with proper domain access
+```
+
+## Configuration
+
+### Configuration Files
+
+Lophiid organizes configuration files in the `config/` directory:
+
+- `config/database.sql` - PostgreSQL schema initialization
+- `config/nginx.prod.conf` - Production reverse proxy configuration (HTTPS, SSL, API routing)
+- `config/nginx.ui.conf` - UI service nginx configuration
+
+### Environment Variables
+
+Lophiid uses environment variables exclusively:
+
+- **Backend**: `.env.backend` - Contains backend, API, UI, and database configuration
+- **Agent**: `.env.agent` - Contains agent-specific configuration and auth tokens
+- **Docker**: `.env` - User namespace mapping (DOCKER_UID/DOCKER_GID)
+
+### Certificate Management
+
+The system uses mutual TLS authentication:
+- CA certificate validates all communications
+- Server certificate for backend gRPC server  
+- Client certificates for each agent (unique per agent)
+
+Certificates are automatically generated by the setup scripts.
+
+## Security
+
+- **Mutual TLS**: All backend ↔ agent communication uses client certificates
+- **Environment Variables**: No sensitive data in config files
+- **Network Isolation**: Agents only need outbound access to backend:8080, consider DMZ placement
+- **User Namespace Mapping**: Docker containers run with proper user permissions
+
+## Troubleshooting
+
+### Agent Can't Connect to Backend
+1. Check network connectivity: `telnet <backend-ip> 8080`
+2. Verify certificates: `openssl x509 -in certs/clients/*.pem -text`
+3. Check backend logs: `docker compose logs backend`
+4. Verify agent auth token matches UI registration
+
+### UI Not Accessible
+1. Verify API is running: `curl http://<backend-ip>:9999/api/health`
+2. Check `VUE_APP_BACKEND_ADDRESS` in `.env.backend`
+3. Ensure UI is accessible: `curl http://<backend-ip>:9888`
+
+### Build Issues
+1. **Out of memory during build**: Increase Docker memory limit to 8GB+
+2. **Permission issues**: Ensure user is in docker group
+3. **Port conflicts**: Check ports 5432, 8080, 9888, 9999 are available
+
+## Optional Features
+
+### VirusTotal Integration
+Add to `.env.backend`:
+```env
+LOPHIID_VIRUSTOTAL_API_KEY=your-virustotal-api-key
+```
+
+### Telegram Alerting
+Add to `.env.backend`:
+```env
+LOPHIID_ALERTING_TELEGRAM_API_KEY=your-bot-token
+LOPHIID_ALERTING_TELEGRAM_CHAT_ID=your-chat-id
+```
+
+### LLM Integration
+Add to `.env.backend`:
+```env
+LOPHIID_AI_TRIAGE_ENABLE=true
+LOPHIID_AI_API_LOCATION=http://localhost:8000/v1
+LOPHIID_AI_API_KEY=your-api-key
+LOPHIID_AI_MODEL=your-model-name
+```
+
+## Advanced Usage
+
+### Multiple Agents per Machine
+```bash
+# Generate multiple agent configs with unique names
+./scripts/setup-agent-certs.sh <backend-ip> <agent-ip> agent-1
+./scripts/setup-agent-certs.sh <backend-ip> <agent-ip> agent-2
+
+# Each gets unique auth token and certificate
+# Deploy each agent separately with different port mappings
+# Register each agent separately in the UI with unique tokens
+```
+
+### Scaling Multiple Agents
+When deploying multiple agents across different machines:
+1. Use the same CA certificates (agents are network agnostic)
+2. Generate unique auth tokens for each agent (64 hex characters)
+3. Register each agent separately in the backend UI
+4. Consider using different port ranges to avoid conflicts
+5. Monitor each agent's health through the UI Honeypots section
+
+### Custom Rules
+- Create content rules in `rules/` directory as YAML files
+- Rules define when/how to respond to requests
+- Support static content, JavaScript scripts, and AI-generated responses
+
+### Monitoring
+- **Logs**: `docker compose logs -f [service-name]`
+- **Health**: All services include health checks
+- **Metrics**: Backend exposes Prometheus metrics on `/metrics`
+- **Agent Status**: Backend UI Honeypots section shows last check-in times
+- **Attack Data**: Monitor UI for incoming attack data from agents
+
+### Updates and Maintenance
+
+To update agents:
+```bash
+# Pull latest images and restart
+docker compose pull
+docker compose up -d --force-recreate
+```
+
+To rotate certificates:
+1. Generate new certificates on backend server
+2. Copy new certificates to agent machines  
+3. Restart agent containers
+
+### Certificate Verification
+
+To verify your certificate setup:
+```bash
+# Check certificate configuration
+./scripts/verify-certificates.sh
+```
+
+This will verify:
+- Let's Encrypt certificate presence and validity
+- Self-signed certificate configuration
+- Production docker-compose setup
+
+## Development Setup
+
+For development or building from source, see the build commands in `CLAUDE.md`:
+
+```bash
+# Build protobuf files first
 ./compile_proto.sh
-```
 
-There is no output on the terminal unless something went wrong.
-
-### Build the backend
-
-To build the backend, run the following command:
-
-```shell
+# Build individual components
 bazel build //cmd/backend:backend
-```
-
-This will take care of downloading all the remaining dependencies and build the backend.
-
-If you are unfamilair with bazel, you can find the binary at ./bazel-bin/cmd/backend/backend_/backend
-
-### Build the agent
-First make sure that libmagic is installed:
-
-```shell
-sudo apt-get install libmagic-dev
-```
-
-Build the agent using the following command:
-
-```shell
 bazel build //cmd/agent:client
-```
-
-# Create a CA and certificates
-
-SSL is used for encryption and authentication (client certs). Using this is totally optional, you can leave the ssl_cert configuration options out of the config but that is not recommended.
-
-Below are example commands for creating certificates.
-
-## Create a local CA
-
-Use the following command to create a CA:
-
-```shell
-export COUNTRY=XX  # replace these
-export STATE=XX
-export LOCATION=XX
-export ORG=XX
-
-mkdir ca
-
-openssl req \
-    -x509 \
-    -nodes \
-    -days 3650 \
-    -newkey rsa:4096 \
-    -keyout ca/ca-key.pem \
-    -out ca/ca-cert.pem \
-    -subj "/C=${COUNTRY}/ST=${STATE}/L=${LOCATION}/O=${ORG}/CN=ca.lophiid.org"
-```
-
-Make sure the creates CA key is properly protected and make sure it is backed up properly.
-
-## Create the backend certificate
-
-Create the backend certificate using the following command:
-
-```shell
-export IP="1.1.1.1"  # The public IP of your backend
-mkdir server
-
-openssl req -newkey rsa:4096 -nodes \
-  -keyout server/server-key.pem \
-  -x509 -days 365 \
-  -CA ca/ca-cert.pem \
-  -CAkey ca/ca-key.pem \
-  -out server/server-cert.pem \
-  -subj "/C=${COUNTRY}/ST=${STATE}/L=${LOCATION}/O=${ORG}/CN=lophiid.org" \
-  -addext "subjectAltName = IP:${IP}"
-```
-
-Note that the location of the created certificate and key, which are in the "server/" directory, need to be added to the backend configuration.
-
-## Create a agent certificates
-
-Now for every honeypot agent, you typically run one agent per IP,  make an SSL client certificate:
-
-```shell
-IP="2.2.2.2"
-
-mkdir clients
-openssl req -newkey rsa:4096 -nodes -days 365000 \
-   -keyout clients/${IP}-client-key.pem \
-   -subj "/C=${COUNTRY}/ST=${STATE}/L=${LOCATION}/O=${ORG}/CN=${IP}" \
-   -out clients/${IP}-client-req.pem
-
-openssl x509 -req -days 365000 -set_serial 01 \
-   -in clients/${IP}-client-req.pem \
-   -out clients/${IP}-client-cert.pem \
-   -CA ca/ca-cert.pem \
-   -CAkey ca/ca-key.pem
-```
-
-The agent certificates need to be deployed with the agent on the honeypot machines.
-
-# Setting up the backend
-
-### Setup the database
-
-#### Install postgresql
-
-Install [postgresql](https://www.postgresql.org/):
-
-```shell
-sudo apt install postgresql postgresql-contrib
-```
-
-#### Import the database schema
-
-> [!IMPORTANT]
-> You need to edit config/database.sql to uncomment and edit the create user command at the top. Set a secure password!
-
-
-Now import the database definition that is in [config/database.sql](https://github.com/mrheinen/lophiid/blob/main/config/database.sql) using the following commands:
-
-```shell
-# Become the postgres user
-sudo su postgres
-# Import the database schema
-psql -f config/database.sql
-```
-
-### Create the backend configuration
-
-The configuration file is documented in the [example config](./config/backend-config.yaml)
-
-Note that it is important that the backend is reachable to all the honeypot agents so keep that in mind while configuring the port and listen address in the config. If you setup SSL certificate authentication then it is fine to expose the backend to the Internet.
-
-#### Getting VirusTotal access (optional)
-
-Create an account on [www.virustotal.com](http://www.virustotal.com) and click on your profile picture in the top right corner of the screen. Now click on `API Key` and it will bring you to a page where you can copy the API key (and paste it in the config).
-
-The default free account on VirusTotal has plenty of quota. You probably can run 100-200 honeypots on dedicated IPs before running into quota issues.
-
-The VirusTotal client in lophiid is also written in a way where requests are queued and retried in case of quota issues.  This queue, which is only populated when you run out of quota, is not persistent during lophiid restarts though.
-
-#### Configuring telegram alerting (optional)
-
-Create a telegram bot:
-
-1. Open Telegram and search for the [BotFather]([Telegram: Contact @BotFather](https://telegram.me/BotFather) bot.
-2. Start a chat with the BotFather and use the `/newbot` command to create a new bot.
-3. Follow the instructions to choose a name and username for your bot.
-4. Once your bot is created, the BotFather will provide you with an API token. Add this token to the backend configuration file.
-
-Getting the channel/group  ID:
-
-One way to obtain it is by going to [https://web.telegram.org](https://web.telegram.org/) and going to the channel/group. The ID is now in the URL.
-
-Once you have this setup, you can enable alerting for specific rules by clicking
-on the bell icon behind those rules in the Rules tab of the UI.
-
-#### Setting up LLM triage
-
-If you like to enable LLM triage and LLM descriptions of attacks then you will
-need edit the backend [config](./config/backend-config.yaml) and enable the
-triage process.
-
-In the config set AI -> Triage -> enable to 1.  Also make sure you have set an
-API endpoint and API key in the AI section.
-
-Now you need to run the triage process:
-
-```shell
-bazel build //cmd/triage:triage
-./bazel-bin/triage/triage_/triage -c backend-config.yaml
-```
-
-#### Setting up Yara scanning
-
-You can optionally setup automatic yara scanning of the malware that is
-collected. To do this, you need to run this command from the code root
-directory, where your backend-config.yaml is:
-```shell
-go run cmd/yara/main.go -m -r <path-to-yara-rules> -b 100
-```
-
-We use Yara-X so some older yara rules might potentially not work or
-need updating. The code simply ignores those rules (but does output an error on
-the screen).
-
-This process will regularly poll the database for new downloads and then runs
-the loaded rules against them. The results are stored in the database and
-visible in the UI (e.g. downloads tab).
-
-# Setting up the agent
-
-## Prepare privilege dropping
-
-Create the chroot directory and create a user to drop privileges to.
-
-```shell
-mkdir -p -m 755 /var/empty/lophiid
-useradd -d /var/empty/lophiid -M -r -s /bin/false lophiid-agent
-```
-
-Next update the configuration and set 'chroot_dir' to the chroot directory
-and 'user' to the user created with the command above.
-
-## Allow ICMP packets
-
-Use the following command to allow ICMP ping by the agent. The example is a bit
-lazy and allows it to all users. You can pudate the group range with a group ID
-that lophiid-agent belongs to in order to make it more strict.
-```shell
-sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
-```
-
-## Create the configuration
-
-The configuration options are documented in the [config file](./config/agent-config.yaml).
-Note that you need to run one agent per IP so you might have to run multiple
-agents on a single machine and each is configured individually.
-
-## Setting up p0f (optional)
-
-When p0f is running, you will need to setup the agent to use it.  First you need
-to make sure that the p0f unix socket is accessible from the chroot directory so
-using the example above, you want to run p0f with something like this:
-
-```shell
-p0f -s /var/empty/lophiid/p0f.socket
-```
-
-While you might run multiple agents on a machine; you typically only have to run
-one p0f instance per machine.
-
-# Setting up the UI
-
-## Build and run the API server
-
-Building the server is done with this command:
-
-```shell
 bazel build //cmd/api:api
+
+# Run tests
+bazel test //...
 ```
 
-Now copy the example configuration from
-[./config/api-config.yaml](./config/api-config.yaml] and make the necessary
-changes, such as the database location and listen port and listen IP. Also
-change allowed_origins so that you only allow requests from the UI which you
-will build in the next step.
+## Support
 
-Running the API server is a matter of:
-```shell
-./bazel-bin/cmd/api/api_/api -c api-config.yaml
-```
-
-Take note of the API key. You will need to give this to the web UI when you
-connect with a browser.
-
-## Build and run UI
-First install the vue dependency:
-
-```shell
-npm i @vue/cli-service
-```
-
-Modify the backendAddress and make sure it points to the API server. This needs
-to be edited in the ./ui/src/Config.js and you should do this before doing the
-next step. In fact, keep in mind that whenever you change the config, restart
-the UI server.
-
-Now you can build and run the UI. This will start a development server
-and it is not recommended to expose it to the internet but fine to use
-internal (it does require auth)
-
-```shell
-npm run serve
-```
-
-You will now see the IP and port on which you can connect to the UI.
+If you encounter any issues, please open an issue on the project repository. The maintainer responds quickly and will help troubleshoot problems.

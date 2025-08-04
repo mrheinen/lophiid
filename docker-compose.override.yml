@@ -1,0 +1,23 @@
+# Override file for development
+# This file extends docker-compose.yml for development convenience
+# Copy to docker-compose.override.yml and customize as needed
+
+services:
+  backend:
+    # Mount source code for development
+    volumes:
+      - .:/workspace:ro
+      - ./rules:/app/rules:ro
+    environment:
+      - LOPHIID_BACKEND_LOG_LEVEL=debug
+    
+  api:
+    environment:
+      - LOPHIID_API_GENERAL_LOG_LEVEL=debug
+    
+  postgres:
+    # Expose postgres for development access
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./config/database.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro

@@ -29,7 +29,7 @@ type Config struct {
 			Url                string `fig:"url" validate:"required"`
 			MaxOpenConnections int    `fig:"max_open_connections" default:"20"`
 			MinOpenConnections int    `fig:"min_open_connections" default:"5"`
-		} `fig:"database" validation:"required"`
+		} `fig:"database" validate:"required"`
 		Listener struct {
 			ListenAddress string `fig:"listen_address" default:"localhost:41110"`
 			SSLCert       string `fig:"ssl_cert"`

@@ -1,0 +1,59 @@
+# Multi-stage build for Lophiid Triage Service
+FROM golang:1.23-bullseye AS builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    protobuf-compiler \
+    protoc-gen-go \
+    libmagic-dev \
+    libssl-dev \
+    pkg-config \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install compatible gRPC plugin version
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+
+# Install specific Bazel version (7.4.1 from .bazelversion)
+RUN curl -LO "https://github.com/bazelbuild/bazel/releases/download/7.4.1/bazel-7.4.1-linux-x86_64" \
+    && chmod +x bazel-7.4.1-linux-x86_64 \
+    && mv bazel-7.4.1-linux-x86_64 /usr/local/bin/bazel
+
+# Set up workspace
+WORKDIR /workspace
+COPY . .
+
+# Compile protobuf files
+RUN ./compile_proto.sh
+
+# Build triage service
+RUN bazel build //cmd/triage:triage
+
+# Runtime stage
+FROM debian:bullseye-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directories with proper permissions for user namespace mapping
+RUN mkdir -p /app/config /app/logs && \
+    chmod 755 /app && \
+    chmod 777 /app/logs
+
+# Copy binary (correct Bazel output path)
+COPY --from=builder /workspace/bazel-bin/cmd/triage/triage_/triage /app/triage
+RUN chmod +x /app/triage
+
+# Note: USER will be set via docker-compose user: directive for namespace mapping
+WORKDIR /app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD pgrep -f "./triage" || exit 1
+
+CMD ["./triage"]

@@ -1,0 +1,108 @@
+# Production deployment configuration
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+version: '3.8'
+
+services:
+  postgres:
+    # Production postgres settings
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    # Remove port exposure for security
+    ports: []
+
+  backend:
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  api:
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512m
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  ui:
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+          cpus: '0.25'
+
+  # HTTPS reverse proxy for production with Let's Encrypt certificates
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/letsencrypt:ro
+    depends_on:
+      - ui
+      - api
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  agent:
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 256m
+          cpus: '0.25'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+secrets:
+  postgres_password:
+    external: true

@@ -59,14 +59,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var configFile = flag.String("c", "", "Config file")
 
 func main() {
 
 	flag.Parse()
 
 	var cfg backend.Config
-	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
+	if err := fig.Load(&cfg, fig.UseEnv("LOPHIID"), fig.IgnoreFile()); err != nil {
 		fmt.Printf("Could not parse config: %s\n", err)
 		return
 	}

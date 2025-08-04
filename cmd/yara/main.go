@@ -29,7 +29,6 @@ var fileToScan = flag.String("f", "", "File to scan")
 var dirToScan = flag.String("d", "", "Directory to scan")
 var runManager = flag.Bool("m", false, "Run the manager")
 var dbUrl = flag.String("u", "", "Database URL")
-var configFile = flag.String("c", "backend-config.yaml", "Location of the config")
 var keepRunning = flag.Bool("k", false, "Whether to keep running continuously")
 var batchSize = flag.Int64("b", 30, "Amount of downloads to process at once")
 
@@ -38,7 +37,7 @@ func main() {
 	flag.Parse()
 
 	var cfg backend.Config
-	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
+	if err := fig.Load(&cfg, fig.UseEnv("LOPHIID"), fig.IgnoreFile()); err != nil {
 		fmt.Printf("Could not parse config: %s\n", err)
 		return
 	}
