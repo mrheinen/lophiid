@@ -119,19 +119,22 @@ func main() {
 		return
 	}
 
-	// Determine API key using priority: config file > env var > generated
-	var apiKey string
+	// Determine API key using priority: config file > env var
+	apiKey := cfg.Auth.ApiKey
+	if apiKey == "" {
+		apiKey = os.Getenv("API_KEY")
+	}
+	
+	if apiKey == "" {
+		slog.Error("No API key configured. Set API_KEY environment variable or add 'api_key' to .env.backend file")
+		fmt.Printf("Error: No API key configured. Set API_KEY environment variable or add 'api_key' to .env.backend file\n")
+		os.Exit(1)
+	}
+	
 	if cfg.Auth.ApiKey != "" {
-		apiKey = cfg.Auth.ApiKey
 		slog.Info("Using API key from configuration file")
-	} else if envKey := os.Getenv("API_KEY"); envKey != "" {
-		apiKey = envKey
-		slog.Info("Using API key from API_KEY environment variable")
 	} else {
-		apiKey = uuid.New().String()
-		slog.Warn("No API key configured, generated random key", slog.String("key", apiKey))
-		fmt.Printf("Generated API key: %s\n", apiKey)
-		fmt.Printf("Set API_KEY environment variable or add 'api_key' to config to persist this key\n")
+		slog.Info("Using API key from API_KEY environment variable")
 	}
 
 	reg := prometheus.NewRegistry()
