@@ -65,8 +65,10 @@ services:
       - ./config/nginx.prod.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/letsencrypt:ro
     depends_on:
-      - ui
-      - api
+      api:
+        condition: service_healthy
+      ui:
+        condition: service_started
     restart: unless-stopped
     deploy:
       resources:

@@ -17,10 +17,14 @@ RUN apt-get update && apt-get install -y \
 # Install compatible gRPC plugin version
 RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
 
-# Install specific Bazel version (7.4.1 from .bazelversion)
-RUN curl -LO "https://github.com/bazelbuild/bazel/releases/download/7.4.1/bazel-7.4.1-linux-x86_64" \
-    && chmod +x bazel-7.4.1-linux-x86_64 \
-    && mv bazel-7.4.1-linux-x86_64 /usr/local/bin/bazel
+# Install specific Bazel version (7.4.1 from .bazelversion) - architecture aware
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then BAZEL_ARCH="x86_64"; \
+    elif [ "$ARCH" = "aarch64" ]; then BAZEL_ARCH="arm64"; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi && \
+    curl -LO "https://github.com/bazelbuild/bazel/releases/download/7.4.1/bazel-7.4.1-linux-${BAZEL_ARCH}" \
+    && chmod +x bazel-7.4.1-linux-${BAZEL_ARCH} \
+    && mv bazel-7.4.1-linux-${BAZEL_ARCH} /usr/local/bin/bazel
 
 # Set up workspace
 WORKDIR /workspace

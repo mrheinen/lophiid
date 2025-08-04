@@ -139,26 +139,41 @@ Access the UI at: `http://your-server-ip:9888`
 ./scripts/setup-agent-certs.sh backend.mydomain.com 203.0.113.50 honeypot-1
 ```
 
-This creates a complete deployment directory `agent-<name>/` containing:
-- Agent certificates
-- `docker-compose.yml` (agent configuration)
+This creates a complete deployment package containing:
+- **Directory**: `agent-<name>/` with all deployment files
+- **Compressed**: `agent-<name>.zip` for easy transfer
+- Agent certificates and source code
+- `docker-compose.agent.yml` (agent configuration)
 - `.env.agent` (environment variables)
-- `Dockerfile.agent`
+- `Dockerfile.agent` and build dependencies
 
 ### Step 5: Deploy Remote Agents
 
+**Option A: Using compressed package (recommended)**
 ```bash
-# Copy deployment package to agent machine
-scp -r agent-<name>/ user@<agent-ip>:~/
+# Copy compressed package to agent machine
+scp agent-<name>.zip user@<agent-ip>:~/
 
-# On agent machine:
+# Extract and deploy on agent machine
 ssh user@<agent-ip>
-cd ~/agent-<name>/
-docker compose up -d
+unzip agent-<name>.zip
+cd agent-<name>/
+docker compose -f docker-compose.agent.yml up -d
 
 # Verify agent is running
-docker compose ps
-docker compose logs -f agent
+docker compose -f docker-compose.agent.yml ps
+docker compose -f docker-compose.agent.yml logs -f agent
+```
+
+**Option B: Copy directory directly**
+```bash
+# Copy deployment directory to agent machine
+scp -r agent-<name>/ user@<agent-ip>:~/
+
+# Deploy on agent machine
+ssh user@<agent-ip>
+cd agent-<name>/
+docker compose -f docker-compose.agent.yml up -d
 ```
 
 ### Step 6: Register Agents in UI
@@ -200,9 +215,9 @@ docker compose up -d
 # 4. Generate agent package
 ./scripts/setup-agent-certs.sh 192.168.1.100 192.168.1.101 dev-agent
 
-# 5. Deploy agent
-scp -r agent-dev-agent/ user@192.168.1.101:~/
-ssh user@192.168.1.101 'cd agent-dev-agent && docker compose up -d'
+# 5. Deploy agent (using compressed package)
+scp agent-dev-agent.zip user@192.168.1.101:~/
+ssh user@192.168.1.101 'unzip agent-dev-agent.zip && cd agent-dev-agent && docker compose -f docker-compose.agent.yml up -d'
 
 # 6. Register agent in UI and verify
 ```
@@ -226,8 +241,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # 5. Generate and deploy agents
 ./scripts/setup-agent-certs.sh honeypot.mydomain.com 203.0.113.50 web-honeypot-1
-scp -r agent-web-honeypot-1/ user@203.0.113.50:~/
-ssh user@203.0.113.50 'cd agent-web-honeypot-1 && docker compose up -d'
+scp agent-web-honeypot-1.zip user@203.0.113.50:~/
+ssh user@203.0.113.50 'unzip agent-web-honeypot-1.zip && cd agent-web-honeypot-1 && docker compose -f docker-compose.agent.yml up -d'
 
 # 6. Register agents in UI with proper domain access
 ```

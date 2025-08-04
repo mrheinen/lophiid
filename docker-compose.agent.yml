@@ -4,7 +4,7 @@
 # Usage:
 # 1. Generate agent certificates: ./scripts/setup-agent-certs.sh <backend-ip> <agent-ip>
 # 2. Copy the generated agent-<name>/ directory to the agent machine
-# 3. On agent machine: docker compose up -d
+# 3. On agent machine: docker compose -f docker-compose.agent.yml up -d
 # 4. Register agent in backend UI with the auth token from .env.agent
 #
 # The agent will:

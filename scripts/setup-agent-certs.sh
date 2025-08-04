@@ -29,9 +29,13 @@ STATE="${STATE:-CA}"
 LOCATION="${LOCATION:-San Francisco}"
 ORG="${ORG:-Lophiid}"
 
-# Auto-detect current user UID/GID for Docker user mapping
-export DOCKER_UID=$(id -u)
-export DOCKER_GID=$(id -g)
+# Auto-detect current user UID/GID for Docker user mapping if not already set
+if [ -z "$DOCKER_UID" ]; then
+    export DOCKER_UID=$(id -u)
+fi
+if [ -z "$DOCKER_GID" ]; then
+    export DOCKER_GID=$(id -g)
+fi
 
 echo "Setting up AGENT certificates"
 echo "============================="
@@ -107,16 +111,46 @@ cp docker-compose.agent.yml "$AGENT_DIR/"
 cp Dockerfile.agent "$AGENT_DIR/"
 cp .env.agent "$AGENT_DIR/"
 
+# Copy all build-related files needed for Docker build
+echo "Copying build files..."
+cp compile_proto.sh "$AGENT_DIR/"
+cp backend_service.proto "$AGENT_DIR/"
+cp go.mod "$AGENT_DIR/"
+cp go.sum "$AGENT_DIR/"
+cp MODULE.bazel "$AGENT_DIR/"
+cp WORKSPACE "$AGENT_DIR/"
+cp BUILD "$AGENT_DIR/"
+cp deps.bzl "$AGENT_DIR/"
+
+# Copy source directories needed for agent build
+cp -r backend_service/ "$AGENT_DIR/"
+cp -r cmd/ "$AGENT_DIR/"
+cp -r pkg/ "$AGENT_DIR/"
+
+# Make scripts executable
+chmod +x "$AGENT_DIR/compile_proto.sh"
+
 # Copy certificates needed by agent
 mkdir -p "$AGENT_DIR/certs"/{ca,clients}
 cp "$CERT_DIR/ca/ca-cert.pem" "$AGENT_DIR/certs/ca/"
 cp "$CERT_DIR/clients/${AGENT_NAME}-client-"*.pem "$AGENT_DIR/certs/clients/"
 cp "$CERT_DIR/${AGENT_NAME}-http-"*.pem "$AGENT_DIR/certs/"
 
+# Create Docker Compose .env file for variable expansion
+cat > "$AGENT_DIR/.env" << EOF
+# Docker user mapping for compose file variable expansion
+DOCKER_UID=$DOCKER_UID
+DOCKER_GID=$DOCKER_GID
+EOF
+
 # Create agent-specific environment file
 cat > "$AGENT_DIR/.env.agent" << EOF
 # Agent Environment Variables for $AGENT_NAME
 # Deploy this on the agent machine at $AGENT_HOST
+
+# Docker user mapping (matches backend certificate permissions)
+DOCKER_UID=$DOCKER_UID
+DOCKER_GID=$DOCKER_GID
 
 # Agent Configuration
 LOPHIID_GENERAL_PUBLIC_IP=$AGENT_HOST
@@ -192,6 +226,11 @@ echo "Setting certificate permissions..."
 find "$AGENT_DIR/certs" -name "*-key.pem" -exec chmod 600 {} \; 2>/dev/null || true
 find "$AGENT_DIR/certs" -name "*-cert.pem" -exec chmod 644 {} \; 2>/dev/null || true
 
+# Create compressed deployment package
+echo "Creating compressed deployment package..."
+ZIP_FILE="${AGENT_DIR}.zip"
+zip -r "$ZIP_FILE" "$AGENT_DIR/" >/dev/null 2>&1
+
 echo ""
 echo "✓ Agent certificates and deployment package created!"
 echo ""
@@ -199,7 +238,9 @@ echo "Generated certificates:"
 echo "- Agent gRPC client: $CERT_DIR/clients/${AGENT_NAME}-client-cert.pem"
 echo "- Agent HTTPS server: $CERT_DIR/${AGENT_NAME}-http-cert.pem"
 echo ""
-echo "Agent deployment package created: $AGENT_DIR/"
+echo "Agent deployment package created:"
+echo "- Directory: $AGENT_DIR/"  
+echo "- Compressed: $ZIP_FILE"
 echo ""
 echo "Next steps:"
 echo ""
@@ -210,8 +251,14 @@ echo "   - Add new honeypot with IP: $AGENT_HOST"
 echo "   - Use auth token from $AGENT_DIR/.env.agent"
 echo ""
 echo "2. DEPLOY AGENT to $AGENT_HOST:"
-echo "   - Copy entire $AGENT_DIR/ directory to agent machine"
-echo "   - On agent machine, run: docker compose up -d"
+echo "   Option A: Copy compressed package"
+echo "   - scp $ZIP_FILE user@$AGENT_HOST:~/"
+echo "   - ssh user@$AGENT_HOST 'unzip $ZIP_FILE && cd $AGENT_DIR'"
+echo "   - ssh user@$AGENT_HOST 'cd $AGENT_DIR && docker compose -f docker-compose.agent.yml up -d'"
+echo ""
+echo "   Option B: Copy directory directly"
+echo "   - scp -r $AGENT_DIR/ user@$AGENT_HOST:~/"
+echo "   - ssh user@$AGENT_HOST 'cd $AGENT_DIR && docker compose -f docker-compose.agent.yml up -d'"
 echo ""
 echo "3. VERIFY CONNECTION:"
 echo "   - Check backend logs: docker compose logs backend | grep 'honeypot'"

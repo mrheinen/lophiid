@@ -55,8 +55,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ui
-      args:
-        - VUE_APP_BACKEND_ADDRESS=http://localhost:9999
+    env_file:
+      - .env.backend
     depends_on:
       - api
     ports:

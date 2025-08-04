@@ -22,7 +22,7 @@ export default {
   tagsSegmentLink: '/tag/:offset/:limit',
   requestsSegmentLink: '/requests/:offset/:limit',
   requestsSegmentLinkName: 'reqSegmentLink',
-  backendAddress: process.env.VUE_APP_BACKEND_ADDRESS || 'http://localhost:9999',
+  backendAddress: '/api',
   backendResultOk: 'OK',
   backendResultNotOk: 'ERR',
   reviewStatusOk: "REVIEWED_OK",

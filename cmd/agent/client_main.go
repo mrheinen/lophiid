@@ -148,11 +148,11 @@ func main() {
 
 	var httpServers []*agent.HttpServer
 	for _, port := range cfg.HTTPListener.Port {
-		httpServers = append(httpServers, agent.NewHttpServer(c, net.JoinHostPort(cfg.HTTPListener.IP, fmt.Sprintf("%d", port)), cfg.HTTPListener.IP))
+		httpServers = append(httpServers, agent.NewHttpServer(c, net.JoinHostPort(cfg.HTTPListener.IP, fmt.Sprintf("%d", port)), cfg.General.PublicIP))
 	}
 
 	for _, port := range cfg.HTTPSListener.Port {
-		httpServers = append(httpServers, agent.NewSSLHttpServer(c, net.JoinHostPort(cfg.HTTPListener.IP, fmt.Sprintf("%d", port)), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPListener.IP))
+		httpServers = append(httpServers, agent.NewSSLHttpServer(c, net.JoinHostPort(cfg.HTTPListener.IP, fmt.Sprintf("%d", port)), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.General.PublicIP))
 	}
 
 	// Create the http client. It will allow long timeouts to download from slow
