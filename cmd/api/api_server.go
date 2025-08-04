@@ -33,7 +33,6 @@ import (
 
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/kkyr/fig"
 	"github.com/prometheus/client_golang/prometheus"
@@ -56,11 +55,8 @@ type Config struct {
 		// Comma separated list of allowed origins.
 		AllowedOrigins string `fig:"allowed_origins" default:"*"`
 	} `fig:"cors"`
-	Auth struct {
-		// API key for authentication. If not set, will be read from API_KEY env var.
-		// If neither is set, a random key will be generated and logged once.
-		ApiKey string `fig:"api_key"`
-	} `fig:"auth"`
+	// API key for authentication
+	ApiKey string `fig:"key"`
 	Database struct {
 		Url                string `fig:"url" validate:"required"`
 		MaxOpenConnections int    `fig:"max_open_connections" default:"10"`
@@ -119,23 +115,15 @@ func main() {
 		return
 	}
 
-	// Determine API key using priority: config file > env var
-	apiKey := cfg.Auth.ApiKey
+	// Get API key from fig configuration
+	apiKey := cfg.ApiKey
 	if apiKey == "" {
-		apiKey = os.Getenv("API_KEY")
-	}
-	
-	if apiKey == "" {
-		slog.Error("No API key configured. Set API_KEY environment variable or add 'api_key' to .env.backend file")
-		fmt.Printf("Error: No API key configured. Set API_KEY environment variable or add 'api_key' to .env.backend file\n")
+		slog.Error("No API key configured. Set LOPHIID_API_KEY environment variable in .env.backend file")
+		fmt.Printf("Error: No API key configured. Set LOPHIID_API_KEY environment variable in .env.backend file\n")
 		os.Exit(1)
 	}
 	
-	if cfg.Auth.ApiKey != "" {
-		slog.Info("Using API key from configuration file")
-	} else {
-		slog.Info("Using API key from API_KEY environment variable")
-	}
+	slog.Info("Using API key from LOPHIID_API_KEY environment variable")
 
 	reg := prometheus.NewRegistry()
 	dbc := database.NewKSQLClient(&db)

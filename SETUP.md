@@ -106,7 +106,7 @@ nano .env.backend
 ```env
 # Change default passwords
 POSTGRES_PASSWORD=your-secure-password
-API_KEY=your-secure-api-key
+LOPHIID_API_KEY=your-secure-api-key
 
 # Update shared database URL with new password (used by all services)
 LOPHIID_DATABASE_URL=postgres://lophiid:your-secure-password@postgres:5432/lophiid
@@ -192,7 +192,7 @@ Complete development setup on local network:
 
 # 2. Configure .env.backend (update passwords and UI address)
 nano .env.backend
-# Update: POSTGRES_PASSWORD, API_KEY, LOPHIID_DATABASE_URL, VUE_APP_BACKEND_ADDRESS
+# Update: POSTGRES_PASSWORD, LOPHIID_API_KEY, LOPHIID_DATABASE_URL, VUE_APP_BACKEND_ADDRESS
 
 # 3. Start backend
 docker compose up -d
