@@ -248,7 +248,8 @@ Lophiid uses environment variables exclusively:
 
 - **Backend**: `.env.backend` - Contains backend, API, UI, and database configuration
 - **Agent**: `.env.agent` - Contains agent-specific configuration and auth tokens
-- **Docker**: `.env` - User namespace mapping (DOCKER_UID/DOCKER_GID)
+
+**Note**: Docker user mapping (DOCKER_UID/DOCKER_GID) is automatically detected by the setup scripts.
 
 ### Certificate Management
 

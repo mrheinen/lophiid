@@ -29,6 +29,10 @@ STATE="${STATE:-CA}"
 LOCATION="${LOCATION:-San Francisco}"
 ORG="${ORG:-Lophiid}"
 
+# Auto-detect current user UID/GID for Docker user mapping
+export DOCKER_UID=$(id -u)
+export DOCKER_GID=$(id -g)
+
 echo "Setting up AGENT certificates"
 echo "============================="
 echo "Backend host: $BACKEND_HOST"
