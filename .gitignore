@@ -8,3 +8,8 @@ MODULE.bazel.lock
 package-lock.json
 *.pem
 data/
+# Testing and deployment artifacts
+agent-*/
+certs/
+data/certbot-logs/
+data/certbot-work/

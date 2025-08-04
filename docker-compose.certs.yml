@@ -9,6 +9,8 @@ services:
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     volumes:
       - ./certs:/etc/letsencrypt
+      - ./data/certbot-logs:/var/log/letsencrypt
+      - ./data/certbot-work:/var/lib/letsencrypt
     environment:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
       - LOPHIID_CERT_DOMAIN=${LOPHIID_CERT_DOMAIN}
