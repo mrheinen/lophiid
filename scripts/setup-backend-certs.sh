@@ -42,10 +42,10 @@ echo "Mode: ${PRODUCTION_MODE:-development}"
 echo "Certificate directory: $CERT_DIR"
 echo ""
 echo "This backend will host:"
-echo "- Backend gRPC server (port 8080) - for agent connections"
-echo "- API server (port 9999) - for UI"
-echo "- UI (port 9888) - web interface"
-echo "- PostgreSQL (port 5432) - database"
+echo "- Backend gRPC server - for agent connections"
+echo "- API server - for UI"
+echo "- UI - web interface"
+echo "- PostgreSQL - database"
 echo ""
 
 mkdir -p "$CERT_DIR"/{ca,server}
@@ -144,7 +144,7 @@ echo "1. Update .env.backend with your backend IP/domain and secure passwords"
 
 if [ "$PRODUCTION_MODE" = "production" ]; then
     echo "2. For PRODUCTION deployment with HTTPS:"
-    echo "   - Update VUE_APP_BACKEND_ADDRESS=https://$BACKEND_HOST in .env.backend"
+    echo "   - Update LOPHIID_API_BACKEND_ADDRESS=https://$BACKEND_HOST in .env.backend"
     echo "   - Start with production config: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
     echo "   - Access UI at https://$BACKEND_HOST"
     echo "   - Agents with domain names will automatically use Let's Encrypt certificates"

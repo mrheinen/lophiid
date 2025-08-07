@@ -300,7 +300,7 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 	}
 }
 
-func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session) (models.ContentRule, error) {
+func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session, honeypot *models.Honeypot) (models.ContentRule, error) {
 	var matchedRules []models.ContentRule
 	for _, rule := range rules {
 
@@ -349,6 +349,16 @@ func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.R
 	if len(matchedRules) == 1 {
 		s.UpdateSessionWithRule(req.SourceIP, session, &matchedRules[0])
 		return matchedRules[0], nil
+	}
+
+	// Check if honeypot has a preferred content ID that matches one of the rules
+	if honeypot != nil && honeypot.DefaultContentID > 0 {
+		for _, rule := range matchedRules {
+			if rule.ContentID == honeypot.DefaultContentID {
+				s.UpdateSessionWithRule(req.SourceIP, session, &rule)
+				return rule, nil
+			}
+		}
 	}
 
 	var unservedRules []models.ContentRule
@@ -912,18 +922,18 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	s.metrics.honeypotRequests.WithLabelValues(sReq.HoneypotIP).Add(1)
 	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
 
-	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq, session)
+	// Get honeypot information for content selection
+	hp, hpErr := s.getCachedHoneypot(sReq.HoneypotIP)
+	if hpErr != nil {
+		slog.Error("error finding honeypot", slog.String("error", hpErr.Error()), slog.String("honeypot", sReq.HoneypotIP))
+	}
+
+	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq, session, hp)
 
 	// If there was no matche rule then serve the default rule of the honeypot.
 	if err != nil {
-		hp, err := s.getCachedHoneypot(sReq.HoneypotIP)
-
 		if hp == nil {
-			if err != nil {
-				slog.Error("error finding honeypot", slog.String("error", err.Error()), slog.String("honeypot", sReq.HoneypotIP))
-			} else {
-				slog.Error("honeypot does not exist ?", slog.String("honeypot", sReq.HoneypotIP))
-			}
+			slog.Error("honeypot does not exist ?", slog.String("honeypot", sReq.HoneypotIP))
 			matchedRule = s.safeRules.Get()[0]
 		} else {
 			// Fallback to an empty rule.

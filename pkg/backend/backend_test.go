@@ -233,7 +233,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
-			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput, models.NewSession())
+			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput, models.NewSession(), nil)
 			if (err != nil) != test.errorExpected {
 				t.Errorf("error expected is: %t, but for err=%s", test.errorExpected, err)
 			}
@@ -282,7 +282,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		Method:   "GET",
 		Port:     80,
 		SourceIP: myTestIP,
-	}, session)
+	}, session, nil)
 
 	if matchedRule.ID != 1 {
 		t.Errorf("expected 1 but got %d", matchedRule.ID)
@@ -296,7 +296,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		Method:   "GET",
 		Port:     80,
 		SourceIP: myTestIP,
-	}, session)
+	}, session, nil)
 
 	if matchedRule.ID != 2 {
 		t.Errorf("expected 2 but got %d", matchedRule.ID)
@@ -310,7 +310,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		Method:   "GET",
 		Port:     80,
 		SourceIP: myTestIP,
-	}, session)
+	}, session, nil)
 
 	if matchedRule.ID != 3 {
 		t.Errorf("expected 3 but got %d", matchedRule.ID)
@@ -373,7 +373,7 @@ func TestGetMatchedRulePortPrioritization(t *testing.T) {
 	s := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
 
 	// Test that rule with ports gets priority
-	matchedRule, err := s.GetMatchedRule(rules, req, sess)
+	matchedRule, err := s.GetMatchedRule(rules, req, sess, nil)
 	if err != nil {
 		t.Fatalf("GetMatchedRule returned error: %v", err)
 	}
@@ -385,12 +385,103 @@ func TestGetMatchedRulePortPrioritization(t *testing.T) {
 	sess.ServedRuleWithContent(45, matchedRule.ContentID)
 
 	// Test that rule without ports is selected when rule with ports is served
-	matchedRule, err = s.GetMatchedRule(rules, req, sess)
+	matchedRule, err = s.GetMatchedRule(rules, req, sess, nil)
 	if err != nil {
 		t.Fatalf("GetMatchedRule returned error: %v", err)
 	}
 	if matchedRule.ID != 44 {
 		t.Errorf("Expected rule without ports (ID 44) to be matched, got ID %d", matchedRule.ID)
+	}
+}
+
+func TestGetMatchedRuleHoneypotContentPreference(t *testing.T) {
+	// Test that honeypot's default content ID is preferred when multiple rules match
+	bunchOfRules := []models.ContentRule{
+		{ID: 1, AppID: 1, Method: "GET", Ports: []int{80}, Uri: "/", UriMatching: "exact", ContentID: 100},
+		{ID: 2, AppID: 2, Method: "GET", Ports: []int{80}, Uri: "/", UriMatching: "exact", ContentID: 200},
+		{ID: 3, AppID: 3, Method: "GET", Ports: []int{80}, Uri: "/", UriMatching: "exact", ContentID: 300},
+	}
+
+	fdbc := &database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{
+		ErrorToReturn: nil,
+	}
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	fakeLimiter := ratelimit.FakeRateLimiter{
+		BoolToReturn:  true,
+		ErrorToReturn: nil,
+	}
+	sMetrics := session.CreateSessionMetrics(reg)
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	fIpMgr := analysis.FakeIpEventManager{}
+	fakeRes := &responder.FakeResponder{}
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
+
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, GetDefaultBackendConfig())
+
+	// Test with honeypot preferring content ID 200
+	honeypot := &models.Honeypot{
+		DefaultContentID: 200,
+	}
+
+	sess := models.NewSession()
+	matchedRule, err := b.GetMatchedRule(bunchOfRules, &models.Request{
+		Uri:    "/",
+		Method: "GET",
+		Port:   80,
+	}, sess, honeypot)
+
+	if err != nil {
+		t.Fatalf("GetMatchedRule returned error: %v", err)
+	}
+
+	if matchedRule.ContentID != 200 {
+		t.Errorf("Expected content ID 200 (honeypot's default), got %d", matchedRule.ContentID)
+	}
+
+	// Test with honeypot preferring content ID 300
+	honeypot2 := &models.Honeypot{
+		DefaultContentID: 300,
+	}
+
+	sess2 := models.NewSession()
+	matchedRule2, err := b.GetMatchedRule(bunchOfRules, &models.Request{
+		Uri:    "/",
+		Method: "GET",
+		Port:   80,
+	}, sess2, honeypot2)
+
+	if err != nil {
+		t.Fatalf("GetMatchedRule returned error: %v", err)
+	}
+
+	if matchedRule2.ContentID != 300 {
+		t.Errorf("Expected content ID 300 (honeypot's default), got %d", matchedRule2.ContentID)
+	}
+
+	// Test with honeypot having no preference (should fall back to default behavior)
+	honeypot3 := &models.Honeypot{
+		DefaultContentID: 0,
+	}
+
+	sess3 := models.NewSession()
+	matchedRule3, err := b.GetMatchedRule(bunchOfRules, &models.Request{
+		Uri:    "/",
+		Method: "GET",
+		Port:   80,
+	}, sess3, honeypot3)
+
+	if err != nil {
+		t.Fatalf("GetMatchedRule returned error: %v", err)
+	}
+
+	// Should get one of the three rules, but not based on honeypot preference
+	if matchedRule3.ContentID < 100 || matchedRule3.ContentID > 300 {
+		t.Errorf("Expected content ID between 100-300, got %d", matchedRule3.ContentID)
 	}
 }
 
