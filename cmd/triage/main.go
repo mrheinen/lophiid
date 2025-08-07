@@ -25,7 +25,6 @@ import (
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
 )
 
-var configFile = flag.String("c", "backend-config.json", "Location of the config")
 var batchSize = flag.Int64("b", 30, "Amount of descriptions to process at once")
 var keepRunning = flag.Bool("r", true, "Whether to keep running continuously")
 
@@ -33,7 +32,7 @@ func main() {
 	flag.Parse()
 
 	var cfg backend.Config
-	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
+	if err := fig.Load(&cfg, fig.UseEnv("LOPHIID"), fig.IgnoreFile()); err != nil {
 		fmt.Printf("Could not parse config: %s\n", err)
 		return
 	}

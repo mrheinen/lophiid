@@ -130,6 +130,10 @@ func (a *Agent) Start() error {
 	if a.p0fRunner == nil {
 		return nil
 	}
+	// Additional check for nil pointer wrapped in interface
+	if pr, ok := a.p0fRunner.(*P0fRunnerImpl); ok && pr == nil {
+		return nil
+	}
 
 	// Start the context submissions
 	conTicker := time.NewTicker(a.contextInterval)
@@ -174,6 +178,10 @@ func bytesToString(bytes [32]uint8) string {
 func (a *Agent) SendContext() error {
 
 	if a.p0fRunner == nil {
+		return nil
+	}
+	// Additional check for nil pointer wrapped in interface
+	if pr, ok := a.p0fRunner.(*P0fRunnerImpl); ok && pr == nil {
 		return nil
 	}
 	// We get a map representation of the cache. Since this is a copy, we might be

@@ -1,7 +1,5 @@
-DROP DATABASE IF EXISTS lophiid;
-CREATE DATABASE lophiid;
-
-\connect lophiid
+-- Database initialization script for Docker
+-- This runs inside the already-created lophiid database
 
 -- IMPORTANT: CHANGE THE PASSWORD
 CREATE USER lo WITH PASSWORD 'CHANGE_ME_TO_SOMETHING_GOOD';

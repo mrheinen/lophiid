@@ -33,7 +33,6 @@ import (
 
 	"log/slog"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/kkyr/fig"
 	"github.com/prometheus/client_golang/prometheus"
@@ -44,7 +43,6 @@ import (
 
 var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 
-var configFile = flag.String("c", "", "Config file")
 
 type Config struct {
 	General struct {
@@ -57,6 +55,8 @@ type Config struct {
 		// Comma separated list of allowed origins.
 		AllowedOrigins string `fig:"allowed_origins" default:"*"`
 	} `fig:"cors"`
+	// API key for authentication
+	ApiKey string `fig:"key"`
 	Database struct {
 		Url                string `fig:"url" validate:"required"`
 		MaxOpenConnections int    `fig:"max_open_connections" default:"10"`
@@ -73,7 +73,7 @@ func main() {
 	flag.Parse()
 
 	var cfg Config
-	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
+	if err := fig.Load(&cfg, fig.UseEnv("LOPHIID_API"), fig.IgnoreFile()); err != nil {
 		fmt.Printf("Could not parse config: %s\n", err)
 		return
 	}
@@ -115,19 +115,33 @@ func main() {
 		return
 	}
 
-	id := uuid.New()
-
-	fmt.Printf("Starting with API key: %s\n", id.String())
+	// Get API key from fig configuration
+	apiKey := cfg.ApiKey
+	if apiKey == "" {
+		slog.Error("No API key configured. Set LOPHIID_API_KEY environment variable in .env.backend file")
+		fmt.Printf("Error: No API key configured. Set LOPHIID_API_KEY environment variable in .env.backend file\n")
+		os.Exit(1)
+	}
+	
+	slog.Info("Using API key from LOPHIID_API_KEY environment variable")
 
 	reg := prometheus.NewRegistry()
 	dbc := database.NewKSQLClient(&db)
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, nil, javascript.CreateGoJaMetrics(reg))
-	as := api.NewApiServer(dbc, jRunner, id.String())
+	as := api.NewApiServer(dbc, jRunner, apiKey)
 	as.Start()
 	defer as.Stop()
 	defer dbc.Close()
 
 	r := mux.NewRouter()
+	
+	// Health check endpoint (no authentication required) - MUST be before auth middleware
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok","service":"lophiid-api"}`))
+	}).Methods("GET")
+	
 	// All content endpoints.
 	r.HandleFunc("/content/upsert", as.HandleUpsertSingleContent).Methods("POST")
 	r.HandleFunc("/content/delete", as.HandleDeleteContent).Methods("POST")
@@ -181,6 +195,7 @@ func main() {
 
 	r.HandleFunc("/stats/global", as.HandleGetGlobalStatistics).Methods("GET")
 
+	// Apply auth middleware to all routes except health (which was registered first)
 	r.Use(as.AuthMW)
 
 	origins := make([]string, 0)

@@ -36,7 +36,6 @@ import (
 	"github.com/mrheinen/p0fclient"
 )
 
-var configFile = flag.String("c", "", "Config file")
 
 type Config struct {
 	General struct {
@@ -69,7 +68,7 @@ type Config struct {
 	} `fig:"pinger"`
 	BackendClient struct {
 		StatusInterval time.Duration `fig:"status_interval" default:"10s"`
-		AuthToken      string        `fig:"auth_token" valiate:"required"`
+		AuthToken      string        `fig:"auth_token" validate:"required"`
 		BackendAddress string        `fig:"ip" validate:"required"`
 		BackendPort    int           `fig:"port" default:"41110"`
 		GRPCSSLCert    string        `fig:"grpc_ssl_cert"`
@@ -83,7 +82,7 @@ func main() {
 	flag.Parse()
 
 	var cfg Config
-	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
+	if err := fig.Load(&cfg, fig.UseEnv("LOPHIID"), fig.IgnoreFile()); err != nil {
 		fmt.Printf("Could not parse config: %s\n", err)
 		return
 	}
@@ -149,11 +148,11 @@ func main() {
 
 	var httpServers []*agent.HttpServer
 	for _, port := range cfg.HTTPListener.Port {
-		httpServers = append(httpServers, agent.NewHttpServer(c, net.JoinHostPort(cfg.HTTPListener.IP, fmt.Sprintf("%d", port)), cfg.HTTPListener.IP))
+		httpServers = append(httpServers, agent.NewHttpServer(c, net.JoinHostPort(cfg.HTTPListener.IP, fmt.Sprintf("%d", port)), cfg.General.PublicIP))
 	}
 
 	for _, port := range cfg.HTTPSListener.Port {
-		httpServers = append(httpServers, agent.NewSSLHttpServer(c, net.JoinHostPort(cfg.HTTPListener.IP, fmt.Sprintf("%d", port)), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.HTTPListener.IP))
+		httpServers = append(httpServers, agent.NewSSLHttpServer(c, net.JoinHostPort(cfg.HTTPListener.IP, fmt.Sprintf("%d", port)), cfg.HTTPSListener.SSLCert, cfg.HTTPSListener.SSLKey, cfg.General.PublicIP))
 	}
 
 	// Create the http client. It will allow long timeouts to download from slow

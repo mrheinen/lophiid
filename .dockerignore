@@ -1,1 +1,60 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Bazel
+bazel-*
+.bazelversion
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# Go build cache
+.cache/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation and images (not needed in containers)
+*.md
+images/
+screenshots/
+
+# Development configs (use mounted configs instead)
+config/*.yaml
+config/*.yml
+
+# Certificates (use mounted certs instead)
+certs/
+ca/
+server/
+clients/
+
+# Logs
+*.log
+logs/
+
+# Test files
+*_test.go
+**/*_test.go
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Node modules (UI is built separately)
 ui/node_modules/
