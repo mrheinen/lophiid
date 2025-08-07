@@ -836,6 +836,34 @@ func TestHandleProbe(t *testing.T) {
 	// data is as expected.
 	ctx := GetContextWithAuthMetadata()
 
+	t.Run("Honeypot default", func(t *testing.T) {
+		// Now we test the default content fetching. Set the path to something that
+		// doesn't match any rule.
+		fdbc.HoneypotToReturn = models.Honeypot{
+			DefaultContentID: 66,
+		}
+		
+		probeReq.RequestUri = "/dffsd"
+		res, err := b.HandleProbe(ctx, &probeReq)
+		if err != nil {
+			t.Fatalf("got error: %s", err)
+		}
+		if !bytes.Equal(res.Response.Body, []byte("default")) {
+			t.Errorf("got %s, expected %s", res.Response.Body, "default")
+		}
+
+		if len(res.Response.Header) != 3 {
+			t.Errorf("got %d, expected 3", len(res.Response.Header))
+		}
+
+		// Here it's 0 because we serve the default content for this honeypot and
+		// therefore do not have a rule to get the application from.
+		regWrap := <-b.reqsQueue
+		if regWrap.req.AppID != 0 {
+			t.Errorf("got %d, expected %d", regWrap.req.AppID, 0)
+		}
+	})
+
 	t.Run("Matches ok", func(t *testing.T) {
 		probeReq.RequestUri = "/aa"
 		res, err := b.HandleProbe(ctx, &probeReq)
@@ -871,36 +899,8 @@ func TestHandleProbe(t *testing.T) {
 		}
 	})
 
-	t.Run("Honeypot default", func(t *testing.T) {
-		// Now we test the default content fetching. Set the path to something that
-		// doesn't match any rule.
-		fdbc.HoneypotToReturn = models.Honeypot{
-			DefaultContentID: 66,
-		}
-		probeReq.RequestUri = "/dffsd"
-		res, err := b.HandleProbe(ctx, &probeReq)
-		if err != nil {
-			t.Fatalf("got error: %s", err)
-		}
-		if !bytes.Equal(res.Response.Body, []byte("default")) {
-			t.Errorf("got %s, expected %s", res.Response.Body, "default")
-		}
-
-		if len(res.Response.Header) != 3 {
-			t.Errorf("got %d, expected 3", len(res.Response.Header))
-		}
-
-		// Here it's 0 because we serve the default content for this honeypot and
-		// therefore do not have a rule to get the application from.
-		regWrap := <-b.reqsQueue
-		if regWrap.req.AppID != 0 {
-			t.Errorf("got %d, expected %d", regWrap.req.AppID, 0)
-		}
-
-	})
-
 	t.Run("database error", func(t *testing.T) {
-		// Now we simulate a database error. Should never occur ;p
+		// Now we simulate a database error. Should never occur ;p	
 		fdbc.ContentsToReturn = map[int64]models.Content{}
 		res, err := b.HandleProbe(ctx, &probeReq)
 		if res != nil || err == nil {
@@ -945,7 +945,7 @@ func TestHandleProbe(t *testing.T) {
 		// Reset limiter for this test
 		fakeLimiter.BoolToReturn = true
 		fakeLimiter.ErrorToReturn = nil
-
+		
 		// Set request URI to match our blocking rule
 		probeReq.RequestUri = "/blocked"
 		probeReq.Request.ParsedUrl.Path = "/blocked"
