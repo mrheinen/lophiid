@@ -151,11 +151,15 @@ CREATE TABLE honeypot (
   version            VARCHAR(64) NOT NULL DEFAULT '',
   auth_token         VARCHAR(64) NOT NULL DEFAULT '',
   last_checkin       TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  default_content_id INT NOT NULL DEFAULT 0,
+  default_content_id INT NOT NULL DEFAULT 1,
   ports              INT ARRAY,
   ssl_ports          INT ARRAY,
   cves            VARCHAR(15) ARRAY
 );
+
+ALTER TABLE honeypot
+ADD CONSTRAINT fk_honeypot_default_content
+FOREIGN KEY (default_content_id) REFERENCES content(id);
 
 CREATE TABLE app (
   id              SERIAL PRIMARY KEY,
