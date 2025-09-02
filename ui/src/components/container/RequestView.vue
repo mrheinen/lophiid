@@ -152,6 +152,10 @@
                         <th>Detected application</th>
                         <td>{{ localDescription.ai_application }}</td>
                       </tr>
+                      <tr v-if="localDescription.ai_has_payload">
+                        <th>Has payload</th>
+                        <td>{{ localDescription.ai_has_payload }}</td>
+                      </tr>
                       <tr v-if="localDescription.ai_cve">
                         <th>Guessed CVE</th>
                         <td>{{ localDescription.ai_cve }}</td>
