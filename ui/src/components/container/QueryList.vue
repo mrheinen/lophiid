@@ -32,7 +32,7 @@
           </DataColumn>
           <DataColumn header="Query">
             <template #body="slotProps">
-              <a :href="config.requestsLink + '?q=' + encodeURI(slotProps.data.query)">{{ slotProps.data.query }}</a>
+              <a :href="config.requestsLink + '?q=' + encodeURIComponent(slotProps.data.query)">{{ slotProps.data.query }}</a>
             </template>
           </DataColumn>
 
