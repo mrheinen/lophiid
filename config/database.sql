@@ -81,6 +81,7 @@ CREATE TABLE request_description (
   ai_vulnerability_type   VARCHAR(128),
   ai_malicious       VARCHAR(6),
   ai_cve             VARCHAR(15),
+  ai_has_payload     VARCHAR(6) default '',
   review_status      REVIEW_STATUS_TYPE default 'UNREVIEWED',
   source_model       VARCHAR(256) default 'UNKNOWN',
   triage_status             TRIAGE_STATUS_TYPE default 'UNKNOWN',
@@ -151,15 +152,12 @@ CREATE TABLE honeypot (
   version            VARCHAR(64) NOT NULL DEFAULT '',
   auth_token         VARCHAR(64) NOT NULL DEFAULT '',
   last_checkin       TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  default_content_id INT NOT NULL DEFAULT 1,
+  default_content_id INT NOT NULL DEFAULT 0,
   ports              INT ARRAY,
   ssl_ports          INT ARRAY,
   cves            VARCHAR(15) ARRAY
 );
 
-ALTER TABLE honeypot
-ADD CONSTRAINT fk_honeypot_default_content
-FOREIGN KEY (default_content_id) REFERENCES content(id);
 
 CREATE TABLE app (
   id              SERIAL PRIMARY KEY,
