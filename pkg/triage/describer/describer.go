@@ -54,6 +54,7 @@ type LLMResult struct {
 	VulnerabilityType string `json:"vulnerability_type"`
 	Application       string `json:"application"`
 	CVE               string `json:"cve"`
+	HasPayload        string `json:"has_payload"`
 }
 
 const LLMSystemPrompt = `
@@ -64,13 +65,14 @@ malicious: Use the string "yes" if the request is malicious. Else "no".
 vulnerability_type: A string containing the Mitre CWE ID, starting with "CWE-" for the main weakness being exploited. Use an empty string if you don't know.
 application: A string with the targetted application/device name. An empty string if you don't know.
 cve: The relevant CVE if you know what vulnerability is exploited. An empty string if you don't know.
+has_payload: use the string "yes" if the request has a malicious attacker payload, such as to execute a command or code. Otherwise use the value "no".
 
 The request was:
 `
 
 const LLMBase64MetaPrompt = `
 
-That was the request. Now the following information was found in the base64 encoded string that is in the request. We decoded it for you so you have a better understanding of that the request and this payload are trying to achieve:
+That was the request. Now the following information was found in the base64 encoded string that is in the request. We decoded it for you so you have a better understanding of that the request is trying to achieve:
 
 %s
 
@@ -181,6 +183,10 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 
 		if llmResult.Malicious == "yes" || llmResult.Malicious == "no" {
 			bh.AIMalicious = llmResult.Malicious
+		}
+
+		if llmResult.HasPayload == "yes" || llmResult.HasPayload == "no" {
+			bh.AIHasPayload = llmResult.HasPayload
 		}
 
 		if len(llmResult.CVE) <= 15 {

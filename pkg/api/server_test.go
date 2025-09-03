@@ -545,6 +545,7 @@ func TestHandleGetDescriptionForCmpHash(t *testing.T) {
 					AIVulnerabilityType: "Test vulnerability",
 					AIApplication:       "Test app",
 					AIMalicious:         "false",
+					AIHasPayload:        "false",
 					AICVE:               "CVE-2024-1234",
 				},
 			},
