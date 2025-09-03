@@ -28,6 +28,7 @@ type RequestDescription struct {
 	AIMalicious         string    `ksql:"ai_malicious" json:"ai_malicious" doc:"An AI generated maliciousness rating"`
 	AIApplication       string    `ksql:"ai_application" json:"ai_application" doc:"An AI generated application name"`
 	AIVulnerabilityType string    `ksql:"ai_vulnerability_type" json:"ai_vulnerability_type" doc:"An AI generated vulnerability type that is exploited"`
+	AIHasPayload        string    `ksql:"ai_has_payload" json:"ai_has_payload" doc:"Whether the AI thinks a malicious payload is present"`
 	AICVE               string    `ksql:"ai_cve" json:"ai_cve" doc:"The CVE the AI thinks is related - highly incorrect"`
 	ReviewStatus        string    `ksql:"review_status" json:"review_status" doc:"Whether the AI data was manually reviewed (excluding CVE)"`
 	SourceModel         string    `ksql:"source_model" json:"source_model" doc:"The model used to generate the AI data"`
