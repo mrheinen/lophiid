@@ -160,6 +160,12 @@
                         <th>Guessed CVE</th>
                         <td>{{ localDescription.ai_cve }}</td>
                       </tr>
+
+                      <tr v-if="localDescription.ai_vulnerability_type">
+                        <th>CWE</th>
+                        <td>{{ localDescription.ai_vulnerability_type }}</td>
+                      </tr>
+
                       <tr v-if="localDescription.source_model">
                         <th>AI model</th>
                         <td>{{ localDescription.source_model }}</td>
