@@ -199,14 +199,14 @@ func main() {
 	if cfg.AI.EnableResponder || cfg.AI.Triage.Enable {
 
 		var llmClient llm.OpenAILLMClient
-		if cfg.AI.Model != "" {
-			llmClient = *llm.NewOpenAILLMClientWithModel(cfg.AI.ApiKey, cfg.AI.ApiLocation, "", cfg.AI.Model)
+		if cfg.AI.PrimaryLLM.Model != "" {
+			llmClient = *llm.NewOpenAILLMClientWithModel(cfg.AI.PrimaryLLM.ApiKey, cfg.AI.PrimaryLLM.ApiLocation, "", cfg.AI.PrimaryLLM.Model)
 		} else {
-			llmClient = *llm.NewOpenAILLMClient(cfg.AI.ApiKey, cfg.AI.ApiLocation, "")
+			llmClient = *llm.NewOpenAILLMClient(cfg.AI.PrimaryLLM.ApiKey, cfg.AI.PrimaryLLM.ApiLocation, "")
 		}
-		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
+		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.PrimaryLLM.CacheExpirationTime)
 		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-		llmManager := llm.NewLLMManager(&llmClient, pCache, llmMetrics, cfg.AI.LLMCompletionTimeout, cfg.AI.LLMConcurrentRequests, true, cfg.AI.PromptPrefix, cfg.AI.PromptSuffix)
+		llmManager := llm.NewLLMManager(&llmClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
 
 		if cfg.AI.EnableResponder {
 			slog.Info("Creating responder")

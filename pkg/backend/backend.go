@@ -100,6 +100,7 @@ type BackendServer struct {
 	sessionMgr          session.SessionManager
 	describer           describer.DescriberClient
 	hCache              *util.StringMapCache[models.Honeypot]
+	HpDefaultContentID  int
 }
 
 // NewBackendServer creates a new instance of the backend server.
@@ -150,6 +151,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		sessionMgr:          sessionMgr,
 		describer:           describer,
 		hCache:              hCache,
+		HpDefaultContentID:  config.Backend.Advanced.HoneypotDefaultContentID,
 	}
 }
 
@@ -433,7 +435,6 @@ func (s *BackendServer) SendPingStatus(ctx context.Context, req *backend_service
 // SendStatus receives status information from honeypots and sends commands back
 // in response. This is not authenticated!
 func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
-
 	// Right now we just print an error because it's actually useful to still
 	// update the database with this honeypots information.
 	if err := util.IsLophiidVersionCompatible(req.GetVersion(), constants.LophiidVersion); err != nil {
@@ -446,11 +447,11 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		return &backend_service.StatusResponse{}, status.Errorf(codes.NotFound, "error doing lookup")
 	}
 	if len(dms) == 0 {
-
 		hp := &models.Honeypot{
-			IP:          req.GetIp(),
-			Version:     req.GetVersion(),
-			LastCheckin: time.Now(),
+			IP:               req.GetIp(),
+			Version:          req.GetVersion(),
+			LastCheckin:      time.Now(),
+			DefaultContentID: int64(s.HpDefaultContentID),
 		}
 
 		hp.Ports = append(hp.Ports, req.GetListenPort()...)
@@ -459,6 +460,7 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		_, err := s.dbClient.Insert(hp)
 
 		if err != nil {
+			slog.Error("error inserting honeypot", slog.String("error", err.Error()))
 			return &backend_service.StatusResponse{}, status.Errorf(codes.Unavailable, "error inserting honeypot: %s", err)
 		}
 		slog.Info("status: added honeypot ", slog.String("ip", req.GetIp()))

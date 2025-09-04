@@ -40,6 +40,9 @@ backend:
     # How long before sessions expire after receiving the last request. New
     # requests reset the timeout.
     session_tracking_timeout: 15m
+    # When new honeypots are registered, this content ID will be set as th
+    # default content id.
+    # honeypot_default_content_id: 77
 
 alerting:
   # The alerting interval.  Alerts are aggregated and send every <interval>.
@@ -108,16 +111,18 @@ ratelimiter:
 ai:
   # Whether to enable the responder.
   enable_responder: 1
-  # API location. Note that the implementation was tested with Gemma 2 27b and
-  # is not guaranteed to work with other versions or other LLMs.
-  api_location: http://localhost:8000/v1
-  api_key: AAAAAAAAAAAAAAAAAA
-  # How long prompts and responses should be cached.
-  cache_expiration_time: 24h
-  # How long a completion is allowed to take.
-  llm_completion_timeout: 60s
-  # How many concurrent requests to send to the LLM API
-  llm_concurrent_requests: 5
+  # The primary LLM to use for lookups.
+  primary_llm:
+    # API location. Note that the implementation was tested with Gemma 2 27b and
+    # is not guaranteed to work with other versions or other LLMs.
+    api_location: http://localhost:8000/v1
+    api_key: AAAAAAAAAAAAAAAAAA
+    # How long prompts and responses should be cached.
+    cache_expiration_time: 24h
+    # How long a completion is allowed to take.
+    llm_completion_timeout: 60s
+    # How many concurrent requests to send to the LLM API
+    llm_concurrent_requests: 5
   # Maximum string length of the prompt input.
   max_input_characters: 4096
   describer:

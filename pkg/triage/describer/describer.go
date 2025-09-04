@@ -38,7 +38,7 @@ type DescriptionManager interface {
 // descriptions in memory so that database calls are minimal.
 type CachedDescriptionManager struct {
 	dbClient     database.DatabaseClient
-	llmManager   *llm.LLMManager
+	llmManager   llm.LLMManagerInterface
 	eventManager analysis.IpEventManager
 	metrics      *DescriberMetrics
 }
@@ -55,6 +55,9 @@ type LLMResult struct {
 	Application       string `json:"application"`
 	CVE               string `json:"cve"`
 	HasPayload        string `json:"has_payload"`
+	MitreAttack       string `json:"mitre_attack_id"`
+	TargetedParameter string `json:"targeted_parameter"`
+	ShellCommands     string `json:shell_commands`
 }
 
 const LLMSystemPrompt = `
@@ -66,6 +69,9 @@ vulnerability_type: A string containing the Mitre CWE ID, starting with "CWE-" f
 application: A string with the targetted application/device name. An empty string if you don't know.
 cve: The relevant CVE if you know what vulnerability is exploited. An empty string if you don't know.
 has_payload: use the string "yes" if the request has a malicious attacker payload, such as to execute a command or code. Otherwise use the value "no".
+mitre_attack: The MITRE ATT&CK technique ID starting with "T" if you know what technique is being used. Multiple can be provided if command separated. Use an empty string if you don't know.
+targeted_parameter: The name of the parameter that is targeted by the request. An empty string if you don't know.
+shell_commands: If there is a payload and the payload has shell commands, provide the shell commands here. Empty otherwise.
 
 The request was:
 `
@@ -82,6 +88,17 @@ func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager
 	return &CachedDescriptionManager{
 		dbClient:     dbClient,
 		llmManager:   llmManager,
+		metrics:      metrics,
+		eventManager: eventManager,
+	}
+}
+
+// GetNewCachedDescriptionManagerWithDualLLM creates a new CachedDescriptionManager with dual LLM support
+func GetNewCachedDescriptionManagerWithDualLLM(dbClient database.DatabaseClient, primaryLLM, secondaryLLM *llm.LLMManager, fallbackInterval time.Duration, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
+	dualManager := llm.NewDualLLMManager(primaryLLM, secondaryLLM, fallbackInterval)
+	return &CachedDescriptionManager{
+		dbClient:     dbClient,
+		llmManager:   dualManager,
 		metrics:      metrics,
 		eventManager: eventManager,
 	}

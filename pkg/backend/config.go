@@ -50,8 +50,8 @@ type Config struct {
 		} `fig:"ratelimiter"`
 
 		Advanced struct {
-			ContentCacheDuration       time.Duration `fig:"content_cache_duration" default:"30m"`
-			DownloadCacheDuration      time.Duration `fig:"download_cache_duration" default:"5m"`
+			ContentCacheDuration  time.Duration `fig:"content_cache_duration" default:"30m"`
+			DownloadCacheDuration time.Duration `fig:"download_cache_duration" default:"5m"`
 			// Max downloads per IP per every 5 minutes
 			MaxDownloadsPerIP          int           `fig:"max_downloads_per_ip" default:"50"`
 			PingCacheDuration          time.Duration `fig:"ping_cache_duration" default:"5m"`
@@ -60,6 +60,9 @@ type Config struct {
 			MaintenanceRoutineInterval time.Duration `fig:"maintenance_routine_interval" default:"1m"`
 			// After how long of no communication a session times out.
 			SessionTrackingTimeout time.Duration `fig:"session_tracking_timeout" default:"1h"`
+			// The default content that honeypots are configured with upon first
+			// seeing them.
+			HoneypotDefaultContentID int `fig:"honeypot_default_content_id" default:"0"`
 		} `fig:"advanced"`
 	} `fig:"backend"`
 	Analysis struct {
@@ -113,17 +116,30 @@ type Config struct {
 	} `fig:"whois_manager"`
 
 	AI struct {
-		EnableResponder       bool          `fig:"enable_responder" `
-		ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
-		ApiKey                string        `fig:"api_key"`
-		Model                 string        `fig:"model" default:""`
-		PromptPrefix					string        `fig:"prompt_prefix" default:""`
-		PromptSuffix					string        `fig:"prompt_suffix" default:""`
-		CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
-		LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
-		LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
-		MaxInputCharacters    int           `fig:"max_input_characters" default:"4096"`
-		Triage                struct {
+		EnableResponder bool `fig:"enable_responder" `
+		PrimaryLLM      struct {
+			ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
+			ApiKey                string        `fig:"api_key"`
+			Model                 string        `fig:"model" default:""`
+			PromptPrefix          string        `fig:"prompt_prefix" default:""`
+			PromptSuffix          string        `fig:"prompt_suffix" default:""`
+			CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
+			LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
+			LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
+		} `fig:"primary_llm"`
+		SecondaryLLM struct {
+			ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
+			ApiKey                string        `fig:"api_key"`
+			Model                 string        `fig:"model" default:""`
+			PromptPrefix          string        `fig:"prompt_prefix" default:""`
+			PromptSuffix          string        `fig:"prompt_suffix" default:""`
+			CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
+			LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
+			LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
+		} `fig:"secondary_llm"`
+		FallbackInterval   time.Duration `fig:"fallback_interval" default:"1h"`
+		MaxInputCharacters int           `fig:"max_input_characters" default:"4096"`
+		Triage             struct {
 			Enable               bool          `fig:"enable"`
 			LogFile              string        `fig:"log_file" default:"triage.log" `
 			LogLevel             string        `fig:"log_level" default:"debug" `

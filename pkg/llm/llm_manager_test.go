@@ -18,6 +18,7 @@ package llm
 
 import (
 	"errors"
+	"fmt"
 	"lophiid/pkg/util"
 	"strings"
 	"testing"
@@ -180,5 +181,172 @@ func TestCompleteWithStripThinking(t *testing.T) {
 	// Verify that the thinking section was preserved
 	if resNoStrip != responseWithThinking {
 		t.Errorf("expected original response %q when not stripping thinking, got %q", responseWithThinking, resNoStrip)
+	}
+}
+
+func TestDualLLMManager(t *testing.T) {
+	tests := []struct {
+		name              string
+		primaryError      error
+		secondaryError    error
+		primaryResponse   string
+		secondaryResponse string
+		expectSecondary   bool
+		expectError       bool
+	}{
+		{
+			name:            "primary succeeds",
+			primaryResponse: "primary response",
+			expectSecondary: false,
+			expectError:     false,
+		},
+		{
+			name:              "primary fails, secondary succeeds",
+			primaryError:      fmt.Errorf("primary failed"),
+			secondaryResponse: "secondary response",
+			expectSecondary:   true,
+			expectError:       false,
+		},
+		{
+			name:           "both fail",
+			primaryError:   fmt.Errorf("primary failed"),
+			secondaryError: fmt.Errorf("secondary failed"),
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			primaryClient := &MockLLMClient{
+				CompletionToReturn: tt.primaryResponse,
+				ErrorToReturn:      tt.primaryError,
+			}
+
+			secondaryClient := &MockLLMClient{
+				CompletionToReturn: tt.secondaryResponse,
+				ErrorToReturn:      tt.secondaryError,
+			}
+
+			reg := prometheus.NewRegistry()
+			llmMetrics := CreateLLMMetrics(reg)
+
+			primaryManager := NewLLMManager(
+				primaryClient,
+				util.NewStringMapCache[string]("primary-cache", time.Minute),
+				llmMetrics,
+				time.Second*10,
+				5,
+				true,
+				"",
+				"",
+			)
+
+			secondaryManager := NewLLMManager(
+				secondaryClient,
+				util.NewStringMapCache[string]("secondary-cache", time.Minute),
+				llmMetrics,
+				time.Second*10,
+				5,
+				true,
+				"",
+				"",
+			)
+
+			dualManager := NewDualLLMManager(primaryManager, secondaryManager, time.Hour)
+
+			prompts := []string{"test prompt"}
+			result, err := dualManager.CompleteMultiple(prompts, false)
+
+			if tt.expectError && err == nil {
+				t.Error("expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if !tt.expectError {
+				if tt.expectSecondary {
+					if result["test prompt"] != tt.secondaryResponse {
+						t.Errorf("expected secondary response %q but got %q", tt.secondaryResponse, result["test prompt"])
+					}
+					if !strings.Contains(dualManager.LoadedModel(), "(secondary)") {
+						t.Error("expected LoadedModel to indicate secondary client")
+					}
+				} else {
+					if result["test prompt"] != tt.primaryResponse {
+						t.Errorf("expected primary response %q but got %q", tt.primaryResponse, result["test prompt"])
+					}
+					if strings.Contains(dualManager.LoadedModel(), "(secondary)") {
+						t.Error("expected LoadedModel to indicate primary client")
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestDualLLMManagerFallbackRecovery(t *testing.T) {
+	primaryClient := &MockLLMClient{
+		CompletionToReturn: "primary response",
+		ErrorToReturn:      fmt.Errorf("primary failed"),
+	}
+
+	secondaryClient := &MockLLMClient{
+		CompletionToReturn: "secondary response",
+		ErrorToReturn:      nil,
+	}
+
+	reg := prometheus.NewRegistry()
+	llmMetrics := CreateLLMMetrics(reg)
+
+	primaryManager := NewLLMManager(
+		primaryClient,
+		util.NewStringMapCache[string]("primary-cache", time.Minute),
+		llmMetrics,
+		time.Second*10,
+		5,
+		true,
+		"",
+		"",
+	)
+
+	secondaryManager := NewLLMManager(
+		secondaryClient,
+		util.NewStringMapCache[string]("secondary-cache", time.Minute),
+		llmMetrics,
+		time.Second*10,
+		5,
+		true,
+		"",
+		"",
+	)
+
+	// Use a very short fallback interval for testing
+	dualManager := NewDualLLMManager(primaryManager, secondaryManager, time.Millisecond*100)
+
+	prompts := []string{"test prompt"}
+
+	// First call should fail primary and use secondary
+	result, err := dualManager.CompleteMultiple(prompts, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if result["test prompt"] != "secondary response" {
+		t.Errorf("expected secondary response but got %q", result["test prompt"])
+	}
+
+	// Wait for fallback interval to pass
+	time.Sleep(time.Millisecond * 150)
+
+	// Fix primary client
+	primaryClient.ErrorToReturn = nil
+
+	// Next call should try primary again and succeed
+	result, err = dualManager.CompleteMultiple(prompts, false)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if result["test prompt"] != "primary response" {
+		t.Errorf("expected primary response after recovery but got %q", result["test prompt"])
 	}
 }
