@@ -31,10 +31,17 @@ IP event that can be viewed and queried in the Events tab in the UI.  This helps
 to highlight potentially interesting requests.
 
 #### Enabling
-Configure the backend with the parameters of the AI. This is documented in the
-[example config](./config/backend-config.yaml) in the AI section. In the config set
-"enable_describer" to true or 1.
-Make sure the (local) LLM is running and that the lophiid backend was restarted with the new config.
+Configure the backend with the AI parameters using environment variables in your `.env.backend` file:
+
+```bash
+# Enable AI triage
+LOPHIID_AI_TRIAGE_ENABLE=true
+LOPHIID_AI_API_LOCATION=http://localhost:8000/v1
+LOPHIID_AI_API_KEY=your-api-key
+LOPHIID_AI_MODEL=your-model-name
+```
+
+Make sure the (local) LLM is running and that the lophiid backend was restarted with the new environment variables.
 
 ### AI assisted responses
 
@@ -69,9 +76,13 @@ integration but that is currently beyond the scope of this document.
 
 To enable AI support for a content rule you need to do the following:
 
- * Configure the backend with the parameters of the AI. This is documented in
-   the [example config](./config/backend-config.yaml). Make sure the local LLM is
-   running and that the lophiid backend was restarted with the new config.
+ * Configure the backend with the AI parameters using environment variables in your `.env.backend` file:
+   ```bash
+   LOPHIID_AI_API_LOCATION=http://localhost:8000/v1
+   LOPHIID_AI_API_KEY=your-api-key
+   LOPHIID_AI_MODEL=your-model-name
+   ```
+   Make sure the local LLM is running and that the lophiid backend was restarted.
  * Select a "responder" in the Responder field of the rule. You need to select a
    responder that matches with the type of vulnerability being exploited.
  * Write a regular expression that is used against the Raw field of the request
