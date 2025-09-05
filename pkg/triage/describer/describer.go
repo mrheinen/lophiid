@@ -55,9 +55,9 @@ type LLMResult struct {
 	Application       string `json:"application"`
 	CVE               string `json:"cve"`
 	HasPayload        string `json:"has_payload"`
-	MitreAttack       string `json:"mitre_attack_id"`
+	MitreAttack       string `json:"mitre_attack"`
 	TargetedParameter string `json:"targeted_parameter"`
-	ShellCommands     string `json:shell_commands`
+	ShellCommands     string `json:"shell_commands"`
 }
 
 const LLMSystemPrompt = `
