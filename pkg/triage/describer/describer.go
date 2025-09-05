@@ -55,9 +55,9 @@ type LLMResult struct {
 	Application       string `json:"application"`
 	CVE               string `json:"cve"`
 	HasPayload        string `json:"has_payload"`
-	MitreAttack       string `json:"mitre_attack_id"`
+	MitreAttack       string `json:"mitre_attack"`
 	TargetedParameter string `json:"targeted_parameter"`
-	ShellCommands     string `json:shell_commands`
+	ShellCommands     string `json:"shell_commands"`
 }
 
 const LLMSystemPrompt = `
@@ -197,6 +197,9 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 		bh.AIVulnerabilityType = llmResult.VulnerabilityType
 		bh.AIApplication = llmResult.Application
 		bh.TriageStatus = constants.TriageStatusTypeDone
+		bh.AITargetedParameter = llmResult.TargetedParameter
+		bh.AIMitreAttack = llmResult.MitreAttack
+		bh.AIShellCommands = llmResult.ShellCommands
 
 		if llmResult.Malicious == "yes" || llmResult.Malicious == "no" {
 			bh.AIMalicious = llmResult.Malicious
