@@ -161,9 +161,24 @@
                         <td>{{ localDescription.ai_cve }}</td>
                       </tr>
 
+                      <tr v-if="localDescription.ai_mitre_attack">
+                        <th>MITRE ATT&CK (experimental)</th>
+                        <td>{{ localDescription.ai_mitre_attack }}</td>
+                      </tr>
+
+                      <tr v-if="localDescription.ai_targeted_parameter">
+                        <th>Targeted parameter (experimental)</th>
+                        <td>{{ localDescription.ai_targeted_parameter }}</td>
+                      </tr>
+
                       <tr v-if="localDescription.ai_vulnerability_type">
                         <th>CWE</th>
                         <td>{{ localDescription.ai_vulnerability_type }}</td>
+                      </tr>
+
+                      <tr v-if="localDescription.ai_shell_commands">
+                        <th>Shell commands (experimental)</th>
+                        <td>{{ localDescription.ai_shell_commands }}</td>
                       </tr>
 
                       <tr v-if="localDescription.source_model">

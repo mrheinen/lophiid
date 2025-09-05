@@ -197,6 +197,9 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 		bh.AIVulnerabilityType = llmResult.VulnerabilityType
 		bh.AIApplication = llmResult.Application
 		bh.TriageStatus = constants.TriageStatusTypeDone
+		bh.AITargetedParameter = llmResult.TargetedParameter
+		bh.AIMitreAttack = llmResult.MitreAttack
+		bh.AIShellCommands = llmResult.ShellCommands
 
 		if llmResult.Malicious == "yes" || llmResult.Malicious == "no" {
 			bh.AIMalicious = llmResult.Malicious
