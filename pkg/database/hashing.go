@@ -100,7 +100,7 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		headerFields = append(headerFields, headerArray[0])
 
 		if len(headerArray) == 2 {
-			if strings.ToLower(headerArray[0]) == "host" || strings.ToLower(headerArray[0]) == "user-agent" {
+			if strings.ToLower(headerArray[0]) == "host" || strings.ToLower(headerArray[0]) == "user-agent" || strings.ToLower(headerArray[0]) == "referer" {
 				continue
 			}
 

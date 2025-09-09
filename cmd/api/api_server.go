@@ -116,6 +116,7 @@ func main() {
 		return
 	}
 
+	*apiKey = strings.TrimSpace(*apiKey)
 	if *apiKey == "" {
 		id := uuid.New()
 		*apiKey = id.String()
