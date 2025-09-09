@@ -45,6 +45,7 @@ import (
 var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 
 var configFile = flag.String("c", "", "Config file")
+var apiKey = flag.String("k", "", "API key to run with")
 
 type Config struct {
 	General struct {
@@ -115,14 +116,18 @@ func main() {
 		return
 	}
 
-	id := uuid.New()
+	*apiKey = strings.TrimSpace(*apiKey)
+	if *apiKey == "" {
+		id := uuid.New()
+		*apiKey = id.String()
+	}
 
-	fmt.Printf("Starting with API key: %s\n", id.String())
+	fmt.Printf("Starting with API key: %s\n", *apiKey)
 
 	reg := prometheus.NewRegistry()
 	dbc := database.NewKSQLClient(&db)
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, nil, javascript.CreateGoJaMetrics(reg))
-	as := api.NewApiServer(dbc, jRunner, id.String())
+	as := api.NewApiServer(dbc, jRunner, *apiKey)
 	as.Start()
 	defer as.Stop()
 	defer dbc.Close()
