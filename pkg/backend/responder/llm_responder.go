@@ -10,11 +10,11 @@ import (
 )
 
 type LLMResponder struct {
-	llmManager    *llm.LLMManager
+	llmManager    llm.LLMManagerInterface
 	maxInputChars int
 }
 
-func NewLLMResponder(llmManager *llm.LLMManager, maxInputChars int) *LLMResponder {
+func NewLLMResponder(llmManager llm.LLMManagerInterface, maxInputChars int) *LLMResponder {
 	return &LLMResponder{
 		llmManager:    llmManager,
 		maxInputChars: maxInputChars,

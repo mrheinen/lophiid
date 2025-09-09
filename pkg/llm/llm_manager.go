@@ -29,6 +29,7 @@ import (
 
 // LLMManagerInterface defines the interface for LLM operations
 type LLMManagerInterface interface {
+	Complete(prompt string, cacheResult bool) (string, error)
 	CompleteMultiple(prompts []string, cacheResult bool) (map[string]string, error)
 	LoadedModel() string
 }
@@ -140,6 +141,40 @@ func NewDualLLMManager(primary, secondary LLMManagerInterface, fallbackInterval 
 		fallbackInterval: fallbackInterval,
 		usingSecondary:   false,
 	}
+}
+
+// Complete attempts to complete a single prompt using the primary client, falls back to secondary on error
+func (d *DualLLMManager) Complete(prompt string, cacheResult bool) (string, error) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	// Check if we should switch back to primary after fallback interval
+	if d.usingSecondary && time.Since(d.lastFailureTime) > d.fallbackInterval {
+		slog.Info("Switching back to primary LLM client after fallback interval")
+		d.usingSecondary = false
+	}
+
+	// Try primary client first (unless we're in fallback mode)
+	if !d.usingSecondary {
+		result, err := d.primary.Complete(prompt, cacheResult)
+		if err == nil {
+			return result, nil
+		}
+
+		// Primary failed, switch to secondary
+		slog.Error("Primary LLM client failed, switching to secondary", slog.String("error", err.Error()))
+		d.usingSecondary = true
+		d.lastFailureTime = time.Now()
+	}
+
+	// Use secondary client
+	slog.Info("Using secondary LLM client", slog.Bool("fallback_mode", d.usingSecondary))
+	result, err := d.secondary.Complete(prompt, cacheResult)
+	if err != nil {
+		return "", fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
+	}
+
+	return result, nil
 }
 
 // CompleteMultiple attempts to complete prompts using the primary client, falls back to secondary on error

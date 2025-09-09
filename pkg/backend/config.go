@@ -121,6 +121,7 @@ type Config struct {
 			ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
 			ApiKey                string        `fig:"api_key"`
 			Model                 string        `fig:"model" default:""`
+			MaxContextSize        int           `fig:"max_context_size" default:"32000"`
 			PromptPrefix          string        `fig:"prompt_prefix" default:""`
 			PromptSuffix          string        `fig:"prompt_suffix" default:""`
 			CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
@@ -131,6 +132,7 @@ type Config struct {
 			ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
 			ApiKey                string        `fig:"api_key"`
 			Model                 string        `fig:"model" default:""`
+			MaxContextSize        int           `fig:"max_context_size" default:"32000"`
 			PromptPrefix          string        `fig:"prompt_prefix" default:""`
 			PromptSuffix          string        `fig:"prompt_suffix" default:""`
 			CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`

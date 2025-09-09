@@ -77,7 +77,7 @@ func main() {
 		*keepRunning = false
 	}()
 
-	primaryLLMClient := llm.NewOpenAILLMClientWithModel(cfg.AI.PrimaryLLM.ApiKey, cfg.AI.PrimaryLLM.ApiLocation, "", cfg.AI.PrimaryLLM.Model)
+	primaryLLMClient := llm.NewOpenAILLMClientWithModel(cfg.AI.PrimaryLLM.ApiKey, cfg.AI.PrimaryLLM.ApiLocation, "", cfg.AI.PrimaryLLM.Model, cfg.AI.PrimaryLLM.MaxContextSize)
 
 	metricsRegistry := prometheus.NewRegistry()
 
@@ -109,15 +109,15 @@ func main() {
 	ipEventManager.Start()
 
 	deMtrics := describer.CreateDescriberMetrics(metricsRegistry)
-	
+
 	// Check if secondary LLM is configured (non-empty API key indicates configuration)
 	var myDescriber *describer.CachedDescriptionManager
 	if cfg.AI.SecondaryLLM.ApiKey != "" {
 		slog.Info("Secondary LLM configured, using DualLLMManager")
-		secondaryLLMClient := llm.NewOpenAILLMClientWithModel(cfg.AI.SecondaryLLM.ApiKey, cfg.AI.SecondaryLLM.ApiLocation, "", cfg.AI.SecondaryLLM.Model)
+		secondaryLLMClient := llm.NewOpenAILLMClientWithModel(cfg.AI.SecondaryLLM.ApiKey, cfg.AI.SecondaryLLM.ApiLocation, "", cfg.AI.SecondaryLLM.Model, cfg.AI.SecondaryLLM.MaxContextSize)
 		secondaryCache := util.NewStringMapCache[string]("Secondary LLM prompt cache", cfg.AI.SecondaryLLM.CacheExpirationTime)
 		secondaryManager := llm.NewLLMManager(secondaryLLMClient, secondaryCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
-		
+
 		myDescriber = describer.GetNewCachedDescriptionManagerWithDualLLM(dbc, primaryManager, secondaryManager, cfg.AI.FallbackInterval, ipEventManager, deMtrics)
 	} else {
 		slog.Info("Using single primary LLM")
