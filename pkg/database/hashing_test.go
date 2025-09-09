@@ -468,6 +468,40 @@ func TestGetSameRequestHash(t *testing.T) {
 			shouldMatch: false,
 			wantErr:     false,
 		},
+		{
+			name: "same request different referer headers should match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Referer: https://example1.com/page", "Accept: application/json"},
+				Query:   "id=123",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"Referer: https://example2.com/different", "Accept: application/json"},
+				Query:   "id=123",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+		{
+			name: "same request different user-agent headers should match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Accept: application/json"},
+				Query:   "id=123",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/api/v1/data",
+				Headers: pgtype.FlatArray[string]{"User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "Accept: application/json"},
+				Query:   "id=123",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
 	}
 
 	for _, tt := range tests {
