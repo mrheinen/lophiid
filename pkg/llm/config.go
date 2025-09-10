@@ -26,7 +26,7 @@ type LLMConfig struct {
 	ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
 	ApiKey                string        `fig:"api_key"`
 	Model                 string        `fig:"model" default:""`
-	MaxContextSize        int           `fig:"max_context_size" default:"32000"`
+	MaxContextSize        int64         `fig:"max_context_size" default:"32000"`
 	PromptPrefix          string        `fig:"prompt_prefix" default:""`
 	PromptSuffix          string        `fig:"prompt_suffix" default:""`
 	LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
