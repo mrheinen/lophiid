@@ -197,24 +197,17 @@ func main() {
 	var desClient describer.DescriberClient
 
 	if cfg.AI.EnableResponder || cfg.AI.Triage.Enable {
-
-		var llmClient llm.OpenAILLMClient
-		if cfg.AI.PrimaryLLM.Model != "" {
-			llmClient = *llm.NewOpenAILLMClientWithModel(cfg.AI.PrimaryLLM.ApiKey, cfg.AI.PrimaryLLM.ApiLocation, "", cfg.AI.PrimaryLLM.Model, cfg.AI.PrimaryLLM.MaxContextSize)
-		} else {
-			llmClient = *llm.NewOpenAILLMClient(cfg.AI.PrimaryLLM.ApiKey, cfg.AI.PrimaryLLM.ApiLocation, "", cfg.AI.PrimaryLLM.MaxContextSize)
-		}
-		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.PrimaryLLM.CacheExpirationTime)
+		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
+		primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM)
 		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-		primaryManager := llm.NewLLMManager(&llmClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
+		primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
 
 		var llmManager llm.LLMManagerInterface
 		// Check if secondary LLM is configured (non-empty API key indicates configuration)
 		if cfg.AI.SecondaryLLM.ApiKey != "" {
 			slog.Info("Secondary LLM configured, using DualLLMManager")
-			secondaryLLMClient := llm.NewOpenAILLMClientWithModel(cfg.AI.SecondaryLLM.ApiKey, cfg.AI.SecondaryLLM.ApiLocation, "", cfg.AI.SecondaryLLM.Model, cfg.AI.SecondaryLLM.MaxContextSize)
-			secondaryCache := util.NewStringMapCache[string]("Secondary LLM prompt cache", cfg.AI.SecondaryLLM.CacheExpirationTime)
-			secondaryManager := llm.NewLLMManager(secondaryLLMClient, secondaryCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
+			secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM)
+			secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
 
 			llmManager = llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
 		} else {

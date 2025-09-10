@@ -77,10 +77,7 @@ func main() {
 		*keepRunning = false
 	}()
 
-	primaryLLMClient := llm.NewOpenAILLMClientWithModel(cfg.AI.PrimaryLLM.ApiKey, cfg.AI.PrimaryLLM.ApiLocation, "", cfg.AI.PrimaryLLM.Model, cfg.AI.PrimaryLLM.MaxContextSize)
-
 	metricsRegistry := prometheus.NewRegistry()
-
 	http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
 	go func() {
 		if err := http.ListenAndServe(cfg.AI.Triage.MetricsListenAddress, nil); err != nil {
@@ -88,10 +85,6 @@ func main() {
 			os.Exit(1)
 		}
 	}()
-
-	primaryCache := util.NewStringMapCache[string]("Primary LLM prompt cache", cfg.AI.PrimaryLLM.CacheExpirationTime)
-	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	primaryManager := llm.NewLLMManager(primaryLLMClient, primaryCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
 
 	db, err := kpgx.New(context.Background(), cfg.Backend.Database.Url,
 		ksql.Config{
@@ -101,24 +94,35 @@ func main() {
 		slog.Error("error opening database", slog.String("error", err.Error()))
 		return
 	}
-
 	dbc := database.NewKSQLClient(&db)
-
 	analysisMetrics := analysis.CreateAnalysisMetrics(metricsRegistry)
 	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, cfg.Analysis.ScanMonitorInterval, cfg.Analysis.AggregateScanWindow, analysisMetrics)
 	ipEventManager.Start()
-
 	deMtrics := describer.CreateDescriberMetrics(metricsRegistry)
-
-	// Check if secondary LLM is configured (non-empty API key indicates configuration)
 	var myDescriber *describer.CachedDescriptionManager
+
+	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM)
+	if primaryLLMClient == nil {
+		slog.Error("Failed to create primary LLM client")
+		return
+	}
+
+	llmCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
+	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+	primaryManager := llm.NewLLMManager(primaryLLMClient, llmCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
+
 	if cfg.AI.SecondaryLLM.ApiKey != "" {
 		slog.Info("Secondary LLM configured, using DualLLMManager")
-		secondaryLLMClient := llm.NewOpenAILLMClientWithModel(cfg.AI.SecondaryLLM.ApiKey, cfg.AI.SecondaryLLM.ApiLocation, "", cfg.AI.SecondaryLLM.Model, cfg.AI.SecondaryLLM.MaxContextSize)
-		secondaryCache := util.NewStringMapCache[string]("Secondary LLM prompt cache", cfg.AI.SecondaryLLM.CacheExpirationTime)
-		secondaryManager := llm.NewLLMManager(secondaryLLMClient, secondaryCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
+		secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM)
+		if secondaryLLMClient == nil {
+			slog.Error("error creating secondary LLM client")
+			return
+		}
 
-		myDescriber = describer.GetNewCachedDescriptionManagerWithDualLLM(dbc, primaryManager, secondaryManager, cfg.AI.FallbackInterval, ipEventManager, deMtrics)
+		secondaryManager := llm.NewLLMManager(secondaryLLMClient, llmCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
+
+		dualManager := llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
+		myDescriber = describer.GetNewCachedDescriptionManager(dbc, dualManager, ipEventManager, deMtrics)
 	} else {
 		slog.Info("Using single primary LLM")
 		myDescriber = describer.GetNewCachedDescriptionManager(dbc, primaryManager, ipEventManager, deMtrics)
