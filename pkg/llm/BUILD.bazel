@@ -4,6 +4,7 @@ go_library(
     name = "llm",
     srcs = [
         "config.go",
+        "gemini.go",
         "llm.go",
         "llm_manager.go",
         "metrics.go",
@@ -16,6 +17,7 @@ go_library(
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_sashabaranov_go_openai//:go-openai",
         "@com_github_sourcegraph_conc//pool",
+        "@org_golang_google_genai//:genai",
     ],
 )
 

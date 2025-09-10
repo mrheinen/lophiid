@@ -56,7 +56,7 @@ type OpenAILLMClient struct {
 	// single %s at a location where the request prompt needs to go.
 	promptTemplate string
 	// maxContextSize is the maximum number of characters allowed in the context
-	maxContextSize int
+	maxContextSize int64
 }
 
 func NewLLMClient(cfg LLMConfig) LLMClient {
@@ -65,22 +65,21 @@ func NewLLMClient(cfg LLMConfig) LLMClient {
 	case "openai":
 		if cfg.Model == "" {
 			// TODO: rething the prompt template argument.
-			return NewOpenAILLMClient(cfg.ApiKey, cfg.ApiLocation, "", cfg.MaxContextSize)
+			return NewOpenAILLMClient(cfg.ApiKey, cfg.ApiLocation, "%s", cfg.MaxContextSize)
 		} else {
-			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, "", cfg.Model, cfg.MaxContextSize)
+			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, "%s", cfg.Model, cfg.MaxContextSize)
 		}
 	case "gemini":
-		{
-			// TODO
-		}
+		return NewGeminiLLMMClient(cfg.ApiKey, "%s", cfg.Model, cfg.MaxContextSize)
+	default:
+		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))
+		return nil
 	}
-
-	return nil
 }
 
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
 // model and maximum context size.
-func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTemplate string, model string, maxContextSize int) *OpenAILLMClient {
+func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTemplate string, model string, maxContextSize int64) *OpenAILLMClient {
 	config := openai.DefaultConfig(apiKey)
 	config.BaseURL = apiEndpoint
 	client := openai.NewClientWithConfig(config)
@@ -112,7 +111,7 @@ func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTempla
 
 // NewOpenAILLMClient creates a new OpenAILLMClient and auto selects a model
 // from the API. Use this when talking with an API that only has one model.
-func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string, maxContextSize int) *OpenAILLMClient {
+func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string, maxContextSize int64) *OpenAILLMClient {
 	config := openai.DefaultConfig(apiKey)
 	config.BaseURL = apiEndpoint
 	client := openai.NewClientWithConfig(config)
@@ -138,44 +137,12 @@ func (l *OpenAILLMClient) LoadedModel() string {
 }
 
 // truncatePrompt truncates the prompt if it exceeds the maximum context size
-func (l *OpenAILLMClient) truncatePrompt(prompt string) string {
-	if l.maxContextSize <= 0 {
+func truncatePrompt(prompt string, maxContextSize int64) string {
+	if maxContextSize <= 0 || len(prompt) <= int(maxContextSize) {
 		return prompt
 	}
 
-	fullPrompt := fmt.Sprintf(l.promptTemplate, prompt)
-	if len(fullPrompt) <= l.maxContextSize {
-		return prompt
-	}
-
-	// Calculate how much space we have for the actual prompt content
-	templateOverhead := len(l.promptTemplate) - 2 // subtract 2 for the %s placeholder
-	availableSpace := l.maxContextSize - templateOverhead
-
-	if availableSpace <= 0 {
-		slog.Warn("Prompt template is too long for max context size",
-			slog.Int("template_length", len(l.promptTemplate)),
-			slog.Int("max_context_size", l.maxContextSize))
-		return ""
-	}
-
-	if len(prompt) <= availableSpace {
-		return prompt
-	}
-
-	// Truncate the prompt and add a note about truncation
-	truncationNote := "... [TRUNCATED]"
-	if availableSpace <= len(truncationNote) {
-		return prompt[:availableSpace]
-	}
-
-	truncatedPrompt := prompt[:availableSpace-len(truncationNote)] + truncationNote
-	slog.Info("Prompt truncated due to context size limit",
-		slog.Int("original_length", len(prompt)),
-		slog.Int("truncated_length", len(truncatedPrompt)),
-		slog.Int("max_context_size", l.maxContextSize))
-
-	return truncatedPrompt
+	return prompt[:maxContextSize]
 }
 
 // SelectModel queries the OpenAI API for models and selects the first model.
@@ -198,7 +165,7 @@ func (l *OpenAILLMClient) SelectModel() error {
 }
 
 func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, error) {
-	truncatedPrompt := l.truncatePrompt(prompt)
+	truncatedPrompt := truncatePrompt(fmt.Sprintf(l.promptTemplate, prompt), int64(l.maxContextSize))
 	resp, err := l.client.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
@@ -206,7 +173,7 @@ func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, 
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleUser,
-					Content: fmt.Sprintf(l.promptTemplate, truncatedPrompt),
+					Content: truncatedPrompt,
 				},
 			},
 		},
