@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "llm",
     srcs = [
+        "config.go",
         "llm.go",
         "llm_manager.go",
         "metrics.go",

@@ -59,6 +59,25 @@ type OpenAILLMClient struct {
 	maxContextSize int
 }
 
+func NewLLMClient(cfg LLMConfig) LLMClient {
+	// OpenAI
+	switch cfg.ApiType {
+	case "openai":
+		if cfg.Model == "" {
+			// TODO: rething the prompt template argument.
+			return NewOpenAILLMClient(cfg.ApiKey, cfg.ApiLocation, "", cfg.MaxContextSize)
+		} else {
+			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, "", cfg.Model, cfg.MaxContextSize)
+		}
+	case "gemini":
+		{
+			// TODO
+		}
+	}
+
+	return nil
+}
+
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
 // model and maximum context size.
 func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTemplate string, model string, maxContextSize int) *OpenAILLMClient {
