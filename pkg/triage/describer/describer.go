@@ -84,21 +84,10 @@ That was the request. Now the following information was found in the base64 enco
 
 `
 
-func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
+func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
 	return &CachedDescriptionManager{
 		dbClient:     dbClient,
 		llmManager:   llmManager,
-		metrics:      metrics,
-		eventManager: eventManager,
-	}
-}
-
-// GetNewCachedDescriptionManagerWithDualLLM creates a new CachedDescriptionManager with dual LLM support
-func GetNewCachedDescriptionManagerWithDualLLM(dbClient database.DatabaseClient, primaryLLM, secondaryLLM *llm.LLMManager, fallbackInterval time.Duration, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
-	dualManager := llm.NewDualLLMManager(primaryLLM, secondaryLLM, fallbackInterval)
-	return &CachedDescriptionManager{
-		dbClient:     dbClient,
-		llmManager:   dualManager,
 		metrics:      metrics,
 		eventManager: eventManager,
 	}

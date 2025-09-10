@@ -26,6 +26,7 @@ go_library(
         "//pkg/database",
         "//pkg/database/models",
         "//pkg/javascript",
+        "//pkg/llm",
         "//pkg/metrics",
         "//pkg/triage/describer",
         "//pkg/util",

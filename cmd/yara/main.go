@@ -106,24 +106,23 @@ func main() {
 
 	}
 
-	llmClient := llm.NewOpenAILLMClientWithModel(cfg.AI.PrimaryLLM.ApiKey, cfg.AI.PrimaryLLM.ApiLocation, "", cfg.AI.PrimaryLLM.Model)
+	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM)
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+	primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
 
 	// Check if secondary LLM is configured (non-empty API key indicates configuration)
 	var llmManager llm.LLMManagerInterface
 	if cfg.AI.SecondaryLLM.ApiKey != "" {
 		slog.Info("Secondary LLM configured, using DualLLMManager")
-		primaryManager := llm.NewLLMManager(llmClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
 
-		secondaryLLMClient := llm.NewOpenAILLMClientWithModel(cfg.AI.SecondaryLLM.ApiKey, cfg.AI.SecondaryLLM.ApiLocation, "", cfg.AI.SecondaryLLM.Model)
-		secondaryCache := util.NewStringMapCache[string]("Secondary LLM prompt cache", cfg.AI.SecondaryLLM.CacheExpirationTime)
-		secondaryManager := llm.NewLLMManager(secondaryLLMClient, secondaryCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
+		secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM)
+		secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
 
 		llmManager = llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
 	} else {
 		slog.Info("Using single LLM manager")
-		llmManager = llm.NewLLMManager(llmClient, pCache, llmMetrics, time.Minute*3, 4, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
+		llmManager = llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, time.Minute*3, 4, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
 	}
 
 	mgr := yara.NewYaraManager(dbc, llmManager, *rulesDir, cfg.Yara.PrepareCommand, metrics)

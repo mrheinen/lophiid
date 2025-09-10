@@ -16,7 +16,10 @@
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package backend
 
-import "time"
+import (
+	"lophiid/pkg/llm"
+	"time"
+)
 
 type Config struct {
 	Backend struct {
@@ -116,29 +119,14 @@ type Config struct {
 	} `fig:"whois_manager"`
 
 	AI struct {
-		EnableResponder bool `fig:"enable_responder" `
-		PrimaryLLM      struct {
-			ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
-			ApiKey                string        `fig:"api_key"`
-			Model                 string        `fig:"model" default:""`
-			PromptPrefix          string        `fig:"prompt_prefix" default:""`
-			PromptSuffix          string        `fig:"prompt_suffix" default:""`
-			CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
-			LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
-			LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
-		} `fig:"primary_llm"`
-		SecondaryLLM struct {
-			ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
-			ApiKey                string        `fig:"api_key"`
-			Model                 string        `fig:"model" default:""`
-			PromptPrefix          string        `fig:"prompt_prefix" default:""`
-			PromptSuffix          string        `fig:"prompt_suffix" default:""`
-			CacheExpirationTime   time.Duration `fig:"cache_expiration_time" default:"24h"`
-			LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
-			LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
-		} `fig:"secondary_llm"`
+		EnableResponder     bool          `fig:"enable_responder" `
+		PrimaryLLM          llm.LLMConfig `fig:"primary_llm"`
+		SecondaryLLM        llm.LLMConfig `fig:"secondary_llm"`
+		CacheExpirationTime time.Duration `fig:"cache_expiration_time" default:"24h"`
+		// How long to lean on the secondary LLM after the primary failed before
+		// switching back to the primary.
 		FallbackInterval   time.Duration `fig:"fallback_interval" default:"1h"`
-		MaxInputCharacters int           `fig:"max_input_characters" default:"4096"`
+		MaxInputCharacters int           `fig:"max_input_characters" default:"10000"`
 		Triage             struct {
 			Enable               bool          `fig:"enable"`
 			LogFile              string        `fig:"log_file" default:"triage.log" `

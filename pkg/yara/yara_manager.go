@@ -29,10 +29,10 @@ type YaraManager struct {
 	rulesLocation  string
 	metrics        *YaraMetrics
 	prepareCommand string
-	llmManager     *llm.LLMManager
+	llmManager     llm.LLMManagerInterface
 }
 
-func NewYaraManager(dbClient database.DatabaseClient, llmManager *llm.LLMManager, rulesLocation string, prepareCommand string, metrics *YaraMetrics) *YaraManager {
+func NewYaraManager(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, rulesLocation string, prepareCommand string, metrics *YaraMetrics) *YaraManager {
 	return &YaraManager{
 		dbClient:       dbClient,
 		rulesLocation:  rulesLocation,
