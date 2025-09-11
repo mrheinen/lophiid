@@ -29,9 +29,10 @@ type GeminiLLMClient struct {
 	promptTemplate string
 	client         *genai.Client
 	maxContextSize int64
+	thinkingBudget int32
 }
 
-func NewGeminiLLMMClient(apiKey string, promptTemplate string, model string, maxContextSize int64) *GeminiLLMClient {
+func NewGeminiLLMMClient(apiKey string, promptTemplate string, model string, maxContextSize int64, thinkingBudget int32) *GeminiLLMClient {
 
 	client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
 		APIKey:  apiKey,
@@ -48,6 +49,7 @@ func NewGeminiLLMMClient(apiKey string, promptTemplate string, model string, max
 		promptTemplate: promptTemplate,
 		maxContextSize: maxContextSize,
 		client:         client,
+		thinkingBudget: thinkingBudget,
 	}
 }
 
@@ -57,7 +59,14 @@ func (g *GeminiLLMClient) LoadedModel() string {
 
 func (g *GeminiLLMClient) Complete(ctx context.Context, prompt string) (string, error) {
 	finalPrompt := truncatePrompt(fmt.Sprintf(g.promptTemplate, prompt), g.maxContextSize)
-	result, err := g.client.Models.GenerateContent(ctx, g.model, genai.Text(finalPrompt), nil)
+
+	cfg := &genai.GenerateContentConfig{
+		ThinkingConfig: &genai.ThinkingConfig{
+			ThinkingBudget: &g.thinkingBudget,
+		},
+	}
+
+	result, err := g.client.Models.GenerateContent(ctx, g.model, genai.Text(finalPrompt), cfg)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to generate completion: %w", err)
