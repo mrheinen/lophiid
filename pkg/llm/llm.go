@@ -18,10 +18,7 @@ package llm
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-
-	openai "github.com/sashabaranov/go-openai"
 )
 
 type LLMClient interface {
@@ -55,7 +52,7 @@ func NewLLMClient(cfg LLMConfig) LLMClient {
 			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, "%s", cfg.Model, cfg.MaxContextSize)
 		}
 	case "gemini":
-		return NewGeminiLLMMClient(cfg.ApiKey, "%s", cfg.Model, cfg.MaxContextSize)
+		return NewGeminiLLMMClient(cfg.ApiKey, "%s", cfg.Model, cfg.MaxContextSize, cfg.GeminiThinkingBudget)
 	default:
 		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))
 		return nil

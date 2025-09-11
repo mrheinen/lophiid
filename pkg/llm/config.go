@@ -31,4 +31,6 @@ type LLMConfig struct {
 	PromptSuffix          string        `fig:"prompt_suffix" default:""`
 	LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
 	LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
+	// Gemini only.
+	GeminiThinkingBudget int32 `fig:"gemini_thinking_budget" default:"0"`
 }
