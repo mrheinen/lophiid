@@ -8,6 +8,7 @@ go_library(
         "llm.go",
         "llm_manager.go",
         "metrics.go",
+        "openai.go",
     ],
     importpath = "lophiid/pkg/llm",
     visibility = ["//visibility:public"],

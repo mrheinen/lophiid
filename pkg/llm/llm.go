@@ -24,10 +24,6 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-type OpenAIClientInterface interface {
-	CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error)
-}
-
 type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
 	LoadedModel() string
@@ -48,17 +44,6 @@ func (m *MockLLMClient) LoadedModel() string {
 	return "gpt-3.5-turbo"
 }
 
-type OpenAILLMClient struct {
-	client      *openai.Client
-	apiEndpoint string // E.g. http://localhost:8000/v1
-	Model       string
-	// promptTemplate is used to construct the prompt. It needs to contain a
-	// single %s at a location where the request prompt needs to go.
-	promptTemplate string
-	// maxContextSize is the maximum number of characters allowed in the context
-	maxContextSize int64
-}
-
 func NewLLMClient(cfg LLMConfig) LLMClient {
 	// OpenAI
 	switch cfg.ApiType {
@@ -77,65 +62,6 @@ func NewLLMClient(cfg LLMConfig) LLMClient {
 	}
 }
 
-// NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
-// model and maximum context size.
-func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTemplate string, model string, maxContextSize int64) *OpenAILLMClient {
-	config := openai.DefaultConfig(apiKey)
-	config.BaseURL = apiEndpoint
-	client := openai.NewClientWithConfig(config)
-
-	ret := &OpenAILLMClient{
-		client:         client,
-		apiEndpoint:    apiEndpoint,
-		promptTemplate: promptTemplate,
-		Model:          model,
-		maxContextSize: maxContextSize,
-	}
-
-	models, err := client.ListModels(context.Background())
-	if err != nil {
-		slog.Error("could not list models", slog.String("error", err.Error()))
-		return nil
-	}
-
-	for _, m := range models.Models {
-		if m.ID == model {
-			return ret
-		}
-	}
-
-	slog.Error("could not find model", slog.String("model", model))
-	return nil
-
-}
-
-// NewOpenAILLMClient creates a new OpenAILLMClient and auto selects a model
-// from the API. Use this when talking with an API that only has one model.
-func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string, maxContextSize int64) *OpenAILLMClient {
-	config := openai.DefaultConfig(apiKey)
-	config.BaseURL = apiEndpoint
-	client := openai.NewClientWithConfig(config)
-
-	ret := &OpenAILLMClient{
-		client:         client,
-		apiEndpoint:    apiEndpoint,
-		promptTemplate: promptTemplate,
-		maxContextSize: maxContextSize,
-	}
-
-	if err := ret.SelectModel(); err != nil {
-		slog.Error("Error finding model", slog.String("error", err.Error()))
-		return nil
-	}
-
-	slog.Info("Selected model", slog.String("model", ret.Model))
-	return ret
-}
-
-func (l *OpenAILLMClient) LoadedModel() string {
-	return l.Model
-}
-
 // truncatePrompt truncates the prompt if it exceeds the maximum context size
 func truncatePrompt(prompt string, maxContextSize int64) string {
 	if maxContextSize <= 0 || len(prompt) <= int(maxContextSize) {
@@ -143,49 +69,4 @@ func truncatePrompt(prompt string, maxContextSize int64) string {
 	}
 
 	return prompt[:maxContextSize]
-}
-
-// SelectModel queries the OpenAI API for models and selects the first model.
-func (l *OpenAILLMClient) SelectModel() error {
-	models, err := l.client.ListModels(context.Background())
-	if err != nil {
-		return fmt.Errorf("ListModels error: %w", err)
-	}
-
-	if len(models.Models) == 0 {
-		return fmt.Errorf("no models found")
-	}
-
-	if len(models.Models) > 1 {
-		slog.Warn("Found multiple models! Using the first.", slog.String("model", models.Models[0].ID))
-	}
-
-	l.Model = models.Models[0].ID
-	return nil
-}
-
-func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, error) {
-	truncatedPrompt := truncatePrompt(fmt.Sprintf(l.promptTemplate, prompt), int64(l.maxContextSize))
-	resp, err := l.client.CreateChatCompletion(
-		ctx,
-		openai.ChatCompletionRequest{
-			Model: l.Model,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: truncatedPrompt,
-				},
-			},
-		},
-	)
-
-	if err != nil {
-		return "", fmt.Errorf("ChatCompletion error: %v", err)
-	}
-
-	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("chat returned nothing")
-	}
-
-	return resp.Choices[0].Message.Content, nil
 }
