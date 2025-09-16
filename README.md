@@ -5,6 +5,7 @@
 </p>
 
 ![Lophiid build workflow](https://github.com/mrheinen/lophiid/actions/workflows/go.yml/badge.svg)
+![CodeQL](https://github.com/mrheinen/lophiid/actions/workflows/github-code-scanning/codeql/badge.svg)
 
 ## Introduction
 
