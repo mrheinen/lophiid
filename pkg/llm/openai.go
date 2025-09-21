@@ -20,13 +20,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/util/constants"
+	"time"
 
-	openai "github.com/sashabaranov/go-openai"
+	"github.com/openai/openai-go/v2"
+	"github.com/openai/openai-go/v2/option"
 )
-
-type OpenAIClientInterface interface {
-	CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error)
-}
 
 type OpenAILLMClient struct {
 	client      *openai.Client
@@ -42,25 +41,27 @@ type OpenAILLMClient struct {
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
 // model and maximum context size.
 func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTemplate string, model string, maxContextSize int64) *OpenAILLMClient {
-	config := openai.DefaultConfig(apiKey)
-	config.BaseURL = apiEndpoint
-	client := openai.NewClientWithConfig(config)
+	client := openai.NewClient(
+		option.WithAPIKey(apiKey),
+		option.WithBaseURL(apiEndpoint),
+	)
 
 	ret := &OpenAILLMClient{
-		client:         client,
+		client:         &client,
 		apiEndpoint:    apiEndpoint,
 		promptTemplate: promptTemplate,
 		Model:          model,
 		maxContextSize: maxContextSize,
 	}
 
-	models, err := client.ListModels(context.Background())
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*30)
+	models, err := client.Models.List(ctx)
 	if err != nil {
-		slog.Error("could not list models", slog.String("error", err.Error()))
+		slog.Error("error listing models", slog.String("error", err.Error()))
 		return nil
 	}
 
-	for _, m := range models.Models {
+	for _, m := range models.Data {
 		if m.ID == model {
 			return ret
 		}
@@ -68,18 +69,19 @@ func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTempla
 
 	slog.Error("could not find model", slog.String("model", model))
 	return nil
-
 }
 
 // NewOpenAILLMClient creates a new OpenAILLMClient and auto selects a model
 // from the API. Use this when talking with an API that only has one model.
 func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string, maxContextSize int64) *OpenAILLMClient {
-	config := openai.DefaultConfig(apiKey)
-	config.BaseURL = apiEndpoint
-	client := openai.NewClientWithConfig(config)
+
+	client := openai.NewClient(
+		option.WithAPIKey(apiKey),
+		option.WithBaseURL(apiEndpoint),
+	)
 
 	ret := &OpenAILLMClient{
-		client:         client,
+		client:         &client,
 		apiEndpoint:    apiEndpoint,
 		promptTemplate: promptTemplate,
 		maxContextSize: maxContextSize,
@@ -100,40 +102,64 @@ func (l *OpenAILLMClient) LoadedModel() string {
 
 // SelectModel queries the OpenAI API for models and selects the first model.
 func (l *OpenAILLMClient) SelectModel() error {
-	models, err := l.client.ListModels(context.Background())
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*30)
+	models, err := l.client.Models.List(ctx)
 	if err != nil {
-		return fmt.Errorf("ListModels error: %w", err)
+		return fmt.Errorf("error listing models: %w", err)
 	}
 
-	if len(models.Models) == 0 {
+	if len(models.Data) == 0 {
 		return fmt.Errorf("no models found")
 	}
 
-	if len(models.Models) > 1 {
-		slog.Warn("Found multiple models! Using the first.", slog.String("model", models.Models[0].ID))
-	}
+	slog.Info("using the model", slog.String("model", models.Data[0].ID))
 
-	l.Model = models.Models[0].ID
+	l.Model = models.Data[0].ID
 	return nil
 }
 
+// Complete complete a single LLM prompt
 func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, error) {
 	truncatedPrompt := truncatePrompt(fmt.Sprintf(l.promptTemplate, prompt), int64(l.maxContextSize))
-	resp, err := l.client.CreateChatCompletion(
-		ctx,
-		openai.ChatCompletionRequest{
-			Model: l.Model,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: truncatedPrompt,
-				},
-			},
+
+	msgs := []LLMMessage{
+		{
+			Role:    constants.LLMClientMessageUser,
+			Content: truncatedPrompt,
 		},
-	)
+	}
+
+	return l.CompleteWithMessages(ctx, msgs)
+}
+
+// CompleteWithMessages complete a sequence of LLM messages. The last message
+// needs to be a user message.
+func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error) {
+	lastMessage := &msgs[len(msgs)-1]
+	if lastMessage.Role != constants.LLMClientMessageUser {
+		return "", fmt.Errorf("last message must be user")
+	}
+
+	param := openai.ChatCompletionNewParams{
+		Messages: []openai.ChatCompletionMessageParamUnion{},
+		Model:    l.Model,
+	}
+
+	for i := range msgs {
+		switch msgs[i].Role {
+		case constants.LLMClientMessageUser:
+			param.Messages = append(param.Messages, openai.UserMessage(msgs[i].Content))
+		case constants.LLMClientMessageSystem:
+			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
+		default:
+			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
+		}
+	}
+
+	resp, err := l.client.Chat.Completions.New(ctx, param)
 
 	if err != nil {
-		return "", fmt.Errorf("ChatCompletion error: %v", err)
+		return "", fmt.Errorf("chat completion error: %v", err)
 	}
 
 	if len(resp.Choices) == 0 {
