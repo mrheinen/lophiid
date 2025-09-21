@@ -15,6 +15,7 @@ go_library(
         "request_description.go",
         "request_metadata.go",
         "session.go",
+        "session_execution_context.go",
         "stored_query.go",
         "tag.go",
         "tag_per_query.go",

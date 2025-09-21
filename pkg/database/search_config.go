@@ -29,6 +29,13 @@ var contentConfig = SearchConfig{
 	OrderBy:       "id DESC",
 }
 
+var sessionContextConfig = SearchConfig{
+	Table:         &SessionContextTable,
+	TableName:     "session_execution_context",
+	AllowedFields: getDatamodelDatabaseFields(models.SessionExecutionContext{}),
+	OrderBy:       "id DESC",
+}
+
 var yaraConfig = SearchConfig{
 	Table:         &YaraTable,
 	TableName:     "yara",
