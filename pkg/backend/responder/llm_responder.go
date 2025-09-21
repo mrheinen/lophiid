@@ -73,6 +73,15 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
 		}
 
+	case constants.ResponderTypeHelpfulAI:
+		basePrompt = helpfulAIPrompt
+		finalPrompt := fmt.Sprintf(basePrompt, promptInput)
+		res, err = l.llmManager.Complete(finalPrompt, true)
+		if err != nil {
+			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
+			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
+		}
+
 	default:
 		slog.Error("invalid responder type", slog.String("type", resType))
 		return "", fmt.Errorf("invalid responder type: %s", resType)

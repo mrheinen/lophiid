@@ -27,3 +27,5 @@ You are a computer that is given source code. Tell me what output this source co
 
 %s
 `
+
+var helpfulAIPrompt = `You are a helpful AI. Please respond to the users request. Keep your answer straightforward and concise. This is the request: %s`
