@@ -24,8 +24,8 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
-	"strings"
 	"time"
 )
 
@@ -171,9 +171,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 	for prompt, completion := range result {
 		var llmResult LLMResult
 
-		completion = strings.TrimSpace(completion)
-		completion = strings.TrimPrefix(completion, "```json")
-		completion = strings.TrimSuffix(completion, "```")
+		completion = util.RemoveJsonExpression(completion)
 
 		if err := json.Unmarshal([]byte(completion), &llmResult); err != nil {
 			b.MarkDescriptionFailed(&promptMap[prompt].RequestDescription)
