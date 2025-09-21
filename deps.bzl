@@ -30,11 +30,39 @@ def go_dependencies():
         version = "v0.0.0-20240626203959-61d1e3462e30",
     )
     go_repository(
+        name = "com_github_azure_azure_sdk_for_go_sdk_azcore",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/Azure/azure-sdk-for-go/sdk/azcore",
+        sum = "h1:g0EZJwz7xkXQiZAI5xi9f3WWFYBlX1CPTrR+NDToRkQ=",
+        version = "v1.17.0",
+    )
+    go_repository(
+        name = "com_github_azure_azure_sdk_for_go_sdk_azidentity",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/Azure/azure-sdk-for-go/sdk/azidentity",
+        sum = "h1:tfLQ34V6F7tVSwoTf/4lH5sE0o6eCJuNDTmH09nDpbc=",
+        version = "v1.7.0",
+    )
+    go_repository(
+        name = "com_github_azure_azure_sdk_for_go_sdk_internal",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/Azure/azure-sdk-for-go/sdk/internal",
+        sum = "h1:ywEEhmNahHBihViHepv3xPBn1663uRv2t2q/ESv9seY=",
+        version = "v1.10.0",
+    )
+    go_repository(
         name = "com_github_azure_go_ansiterm",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/Azure/go-ansiterm",
         sum = "h1:UQHMgLO+TxOElx5B5HZ4hJQsoJ/PvUvKRhJHDQXO8P8=",
         version = "v0.0.0-20210617225240-d185dfc1b5a1",
+    )
+    go_repository(
+        name = "com_github_azuread_microsoft_authentication_library_for_go",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/AzureAD/microsoft-authentication-library-for-go",
+        sum = "h1:XHOnouVk1mxXfQidrMEnLlPk9UMeRtyBTnEFtxkV0kU=",
+        version = "v1.2.2",
     )
     go_repository(
         name = "com_github_benbjohnson_clock",
@@ -411,8 +439,15 @@ def go_dependencies():
         name = "com_github_golang_groupcache",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/golang/groupcache",
-        sum = "h1:f+oWsMOmNPc8JmEHVZIycC7hBoQxHH9pNKQORJNozsQ=",
-        version = "v0.0.0-20241129210726-2c02b8208cf8",
+        sum = "h1:oI5xCqsCo564l8iNU+DwB5epxmsaqB+rhGL0m5jtYqE=",
+        version = "v0.0.0-20210331224755-41bb18bfe9da",
+    )
+    go_repository(
+        name = "com_github_golang_jwt_jwt_v5",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/golang-jwt/jwt/v5",
+        sum = "h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=",
+        version = "v5.2.1",
     )
     go_repository(
         name = "com_github_golang_mock",
@@ -667,6 +702,13 @@ def go_dependencies():
         version = "v0.2.0",
     )
     go_repository(
+        name = "com_github_kylelemons_godebug",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/kylelemons/godebug",
+        sum = "h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=",
+        version = "v1.1.0",
+    )
+    go_repository(
         name = "com_github_lib_pq",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/lib/pq",
@@ -765,6 +807,13 @@ def go_dependencies():
         version = "v0.0.0-20120604004816-cd527374f1e5",
     )
     go_repository(
+        name = "com_github_openai_openai_go_v2",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/openai/openai-go/v2",
+        sum = "h1:0t3e5AUr5fsgb9TotDJNTdpGqf/SSSfMX4pr8QrV9OY=",
+        version = "v2.6.0",
+    )
+    go_repository(
         name = "com_github_opencontainers_go_digest",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/opencontainers/go-digest",
@@ -826,6 +875,13 @@ def go_dependencies():
         importpath = "github.com/pelletier/go-toml/v2",
         sum = "h1:LWAJwfNvjQZCFIDKWYQaM62NcYeYViCmWIwmOStowAI=",
         version = "v2.1.1",
+    )
+    go_repository(
+        name = "com_github_pkg_browser",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/pkg/browser",
+        sum = "h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=",
+        version = "v0.0.0-20240102092130-5ac0b6a4141c",
     )
     go_repository(
         name = "com_github_pkg_errors",
@@ -980,6 +1036,34 @@ def go_dependencies():
         importpath = "github.com/syndtr/gocapability",
         sum = "h1:kdXcSzyDtseVEc4yCz2qF8ZrQvIDBJLl4S1c3GCXmoI=",
         version = "v0.0.0-20200815063812-42c35b437635",
+    )
+    go_repository(
+        name = "com_github_tidwall_gjson",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/tidwall/gjson",
+        sum = "h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=",
+        version = "v1.18.0",
+    )
+    go_repository(
+        name = "com_github_tidwall_match",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/tidwall/match",
+        sum = "h1:0pt8FlkOwjN2fPt4bIl4BoNxb98gGHN2ObFEDkrfZnM=",
+        version = "v1.2.0",
+    )
+    go_repository(
+        name = "com_github_tidwall_pretty",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/tidwall/pretty",
+        sum = "h1:qjsOFOWWQl+N3RsoF5/ssm1pHmJJwhjlSbZ51I6wMl4=",
+        version = "v1.2.1",
+    )
+    go_repository(
+        name = "com_github_tidwall_sjson",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/tidwall/sjson",
+        sum = "h1:kLy8mja+1c9jlljvWTlSazM7cKDRfJuR/bOJhcY5NcY=",
+        version = "v1.2.5",
     )
     go_repository(
         name = "com_github_urfave_cli",
