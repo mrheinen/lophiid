@@ -114,7 +114,8 @@ const (
 )
 
 const (
-	LLMClientMessageUser   = "user"
-	LLMClientMessageSystem = "system"
-	LLMClientMessageModel  = "model"
+	LLMClientMessageUser      = "user"
+	LLMClientMessageSystem    = "system"
+	LLMClientMessageModel     = "model"
+	LLMClientMessageAssistent = "assistent"
 )
