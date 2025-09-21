@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -23,7 +23,13 @@ import (
 
 type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
+	CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error)
 	LoadedModel() string
+}
+
+type LLMMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 type MockLLMClient struct {
@@ -34,6 +40,10 @@ type MockLLMClient struct {
 
 func (m *MockLLMClient) Complete(ctx context.Context, prompt string) (string, error) {
 	m.LastReceivedPrompt = prompt
+	return m.CompletionToReturn, m.ErrorToReturn
+}
+
+func (m *MockLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error) {
 	return m.CompletionToReturn, m.ErrorToReturn
 }
 
@@ -51,8 +61,6 @@ func NewLLMClient(cfg LLMConfig) LLMClient {
 		} else {
 			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, "%s", cfg.Model, cfg.MaxContextSize)
 		}
-	case "gemini":
-		return NewGeminiLLMMClient(cfg.ApiKey, "%s", cfg.Model, cfg.MaxContextSize, cfg.GeminiThinkingBudget)
 	default:
 		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))
 		return nil
