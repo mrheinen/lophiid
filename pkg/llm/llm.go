@@ -51,15 +51,14 @@ func (m *MockLLMClient) LoadedModel() string {
 	return "gpt-3.5-turbo"
 }
 
-func NewLLMClient(cfg LLMConfig) LLMClient {
+func NewLLMClient(cfg LLMConfig, systemPrompt string) LLMClient {
 	// OpenAI
 	switch cfg.ApiType {
 	case "openai":
 		if cfg.Model == "" {
-			// TODO: rething the prompt template argument.
-			return NewOpenAILLMClient(cfg.ApiKey, cfg.ApiLocation, "%s", cfg.MaxContextSize)
+			return NewOpenAILLMClient(cfg.ApiKey, cfg.ApiLocation, systemPrompt, cfg.MaxContextSize)
 		} else {
-			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, "%s", cfg.Model, cfg.MaxContextSize)
+			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, systemPrompt, cfg.Model, cfg.MaxContextSize)
 		}
 	default:
 		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))

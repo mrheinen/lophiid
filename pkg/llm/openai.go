@@ -31,16 +31,16 @@ type OpenAILLMClient struct {
 	client      *openai.Client
 	apiEndpoint string // E.g. http://localhost:8000/v1
 	Model       string
-	// promptTemplate is used to construct the prompt. It needs to contain a
+	// systemPrompt is used to construct the prompt. It needs to contain a
 	// single %s at a location where the request prompt needs to go.
-	promptTemplate string
+	systemPrompt string
 	// maxContextSize is the maximum number of characters allowed in the context
 	maxContextSize int64
 }
 
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
 // model and maximum context size.
-func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTemplate string, model string, maxContextSize int64) *OpenAILLMClient {
+func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, systemPrompt string, model string, maxContextSize int64) *OpenAILLMClient {
 	client := openai.NewClient(
 		option.WithAPIKey(apiKey),
 		option.WithBaseURL(apiEndpoint),
@@ -49,7 +49,7 @@ func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTempla
 	ret := &OpenAILLMClient{
 		client:         &client,
 		apiEndpoint:    apiEndpoint,
-		promptTemplate: promptTemplate,
+		systemPrompt:   systemPrompt,
 		Model:          model,
 		maxContextSize: maxContextSize,
 	}
@@ -83,7 +83,7 @@ func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string
 	ret := &OpenAILLMClient{
 		client:         &client,
 		apiEndpoint:    apiEndpoint,
-		promptTemplate: promptTemplate,
+		systemPrompt:   promptTemplate,
 		maxContextSize: maxContextSize,
 	}
 
@@ -102,8 +102,9 @@ func (l *OpenAILLMClient) LoadedModel() string {
 
 // SelectModel queries the OpenAI API for models and selects the first model.
 func (l *OpenAILLMClient) SelectModel() error {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	models, err := l.client.Models.List(ctx)
+	defer cancel()
 	if err != nil {
 		return fmt.Errorf("error listing models: %w", err)
 	}
@@ -120,14 +121,21 @@ func (l *OpenAILLMClient) SelectModel() error {
 
 // Complete complete a single LLM prompt
 func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, error) {
-	truncatedPrompt := truncatePrompt(fmt.Sprintf(l.promptTemplate, prompt), int64(l.maxContextSize))
+	truncatedPrompt := truncatePrompt(prompt, int64(l.maxContextSize))
 
-	msgs := []LLMMessage{
-		{
-			Role:    constants.LLMClientMessageUser,
-			Content: truncatedPrompt,
-		},
+	msgs := []LLMMessage{}
+
+	if l.systemPrompt != "" {
+		msgs = append(msgs, LLMMessage{
+			Role:    constants.LLMClientMessageSystem,
+			Content: l.systemPrompt,
+		})
 	}
+
+	msgs = append(msgs, LLMMessage{
+		Role:    constants.LLMClientMessageUser,
+		Content: truncatedPrompt,
+	})
 
 	return l.CompleteWithMessages(ctx, msgs)
 }
@@ -145,12 +153,20 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		Model:    l.Model,
 	}
 
+	if l.systemPrompt != "" && msgs[0].Role != constants.LLMClientMessageSystem {
+		param.Messages = append(param.Messages, openai.SystemMessage(l.systemPrompt))
+	}
+
 	for i := range msgs {
 		switch msgs[i].Role {
 		case constants.LLMClientMessageUser:
 			param.Messages = append(param.Messages, openai.UserMessage(msgs[i].Content))
+		case constants.LLMClientMessageAssistent:
+			param.Messages = append(param.Messages, openai.AssistantMessage(msgs[i].Content))
 		case constants.LLMClientMessageSystem:
 			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
+
+
 		default:
 			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
 		}
