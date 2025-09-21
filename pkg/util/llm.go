@@ -30,3 +30,10 @@ func RemoveThinkingFromResponse(response string) string {
 	// Remove everything before and including the </think> tag
 	return strings.TrimSpace(response[endIndex+len(ThinkingEndTag):])
 }
+
+// RemoveJsonExpression removes ```json...``` tags from the content if present.
+func RemoveJsonExpression(response string) string {
+	ret := strings.TrimSpace(response)
+	ret = strings.TrimPrefix(ret, "```json")
+	return strings.TrimSuffix(ret, "```")
+}
