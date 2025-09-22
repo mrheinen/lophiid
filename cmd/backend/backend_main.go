@@ -105,14 +105,14 @@ func main() {
 
 	listener, err := net.Listen("tcp", cfg.Backend.Listener.ListenAddress)
 	if err != nil {
-		slog.Error("Error: %s\n", err)
+		slog.Error("Error listening", slog.String("error", err.Error()))
 		return
 	}
 
 	// Create the database handle.
 	pgxConf, err := pgxpool.ParseConfig(cfg.Backend.Database.Url)
 	if err != nil {
-		slog.Error("Error parsing database url: %s", err)
+		slog.Error("Error parsing database config", slog.String("error", err.Error()))
 		return
 	}
 
@@ -122,13 +122,13 @@ func main() {
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), pgxConf)
 	if err != nil {
-		slog.Error("Error parsing database config: %s", err)
+		slog.Error("Error creating database pool", slog.String("error", err.Error()))
 		return
 	}
 
 	db, err := kpgx.NewFromPgxPool(pool)
 	if err != nil {
-		slog.Error("Error creating database: %s", err)
+		slog.Error("Error creating KSQL client", slog.String("error", err.Error()))
 		return
 	}
 
@@ -198,7 +198,7 @@ func main() {
 
 	if cfg.AI.EnableResponder || cfg.AI.Triage.Enable {
 		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
-		primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM)
+		primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
 		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 		primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
 
@@ -206,7 +206,7 @@ func main() {
 		// Check if secondary LLM is configured (non-empty API key indicates configuration)
 		if cfg.AI.SecondaryLLM.ApiKey != "" {
 			slog.Info("Secondary LLM configured, using DualLLMManager")
-			secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM)
+			secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM, "")
 			secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
 
 			llmManager = llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
@@ -237,7 +237,7 @@ func main() {
 	for {
 		cnt, err := sessionMgr.CleanupStaleSessions(50)
 		if err != nil {
-			slog.Error("Error cleaning up sessions: %s", err)
+			slog.Error("error cleaning up stale sessions", slog.String("error", err.Error()))
 			return
 		}
 
@@ -251,7 +251,7 @@ func main() {
 
 	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, cfg)
 	if err = bs.Start(); err != nil {
-		slog.Error("Error: %s", err)
+		slog.Error("error starting backend", slog.String("error", err.Error()))
 	}
 
 	authCache := util.NewStringMapCache[models.Honeypot]("auth token cache", time.Minute*10)
@@ -277,7 +277,7 @@ func main() {
 		backend_service.RegisterBackendServiceServer(rpcServer, bs)
 
 		if err = rpcServer.Serve(listener); err != nil {
-			slog.Error("Error: %s\n", err)
+			slog.Error("error starting backend", slog.String("error", err.Error()))
 		}
 		return
 	}
@@ -317,7 +317,7 @@ func main() {
 	reflection.Register(s)
 	backend_service.RegisterBackendServiceServer(s, bs)
 	if err := s.Serve(listener); err != nil {
-		slog.Error("Error: %s\n", err)
+		slog.Error("error starting backend (serve)", slog.String("error", err.Error()))
 	}
 
 	// TODO: Implement proper shutdown
