@@ -7,6 +7,7 @@ go_library(
         "llm.go",
         "llm_manager.go",
         "metrics.go",
+        "mock_llm_manager.go",
         "openai.go",
     ],
     importpath = "lophiid/pkg/llm",

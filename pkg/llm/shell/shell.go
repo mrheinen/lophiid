@@ -65,7 +65,6 @@ type LLMCommandOutput struct {
 }
 
 func NewShellClient(llmManager llm.LLMManagerInterface, dbClient database.DatabaseClient) *ShellClient {
-
 	llmManager.SetResponseSchemaFromObject(LLMCommandOutput{}, "The command output and environment variables")
 	return &ShellClient{
 		llmManager: llmManager,
