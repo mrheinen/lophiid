@@ -65,6 +65,13 @@ def go_dependencies():
         version = "v1.2.2",
     )
     go_repository(
+        name = "com_github_bahlo_generic_list_go",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/bahlo/generic-list-go",
+        sum = "h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=",
+        version = "v0.2.0",
+    )
+    go_repository(
         name = "com_github_benbjohnson_clock",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/benbjohnson/clock",
@@ -84,6 +91,13 @@ def go_dependencies():
         importpath = "github.com/blang/semver/v4",
         sum = "h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=",
         version = "v4.0.0",
+    )
+    go_repository(
+        name = "com_github_buger_jsonparser",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/buger/jsonparser",
+        sum = "h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=",
+        version = "v1.1.1",
     )
     go_repository(
         name = "com_github_burntsushi_toml",
@@ -590,6 +604,13 @@ def go_dependencies():
         version = "v0.3.12",
     )
     go_repository(
+        name = "com_github_invopop_jsonschema",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/invopop/jsonschema",
+        sum = "h1:KvpoAJWEjR3uD9Kbm2HWJmqsEaHt8lBUpd0qHcIi21E=",
+        version = "v0.13.0",
+    )
+    go_repository(
         name = "com_github_jackc_pgpassfile",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/jackc/pgpassfile",
@@ -719,8 +740,8 @@ def go_dependencies():
         name = "com_github_mailru_easyjson",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/mailru/easyjson",
-        sum = "h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=",
-        version = "v0.7.7",
+        sum = "h1:LbtsOm5WAswyWbvTEOqhypdPeZzHavpZx96/n553mR8=",
+        version = "v0.9.1",
     )
     go_repository(
         name = "com_github_microsoft_go_winio",
@@ -1106,6 +1127,13 @@ def go_dependencies():
         importpath = "github.com/vishvananda/netns",
         sum = "h1:OviZH7qLw/7ZovXvuNyL3XQl8UFofeikI1NW1Gypu7k=",
         version = "v0.0.0-20191106174202-0a2b9b5464df",
+    )
+    go_repository(
+        name = "com_github_wk8_go_ordered_map_v2",
+        build_file_proto_mode = "disable_global",
+        importpath = "github.com/wk8/go-ordered-map/v2",
+        sum = "h1:5h/BUHu93oj4gIdvHHHGsScSTMijfx5PeYkE/fJgbpc=",
+        version = "v2.1.8",
     )
     go_repository(
         name = "com_github_xeipuuv_gojsonpointer",
