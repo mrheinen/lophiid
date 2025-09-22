@@ -54,7 +54,7 @@ func (m *MockLLMClient) LoadedModel() string {
 	return "gpt-3.5-turbo"
 }
 
-func (m *MockLLMClient) SetResponseSchemaFromObject(obj any) {
+func (m *MockLLMClient) SetResponseSchemaFromObject(obj any, title string) {
 }
 
 // GenerateSchema generates a schema for the OpenAI API. Useful for structured
