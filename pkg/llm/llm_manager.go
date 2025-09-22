@@ -32,6 +32,7 @@ type LLMManagerInterface interface {
 	Complete(prompt string, cacheResult bool) (string, error)
 	CompleteMultiple(prompts []string, cacheResult bool) (map[string]string, error)
 	CompleteWithMessages(msgs []LLMMessage) (string, error)
+	SetResponseSchemaFromObject(obj any, title string)
 	LoadedModel() string
 }
 
@@ -62,6 +63,10 @@ func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metric
 
 func (l *LLMManager) LoadedModel() string {
 	return l.client.LoadedModel()
+}
+
+func (l *LLMManager) SetResponseSchemaFromObject(obj any, title string) {
+	l.client.SetResponseSchemaFromObject(obj, title)
 }
 
 // CompleteMultiple completes multiple prompts in parallel. It will return a map
@@ -163,6 +168,11 @@ func NewDualLLMManager(primary, secondary LLMManagerInterface, fallbackInterval 
 		fallbackInterval: fallbackInterval,
 		usingSecondary:   false,
 	}
+}
+
+func (d *DualLLMManager) SetResponseSchemaFromObject(obj any, title string) {
+	d.primary.SetResponseSchemaFromObject(obj, title)
+	d.secondary.SetResponseSchemaFromObject(obj, title)
 }
 
 // Complete attempts to complete a single prompt using the primary client, falls back to secondary on error

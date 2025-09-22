@@ -15,6 +15,7 @@ go_library(
         "//pkg/metrics",
         "//pkg/util",
         "//pkg/util/constants",
+        "@com_github_invopop_jsonschema//:jsonschema",
         "@com_github_openai_openai_go_v2//:openai-go",
         "@com_github_openai_openai_go_v2//option",
         "@com_github_prometheus_client_golang//prometheus",

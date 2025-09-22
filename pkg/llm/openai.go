@@ -23,6 +23,7 @@ import (
 	"lophiid/pkg/util/constants"
 	"time"
 
+	"github.com/invopop/jsonschema"
 	"github.com/openai/openai-go/v2"
 	"github.com/openai/openai-go/v2/option"
 )
@@ -36,6 +37,7 @@ type OpenAILLMClient struct {
 	systemPrompt string
 	// maxContextSize is the maximum number of characters allowed in the context
 	maxContextSize int64
+	schema         *openai.ResponseFormatJSONSchemaJSONSchemaParam
 }
 
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
@@ -54,7 +56,8 @@ func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, systemPrompt
 		maxContextSize: maxContextSize,
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
 	models, err := client.Models.List(ctx)
 	if err != nil {
 		slog.Error("error listing models", slog.String("error", err.Error()))
@@ -67,7 +70,7 @@ func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, systemPrompt
 		}
 	}
 
-	slog.Error("could not find model", slog.String("model", model))
+	slog.Error("could not find model", slog.String("model", model), slog.String("models", fmt.Sprintf("%+v", models.Data)))
 	return nil
 }
 
@@ -85,6 +88,7 @@ func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string
 		apiEndpoint:    apiEndpoint,
 		systemPrompt:   promptTemplate,
 		maxContextSize: maxContextSize,
+		schema:         nil,
 	}
 
 	if err := ret.SelectModel(); err != nil {
@@ -98,6 +102,21 @@ func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string
 
 func (l *OpenAILLMClient) LoadedModel() string {
 	return l.Model
+}
+
+func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) {
+	reflector := jsonschema.Reflector{
+		AllowAdditionalProperties: false,
+		DoNotReference:            true,
+	}
+
+	schema := reflector.Reflect(obj)
+	l.schema = &openai.ResponseFormatJSONSchemaJSONSchemaParam{
+		Name:        "response_schema",
+		Description: openai.String(title),
+		Schema:      schema,
+		Strict:      openai.Bool(true),
+	}
 }
 
 // SelectModel queries the OpenAI API for models and selects the first model.
@@ -166,9 +185,17 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		case constants.LLMClientMessageSystem:
 			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
 
-
 		default:
 			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
+		}
+	}
+
+	if l.schema != nil {
+		slog.Debug("setting response schema")
+		param.ResponseFormat = openai.ChatCompletionNewParamsResponseFormatUnion{
+			OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
+				JSONSchema: *l.schema,
+			},
 		}
 	}
 

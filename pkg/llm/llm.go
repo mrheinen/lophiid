@@ -19,11 +19,14 @@ package llm
 import (
 	"context"
 	"log/slog"
+
+	"github.com/invopop/jsonschema"
 )
 
 type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
 	CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error)
+	SetResponseSchemaFromObject(obj any, title string)
 	LoadedModel() string
 }
 
@@ -49,6 +52,22 @@ func (m *MockLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMess
 
 func (m *MockLLMClient) LoadedModel() string {
 	return "gpt-3.5-turbo"
+}
+
+func (m *MockLLMClient) SetResponseSchemaFromObject(obj any) {
+}
+
+// GenerateSchema generates a schema for the OpenAI API. Useful for structured
+// output.
+func GenerateSchema[T any]() any {
+	// Structured Outputs uses a subset of JSON schema
+	// These flags are necessary to comply with the subset
+	reflector := jsonschema.Reflector{
+		AllowAdditionalProperties: false,
+		DoNotReference:            true,
+	}
+	var v T
+	return reflector.Reflect(v)
 }
 
 func NewLLMClient(cfg LLMConfig, systemPrompt string) LLMClient {
