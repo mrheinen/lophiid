@@ -33,7 +33,7 @@ var sessionContextConfig = SearchConfig{
 	Table:         &SessionContextTable,
 	TableName:     "session_execution_context",
 	AllowedFields: getDatamodelDatabaseFields(models.SessionExecutionContext{}),
-	OrderBy:       "id DESC",
+	OrderBy:       "created_at DESC",
 }
 
 var yaraConfig = SearchConfig{
