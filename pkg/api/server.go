@@ -348,7 +348,7 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 	if len(rb.Script) > 0 {
 		// Try running the script with a fake request. This to see if it compiles
 		// and doesn't produce any errors.
-		modifiedScript := fmt.Sprintf("%s\ncreateResponse();", rb.Script)
+		modifiedScript := fmt.Sprintf("%s\n__validate();", rb.Script)
 		eCol := extractors.NewExtractorCollection(true)
 		err := a.jRunner.RunScript(modifiedScript, models.Request{
 			ID:            42,
