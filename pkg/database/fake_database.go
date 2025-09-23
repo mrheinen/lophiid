@@ -24,34 +24,35 @@ import (
 // FakeDatabaseClient is a struct specifically for testing users of the
 // DatabaseClient interface
 type FakeDatabaseClient struct {
-	ContentIDToReturn           int64
-	ContentsToReturn            map[int64]models.Content
-	ErrorToReturn               error
-	ContentRuleIDToReturn       int64
-	ContentRulesToReturn        []models.ContentRule
-	RequestsToReturn            []models.Request
-	RequestToReturn             models.Request
-	DownloadsToReturn           []models.Download
-	ApplicationToReturn         models.Application
-	HoneypotToReturn            models.Honeypot
-	HoneypotErrorToReturn       error
-	QueriesToReturn             []models.StoredQuery
-	QueriesToReturnError        error
-	TagPerQueryReturn           []models.TagPerQuery
-	TagPerQueryReturnError      error
-	WhoisModelsToReturn         []models.Whois
-	WhoisErrorToReturn          error
-	LastDataModelSeen           interface{}
-	LastExternalDataModelSeen   interface{}
-	P0fResultToReturn           models.P0fResult
-	P0fErrorToReturn            error
-	IpEventToReturn             models.IpEvent
-	DataModelToReturn           models.DataModel
-	SessionToReturn             models.Session
-	RequestDescriptionsToReturn []models.RequestDescription
-	MetadataToReturn            []models.RequestMetadata
-	YarasToReturn               []models.Yara
-	SimpleQueryResult           interface{}
+	ContentIDToReturn               int64
+	ContentsToReturn                map[int64]models.Content
+	ErrorToReturn                   error
+	ContentRuleIDToReturn           int64
+	ContentRulesToReturn            []models.ContentRule
+	RequestsToReturn                []models.Request
+	RequestToReturn                 models.Request
+	DownloadsToReturn               []models.Download
+	ApplicationToReturn             models.Application
+	HoneypotToReturn                models.Honeypot
+	HoneypotErrorToReturn           error
+	QueriesToReturn                 []models.StoredQuery
+	QueriesToReturnError            error
+	TagPerQueryReturn               []models.TagPerQuery
+	TagPerQueryReturnError          error
+	WhoisModelsToReturn             []models.Whois
+	WhoisErrorToReturn              error
+	LastDataModelSeen               any
+	LastExternalDataModelSeen       any
+	P0fResultToReturn               models.P0fResult
+	P0fErrorToReturn                error
+	IpEventToReturn                 models.IpEvent
+	DataModelToReturn               models.DataModel
+	SessionToReturn                 models.Session
+	RequestDescriptionsToReturn     []models.RequestDescription
+	MetadataToReturn                []models.RequestMetadata
+	YarasToReturn                   []models.Yara
+	SimpleQueryResult               any
+	SessionExecutionContextToReturn []models.SessionExecutionContext
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -94,6 +95,9 @@ func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query
 }
 func (f *FakeDatabaseClient) SearchYara(offset int64, limit int64, query string) ([]models.Yara, error) {
 	return f.YarasToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchSessionExecutionContext(offset int64, limit int64, query string) ([]models.SessionExecutionContext, error) {
+	return f.SessionExecutionContextToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchSession(offset int64, limit int64, query string) ([]models.Session, error) {
 	return []models.Session{f.SessionToReturn}, f.ErrorToReturn
@@ -147,6 +151,6 @@ func (f *FakeDatabaseClient) SearchWhois(offset int64, limit int64, query string
 func (f *FakeDatabaseClient) SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error) {
 	return f.RequestDescriptionsToReturn, f.ErrorToReturn
 }
-func (f *FakeDatabaseClient) SimpleQuery(query string, result interface{}) (interface{}, error) {
+func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) {
 	return f.SimpleQueryResult, f.ErrorToReturn
 }

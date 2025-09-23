@@ -48,6 +48,7 @@ var P0fResultTable = ksql.NewTable("p0f_result")
 var IpEventTable = ksql.NewTable("ip_event")
 var SessionTable = ksql.NewTable("session")
 var RequestDescriptionTable = ksql.NewTable("request_description")
+var SessionContextTable = ksql.NewTable("session_execution_context")
 var YaraTable = ksql.NewTable("yara")
 
 type DatabaseClient interface {
@@ -73,6 +74,7 @@ type DatabaseClient interface {
 	SearchHoneypots(offset int64, limit int64, query string) ([]models.Honeypot, error)
 	SearchSession(offset int64, limit int64, query string) ([]models.Session, error)
 	SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error)
+	SearchSessionExecutionContext(offset int64, limit int64, query string) ([]models.SessionExecutionContext, error)
 	SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]models.Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
@@ -93,7 +95,7 @@ func getDatamodelDatabaseFields(datamodel interface{}) []string {
 		val = val.Elem()
 	}
 
-	for i := 0; i < val.NumField(); i++ {
+	for i := range val.NumField() {
 		tvalue := val.Field(i).Tag.Get("ksql")
 		if tvalue != "" {
 			idx := strings.Index(tvalue, ",")
@@ -116,7 +118,7 @@ type FieldDocEntry struct {
 func GetDatamodelDocumentationMap(datamodel interface{}) map[string]FieldDocEntry {
 	ret := make(map[string]FieldDocEntry)
 	t := reflect.TypeOf(datamodel)
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		docValue := t.Field(i).Tag.Get("doc")
 		fieldValue := t.Field(i).Tag.Get("ksql")
 		if docValue != "" && fieldValue != "" {
@@ -180,6 +182,7 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["Session"] = &SessionTable
 	sqlTable["RequestDescription"] = &RequestDescriptionTable
 	sqlTable["Yara"] = &YaraTable
+	sqlTable["SessionExecutionContext"] = &SessionContextTable
 
 	table, ok := sqlTable[name]
 	if !ok {
@@ -320,7 +323,7 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 	jobs := make(chan models.Request, len(rs))
 	results := make(chan models.Request, len(rs))
 
-	for w := 0; w < concurrentWorkers; w++ {
+	for range concurrentWorkers {
 		go func() {
 			for req := range jobs {
 				tags, err := d.GetTagPerRequestFullForRequest(req.ID)
@@ -368,6 +371,12 @@ func (d *KSQLClient) SearchRequests(offset int64, limit int64, query string) ([]
 func (d *KSQLClient) SearchContent(offset int64, limit int64, query string) ([]models.Content, error) {
 	var result []models.Content
 	err := d.Search(offset, limit, query, contentConfig, &result)
+	return result, err
+}
+
+func (d *KSQLClient) SearchSessionExecutionContext(offset int64, limit int64, query string) ([]models.SessionExecutionContext, error) {
+	var result []models.SessionExecutionContext
+	err := d.Search(offset, limit, query, sessionContextConfig, &result)
 	return result, err
 }
 

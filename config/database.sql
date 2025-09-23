@@ -91,6 +91,21 @@ CREATE TABLE request_description (
   CONSTRAINT fk_example_request_id FOREIGN KEY(example_request_id) REFERENCES request(id)
 );
 
+CREATE TABLE session_execution_context (
+  id                 SERIAL PRIMARY KEY,
+  created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  env_hostname       VARCHAR(256),
+  env_cwd            VARCHAR(1024),
+  env_user           VARCHAR(128),
+  input              VARCHAR(4096),
+  output             VARCHAR(16384),
+  summary            VARCHAR(8192),
+  request_id         INT,
+  session_id         INT,
+  source_model       VARCHAR(256) default 'UNKNOWN',
+  CONSTRAINT fk_sess_session_id FOREIGN KEY(session_id) REFERENCES public.session(id)
+);
 
 CREATE TABLE content_rule (
   id              SERIAL PRIMARY KEY,
@@ -363,6 +378,10 @@ CREATE TABLE ip_event (
 
 GRANT ALL PRIVILEGES ON content TO lo;
 GRANT ALL PRIVILEGES ON content_id_seq TO lo;
+GRANT ALL PRIVILEGES ON session_execution_context TO lo;
+GRANT ALL PRIVILEGES ON session_execution_context_id_seq TO lo;
+
+
 GRANT ALL PRIVILEGES ON content_rule TO lo;
 GRANT ALL PRIVILEGES ON content_rule_id_seq TO lo;
 GRANT ALL PRIVILEGES ON request TO lo;

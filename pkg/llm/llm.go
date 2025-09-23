@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -19,11 +19,20 @@ package llm
 import (
 	"context"
 	"log/slog"
+
+	"github.com/invopop/jsonschema"
 )
 
 type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
+	CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error)
+	SetResponseSchemaFromObject(obj any, title string)
 	LoadedModel() string
+}
+
+type LLMMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 type MockLLMClient struct {
@@ -37,22 +46,39 @@ func (m *MockLLMClient) Complete(ctx context.Context, prompt string) (string, er
 	return m.CompletionToReturn, m.ErrorToReturn
 }
 
+func (m *MockLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error) {
+	return m.CompletionToReturn, m.ErrorToReturn
+}
+
 func (m *MockLLMClient) LoadedModel() string {
 	return "gpt-3.5-turbo"
 }
 
-func NewLLMClient(cfg LLMConfig) LLMClient {
+func (m *MockLLMClient) SetResponseSchemaFromObject(obj any, title string) {
+}
+
+// GenerateSchema generates a schema for the OpenAI API. Useful for structured
+// output.
+func GenerateSchema[T any]() any {
+	// Structured Outputs uses a subset of JSON schema
+	// These flags are necessary to comply with the subset
+	reflector := jsonschema.Reflector{
+		AllowAdditionalProperties: false,
+		DoNotReference:            true,
+	}
+	var v T
+	return reflector.Reflect(v)
+}
+
+func NewLLMClient(cfg LLMConfig, systemPrompt string) LLMClient {
 	// OpenAI
 	switch cfg.ApiType {
 	case "openai":
 		if cfg.Model == "" {
-			// TODO: rething the prompt template argument.
-			return NewOpenAILLMClient(cfg.ApiKey, cfg.ApiLocation, "%s", cfg.MaxContextSize)
+			return NewOpenAILLMClient(cfg.ApiKey, cfg.ApiLocation, systemPrompt, cfg.MaxContextSize)
 		} else {
-			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, "%s", cfg.Model, cfg.MaxContextSize)
+			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, systemPrompt, cfg.Model, cfg.MaxContextSize)
 		}
-	case "gemini":
-		return NewGeminiLLMMClient(cfg.ApiKey, "%s", cfg.Model, cfg.MaxContextSize, cfg.GeminiThinkingBudget)
 	default:
 		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))
 		return nil

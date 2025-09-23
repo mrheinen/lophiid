@@ -101,7 +101,7 @@ func main() {
 	deMtrics := describer.CreateDescriberMetrics(metricsRegistry)
 	var myDescriber *describer.CachedDescriptionManager
 
-	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM)
+	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
 	if primaryLLMClient == nil {
 		slog.Error("Failed to create primary LLM client")
 		return
@@ -113,7 +113,7 @@ func main() {
 
 	if cfg.AI.SecondaryLLM.ApiKey != "" {
 		slog.Info("Secondary LLM configured, using DualLLMManager")
-		secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM)
+		secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM, "")
 		if secondaryLLMClient == nil {
 			slog.Error("error creating secondary LLM client")
 			return

@@ -20,69 +20,75 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/util/constants"
+	"time"
 
-	openai "github.com/sashabaranov/go-openai"
+	"github.com/invopop/jsonschema"
+	"github.com/openai/openai-go/v2"
+	"github.com/openai/openai-go/v2/option"
 )
-
-type OpenAIClientInterface interface {
-	CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error)
-}
 
 type OpenAILLMClient struct {
 	client      *openai.Client
 	apiEndpoint string // E.g. http://localhost:8000/v1
 	Model       string
-	// promptTemplate is used to construct the prompt. It needs to contain a
+	// systemPrompt is used to construct the prompt. It needs to contain a
 	// single %s at a location where the request prompt needs to go.
-	promptTemplate string
+	systemPrompt string
 	// maxContextSize is the maximum number of characters allowed in the context
 	maxContextSize int64
+	schema         *openai.ResponseFormatJSONSchemaJSONSchemaParam
 }
 
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
 // model and maximum context size.
-func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, promptTemplate string, model string, maxContextSize int64) *OpenAILLMClient {
-	config := openai.DefaultConfig(apiKey)
-	config.BaseURL = apiEndpoint
-	client := openai.NewClientWithConfig(config)
+func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, systemPrompt string, model string, maxContextSize int64) *OpenAILLMClient {
+	client := openai.NewClient(
+		option.WithAPIKey(apiKey),
+		option.WithBaseURL(apiEndpoint),
+	)
 
 	ret := &OpenAILLMClient{
-		client:         client,
+		client:         &client,
 		apiEndpoint:    apiEndpoint,
-		promptTemplate: promptTemplate,
+		systemPrompt:   systemPrompt,
 		Model:          model,
 		maxContextSize: maxContextSize,
 	}
 
-	models, err := client.ListModels(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	models, err := client.Models.List(ctx)
 	if err != nil {
-		slog.Error("could not list models", slog.String("error", err.Error()))
+		slog.Error("error listing models", slog.String("error", err.Error()))
 		return nil
 	}
 
-	for _, m := range models.Models {
+	for _, m := range models.Data {
 		if m.ID == model {
 			return ret
 		}
 	}
 
-	slog.Error("could not find model", slog.String("model", model))
+	slog.Error("could not find model", slog.String("model", model), slog.String("models", fmt.Sprintf("%+v", models.Data)))
 	return nil
-
 }
 
 // NewOpenAILLMClient creates a new OpenAILLMClient and auto selects a model
 // from the API. Use this when talking with an API that only has one model.
 func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string, maxContextSize int64) *OpenAILLMClient {
-	config := openai.DefaultConfig(apiKey)
-	config.BaseURL = apiEndpoint
-	client := openai.NewClientWithConfig(config)
+
+	client := openai.NewClient(
+		option.WithAPIKey(apiKey),
+		option.WithBaseURL(apiEndpoint),
+	)
 
 	ret := &OpenAILLMClient{
-		client:         client,
+		client:         &client,
 		apiEndpoint:    apiEndpoint,
-		promptTemplate: promptTemplate,
+		systemPrompt:   promptTemplate,
 		maxContextSize: maxContextSize,
+		schema:         nil,
 	}
 
 	if err := ret.SelectModel(); err != nil {
@@ -98,42 +104,110 @@ func (l *OpenAILLMClient) LoadedModel() string {
 	return l.Model
 }
 
-// SelectModel queries the OpenAI API for models and selects the first model.
-func (l *OpenAILLMClient) SelectModel() error {
-	models, err := l.client.ListModels(context.Background())
-	if err != nil {
-		return fmt.Errorf("ListModels error: %w", err)
+func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) {
+	reflector := jsonschema.Reflector{
+		AllowAdditionalProperties: false,
+		DoNotReference:            true,
 	}
 
-	if len(models.Models) == 0 {
+	schema := reflector.Reflect(obj)
+	l.schema = &openai.ResponseFormatJSONSchemaJSONSchemaParam{
+		Name:        "response_schema",
+		Description: openai.String(title),
+		Schema:      schema,
+		Strict:      openai.Bool(true),
+	}
+}
+
+// SelectModel queries the OpenAI API for models and selects the first model.
+func (l *OpenAILLMClient) SelectModel() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	models, err := l.client.Models.List(ctx)
+	defer cancel()
+	if err != nil {
+		return fmt.Errorf("error listing models: %w", err)
+	}
+
+	if len(models.Data) == 0 {
 		return fmt.Errorf("no models found")
 	}
 
-	if len(models.Models) > 1 {
-		slog.Warn("Found multiple models! Using the first.", slog.String("model", models.Models[0].ID))
-	}
+	slog.Info("using the model", slog.String("model", models.Data[0].ID))
 
-	l.Model = models.Models[0].ID
+	l.Model = models.Data[0].ID
 	return nil
 }
 
+// Complete complete a single LLM prompt
 func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, error) {
-	truncatedPrompt := truncatePrompt(fmt.Sprintf(l.promptTemplate, prompt), int64(l.maxContextSize))
-	resp, err := l.client.CreateChatCompletion(
-		ctx,
-		openai.ChatCompletionRequest{
-			Model: l.Model,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: truncatedPrompt,
-				},
+	truncatedPrompt := truncatePrompt(prompt, int64(l.maxContextSize))
+
+	msgs := []LLMMessage{}
+
+	if l.systemPrompt != "" {
+		msgs = append(msgs, LLMMessage{
+			Role:    constants.LLMClientMessageSystem,
+			Content: l.systemPrompt,
+		})
+	}
+
+	msgs = append(msgs, LLMMessage{
+		Role:    constants.LLMClientMessageUser,
+		Content: truncatedPrompt,
+	})
+
+	return l.CompleteWithMessages(ctx, msgs)
+}
+
+// CompleteWithMessages complete a sequence of LLM messages. The last message
+// needs to be a user message.
+func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error) {
+	lastMessage := &msgs[len(msgs)-1]
+	if lastMessage.Role != constants.LLMClientMessageUser {
+		return "", fmt.Errorf("last message must be user")
+	}
+
+	param := openai.ChatCompletionNewParams{
+		Messages: []openai.ChatCompletionMessageParamUnion{},
+		Model:    l.Model,
+	}
+
+	if l.systemPrompt != "" && msgs[0].Role != constants.LLMClientMessageSystem {
+		param.Messages = append(param.Messages, openai.SystemMessage(l.systemPrompt))
+	}
+
+	for i := range msgs {
+		switch msgs[i].Role {
+		case constants.LLMClientMessageUser:
+			param.Messages = append(param.Messages, openai.UserMessage(msgs[i].Content))
+		case constants.LLMClientMessageAssistant:
+			param.Messages = append(param.Messages, openai.AssistantMessage(msgs[i].Content))
+		case constants.LLMClientMessageSystem:
+			for i := range param.Messages {
+				if *param.Messages[i].GetRole() == constants.LLMClientMessageSystem {
+					return "", fmt.Errorf("duplicate system message")
+				}
+			}
+			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
+
+		default:
+			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
+		}
+	}
+
+	if l.schema != nil {
+		slog.Debug("setting response schema")
+		param.ResponseFormat = openai.ChatCompletionNewParamsResponseFormatUnion{
+			OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
+				JSONSchema: *l.schema,
 			},
-		},
-	)
+		}
+	}
+
+	resp, err := l.client.Chat.Completions.New(ctx, param)
 
 	if err != nil {
-		return "", fmt.Errorf("ChatCompletion error: %v", err)
+		return "", fmt.Errorf("chat completion error: %v", err)
 	}
 
 	if len(resp.Choices) == 0 {

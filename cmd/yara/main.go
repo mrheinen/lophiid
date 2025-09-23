@@ -106,7 +106,7 @@ func main() {
 
 	}
 
-	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM)
+	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 	primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
@@ -116,7 +116,7 @@ func main() {
 	if cfg.AI.SecondaryLLM.ApiKey != "" {
 		slog.Info("Secondary LLM configured, using DualLLMManager")
 
-		secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM)
+		secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM, "")
 		secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
 
 		llmManager = llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
@@ -130,12 +130,12 @@ func main() {
 	yarax := yara.YaraxWrapper{}
 
 	if err := yarax.Init(); err != nil {
-		slog.Error("Error initializing yara: ", err)
+		slog.Error("Error initializing yara", slog.String("error", err.Error()))
 		return
 	}
 
 	if err := yarax.LoadRulesFromDirectory(*rulesDir); err != nil {
-		slog.Error("Error loading rules: ", err)
+		slog.Error("Error loading rules", slog.String("error", err.Error()))
 		return
 	}
 
@@ -170,7 +170,7 @@ func main() {
 	if *fileToScan != "" {
 		res, err := yarax.ScanFile(*fileToScan)
 		if err != nil {
-			slog.Error("Error scanning file: ", err)
+			slog.Error("Error scanning file", slog.String("error", err.Error()))
 			return
 		}
 
@@ -181,7 +181,7 @@ func main() {
 	if *dirToScan != "" {
 		err := yarax.ScanDirectoryRecursive(*dirToScan, yara.PrintYaraResult)
 		if err != nil {
-			slog.Error("Error scanning directory: ", err)
+			slog.Error("Error scanning directory", slog.String("error", err.Error()))
 			return
 		}
 	}

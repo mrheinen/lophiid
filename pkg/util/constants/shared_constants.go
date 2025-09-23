@@ -80,6 +80,7 @@ const (
 	ResponderTypeNone                = "NONE"
 	ResponderTypeCommandInjection    = "COMMAND_INJECTION"
 	ResponderTypeSourceCodeExecution = "SOURCE_CODE_EXECUTION"
+	ResponderTypeHelpfulAI           = "HELPFUL_AI"
 )
 
 // This needs to be kept in sync with RESPONDER_DECODER_TYPE in the database.
@@ -107,7 +108,14 @@ const (
 // These need to be kept in sync with YARA_STATUS_TYPE in the database
 const (
 	YaraStatusTypeUnknown = "UNKNOWN"
-  YaraStatusTypePending = "PENDING"
-  YaraStatusTypeDone    = "DONE"
-  YaraStatusTypeFailed  = "FAILED"
+	YaraStatusTypePending = "PENDING"
+	YaraStatusTypeDone    = "DONE"
+	YaraStatusTypeFailed  = "FAILED"
+)
+
+const (
+	LLMClientMessageUser      = "user"
+	LLMClientMessageSystem    = "system"
+	LLMClientMessageModel     = "model"
+	LLMClientMessageAssistant = "assistant"
 )
