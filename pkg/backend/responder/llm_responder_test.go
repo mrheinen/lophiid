@@ -102,3 +102,53 @@ func TestCommandInjection(t *testing.T) {
 		})
 	}
 }
+
+func TestHelpfulAI(t *testing.T) {
+
+	for _, test := range []struct {
+		description         string
+		template            string
+		completionToReturn  string
+		expectedReturnValue string
+		userRequest         string
+	}{
+		{
+			description:         "works with simple request",
+			completionToReturn:  "Hello! I'm here to help you.",
+			template:            "AI Response:",
+			expectedReturnValue: "AI Response:\nHello! I'm here to help you.",
+			userRequest:         "Hello, can you help me?",
+		},
+		{
+			description:         "works with technical question",
+			completionToReturn:  "A honeypot is a security mechanism that creates a decoy system to attract attackers.",
+			template:            "Question: What is a honeypot?\nAnswer:",
+			expectedReturnValue: "Question: What is a honeypot?\nAnswer:\nA honeypot is a security mechanism that creates a decoy system to attract attackers.",
+			userRequest:         "What is a honeypot?",
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			lmClient := llm.MockLLMClient{
+				CompletionToReturn: test.completionToReturn,
+				ErrorToReturn:      nil,
+			}
+
+			reg := prometheus.NewRegistry()
+			metrics := llm.CreateLLMMetrics(reg)
+			cache := util.NewStringMapCache[string]("foo", time.Minute)
+			lm := llm.NewLLMManager(&lmClient, cache, metrics, time.Minute, 5, true, "", "")
+
+			responder := NewLLMResponder(lm, 50)
+			ret, err := responder.Respond(constants.ResponderTypeHelpfulAI, test.userRequest, test.template)
+
+			if err != nil {
+				t.Errorf("unexpected error: %s", err.Error())
+			}
+
+			if ret != test.expectedReturnValue {
+				t.Errorf("unexpected result: %+#v", ret)
+			}
+		})
+	}
+}
