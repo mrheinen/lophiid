@@ -117,5 +117,5 @@ const (
 	LLMClientMessageUser      = "user"
 	LLMClientMessageSystem    = "system"
 	LLMClientMessageModel     = "model"
-	LLMClientMessageAssistent = "assistent"
+	LLMClientMessageAssistant = "assistant"
 )

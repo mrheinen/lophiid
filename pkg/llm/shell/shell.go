@@ -141,7 +141,7 @@ func (s *ShellClient) RunCommand(req *models.Request, cmd string) (*models.Sessi
 			})
 
 			msgs = append(msgs, llm.LLMMessage{
-				Role:    constants.LLMClientMessageAssistent,
+				Role:    constants.LLMClientMessageAssistant,
 				Content: pCmd.Output,
 			})
 		}
