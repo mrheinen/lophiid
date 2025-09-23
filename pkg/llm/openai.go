@@ -180,7 +180,7 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		switch msgs[i].Role {
 		case constants.LLMClientMessageUser:
 			param.Messages = append(param.Messages, openai.UserMessage(msgs[i].Content))
-		case constants.LLMClientMessageAssistent:
+		case constants.LLMClientMessageAssistant:
 			param.Messages = append(param.Messages, openai.AssistantMessage(msgs[i].Content))
 		case constants.LLMClientMessageSystem:
 			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
