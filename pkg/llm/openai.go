@@ -183,6 +183,11 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		case constants.LLMClientMessageAssistant:
 			param.Messages = append(param.Messages, openai.AssistantMessage(msgs[i].Content))
 		case constants.LLMClientMessageSystem:
+			for i := range param.Messages {
+				if *param.Messages[i].GetRole() == constants.LLMClientMessageSystem {
+					return "", fmt.Errorf("duplicate system message")
+				}
+			}
 			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
 
 		default:
