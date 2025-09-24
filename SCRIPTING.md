@@ -290,7 +290,15 @@ Get the stderr output of the command.
 ### util.responder.respond(resType, promptInput, template) string
 
 Gives access to the LLM responder. For resType, you can currently only use
-COMMAND_INJECTION. For promptInput use one or more commands (separated by ;).
+COMMAND_INJECTION or HELPFUL_AI.
+
+COMMAND_INJECTION is used for command injection where you want to the give the
+LLM a command (or multiple) and you want an example output of the command in
+return.
+
+HELPFUL_AI is used for asking the LLM to do something useful. It can be used to
+send any kind of prompt to the AI and the system prompt is written to let the
+AI answer you in a helpful manner.
 
 For template, you can use a string with %%%LOPHIID_PAYLOAD_RESPONSE%%% embedded
 and the LLM response will replace that tag.  You can also use an empty string
@@ -314,7 +322,7 @@ Here is an example usage:
     // it failed
   }
 
-  response.setBody(res)
+  response.setBody(res);
 ```
 
 Note that the LLM responder will cache prompts and LLM responses so while

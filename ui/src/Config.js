@@ -22,8 +22,7 @@ export default {
   tagsSegmentLink: '/tag/:offset/:limit',
   requestsSegmentLink: '/requests/:offset/:limit',
   requestsSegmentLinkName: 'reqSegmentLink',
-  backendAddress: 'http://192.168.1.78:8088',
-  //backendAddress: 'http://127.0.0.1:8088',
+  backendAddress: 'http://127.0.0.1:8088',
   backendResultOk: 'OK',
   backendResultNotOk: 'ERR',
   reviewStatusOk: "REVIEWED_OK",
@@ -46,7 +45,7 @@ export default {
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
   contentRuleRequestPurposes: ['UNKNOWN', 'RECON', 'CRAWL', 'ATTACK'],
   contentRuleHTTPMethods: ['ANY' , 'GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'],
-  ruleResponderTypes: ['NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION'],
+  ruleResponderTypes: ['NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION', 'HELPFUL_AI'],
   ruleResponderDecoders: ['NONE', 'URI', 'HTML'],
 
   statusCodeValues: [
