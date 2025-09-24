@@ -297,8 +297,8 @@ LLM a command (or multiple) and you want an example output of the command in
 return.
 
 HELPFUL_AI is used for asking the LLM to do something useful. It can be used to
-send any kind of prompt to the AI and the the system prompt is written to let
-the AI answer you in a helpful manner.
+send any kind of prompt to the AI and the system prompt is written to let the
+AI answer you in a helpful manner.
 
 For template, you can use a string with %%%LOPHIID_PAYLOAD_RESPONSE%%% embedded
 and the LLM response will replace that tag.  You can also use an empty string
