@@ -65,7 +65,7 @@ type Config struct {
 			SessionTrackingTimeout time.Duration `fig:"session_tracking_timeout" default:"1h"`
 			// The default content that honeypots are configured with upon first
 			// seeing them.
-			HoneypotDefaultContentID int `fig:"honeypot_default_content_id" default:"0"`
+			HoneypotDefaultContentID int `fig:"honeypot_default_content_id" default:"1"`
 		} `fig:"advanced"`
 	} `fig:"backend"`
 	Analysis struct {

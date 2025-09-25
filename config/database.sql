@@ -507,3 +507,5 @@ CREATE INDEX request_description_status_idx ON request_description (
   created_at DESC,
   triage_status
 );
+
+insert into content (id, status_code, description, server, name) values (1, '200',  'Default content', 'Apache', 'Default content (do not remove)');
