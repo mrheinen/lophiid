@@ -42,6 +42,8 @@ Before you can build, you will need to compile some protobuffers by running a sc
 
 ```shell
 sudo apt-get install protobuf-compiler
+sudo apt-get install protoc-gen-go
+sudo apt-get install protoc-gen-go-grpc
 ```
 
 ### Build the protobufs
