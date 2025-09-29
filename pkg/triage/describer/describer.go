@@ -49,29 +49,23 @@ type QueueEntry struct {
 }
 
 type LLMResult struct {
-	Description       string `json:"description"`
-	Malicious         string `json:"malicious"`
-	VulnerabilityType string `json:"vulnerability_type"`
-	Application       string `json:"application"`
-	CVE               string `json:"cve"`
-	HasPayload        string `json:"has_payload"`
-	MitreAttack       string `json:"mitre_attack"`
-	TargetedParameter string `json:"targeted_parameter"`
-	ShellCommands     string `json:"shell_commands"`
+	Description       string `json:"description" jsonschema_description:"One or two paragraphs describing the intent of the request, if it is malicious and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports. If you identified the application then one of two lines on how you idenfified it. For example, \"identified the application by the URL\" or \"identified the application by the parameter names\". "`
+	Malicious         string `json:"malicious" jsonschema_description:"Use the string \"yes\" if the request is malicious. Else \"no\"."`
+	VulnerabilityType string `json:"vulnerability_type" jsonschema_description:"A string containing the Mitre CWE ID, starting with \"CWE-\" for the main weakness being exploited. Use an empty string if you don't know."`
+	Application       string `json:"application" jsonschema_description:"A string with the targetted application/device name. An empty string if you don't know."`
+	CVE               string `json:"cve" jsonschema_description:"The relevant CVE if you know what vulnerability is exploited. An empty string if you don't know."`
+	HasPayload        string `json:"has_payload" jsonschema_description:"Use the string \"yes\" if the request has a malicious attacker payload, such as to execute a command or code. Otherwise use the value \"no\""`
+	MitreAttack       string `json:"mitre_attack" jsonschema_description:"The MITRE ATT&CK technique ID starting with "T" if you know what technique is being used. Multiple can be provided if command separated. Use an empty string if you don't know."`
+	TargetedParameter string `json:"targeted_parameter" jsonschema_description:"The name of the parameter that is targeted. Use an empty string if you don't know."`
+	ShellCommands     string `json:"shell_commands" jsonschema_description:"If there is a payload and the payload has shell commands, provide the shell commands here. Empty otherwise."`
 }
 
 const LLMSystemPrompt = `
-Analyze the provided HTTP request. Your response needs to be a raw JSON object that is not formatted for displaying, without any text outside the JSON, that has the following keys:
+You are an information security professional / threat analyst responsible for analyzing HTTP requests and highlighting important details. You analysis is targetted towards other information security professionals. While analyzing the requests I want you to focus on what the request target is, what is being exploited, how it is being exploited and what the compoments of the exploit are. You will also be asked about details such as, is there a payload in the request and if there is a payload, what parameter is it injected into and does it contain, for example, shell commands.
+`
 
-description: One or two paragraphs describing the intent of the request, if it is malicious and what application it targets. Describe the payload if the request is malicous. Do not include hostnames, IPs or ports.
-malicious: Use the string "yes" if the request is malicious. Else "no".
-vulnerability_type: A string containing the Mitre CWE ID, starting with "CWE-" for the main weakness being exploited. Use an empty string if you don't know.
-application: A string with the targetted application/device name. An empty string if you don't know.
-cve: The relevant CVE if you know what vulnerability is exploited. An empty string if you don't know.
-has_payload: use the string "yes" if the request has a malicious attacker payload, such as to execute a command or code. Otherwise use the value "no".
-mitre_attack: The MITRE ATT&CK technique ID starting with "T" if you know what technique is being used. Multiple can be provided if command separated. Use an empty string if you don't know.
-targeted_parameter: The name of the parameter that is targeted by the request. An empty string if you don't know.
-shell_commands: If there is a payload and the payload has shell commands, provide the shell commands here. Empty otherwise.
+const LLMUserPrompt = `
+Analyze the provided HTTP request and give me security relevant information in the JSON output.
 
 The request was:
 `
@@ -85,6 +79,8 @@ That was the request. Now the following information was found in the base64 enco
 `
 
 func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
+
+	llmManager.SetResponseSchemaFromObject(LLMResult{}, "security_information")
 	return &CachedDescriptionManager{
 		dbClient:     dbClient,
 		llmManager:   llmManager,
@@ -144,9 +140,9 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 
 		slog.Debug("Describing request for URI", slog.String("uri", reqs[0].Uri), slog.String("hash", reqs[0].CmpHash))
 
-		prompt := fmt.Sprintf("%s\n%s", LLMSystemPrompt, reqs[0].Raw)
+		prompt := fmt.Sprintf("%s\n%s", LLMUserPrompt, reqs[0].Raw)
 		if base64data != "" {
-			prompt = fmt.Sprintf("%s\n%s\n%s\n%s", LLMSystemPrompt, reqs[0].Raw, LLMBase64MetaPrompt, base64data)
+			prompt = fmt.Sprintf("%s\n%s\n%s\n%s", LLMUserPrompt, reqs[0].Raw, LLMBase64MetaPrompt, base64data)
 		}
 
 		prompts = append(prompts, prompt)
