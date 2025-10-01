@@ -61,7 +61,7 @@ type LLMResult struct {
 }
 
 const LLMSystemPrompt = `
-You are an information security professional / threat analyst responsible for analyzing HTTP requests and highlighting important details. You analysis is targetted towards other information security professionals. While analyzing the requests I want you to focus on what the request target is, what is being exploited, how it is being exploited and what the compoments of the exploit are. You will also be asked about details such as, is there a payload in the request and if there is a payload, what parameter is it injected into and does it contain, for example, shell commands.
+You are an information security professional / threat analyst responsible for analyzing HTTP requests and highlighting important details. You analysis is targetted towards other information security professionals. While analyzing the requests I want you to focus on what the request target is, what is being exploited, how it is being exploited and what the components of the exploit are. You will also be asked about details such as, is there a payload in the request and if there is a payload, what parameter is it injected into and does it contain, for example, shell commands.
 `
 
 const LLMUserPrompt = `
