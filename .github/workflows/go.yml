@@ -14,7 +14,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
 
       - name: Install libmagic
@@ -23,11 +24,11 @@ jobs:
 
       - name: Install yara-x
         run: |
-          sudo rustup toolchain install stable --profile minimal --no-self-update
-          sudo cargo install cargo-c
+          cargo install cargo-c
           git clone https://github.com/VirusTotal/yara-x.git
           cd yara-x
-          sudo cargo cinstall -p yara-x-capi --release
+          export PATH="$HOME/.cargo/bin:$PATH"
+          sudo -E cargo cinstall -p yara-x-capi --release
 
       - name: Set up Go
         uses: actions/setup-go@v4
