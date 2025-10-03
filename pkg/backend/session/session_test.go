@@ -53,7 +53,7 @@ func TestSessionManagerCache(t *testing.T) {
 	// Check the gauge.
 	m := testutil.ToFloat64(metrics.sessionsActiveGauge)
 	if m != 1 {
-		t.Errorf("sessionsActiveGauge should be 1, got %d", m)
+		t.Errorf("sessionsActiveGauge should be 1, got %f", m)
 	}
 
 	session.ID = 43

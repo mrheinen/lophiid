@@ -10,9 +10,10 @@ and will help you out.
 
 #### Install dependencies
 
-##### Bazel
+##### Golang
 
-You will need to have [bazel](https://bazel.build/) installed. Just grab the latest version from your OS distribution and install it.
+You will need to have Golang 1.25.1 installed. You can get this here:
+https://go.dev/dl/
 
 ##### Yara-X
 
@@ -61,12 +62,8 @@ There is no output on the terminal unless something went wrong.
 To build the backend, run the following command:
 
 ```shell
-bazel build //cmd/backend:backend
+go build cmd/backend/backend.go
 ```
-
-This will take care of downloading all the remaining dependencies and build the backend.
-
-If you are unfamilair with bazel, you can find the binary at ./bazel-bin/cmd/backend/backend_/backend
 
 ### Build the agent
 First make sure that libmagic is installed:
@@ -78,7 +75,7 @@ sudo apt-get install libmagic-dev
 Build the agent using the following command:
 
 ```shell
-bazel build //cmd/agent:client
+go build cmd/agent/agent_cli.go
 ```
 
 # Create a CA and certificates
@@ -210,7 +207,14 @@ One way to obtain it is by going to [https://web.telegram.org](https://web.teleg
 Once you have this setup, you can enable alerting for specific rules by clicking
 on the bell icon behind those rules in the Rules tab of the UI.
 
-#### Setting up LLM triage
+### Running the backend
+
+Simple run the backend:
+```shell
+./backend -c backend-config.yaml
+```
+
+## Setting up LLM triage
 
 If you like to enable LLM triage and LLM descriptions of attacks then you will
 need edit the backend [config](./config/backend-config.yaml) and enable the
@@ -222,11 +226,10 @@ API endpoint and API key in the AI section.
 Now you need to run the triage process:
 
 ```shell
-bazel build //cmd/triage:triage
-./bazel-bin/triage/triage_/triage -c backend-config.yaml
+go run cmd/triage/triage_cli.go -c backend-config.yaml
 ```
 
-#### Setting up Yara scanning
+## Setting up Yara scanning
 
 You can optionally setup automatic yara scanning of the malware that is
 collected. To do this, you need to run this command from the code root
@@ -292,7 +295,7 @@ one p0f instance per machine.
 Building the server is done with this command:
 
 ```shell
-bazel build //cmd/api:api
+go build cmd/api/api_server.go
 ```
 
 Now copy the example configuration from
@@ -303,7 +306,7 @@ will build in the next step.
 
 Running the API server is a matter of:
 ```shell
-./bazel-bin/cmd/api/api_/api -c api-config.yaml
+./api_server -c api-config.yaml
 ```
 
 Take note of the API key. You will need to give this to the web UI when you
