@@ -29,8 +29,6 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           cargo cinstall -p yara-x-capi --release --prefix=/tmp/
           sudo mkdir -p /usr/local/lib/x86_64-linux-gnu/
-          sudo cp -r /tmp/lib/x86_64-linux-gnu/* /usr/local/lib/x86_64-linux-gnu/
-          ls -l /usr/local/lib/x86_64-linux-gnu/
           sudo cp -r /tmp/lib/x86_64-linux-gnu/* /usr/lib/x86_64-linux-gnu/
 
       - name: Set up Go
