@@ -29,7 +29,7 @@ jobs:
           cargo install cargo-c
           git clone https://github.com/VirusTotal/yara-x.git
           cd yara-x
-          sudo cargo cinstall -p yara-x-capi --release
+          sudo `which cargo` cinstall -p yara-x-capi --release
 
       - name: Set up Go
         uses: actions/setup-go@v4
