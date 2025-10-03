@@ -28,7 +28,7 @@ jobs:
           git clone https://github.com/VirusTotal/yara-x.git
           cd yara-x
           export PATH="$HOME/.cargo/bin:$PATH"
-          sudo -E cargo cinstall -p yara-x-capi --release
+          sudo ~runner/.cargo/bin/cargo cinstall -p yara-x-capi --release
 
       - name: Set up Go
         uses: actions/setup-go@v4
