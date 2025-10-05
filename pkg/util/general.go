@@ -25,7 +25,7 @@ import (
 	"unicode"
 )
 
-func GetStructName(m interface{}) string {
+func GetStructName(m any) string {
 	if t := reflect.TypeOf(m); t.Kind() == reflect.Ptr {
 		return t.Elem().Name()
 	} else {
@@ -49,7 +49,7 @@ func IsValidUUID(uuid string) bool {
 
 // Checks if a string is ASCII.
 func IsStringASCII(s string) bool {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		if s[i] > unicode.MaxASCII {
 			return false
 		}
@@ -62,7 +62,7 @@ const printableAlphaNumericChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGH
 
 func GenerateRandomString(length int, inputChars string) string {
 	result := make([]byte, length)
-	for i := 0; i < length; i++ {
+	for i := range length {
 		result[i] = inputChars[rand.Intn(len(inputChars))]
 	}
 	return string(result)
