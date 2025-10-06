@@ -41,5 +41,34 @@ func TestIsValidUUID(t *testing.T) {
 		})
 
 	}
+}
 
+func TestIsAscii(t *testing.T) {
+
+	for _, test := range []struct {
+		description string
+		string        string
+		isAscii       bool
+	}{
+		{
+			description: "is ascii",
+			string:        "sadsdssdsd",
+			isAscii:       true,
+		},
+		{
+			description: "is not valid",
+			string:        "\xff\xff\xfe\x0a",
+			isAscii:       false,
+		},
+
+
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			res := IsStringASCII(test.string)
+			if res != test.isAscii {
+				t.Errorf("got %v, want %v", res, test.isAscii)
+			}
+		})
+	}
 }

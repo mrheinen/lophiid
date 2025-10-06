@@ -49,7 +49,7 @@ func IsValidUUID(uuid string) bool {
 
 // Checks if a string is ASCII.
 func IsStringASCII(s string) bool {
-	for i := range len(s) {
+	for i := range s {
 		if s[i] > unicode.MaxASCII {
 			return false
 		}

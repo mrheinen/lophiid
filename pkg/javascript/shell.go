@@ -30,6 +30,11 @@ type Shell struct {
 // RunCommand is a wrapper around the shell client and returns the command
 // output as a string.
 func (s *Shell) RunCommand(cmd string) string {
+	if s.shellClient == nil {
+		slog.Warn("shell client not available", slog.String("cmd", cmd))
+		return ""
+	}
+
 	res, err := s.shellClient.RunCommand(s.request, cmd)
 
 	if err != nil {
