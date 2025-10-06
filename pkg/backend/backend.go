@@ -303,7 +303,9 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 }
 
 func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session) (models.ContentRule, error) {
-	var matchedRules []models.ContentRule
+	matchedPriority1 := []models.ContentRule{}
+	matchedPriority2 := []models.ContentRule{}
+
 	for _, rule := range rules {
 
 		if len(rule.Ports) != 0 {
@@ -330,18 +332,22 @@ func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.R
 		matchedBody := MatchesString(rule.BodyMatching, string(req.Body), rule.Body)
 
 		// We assume here that at least path or body are set.
-		matched := false
 		if matchedUri && rule.Body == "" {
-			matched = true
+			matchedPriority1 = append(matchedPriority1, rule)
 		} else if matchedBody && rule.Uri == "" {
-			matched = true
+			matchedPriority1 = append(matchedPriority1, rule)
 		} else if matchedBody && matchedUri {
-			matched = true
+			matchedPriority2 = append(matchedPriority2, rule)
 		}
+	}
 
-		if matched {
-			matchedRules = append(matchedRules, rule)
-		}
+	// This is important. If there are rules that have more matching criteria
+	// then we will take these rules and serve them first.
+	var matchedRules []models.ContentRule
+	if len(matchedPriority2) > 0 {
+		matchedRules = matchedPriority2
+	} else {
+		matchedRules = matchedPriority1
 	}
 
 	if len(matchedRules) == 0 {

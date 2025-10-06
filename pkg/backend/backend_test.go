@@ -73,6 +73,8 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{ID: 10, AppID: 9, Method: "GET", Ports: []int{80}, Body: "/etc/passwd", BodyMatching: "contains", ContentID: 42},
 		{ID: 11, AppID: 9, Method: "GET", Ports: []int{80}, Uri: "/pppaaattthhh", UriMatching: "exact", Body: "/etc/hosts", BodyMatching: "contains", ContentID: 42},
 		{ID: 12, AppID: 4, Method: "POST", Ports: []int{80}, Uri: "suffix", UriMatching: "suffix", ContentID: 77},
+		{ID: 13, AppID: 4, Method: "POST", Ports: []int{80}, Uri: "/same", UriMatching: "exact", Body: "body", BodyMatching: "exact", ContentID: 77},
+		{ID: 14, AppID: 4, Method: "POST", Ports: []int{80}, Uri: "/same", UriMatching: "exact", ContentID: 77},
 	}
 
 	for _, test := range []struct {
@@ -172,6 +174,19 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			errorExpected:         false,
 		},
 		{
+			description: "matched one rule (uri and body)  ",
+			requestInput: models.Request{
+				Uri:    "/same",
+				Port:   80,
+				Body:   []byte("body"),
+				Method: "POST",
+			},
+			contentRulesInput:     bunchOfRules,
+			contentRuleIDExpected: 13,
+			errorExpected:         false,
+		},
+
+		{
 			description: "matched on body alone (exact) ",
 			requestInput: models.Request{
 				Uri:    "/eeee",
@@ -183,6 +198,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			contentRuleIDExpected: 9,
 			errorExpected:         false,
 		},
+
 		{
 			description: "matched on body alone (contains) ",
 			requestInput: models.Request{
