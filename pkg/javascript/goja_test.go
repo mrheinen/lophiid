@@ -23,6 +23,7 @@ import (
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
+	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/util/constants"
 	"testing"
 	"time"
@@ -115,7 +116,8 @@ func TestRunScriptWithoutValidateOk(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
 			fRes := responder.FakeResponder{}
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, &fRes, metrics)
+			mockShell := &shell.FakeShellClient{}
+			jr := NewGojaJavascriptRunner(&fdb, mockShell, []string{}, time.Minute, &fRes, metrics)
 
 			res := backend_service.HttpResponse{}
 			eCol := extractors.NewExtractorCollection(true)
@@ -205,7 +207,8 @@ func TestRunScriptWithValidateOk(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			metrics := CreateGoJaMetrics(reg)
 			fRes := responder.FakeResponder{}
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, &fRes, metrics)
+			mockShell := &shell.FakeShellClient{}
+			jr := NewGojaJavascriptRunner(&fdb, mockShell, []string{}, time.Minute, &fRes, metrics)
 			err := jr.RunScript(test.script, req, &res, eCol, true)
 			if (err != nil) != test.expectError {
 				t.Errorf("got error: %s", err)
@@ -304,7 +307,8 @@ func TestRunScriptUsesCache(t *testing.T) {
 			fdb := database.FakeDatabaseClient{}
 
 			fRes := responder.FakeResponder{}
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, &fRes, metrics)
+			mockShell := &shell.FakeShellClient{}
+			jr := NewGojaJavascriptRunner(&fdb, mockShell, []string{}, time.Minute, &fRes, metrics)
 
 			eCol := extractors.NewExtractorCollection(true)
 			jr.RunScript(test.script1, test.request1, &res, eCol, false)
@@ -400,7 +404,8 @@ func TestRunScriptUsesDatabase(t *testing.T) {
 			}
 
 			fRes := responder.FakeResponder{}
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, &fRes, metrics)
+			fShell := &shell.FakeShellClient{}
+			jr := NewGojaJavascriptRunner(&fdb, fShell, []string{}, time.Minute, &fRes, metrics)
 
 			eCol := extractors.NewExtractorCollection(true)
 			err := jr.RunScript(test.script, test.request, &res, eCol, false)
@@ -519,7 +524,8 @@ func TestRunScriptRunsCommands(t *testing.T) {
 			fdb := database.FakeDatabaseClient{}
 
 			fRes := responder.FakeResponder{}
-			jr := NewGojaJavascriptRunner(&fdb, test.allowedCmds, test.cmdTimeout, &fRes, metrics)
+			fShell := &shell.FakeShellClient{}
+			jr := NewGojaJavascriptRunner(&fdb, fShell, test.allowedCmds, test.cmdTimeout, &fRes, metrics)
 
 			eCol := extractors.NewExtractorCollection(true)
 			err := jr.RunScript(test.script, test.request, &res, eCol, false)
@@ -582,7 +588,8 @@ func TestRunScriptHasContext(t *testing.T) {
 			fdb := database.FakeDatabaseClient{}
 
 			fRes := responder.FakeResponder{}
-			jr := NewGojaJavascriptRunner(&fdb, []string{}, time.Minute, &fRes, metrics)
+			fShell := &shell.FakeShellClient{}
+			jr := NewGojaJavascriptRunner(&fdb, fShell, []string{}, time.Minute, &fRes, metrics)
 
 			// Ensure metadata is extracted from the request.
 			eCol := extractors.NewExtractorCollection(true)

@@ -27,6 +27,19 @@ import (
 	"lophiid/pkg/util/constants"
 )
 
+type ShellClientInterface interface {
+	RunCommand(req *models.Request, cmd string) (*models.SessionExecutionContext, error)
+}
+
+type FakeShellClient struct {
+	ContextToReturn *models.SessionExecutionContext
+	ErrorToReturn error
+}
+
+func (m* FakeShellClient) RunCommand(req *models.Request, cmd string) (*models.SessionExecutionContext, error) {
+	return m.ContextToReturn, m.ErrorToReturn
+}
+
 type ShellClient struct {
 	llmManager llm.LLMManagerInterface
 	dbClient   database.DatabaseClient

@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -38,6 +39,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/util"
 	"lophiid/pkg/vt"
@@ -196,13 +198,15 @@ func main() {
 	var llmResponder responder.Responder
 	var desClient describer.DescriberClient
 
+	var llmManager llm.LLMManagerInterface
+	var shellClient shell.ShellClientInterface
+
 	if cfg.AI.EnableResponder || cfg.AI.Triage.Enable {
 		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
 		primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
 		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 		primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
 
-		var llmManager llm.LLMManagerInterface
 		// Check if secondary LLM is configured (non-empty API key indicates configuration)
 		if cfg.AI.SecondaryLLM.ApiKey != "" {
 			slog.Info("Secondary LLM configured, using DualLLMManager")
@@ -224,9 +228,19 @@ func main() {
 			slog.Info("Creating describer client")
 			desClient = describer.GetNewCachedDescriberClient(dbc, cfg.AI.Triage.CacheExpirationTime)
 		}
+
 	}
 
-	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
+	if llmManager != nil {
+		shellClient = shell.NewShellClient(llmManager, dbc)
+	} else {
+		shellClient = &shell.FakeShellClient{
+			ErrorToReturn:   errors.New("shell is disabled"),
+			ContextToReturn: &models.SessionExecutionContext{},
+		}
+	}
+
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, shellClient, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
 
 	sMetrics := session.CreateSessionMetrics(metricsRegistry)
 	sessionMgr := session.NewDatabaseSessionManager(dbc, cfg.Backend.Advanced.SessionTrackingTimeout, sMetrics)

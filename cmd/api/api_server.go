@@ -18,12 +18,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"lophiid/pkg/api"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/util"
 	"net"
 	"net/http"
@@ -126,7 +129,15 @@ func main() {
 
 	reg := prometheus.NewRegistry()
 	dbc := database.NewKSQLClient(&db)
-	jRunner := javascript.NewGojaJavascriptRunner(dbc, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, nil, javascript.CreateGoJaMetrics(reg))
+
+	// Plug the fake shell client because in the API server we do not want to do
+	// LLM requests. For now.
+	shellClient := shell.FakeShellClient{
+		ErrorToReturn:   errors.New("no shell client in the API"),
+		ContextToReturn: &models.SessionExecutionContext{},
+	}
+
+	jRunner := javascript.NewGojaJavascriptRunner(dbc, &shellClient, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, nil, javascript.CreateGoJaMetrics(reg))
 	as := api.NewApiServer(dbc, jRunner, *apiKey)
 	as.Start()
 	defer as.Stop()

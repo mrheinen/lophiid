@@ -159,6 +159,15 @@ Returns a sha1 hash of the given string.
 
 Sleep the given amount of milliseconds.
 
+### util.random.string.alphanumeric(int)
+
+Get a random alphanumeric string of the given length.
+
+### util.random.string.generate(int, charset)
+
+Get a random string of the given length. Characters in the string will be
+composed of the given charset.
+
 ## Logging
 
 The logger will log to stdout in the process that executes the Javascript. It
@@ -285,6 +294,7 @@ Get the stdout output of the command.
 
 Get the stderr output of the command.
 
+
 ## LLM access
 
 ### util.responder.respond(resType, promptInput, template) string
@@ -327,3 +337,10 @@ Here is an example usage:
 
 Note that the LLM responder will cache prompts and LLM responses so while
 initial calls can be slow; future ones for the same promptInput are fast.
+
+### util.shell.runCommand(cmd) string
+
+Allow you to make use of the shell emulation functionality.  This will cause the
+LLM to be asked to emulate the execution of the command. The shell emulation is
+smart enough to keep track of what commands have run in the session and so
+therefore previous commands will influence the output of new commands.
