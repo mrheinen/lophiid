@@ -131,6 +131,7 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		"credential":    true,
 		"credentials":   true,
 		"creds":         true,
+		"digest":        true,
 		"hash":          true,
 		"checksum":      true,
 		"user":          true,

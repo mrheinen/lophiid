@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -24,6 +24,7 @@ import (
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
+	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/util"
 	"time"
 
@@ -35,6 +36,8 @@ var ErrScriptComplained = errors.New("script complained")
 // Contains helper structs for use inside javascript.
 type Util struct {
 	Crypto    Crypto                `json:"crypto"`
+	Shell     Shell                 `json:"shell"`
+	Random    Random                `json:"random"`
 	Time      Time                  `json:"time"`
 	Cache     CacheWrapper          `json:"cache"`
 	Encoding  Encoding              `json:"encoding"`
@@ -56,9 +59,10 @@ type GojaJavascriptRunner struct {
 	commandTimeout  time.Duration
 	metrics         *GojaMetrics
 	responder       responder.Responder
+	shellClient     shell.ShellClientInterface
 }
 
-func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands []string, commandTimeout time.Duration, responder responder.Responder, metrics *GojaMetrics) *GojaJavascriptRunner {
+func NewGojaJavascriptRunner(dbClient database.DatabaseClient, shellClient shell.ShellClientInterface, allowedCommands []string, commandTimeout time.Duration, responder responder.Responder, metrics *GojaMetrics) *GojaJavascriptRunner {
 	// The string cache timeout should be a low and targetted
 	// for the use case of holding something in cache between
 	// a couple requests for the same source.
@@ -71,6 +75,7 @@ func NewGojaJavascriptRunner(dbClient database.DatabaseClient, allowedCommands [
 		allowedCommands: allowedCommands,
 		commandTimeout:  commandTimeout,
 		responder:       responder,
+		shellClient:     shellClient,
 	}
 }
 
@@ -85,8 +90,13 @@ func (j *GojaJavascriptRunner) RunScript(script string, req models.Request, res 
 	// character.
 	vm.SetFieldNameMapper(goja.TagFieldNameMapper("json", true))
 	vm.Set("util", Util{
+		Shell: Shell{
+			shellClient: j.shellClient,
+			request:     &req,
+		},
 		Crypto: Crypto{},
 		Time:   Time{},
+		Random: Random{},
 		Cache: CacheWrapper{
 			keyPrefix: fmt.Sprintf("%s%s", req.SourceIP, req.HoneypotIP),
 			strCache:  j.strCache,
