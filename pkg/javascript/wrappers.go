@@ -46,6 +46,10 @@ func (r *ResponseWrapper) SetBody(body string) {
 	r.response.Body = []byte(body)
 }
 
+func (r *ResponseWrapper) SetStatusCode(code int) {
+	r.response.StatusCode = fmt.Sprintf("%d", code)
+}
+
 func (r *ResponseWrapper) GetBody() string {
 	return string(r.response.Body)
 }

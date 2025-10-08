@@ -118,6 +118,7 @@ visible in the Response struct):
  * setBody(string) - This will set the respose body to the given value.
  * setBody() - This will return the body as a string.
  * addHeader(string, string) - This will set the given header
+ * setStatusCode(int) - This will set the status code
 
 These two are necessary because the body is stored in []bytes which is hard to
 handle in Javascript.
