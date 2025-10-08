@@ -42,6 +42,16 @@ func (r *ResponseWrapper) AddHeader(key string, value string) {
 	})
 }
 
+func (r *ResponseWrapper) GetHeader(key string) string {
+
+	for _, hdr := range r.response.Header {
+		if hdr.Key == key {
+			return hdr.Value
+    }
+	}
+	return "";
+}
+
 func (r *ResponseWrapper) SetBody(body string) {
 	r.response.Body = []byte(body)
 }
