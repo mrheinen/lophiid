@@ -177,12 +177,40 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 		bh := promptMap[prompt].RequestDescription
 		bh.SourceModel = b.llmManager.LoadedModel()
 		bh.AIDescription = llmResult.Description
-		bh.AIVulnerabilityType = llmResult.VulnerabilityType
-		bh.AIApplication = llmResult.Application
 		bh.TriageStatus = constants.TriageStatusTypeDone
-		bh.AITargetedParameter = llmResult.TargetedParameter
-		bh.AIMitreAttack = llmResult.MitreAttack
-		bh.AIShellCommands = llmResult.ShellCommands
+
+		// Important: these values from the LLM can be something completely random
+		// and we therefore have to limit their length. This length has to be kept
+		// in sync with the definition of the request_description table schema in
+		// config/database.sql.
+		if len(llmResult.VulnerabilityType) <= 128 {
+			bh.AIVulnerabilityType = llmResult.VulnerabilityType
+		} else {
+			slog.Error("VulnerabilityType too long", slog.String("vulnerability_type", llmResult.VulnerabilityType))
+		}
+
+		if len(llmResult.Application) <= 128 {
+			bh.AIApplication = llmResult.Application
+		} else {
+			slog.Error("Application too long", slog.String("application", llmResult.Application))
+		}
+
+		if len(llmResult.TargetedParameter) <= 128 {
+			bh.AITargetedParameter = llmResult.TargetedParameter
+		} else {
+			slog.Error("TargetedParameter too long", slog.String("targeted_parameter", llmResult.TargetedParameter))
+		}
+		if len(llmResult.MitreAttack) <= 2048 {
+			bh.AIMitreAttack = llmResult.MitreAttack
+		} else {
+			slog.Error("MitreAttack too long", slog.String("mitre_attack", llmResult.MitreAttack))
+		}
+
+		if len(llmResult.ShellCommands) <= 10000 {
+			bh.AIShellCommands = llmResult.ShellCommands
+		} else {
+			slog.Error("ShellCommands too long", slog.String("shell_commands", llmResult.ShellCommands))
+		}
 
 		if llmResult.Malicious == "yes" || llmResult.Malicious == "no" {
 			bh.AIMalicious = llmResult.Malicious
