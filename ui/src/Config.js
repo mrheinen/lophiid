@@ -51,6 +51,7 @@ export default {
   statusCodeValues: [
     { label: '200 - OK', value: '200' },
     { label: '201 - Created', value: '201' },
+    { label: '202 - Accepted', value: '202' },
     { label: '301 - Permanent redirect', value: '301' },
     { label: '302 - Temporary redirect', value: '302' },
     { label: '400 - Bad request', value: '400' },
