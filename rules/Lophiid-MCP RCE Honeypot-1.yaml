@@ -1,0 +1,326 @@
+app:
+    id: 179
+    name: MCP RCE Honeypot
+    version: "1"
+    vendor: Lophiid
+    os: ""
+    link: ""
+    created_at: 2025-10-05T18:00:01.756222Z
+    updated_at: 2025-10-05T18:00:01.755959Z
+    ext_version: 0
+    ext_uuid: 8691c845-87e4-4a52-913f-d339d6d2f05b
+    cves: []
+rules:
+    - id: 977
+      uri: /
+      body: method\s*":\s*"initialize"
+      method: POST
+      port: 0
+      ports: []
+      uri_matching: prefix
+      body_matching: regex
+      content_id: 972
+      app_id: 179
+      app_uuid: 8691c845-87e4-4a52-913f-d339d6d2f05b
+      content_uuid: 2fda9f13-a2e0-4be3-8633-df77be57410f
+      created_at: 2025-10-05T18:04:26.125102Z
+      updated_at: 2025-10-09T16:46:38.354343Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: ea18d258-c55c-450c-9a14-bb6bca558462
+      request_purpose: RECON
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 978
+      uri: /
+      body: notifications/initialized
+      method: POST
+      port: 0
+      ports: []
+      uri_matching: prefix
+      body_matching: contains
+      content_id: 973
+      app_id: 179
+      app_uuid: 8691c845-87e4-4a52-913f-d339d6d2f05b
+      content_uuid: 61066d43-8930-48f4-9717-4be884834f7a
+      created_at: 2025-10-05T18:10:57.399865Z
+      updated_at: 2025-10-06T16:28:18.978333Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 6812b684-0c2c-4b1b-9bc6-b8ab608ee956
+      request_purpose: RECON
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 979
+      uri: /
+      body: tools/list
+      method: POST
+      port: 0
+      ports: []
+      uri_matching: prefix
+      body_matching: contains
+      content_id: 974
+      app_id: 179
+      app_uuid: 8691c845-87e4-4a52-913f-d339d6d2f05b
+      content_uuid: c21c677b-6885-4c1f-b6cc-9ccf845743cd
+      created_at: 2025-10-05T18:12:59.181659Z
+      updated_at: 2025-10-06T16:28:14.127067Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 42edc5a0-5bed-41c1-b097-4601f80ed43d
+      request_purpose: RECON
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 981
+      uri: /mcp
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 976
+      app_id: 179
+      app_uuid: 8691c845-87e4-4a52-913f-d339d6d2f05b
+      content_uuid: 6e318720-6299-4182-92de-a8a76a18f646
+      created_at: 2025-10-05T19:10:32.158988Z
+      updated_at: 2025-10-06T16:28:07.649138Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 5fdf2b7f-5609-4169-b600-eaf3046f5bd7
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 980
+      uri: /
+      body: executeCommand
+      method: POST
+      port: 0
+      ports: []
+      uri_matching: prefix
+      body_matching: contains
+      content_id: 975
+      app_id: 179
+      app_uuid: 8691c845-87e4-4a52-913f-d339d6d2f05b
+      content_uuid: 2aa0c87f-e0ee-4bdd-a9a7-1b74057bcc4e
+      created_at: 2025-10-05T18:41:30.197283Z
+      updated_at: 2025-10-06T16:28:03.562093Z
+      alert: true
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: c0bb1329-551a-4a9c-8c55-6475ec4831a2
+      request_purpose: ATTACK
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+contents:
+    - id: 972
+      name: MCP - initialize
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      script: "function __validate() {\n\n  return \"\";\n}\n\nfunction createResponse() {\n\n  var respObject = {\n    \"jsonrpc\":\"2.0\",\n    \"id\":1,\n    \"result\":{\n      \"capabilities\":{\n        \"logging\":{},\n        \"tools\":{\n          \"listChanged\":true\n        }\n      },\n      \"protocolVersion\":\"2025-06-18\",\n      \"serverInfo\":{\n        \"name\":\"execution-server\",\n        \"version\":\"1.0.0\"\n      }\n    }\n  };\n\n  // Note that the session is per honeypot + attacker combination.\n  var cacheKey = \"mcpe_session_id\";\n  \n  var sessionId = util.random.string.alphanumeric(26).toUpperCase();\n  util.cache.set(cacheKey, sessionId);\n  \n  response.setBody(JSON.stringify(respObject));\n  response.addHeader(\"Mcp-Session-Id\", sessionId);\n  response.addHeader(\"Connection\", \"keep-alive\");\n  \n  return \"\";\n}"
+      created_at: 2025-10-05T18:04:13.011396Z
+      updated_at: 2025-10-08T15:10:20.488133Z
+      ext_version: 0
+      ext_uuid: 2fda9f13-a2e0-4be3-8633-df77be57410f
+    - id: 973
+      name: MCP - notifications/initialized
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "202"
+      script: |-
+        function __validate() {
+          return "";
+        }
+
+        // By default this will respond with a 403. Unless there is a session ID and that session ID matches
+        // with what the client sends.
+        function createResponse() {
+          // Note that the session is per honeypot + attacker combination.
+          var cacheKey = "mcpe_session_id";
+
+          var sessionId = util.cache.get(cacheKey);
+          if (sessionId == "") {
+            util.log.info("got MCP call without session set server-side");
+            return "";
+          }
+
+          var clientSessionId = response.getHeader("Mcp-Session-Id");
+          if (clientSessionId == "" ){
+            util.log.info("got MCP call without client session ID (header)");
+          }
+
+          if (clientSessionId != sessionId) {
+            util.log.error("client session ID does not match server" );
+          }
+
+          response.setStatusCode(202);
+          return "";
+        }
+      created_at: 2025-10-05T18:09:06.716763Z
+      updated_at: 2025-10-09T15:17:40.626138Z
+      ext_version: 0
+      ext_uuid: 61066d43-8930-48f4-9717-4be884834f7a
+    - id: 974
+      name: MCP - tools/list
+      description: ""
+      content_type: text/event-stream
+      server: Apache
+      status_code: "200"
+      script: |4-
+
+        function __validate(){
+          return "";
+        }
+
+        function createResponse() {
+
+          var outputPrefix = "event: message\nid: DE24FD6IGMTITDERODOJ3IN3BG_0\ndata: ";
+          var jsonData = {
+            "jsonrpc":"2.0",
+            "id":2,
+            "result":{
+              "tools":[
+                {"description":"Get the current time in NYC, San Francisco, or Boston",
+                 "inputSchema":{
+                   "type":"object",
+                   "required":["city"],
+                   "properties":{"city":{
+                     "type":"string",
+                     "description":"City to get time for (nyc, sf, or boston)",
+                   }
+                   },
+                   "additionalProperties":false
+                 },
+                 "name":"cityTime"
+                },{
+                  "description":"Execute a shell command on the server. Returns stdout, stderr, and exit code. WARNING: Use only in trusted environments.",
+                  "inputSchema":{
+                    "type":"object",
+                    "required":["command"],
+                    "properties":{
+                      "command":{
+                        "type":"string",
+                        "description":"The shell command to execute"
+                      },
+                      "workingDir":{
+                        "type":"string",
+                        "description":"Optional working directory for command execution"
+                      }
+                    },
+                    "additionalProperties":false
+                  },
+                  "name":"executeCommand",
+                  "outputSchema":{
+                    "type":"object",
+                    "required":["stdout","stderr","exitCode","success"],
+                    "properties":{
+                      "exitCode":{"type":"integer"},
+                      "stderr":{"type":"string"},
+                      "stdout":{"type":"string"},
+                      "success":{"type":"boolean"}
+                    },
+                    "additionalProperties":false}}]
+            }
+          };
+
+          var finalOutput = outputPrefix + JSON.stringify(jsonData);
+          response.setBody(finalOutput);
+
+          return "";
+        }
+      created_at: 2025-10-05T18:12:47.341445Z
+      updated_at: 2025-10-09T13:37:53.077626Z
+      ext_version: 0
+      ext_uuid: c21c677b-6885-4c1f-b6cc-9ccf845743cd
+    - id: 976
+      name: MCP - GET
+      description: ""
+      content_type: text/event-stream
+      server: Apache
+      status_code: "200"
+      headers:
+        - 'Mcp-Session-Id: XO26TQULZTX5UNYIFNOH3W2YVQ'
+        - 'Connection: keep-alive'
+      created_at: 2025-10-05T19:10:22.1675Z
+      updated_at: 2025-10-05T19:26:55.253878Z
+      ext_version: 0
+      ext_uuid: 6e318720-6299-4182-92de-a8a76a18f646
+    - id: 975
+      name: MCP - tools/call runCommand
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      script: |-
+        function __validate() {
+          return "";
+        }
+
+        function createResponse() {
+          if (request.bodyString() == "") {
+            return "no request body received";
+          }
+          try {
+            var obj = JSON.parse(request.bodyString());
+          } catch (e) {
+            util.log.error(e);
+            return "couldnt parse json"
+          }
+
+          if (!obj.hasOwnProperty('params')) {
+            return "Request is missing params"
+          }
+
+          var ptr = obj.params;
+          if (!ptr.hasOwnProperty('arguments')) {
+            return "Request is missing arguments"
+          }
+
+          ptr = ptr.arguments;
+          if (!ptr.hasOwnProperty('command')) {
+            return "Request is missing command"
+          }
+
+          var output = util.shell.runCommand(ptr.command);
+
+          var jsonOutput = {
+            "jsonrpc":"2.0",
+            "id":3,
+            "result":{
+              "content":[
+                {"type":"text",
+                 "text":output
+                }
+              ],
+              "structuredContent":
+              {"exitCode":0,
+               "stderr":"",
+               "stdout": output,
+               "success":true
+              }
+            }
+          };
+
+          response.setBody(JSON.stringify(jsonOutput));
+        }
+      created_at: 2025-10-05T18:34:52.789149Z
+      updated_at: 2025-10-05T19:03:59.435378Z
+      ext_version: 0
+      ext_uuid: 2aa0c87f-e0ee-4bdd-a9a7-1b74057bcc4e
