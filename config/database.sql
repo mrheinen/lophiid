@@ -8,7 +8,7 @@ CREATE USER lo WITH PASSWORD 'CHANGE_ME_TO_SOMETHING_GOOD';
 
 CREATE TYPE MATCHING_TYPE AS ENUM ('none', 'exact', 'prefix', 'suffix', 'contains', 'regex');
 CREATE TYPE METHOD_TYPE AS ENUM ('GET', 'POST', 'HEAD', 'TRACE', 'OPTIONS', 'DELETE', 'PUT', 'ANY');
-CREATE TYPE STATUS_CODE AS ENUM ('200', '201', '301', '302', '400', '401', '403', '404', '500');
+CREATE TYPE STATUS_CODE AS ENUM ('200', '201', '202', '203', '204', '206', '300', '301', '302', '303', '304', '307', '308', '400', '401', '402', '403', '404', '405', '406', '408', '409', '410', '413', '414', '415', '416', '418', '429', '500', '501', '502', '503', '504', '505');
 
 CREATE TABLE content (
   id              SERIAL PRIMARY KEY,
