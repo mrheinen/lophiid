@@ -192,3 +192,89 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 	}
 }
 
+func TestApplicationLengthValidation(t *testing.T) {
+	tests := []struct {
+		name              string
+		applicationLength int
+		expectedEmpty     bool
+	}{
+		{
+			name:              "application exactly 128 chars",
+			applicationLength: 128,
+			expectedEmpty:     false,
+		},
+		{
+			name:              "application over 128 chars",
+			applicationLength: 129,
+			expectedEmpty:     true,
+		},
+	}
+
+	reg := prometheus.NewRegistry()
+	llmMetrics := llm.CreateLLMMetrics(reg)
+	describerMetrics := CreateDescriberMetrics(reg)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			applicationValue := util.GenerateRandomString(tt.applicationLength, "abcdefghijklmnopqrstuvwxyz")
+
+			mockDB := &database.FakeDatabaseClient{
+				RequestDescriptionsToReturn: []models.RequestDescription{
+					{
+						ExampleRequestID: 1,
+						TriageStatus:     constants.TriageStatusTypePending,
+					},
+				},
+				RequestsToReturn: []models.Request{
+					{
+						ID:      1,
+						Uri:     "/test",
+						CmpHash: "hash1",
+						Raw:     "GET /test HTTP/1.1",
+					},
+				},
+			}
+
+			llmResponse := `{"description":"Test","vulnerability_type":"none","application":"` + applicationValue + `","malicious":"no","has_payload":"no"}`
+
+			mockLLMClient := &llm.MockLLMClient{
+				CompletionToReturn: llmResponse,
+			}
+
+			mockEvents := &analysis.FakeIpEventManager{}
+
+			llmManager := llm.NewLLMManager(
+				mockLLMClient,
+				util.NewStringMapCache[string]("test-cache", time.Minute),
+				llmMetrics,
+				time.Second*10,
+				5,
+				true,
+				"",
+				"",
+			)
+
+			manager := &CachedDescriptionManager{
+				dbClient:     mockDB,
+				llmManager:   llmManager,
+				eventManager: mockEvents,
+				metrics:      describerMetrics,
+			}
+
+			_, err := manager.GenerateLLMDescriptions(1)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Check if the application was set correctly
+			updatedDesc := mockDB.LastDataModelSeen.(*models.RequestDescription)
+			if tt.expectedEmpty && updatedDesc.AIApplication != "" {
+				t.Errorf("expected empty AIApplication but got: %s", updatedDesc.AIApplication)
+			}
+			if !tt.expectedEmpty && updatedDesc.AIApplication != applicationValue {
+				t.Errorf("expected AIApplication to be %s but got: %s", applicationValue, updatedDesc.AIApplication)
+			}
+		})
+	}
+}
+
