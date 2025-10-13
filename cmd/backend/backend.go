@@ -63,6 +63,24 @@ import (
 
 var configFile = flag.String("c", "", "Config file")
 
+func getLLMManager(cfg backend.Config, llmMetrics *llm.LLMMetrics) llm.LLMManagerInterface {
+	pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
+	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
+	primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
+
+	// Check if secondary LLM is configured (non-empty API key indicates configuration)
+	if cfg.AI.SecondaryLLM.ApiKey == "" {
+		slog.Info("Using single LLM manager")
+		return primaryManager
+	}
+
+	slog.Info("Secondary LLM configured, using DualLLMManager")
+	secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM, "")
+	secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
+
+	return llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
+}
+
 func main() {
 
 	flag.Parse()
@@ -198,40 +216,22 @@ func main() {
 	var llmResponder responder.Responder
 	var desClient describer.DescriberClient
 
-	var llmManager llm.LLMManagerInterface
 	var shellClient shell.ShellClientInterface
 
-	if cfg.AI.EnableResponder || cfg.AI.Triage.Enable {
-		pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
-		primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
-		llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-		primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
-
-		// Check if secondary LLM is configured (non-empty API key indicates configuration)
-		if cfg.AI.SecondaryLLM.ApiKey != "" {
-			slog.Info("Secondary LLM configured, using DualLLMManager")
-			secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM, "")
-			secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
-
-			llmManager = llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
-		} else {
-			slog.Info("Using single LLM manager")
-			llmManager = primaryManager
-		}
-
-		if cfg.AI.EnableResponder {
-			slog.Info("Creating responder")
-			llmResponder = responder.NewLLMResponder(llmManager, cfg.AI.MaxInputCharacters)
-		}
-
-		if cfg.AI.Triage.Enable {
-			slog.Info("Creating describer client")
-			desClient = describer.GetNewCachedDescriberClient(dbc, cfg.AI.Triage.CacheExpirationTime)
-		}
-
+	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
+	if cfg.AI.EnableResponder {
+		llmManager := getLLMManager(cfg, llmMetrics)
+		slog.Info("Creating responder")
+		llmResponder = responder.NewLLMResponder(llmManager, cfg.AI.MaxInputCharacters)
 	}
 
-	if llmManager != nil {
+	if cfg.AI.Triage.Enable {
+		slog.Info("Creating describer client")
+		desClient = describer.GetNewCachedDescriberClient(dbc, cfg.AI.Triage.CacheExpirationTime)
+	}
+
+	if cfg.AI.EnableShellEmulation {
+		llmManager := getLLMManager(cfg, llmMetrics)
 		shellClient = shell.NewShellClient(llmManager, dbc)
 	} else {
 		shellClient = &shell.FakeShellClient{
