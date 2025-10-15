@@ -11,10 +11,10 @@ app:
     ext_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
     cves: []
 rules:
-    - id: 959
-      uri: /api/embed
-      body: model
-      method: POST
+    - id: 954
+      uri: /
+      body: ""
+      method: ANY
       port: 0
       ports:
         - 11434
@@ -22,6 +22,54 @@ rules:
         - 8500
         - 5172
         - 9306
+        - 80
+        - 8080
+      uri_matching: exact
+      body_matching: none
+      content_id: 951
+      app_id: 176
+      app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
+      content_uuid: 1c7c1bee-b558-468d-898a-99e2ec89997d
+      created_at: 2025-09-23T17:39:19.4027Z
+      updated_at: 2025-10-06T16:20:08.452373Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: b8d16a30-53f3-46b8-abda-016b9302b10b
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 965
+      uri: /api/blobs
+      body: ""
+      method: HEAD
+      port: 0
+      ports: []
+      uri_matching: prefix
+      body_matching: none
+      content_id: 961
+      app_id: 176
+      app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
+      content_uuid: 76f0b5b0-2e26-427f-b831-4b6d42d1ccee
+      created_at: 2025-09-24T11:56:16.080479Z
+      updated_at: 2025-10-06T16:19:48.837771Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 9aad57b5-7305-4b33-83e0-3d6ed25e715f
+      request_purpose: RECON
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+    - id: 959
+      uri: /api/embed
+      body: model
+      method: POST
+      port: 0
+      ports: []
       uri_matching: exact
       body_matching: contains
       content_id: 955
@@ -29,7 +77,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: 8f89637a-4aee-46bf-923d-05282f62a5ed
       created_at: 2025-09-24T11:43:42.430857Z
-      updated_at: 2025-09-24T14:01:12.026494Z
+      updated_at: 2025-10-06T16:18:49.042604Z
       alert: false
       enabled: true
       block: false
@@ -44,12 +92,7 @@ rules:
       body: ""
       method: DELETE
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: none
       content_id: 958
@@ -57,7 +100,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: af271533-11b4-4d33-907e-39e91f713f2d
       created_at: 2025-09-24T11:47:51.856803Z
-      updated_at: 2025-09-24T14:01:06.700606Z
+      updated_at: 2025-10-06T16:18:45.59988Z
       alert: true
       enabled: true
       block: false
@@ -72,12 +115,7 @@ rules:
       body: ""
       method: ANY
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: none
       content_id: 962
@@ -85,7 +123,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: 23404d9b-ec79-4b45-9afa-f1e90c10dd00
       created_at: 2025-09-24T13:46:15.340931Z
-      updated_at: 2025-09-24T13:46:27.163139Z
+      updated_at: 2025-10-06T16:18:40.951033Z
       alert: false
       enabled: false
       block: false
@@ -95,45 +133,12 @@ rules:
       responder: NONE
       responder_regex: ""
       responder_decoder: NONE
-    - id: 965
-      uri: /api/blobs
-      body: ""
-      method: HEAD
-      port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
-      uri_matching: prefix
-      body_matching: none
-      content_id: 961
-      app_id: 176
-      app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
-      content_uuid: 76f0b5b0-2e26-427f-b831-4b6d42d1ccee
-      created_at: 2025-09-24T11:56:16.080479Z
-      updated_at: 2025-09-24T11:56:16.080421Z
-      alert: false
-      enabled: true
-      block: false
-      ext_version: 0
-      ext_uuid: 9aad57b5-7305-4b33-83e0-3d6ed25e715f
-      request_purpose: RECON
-      responder: NONE
-      responder_regex: ""
-      responder_decoder: NONE
     - id: 964
       uri: /api/blobs/
       body: ""
       method: POST
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: prefix
       body_matching: none
       content_id: 960
@@ -141,7 +146,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: dd5129c0-461c-46f5-9383-2ce6b73fc274
       created_at: 2025-09-24T11:50:31.206918Z
-      updated_at: 2025-09-24T11:50:31.206858Z
+      updated_at: 2025-10-06T16:18:35.996194Z
       alert: false
       enabled: true
       block: false
@@ -156,12 +161,7 @@ rules:
       body: source
       method: POST
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: contains
       content_id: 959
@@ -169,7 +169,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: 99d5af71-a7f9-4dae-a72f-e7834eb7f93d
       created_at: 2025-09-24T11:48:55.936663Z
-      updated_at: 2025-09-24T11:48:55.936605Z
+      updated_at: 2025-10-06T16:18:29.789411Z
       alert: false
       enabled: true
       block: false
@@ -184,12 +184,7 @@ rules:
       body: model
       method: ANY
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: contains
       content_id: 957
@@ -197,7 +192,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: 0d8ed081-bfcb-4267-ad68-3554195d7c2a
       created_at: 2025-09-24T11:46:24.02102Z
-      updated_at: 2025-09-24T11:46:24.020929Z
+      updated_at: 2025-10-06T16:18:23.818162Z
       alert: false
       enabled: true
       block: false
@@ -207,17 +202,35 @@ rules:
       responder: NONE
       responder_regex: ""
       responder_decoder: NONE
+    - id: 956
+      uri: /api/create
+      body: model
+      method: POST
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: contains
+      content_id: 952
+      app_id: 176
+      app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
+      content_uuid: 41454a4d-6124-4148-a177-5f8d74013263
+      created_at: 2025-09-24T11:36:43.017665Z
+      updated_at: 2025-10-06T16:18:18.673555Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 13d2f14d-90d8-4473-8d57-7923752da649
+      request_purpose: ATTACK
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
     - id: 960
       uri: /api/ps
       body: ""
       method: ANY
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: none
       content_id: 956
@@ -225,7 +238,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: cbb8ca13-6b58-4275-8752-7ab8a972bc10
       created_at: 2025-09-24T11:45:08.094158Z
-      updated_at: 2025-09-24T11:45:08.094052Z
+      updated_at: 2025-10-06T16:18:09.083521Z
       alert: false
       enabled: true
       block: false
@@ -240,12 +253,7 @@ rules:
       body: model
       method: ANY
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: contains
       content_id: 954
@@ -253,7 +261,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: e3261098-8bc4-4cf1-a15f-9285885198c0
       created_at: 2025-09-24T11:42:11.562971Z
-      updated_at: 2025-09-24T11:42:11.562873Z
+      updated_at: 2025-10-06T16:18:05.296145Z
       alert: false
       enabled: true
       block: false
@@ -263,73 +271,12 @@ rules:
       responder: NONE
       responder_regex: ""
       responder_decoder: NONE
-    - id: 957
-      uri: /api/show
-      body: modelfile
-      method: ANY
-      port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
-      uri_matching: exact
-      body_matching: contains
-      content_id: 953
-      app_id: 176
-      app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
-      content_uuid: a615015a-c808-496f-b807-1e193057d9ac
-      created_at: 2025-09-24T11:39:57.87381Z
-      updated_at: 2025-09-24T11:39:57.873759Z
-      alert: false
-      enabled: true
-      block: false
-      ext_version: 0
-      ext_uuid: bd9ee306-b92b-4138-a7eb-b94074dc0ccd
-      request_purpose: UNKNOWN
-      responder: NONE
-      responder_regex: ""
-      responder_decoder: NONE
-    - id: 956
-      uri: /api/create
-      body: model
-      method: POST
-      port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
-      uri_matching: exact
-      body_matching: contains
-      content_id: 952
-      app_id: 176
-      app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
-      content_uuid: 41454a4d-6124-4148-a177-5f8d74013263
-      created_at: 2025-09-24T11:36:43.017665Z
-      updated_at: 2025-09-24T11:36:53.292778Z
-      alert: false
-      enabled: true
-      block: false
-      ext_version: 0
-      ext_uuid: 13d2f14d-90d8-4473-8d57-7923752da649
-      request_purpose: ATTACK
-      responder: NONE
-      responder_regex: ""
-      responder_decoder: NONE
     - id: 955
       uri: /api/generate
       body: prompt
       method: POST
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: contains
       content_id: 950
@@ -337,7 +284,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: 531fd029-3c24-4e5d-971c-06a527cf1e2f
       created_at: 2025-09-23T18:36:31.344733Z
-      updated_at: 2025-09-23T18:41:58.852383Z
+      updated_at: 2025-10-06T16:18:00.453143Z
       alert: true
       enabled: true
       block: false
@@ -347,45 +294,12 @@ rules:
       responder: NONE
       responder_regex: ""
       responder_decoder: NONE
-    - id: 954
-      uri: /
-      body: ""
-      method: ANY
-      port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
-      uri_matching: exact
-      body_matching: none
-      content_id: 951
-      app_id: 176
-      app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
-      content_uuid: 1c7c1bee-b558-468d-898a-99e2ec89997d
-      created_at: 2025-09-23T17:39:19.4027Z
-      updated_at: 2025-09-23T17:41:59.032303Z
-      alert: false
-      enabled: true
-      block: false
-      ext_version: 0
-      ext_uuid: b8d16a30-53f3-46b8-abda-016b9302b10b
-      request_purpose: UNKNOWN
-      responder: NONE
-      responder_regex: ""
-      responder_decoder: NONE
     - id: 953
       uri: /api/pull
       body: ""
       method: ANY
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: none
       content_id: 949
@@ -393,7 +307,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: 297c6bea-0afb-4302-9a17-b895b1677ebe
       created_at: 2025-09-19T17:07:44.745387Z
-      updated_at: 2025-09-23T17:41:54.625594Z
+      updated_at: 2025-10-06T16:17:53.893559Z
       alert: false
       enabled: true
       block: false
@@ -403,17 +317,35 @@ rules:
       responder: NONE
       responder_regex: ""
       responder_decoder: NONE
+    - id: 957
+      uri: /api/show
+      body: model
+      method: ANY
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: contains
+      content_id: 953
+      app_id: 176
+      app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
+      content_uuid: a615015a-c808-496f-b807-1e193057d9ac
+      created_at: 2025-09-24T11:39:57.87381Z
+      updated_at: 2025-10-06T16:17:45.820536Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: bd9ee306-b92b-4138-a7eb-b94074dc0ccd
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
     - id: 952
       uri: /api/tags
       body: ""
       method: ANY
       port: 0
-      ports:
-        - 11434
-        - 5984
-        - 8500
-        - 5172
-        - 9306
+      ports: []
       uri_matching: exact
       body_matching: none
       content_id: 948
@@ -421,7 +353,7 @@ rules:
       app_uuid: 28c3cfaa-cd63-4b0e-a7c2-d1e5a4bb4d12
       content_uuid: 712fc641-d993-4135-b364-59cb36e90669
       created_at: 2025-09-19T17:05:29.600949Z
-      updated_at: 2025-09-23T17:41:45.055028Z
+      updated_at: 2025-09-29T12:26:52.163189Z
       alert: false
       enabled: true
       block: false
@@ -432,28 +364,103 @@ rules:
       responder_regex: ""
       responder_decoder: NONE
 contents:
-    - id: 957
-      data: ewogICJlbWJlZGRpbmciOiBbCiAgICAwLjU2NzA0MDM4MzgxNTc2NTQsIDAuMDA5MjYwMTc0ODE4MzM2OTY0LCAwLjIzMTc4NzQ0MzE2MTAxMDc0LCAtMC4yOTE2MTczMDQwODY2ODUyLCAtMC44OTI0NTU2OTcwNTk2MzEzLAogICAgMC44Nzg1NTUyOTc4NTE1NjI1LCAtMC4zNDU3NjQyNzkzNjU1Mzk1NSwgMC41NzQyNTEwNTU3MTc0NjgzLCAtMC4wNDIyMjgzNTk3MjkwNTE1OSwgLTAuMTM3OTA2MDE0OTE5MjgxCiAgXQp9
-      name: Ollama - /api/embeddings
+    - id: 961
+      name: Ollama - /api/blobs/* (HEAD)
       description: ""
       content_type: application/json
       server: Apache
       status_code: "200"
-      created_at: 2025-09-24T11:46:02.589201Z
-      updated_at: 2025-09-24T11:46:02.58908Z
+      created_at: 2025-09-24T11:55:50.060285Z
+      updated_at: 2025-09-24T11:55:50.060226Z
       ext_version: 0
-      ext_uuid: 0d8ed081-bfcb-4267-ad68-3554195d7c2a
+      ext_uuid: 76f0b5b0-2e26-427f-b831-4b6d42d1ccee
+    - id: 955
+      data: ewogICJtb2RlbCI6ICJhbGwtbWluaWxtIiwKICAiZW1iZWRkaW5ncyI6IFtbCiAgICAwLjAxMDA3MTAyOSwgLTAuMDAxNzU5NDg2MiwgMC4wNTAwNzIyMSwgMC4wNDY5Mjk3MiwgMC4wNTQ5MTY4MTQsCiAgICAwLjAwODU5OTcwNCwgMC4xMDU0NDE0MTQsIC0wLjAyNTg3ODEzOSwgMC4xMjk1ODEyOSwgMC4wMzE5NTIzNDgKICBdXSwKICAidG90YWxfZHVyYXRpb24iOiAxNDE0MzkxNywKICAibG9hZF9kdXJhdGlvbiI6IDEwMTk1MDAsCiAgInByb21wdF9ldmFsX2NvdW50IjogOAp9
+      name: Ollama - /api/embed
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:43:28.067465Z
+      updated_at: 2025-09-24T11:43:28.067366Z
+      ext_version: 0
+      ext_uuid: 8f89637a-4aee-46bf-923d-05282f62a5ed
     - id: 949
-      data: ewogICJzdGF0dXMiOiAicHVsbGluZyBtYW5pZmVzdCIKfQ==
       name: Ollama - /api/pull
       description: ""
       content_type: application/json
       server: Apache
       status_code: "200"
+      script: "\n\nfunction __validate() {\n\n  return \"\"\n}\n\nfunction createResponse() {\n\n  try {\n    var obj = JSON.parse(request.bodyString());\n  } catch (e) {\n    util.log.error('could not parse JSON' + e);\n    return;\n  }\n\n  if ('model' in obj) {\n    // store the requested model in the cache so that we can use this model in other responses.\n    util.cache.set(\"ollama_model\", obj.model);\n  }\n  \n  response.setBody('{  \"status\": \"pulling manifest\" }');\n}"
       created_at: 2025-09-19T17:07:26.230816Z
-      updated_at: 2025-09-19T17:07:26.230742Z
+      updated_at: 2025-10-03T13:25:53.535451Z
       ext_version: 0
       ext_uuid: 297c6bea-0afb-4302-9a17-b895b1677ebe
+    - id: 948
+      name: Ollama - /api/tags
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      script: "\n\nfunction __validate() {\n  return \"\";\n}\n\nfunction createResponse() {\n\n  var retVal = {\n    \"models\":[\n      {\"name\":\"gemma3:4b\",\n       \"model\":\"gemma3:4b\",\n       \"modified_at\":\"2025-09-19T19:04:05.50084463+02:00\",\n       \"size\":3338801804,\n       \"digest\":\"a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a\",\n       \"details\":{\n         \"parent_model\":\"\",\n         \"format\":\"gguf\",\n         \"family\":\"gemma3\",\n         \"families\":[\"gemma3\"],\n         \"parameter_size\":\"4.3B\",\n         \"quantization_level\":\"Q4_K_M\"}\n      }\n    ]\n  };\n\n\n  var model = util.cache.get(\"ollama_model\");\n  if (model != \"\") {\n    retVal.models[0].name = model;\n    retVal.models[0].model = model;\n  }\n  \n  response.setBody(JSON.stringify(retVal));\n}"
+      created_at: 2025-09-19T17:05:11.811529Z
+      updated_at: 2025-10-03T13:23:58.59732Z
+      ext_version: 0
+      ext_uuid: 712fc641-d993-4135-b364-59cb36e90669
+    - id: 951
+      data: T2xsYW1hIGlzIHJ1bm5pbmc=
+      name: Ollama - /
+      description: ""
+      content_type: text/plain; charset=UTF-8
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-23T17:38:49.398123Z
+      updated_at: 2025-09-23T17:38:49.397968Z
+      ext_version: 0
+      ext_uuid: 1c7c1bee-b558-468d-898a-99e2ec89997d
+    - id: 952
+      data: eyJzdGF0dXMiOiJyZWFkaW5nIG1vZGVsIG1ldGFkYXRhIn0KeyJzdGF0dXMiOiJjcmVhdGluZyBzeXN0ZW0gbGF5ZXIifQp7InN0YXR1cyI6InVzaW5nIGFscmVhZHkgY3JlYXRlZCBsYXllciBzaGEyNTY6MjJmN2Y4ZWY1ZjRjNzkxYzFiMDNkN2ViNDE0Mzk5Mjk0NzY0ZDdjYzgyYzdlOTRhYTgxYTFmZWI4MGE5ODNhMiJ9Cnsic3RhdHVzIjoidXNpbmcgYWxyZWFkeSBjcmVhdGVkIGxheWVyIHNoYTI1Njo4YzE3YzJlYmIwZWEwMTFiZTk5ODFjYzM5MjJkYjhjYThmYTYxZTgyOGM1ZDNmNDRjYjZhZTM0MmJmODA0NjBiIn0KeyJzdGF0dXMiOiJ1c2luZyBhbHJlYWR5IGNyZWF0ZWQgbGF5ZXIgc2hhMjU2OjdjMjNmYjM2ZDgwMTQxYzRhYjhjZGJiNjFlZTQ3OTAxMDJlYmQyYmY3YWVmZjQxNDQ1MzE3N2Q0ZjIxMTBlNWQifQp7InN0YXR1cyI6InVzaW5nIGFscmVhZHkgY3JlYXRlZCBsYXllciBzaGEyNTY6MmUwNDkzZjY3ZDBjOGM5YzY4YThhZWFjZGY2YTM4YTIxNTFjYjNjNGMxZDQyYWNjZjI5NmUxOTgxMDUyNzk4OCJ9Cnsic3RhdHVzIjoidXNpbmcgYWxyZWFkeSBjcmVhdGVkIGxheWVyIHNoYTI1NjoyNzU5Mjg2YmFhODc1ZGMyMmRlNTM5NGI0YTkyNTcwMWIxODk2YTdlM2Y4ZTUzMjc1YzM2Zjc1YTg3N2E4MmM5In0KeyJzdGF0dXMiOiJ3cml0aW5nIGxheWVyIHNoYTI1NjpkZjMwMDQ1ZmU5MGYwZDc1MGRiODJhMDU4MTA5Y2VjZDZkNGRlOWM5MGEzZDc1YjE5YzA5ZTVmNjQ1ODBiYjQyIn0KeyJzdGF0dXMiOiJ3cml0aW5nIGxheWVyIHNoYTI1NjpmMThhNjhlYjA5YmY5MjViYjFiNjY5NDkwNDA3YzFiMTI1MWM1ZGI5OGRjNGQzZDgxZjMwODg0OThlYTU1NjkwIn0KeyJzdGF0dXMiOiJ3cml0aW5nIG1hbmlmZXN0In0KeyJzdGF0dXMiOiJzdWNjZXNzIn0=
+      name: Ollama - /api/create
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:35:51.554181Z
+      updated_at: 2025-09-24T11:35:51.554085Z
+      ext_version: 0
+      ext_uuid: 41454a4d-6124-4148-a177-5f8d74013263
+    - id: 950
+      name: Ollama - /api/generate
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      script: "function __validate() {\n  request.body = \"{}\"\n  return \"\";\n}\n\nfunction createResponse() {\n\n  if (request.bodyString() == \"\") {\n    return \"no request body received\";\n  }\n\n  var obj = JSON.parse(request.bodyString());\n  if (!obj.hasOwnProperty(\"prompt\")) {\n   return \"no prompt found in request body\";\n }\n\n  returnObject = {\n  \"model\": obj.model,\n  \"created_at\": \"2025-09-03T15:36:02.583064Z\",\n  \"response\": obj.prompt,\n  \"done\": true,\n  \"total_duration\": 8493852375,\n  \"load_duration\": 6589624375,\n  \"prompt_eval_count\": 14,\n  \"prompt_eval_duration\": 119039000,\n  \"eval_count\": 110,\n  \"eval_duration\": 1779061000\n};\n\n  \n  var cacheKey = \"llm_was_called\";\n\n  var count = util.cache.get(cacheKey);\n\n  if (count == \"\") {\n    util.cache.set(cacheKey, \"1\");\n  } else {\n    count = parseInt(count, 10);\n    \n    if (count > 10) {\n      response.setBody(JSON.stringify(returnObject));\n      return;\n    }\n\n    count = count + 1;\n    util.cache.set(cacheKey, count.toString());\n  }\n\n  var res = util.responder.respond(\"HELPFUL_AI\", obj.prompt, \"\");\n  if (res == \"\") {\n    return \"llm returned empty response\";\n  }\n\n  returnObject.response = res;\n  response.setBody(JSON.stringify(returnObject));\n  return \"\";\n}"
+      created_at: 2025-09-20T18:35:06.881365Z
+      updated_at: 2025-10-13T14:24:55.717496Z
+      ext_version: 0
+      ext_uuid: 531fd029-3c24-4e5d-971c-06a527cf1e2f
+    - id: 953
+      data: ewogICJtb2RlbGZpbGUiOiAiIyBNb2RlbGZpbGUgZ2VuZXJhdGVkIGJ5IFwib2xsYW1hIHNob3dcIlxuIyBUbyBidWlsZCBhIG5ldyBNb2RlbGZpbGUgYmFzZWQgb24gdGhpcyBvbmUsIHJlcGxhY2UgdGhlIEZST00gbGluZSB3aXRoOlxuIyBGUk9NIGxsYXZhOmxhdGVzdFxuXG5GUk9NIC9Vc2Vycy9tYXR0Ly5vbGxhbWEvbW9kZWxzL2Jsb2JzL3NoYTI1NjoyMDA3NjVlMTI4MzY0MGZmYmQwMTMxODRiZjQ5NmUyNjEwMzJmYTc1Yjk5NDk4YTk2MTNiZTRlOTRkNjNhZDUyXG5URU1QTEFURSBcIlwiXCJ7eyAuU3lzdGVtIH19XG5VU0VSOiB7eyAuUHJvbXB0IH19XG5BU1NJU1RBTlQ6IFwiXCJcIlxuUEFSQU1FVEVSIG51bV9jdHggNDA5NlxuUEFSQU1FVEVSIHN0b3AgXCJcdTAwM2Mvc1x1MDAzZVwiXG5QQVJBTUVURVIgc3RvcCBcIlVTRVI6XCJcblBBUkFNRVRFUiBzdG9wIFwiQVNTSVNUQU5UOlwiIiwKICAicGFyYW1ldGVycyI6ICJudW1fa2VlcCAgICAgICAgICAgICAgICAgICAgICAgMjRcbnN0b3AgICAgICAgICAgICAgICAgICAgICAgICAgICBcIjx8c3RhcnRfaGVhZGVyX2lkfD5cIlxuc3RvcCAgICAgICAgICAgICAgICAgICAgICAgICAgIFwiPHxlbmRfaGVhZGVyX2lkfD5cIlxuc3RvcCAgICAgICAgICAgICAgICAgICAgICAgICAgIFwiPHxlb3RfaWR8PlwiIiwKICAidGVtcGxhdGUiOiAie3sgaWYgLlN5c3RlbSB9fTx8c3RhcnRfaGVhZGVyX2lkfD5zeXN0ZW08fGVuZF9oZWFkZXJfaWR8PlxuXG57eyAuU3lzdGVtIH19PHxlb3RfaWR8Pnt7IGVuZCB9fXt7IGlmIC5Qcm9tcHQgfX08fHN0YXJ0X2hlYWRlcl9pZHw+dXNlcjx8ZW5kX2hlYWRlcl9pZHw+XG5cbnt7IC5Qcm9tcHQgfX08fGVvdF9pZHw+e3sgZW5kIH19PHxzdGFydF9oZWFkZXJfaWR8PmFzc2lzdGFudDx8ZW5kX2hlYWRlcl9pZHw+XG5cbnt7IC5SZXNwb25zZSB9fTx8ZW90X2lkfD4iLAogICJkZXRhaWxzIjogewogICAgInBhcmVudF9tb2RlbCI6ICIiLAogICAgImZvcm1hdCI6ICJnZ3VmIiwKICAgICJmYW1pbHkiOiAibGxhbWEiLAogICAgImZhbWlsaWVzIjogWwogICAgICAibGxhbWEiCiAgICBdLAogICAgInBhcmFtZXRlcl9zaXplIjogIjguMEIiLAogICAgInF1YW50aXphdGlvbl9sZXZlbCI6ICJRNF8wIgogIH0sCiAgIm1vZGVsX2luZm8iOiB7CiAgICAiZ2VuZXJhbC5hcmNoaXRlY3R1cmUiOiAibGxhbWEiLAogICAgImdlbmVyYWwuZmlsZV90eXBlIjogMiwKICAgICJnZW5lcmFsLnBhcmFtZXRlcl9jb3VudCI6IDgwMzAyNjEyNDgsCiAgICAiZ2VuZXJhbC5xdWFudGl6YXRpb25fdmVyc2lvbiI6IDIsCiAgICAibGxhbWEuYXR0ZW50aW9uLmhlYWRfY291bnQiOiAzMiwKICAgICJsbGFtYS5hdHRlbnRpb24uaGVhZF9jb3VudF9rdiI6IDgsCiAgICAibGxhbWEuYXR0ZW50aW9uLmxheWVyX25vcm1fcm1zX2Vwc2lsb24iOiAwLjAwMDAxLAogICAgImxsYW1hLmJsb2NrX2NvdW50IjogMzIsCiAgICAibGxhbWEuY29udGV4dF9sZW5ndGgiOiA4MTkyLAogICAgImxsYW1hLmVtYmVkZGluZ19sZW5ndGgiOiA0MDk2LAogICAgImxsYW1hLmZlZWRfZm9yd2FyZF9sZW5ndGgiOiAxNDMzNiwKICAgICJsbGFtYS5yb3BlLmRpbWVuc2lvbl9jb3VudCI6IDEyOCwKICAgICJsbGFtYS5yb3BlLmZyZXFfYmFzZSI6IDUwMDAwMCwKICAgICJsbGFtYS52b2NhYl9zaXplIjogMTI4MjU2LAogICAgInRva2VuaXplci5nZ21sLmJvc190b2tlbl9pZCI6IDEyODAwMCwKICAgICJ0b2tlbml6ZXIuZ2dtbC5lb3NfdG9rZW5faWQiOiAxMjgwMDksCiAgICAidG9rZW5pemVyLmdnbWwubWVyZ2VzIjogW10sICAgCiAgICAidG9rZW5pemVyLmdnbWwubW9kZWwiOiAiZ3B0MiIsCiAgICAidG9rZW5pemVyLmdnbWwucHJlIjogImxsYW1hLWJwZSIsCiAgICAidG9rZW5pemVyLmdnbWwudG9rZW5fdHlwZSI6IFtdLCAgICAgICAgLwogICAgInRva2VuaXplci5nZ21sLnRva2VucyI6IFtdICAgICAKICB9Cn0=
+      name: Ollama - /api/show
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:39:28.741837Z
+      updated_at: 2025-09-24T11:39:28.741769Z
+      ext_version: 0
+      ext_uuid: a615015a-c808-496f-b807-1e193057d9ac
+    - id: 958
+      name: Ollama - /api/delete
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:47:49.566208Z
+      updated_at: 2025-09-24T11:47:49.566048Z
+      ext_version: 0
+      ext_uuid: af271533-11b4-4d33-907e-39e91f713f2d
     - id: 962
       data: ewogICJtb2RlbCI6ICJtaXN0cmFsIiwKICAiY3JlYXRlZF9hdCI6ICIyMDIzLTExLTAzVDE1OjM2OjAyLjU4MzA2NFoiLAogICJyZXNwb25zZSI6ICIgVGhlIHNreSBhcHBlYXJzIGJsdWUgYmVjYXVzZSBvZiBhIHBoZW5vbWVub24gY2FsbGVkIFJheWxlaWdoIHNjYXR0ZXJpbmcuIiwKICAiZG9uZSI6IHRydWUsCiAgInRvdGFsX2R1cmF0aW9uIjogODQ5Mzg1MjM3NSwKICAibG9hZF9kdXJhdGlvbiI6IDY1ODk2MjQzNzUsCiAgInByb21wdF9ldmFsX2NvdW50IjogMTQsCiAgInByb21wdF9ldmFsX2R1cmF0aW9uIjogMTE5MDM5MDAwLAogICJldmFsX2NvdW50IjogMTEwLAogICJldmFsX2R1cmF0aW9uIjogMTc3OTA2MTAwMAp9
       name: Ollama - /api/generate (static)
@@ -475,6 +482,27 @@ contents:
       updated_at: 2025-09-24T11:54:21.905731Z
       ext_version: 0
       ext_uuid: dd5129c0-461c-46f5-9383-2ce6b73fc274
+    - id: 959
+      name: Ollama - /api/copy
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:48:28.698802Z
+      updated_at: 2025-09-24T11:48:28.698729Z
+      ext_version: 0
+      ext_uuid: 99d5af71-a7f9-4dae-a72f-e7834eb7f93d
+    - id: 957
+      data: ewogICJlbWJlZGRpbmciOiBbCiAgICAwLjU2NzA0MDM4MzgxNTc2NTQsIDAuMDA5MjYwMTc0ODE4MzM2OTY0LCAwLjIzMTc4NzQ0MzE2MTAxMDc0LCAtMC4yOTE2MTczMDQwODY2ODUyLCAtMC44OTI0NTU2OTcwNTk2MzEzLAogICAgMC44Nzg1NTUyOTc4NTE1NjI1LCAtMC4zNDU3NjQyNzkzNjU1Mzk1NSwgMC41NzQyNTEwNTU3MTc0NjgzLCAtMC4wNDIyMjgzNTk3MjkwNTE1OSwgLTAuMTM3OTA2MDE0OTE5MjgxCiAgXQp9
+      name: Ollama - /api/embeddings
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:46:02.589201Z
+      updated_at: 2025-09-24T11:46:02.58908Z
+      ext_version: 0
+      ext_uuid: 0d8ed081-bfcb-4267-ad68-3554195d7c2a
     - id: 956
       data: ewogICJtb2RlbHMiOiBbCiAgICB7CiAgICAgICJuYW1lIjogIm1pc3RyYWw6bGF0ZXN0IiwKICAgICAgIm1vZGVsIjogIm1pc3RyYWw6bGF0ZXN0IiwKICAgICAgInNpemUiOiA1MTM3MDI1MDI0LAogICAgICAiZGlnZXN0IjogIjJhZTZmNmRkN2EzZGQ3MzQ3OTBiYmJmNThiODkwOWE2MDZlMGU3ZTk3ZTk0Yjc2MDRlMGFhN2FlNDQ5MGU2ZDgiLAogICAgICAiZGV0YWlscyI6IHsKICAgICAgICAicGFyZW50X21vZGVsIjogIiIsCiAgICAgICAgImZvcm1hdCI6ICJnZ3VmIiwKICAgICAgICAiZmFtaWx5IjogImxsYW1hIiwKICAgICAgICAiZmFtaWxpZXMiOiBbCiAgICAgICAgICAibGxhbWEiCiAgICAgICAgXSwKICAgICAgICAicGFyYW1ldGVyX3NpemUiOiAiNy4yQiIsCiAgICAgICAgInF1YW50aXphdGlvbl9sZXZlbCI6ICJRNF8wIgogICAgICB9LAogICAgICAiZXhwaXJlc19hdCI6ICIyMDI2LTA2LTA0VDE0OjM4OjMxLjgzNzUzLTA3OjAwIiwKICAgICAgInNpemVfdnJhbSI6IDUxMzcwMjUwMjQKICAgIH0KICBdCn0=
       name: Ollama - /api/ps
@@ -486,49 +514,6 @@ contents:
       updated_at: 2025-09-24T11:44:50.070023Z
       ext_version: 0
       ext_uuid: cbb8ca13-6b58-4275-8752-7ab8a972bc10
-    - id: 952
-      data: eyJzdGF0dXMiOiJyZWFkaW5nIG1vZGVsIG1ldGFkYXRhIn0KeyJzdGF0dXMiOiJjcmVhdGluZyBzeXN0ZW0gbGF5ZXIifQp7InN0YXR1cyI6InVzaW5nIGFscmVhZHkgY3JlYXRlZCBsYXllciBzaGEyNTY6MjJmN2Y4ZWY1ZjRjNzkxYzFiMDNkN2ViNDE0Mzk5Mjk0NzY0ZDdjYzgyYzdlOTRhYTgxYTFmZWI4MGE5ODNhMiJ9Cnsic3RhdHVzIjoidXNpbmcgYWxyZWFkeSBjcmVhdGVkIGxheWVyIHNoYTI1Njo4YzE3YzJlYmIwZWEwMTFiZTk5ODFjYzM5MjJkYjhjYThmYTYxZTgyOGM1ZDNmNDRjYjZhZTM0MmJmODA0NjBiIn0KeyJzdGF0dXMiOiJ1c2luZyBhbHJlYWR5IGNyZWF0ZWQgbGF5ZXIgc2hhMjU2OjdjMjNmYjM2ZDgwMTQxYzRhYjhjZGJiNjFlZTQ3OTAxMDJlYmQyYmY3YWVmZjQxNDQ1MzE3N2Q0ZjIxMTBlNWQifQp7InN0YXR1cyI6InVzaW5nIGFscmVhZHkgY3JlYXRlZCBsYXllciBzaGEyNTY6MmUwNDkzZjY3ZDBjOGM5YzY4YThhZWFjZGY2YTM4YTIxNTFjYjNjNGMxZDQyYWNjZjI5NmUxOTgxMDUyNzk4OCJ9Cnsic3RhdHVzIjoidXNpbmcgYWxyZWFkeSBjcmVhdGVkIGxheWVyIHNoYTI1NjoyNzU5Mjg2YmFhODc1ZGMyMmRlNTM5NGI0YTkyNTcwMWIxODk2YTdlM2Y4ZTUzMjc1YzM2Zjc1YTg3N2E4MmM5In0KeyJzdGF0dXMiOiJ3cml0aW5nIGxheWVyIHNoYTI1NjpkZjMwMDQ1ZmU5MGYwZDc1MGRiODJhMDU4MTA5Y2VjZDZkNGRlOWM5MGEzZDc1YjE5YzA5ZTVmNjQ1ODBiYjQyIn0KeyJzdGF0dXMiOiJ3cml0aW5nIGxheWVyIHNoYTI1NjpmMThhNjhlYjA5YmY5MjViYjFiNjY5NDkwNDA3YzFiMTI1MWM1ZGI5OGRjNGQzZDgxZjMwODg0OThlYTU1NjkwIn0KeyJzdGF0dXMiOiJ3cml0aW5nIG1hbmlmZXN0In0KeyJzdGF0dXMiOiJzdWNjZXNzIn0=
-      name: Ollama - /api/create
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:35:51.554181Z
-      updated_at: 2025-09-24T11:35:51.554085Z
-      ext_version: 0
-      ext_uuid: 41454a4d-6124-4148-a177-5f8d74013263
-    - id: 951
-      data: T2xsYW1hIGlzIHJ1bm5pbmc=
-      name: Ollama - /
-      description: ""
-      content_type: text/plain; charset=UTF-8
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-23T17:38:49.398123Z
-      updated_at: 2025-09-23T17:38:49.397968Z
-      ext_version: 0
-      ext_uuid: 1c7c1bee-b558-468d-898a-99e2ec89997d
-    - id: 955
-      data: ewogICJtb2RlbCI6ICJhbGwtbWluaWxtIiwKICAiZW1iZWRkaW5ncyI6IFtbCiAgICAwLjAxMDA3MTAyOSwgLTAuMDAxNzU5NDg2MiwgMC4wNTAwNzIyMSwgMC4wNDY5Mjk3MiwgMC4wNTQ5MTY4MTQsCiAgICAwLjAwODU5OTcwNCwgMC4xMDU0NDE0MTQsIC0wLjAyNTg3ODEzOSwgMC4xMjk1ODEyOSwgMC4wMzE5NTIzNDgKICBdXSwKICAidG90YWxfZHVyYXRpb24iOiAxNDE0MzkxNywKICAibG9hZF9kdXJhdGlvbiI6IDEwMTk1MDAsCiAgInByb21wdF9ldmFsX2NvdW50IjogOAp9
-      name: Ollama - /api/embed
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:43:28.067465Z
-      updated_at: 2025-09-24T11:43:28.067366Z
-      ext_version: 0
-      ext_uuid: 8f89637a-4aee-46bf-923d-05282f62a5ed
-    - id: 961
-      name: Ollama - /api/blobs/* (HEAD)
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:55:50.060285Z
-      updated_at: 2025-09-24T11:55:50.060226Z
-      ext_version: 0
-      ext_uuid: 76f0b5b0-2e26-427f-b831-4b6d42d1ccee
     - id: 954
       data: eyAic3RhdHVzIjogInJldHJpZXZpbmcgbWFuaWZlc3QiIH0K
       name: Ollama - /api/push
@@ -540,56 +525,3 @@ contents:
       updated_at: 2025-09-24T11:41:43.363206Z
       ext_version: 0
       ext_uuid: e3261098-8bc4-4cf1-a15f-9285885198c0
-    - id: 950
-      name: Ollama - /api/generate
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      script: "function __validate() {\n  request.body = \"{}\"\n  return \"\";\n}\n\nfunction createResponse() {\n\n  if (request.bodyString() == \"\") {\n    return \"no request body received\";\n  }\n\n  var obj = JSON.parse(request.bodyString());\n  if (!obj.hasOwnProperty(\"prompt\")) {\n   return \"no prompt found in request body\";\n }\n\n  returnObject = {\n  \"model\": obj.model,\n  \"created_at\": \"2025-09-03T15:36:02.583064Z\",\n  \"response\": obj.prompt,\n  \"done\": true,\n  \"total_duration\": 8493852375,\n  \"load_duration\": 6589624375,\n  \"prompt_eval_count\": 14,\n  \"prompt_eval_duration\": 119039000,\n  \"eval_count\": 110,\n  \"eval_duration\": 1779061000\n};\n\n  \n  var cacheKey = \"llm_was_called\";\n\n  if (util.cache.get(cacheKey) != \"\") {\n    response.setBody(JSON.stringify(returnObject));\n    return;\n  }\n\n  var res = util.responder.respond(\"HELPFUL_AI\", obj.prompt, \"\");\n  if (res == \"\") {\n    return \"llm returned empty response\";\n  }\n\n  returnObject.response = res;\n  \n  util.cache.set(cacheKey, \"true\");\n  response.setBody(JSON.stringify(returnObject));\n  return \"\";\n}"
-      created_at: 2025-09-20T18:35:06.881365Z
-      updated_at: 2025-09-24T13:56:28.744157Z
-      ext_version: 0
-      ext_uuid: 531fd029-3c24-4e5d-971c-06a527cf1e2f
-    - id: 958
-      name: Ollama - /api/delete
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:47:49.566208Z
-      updated_at: 2025-09-24T11:47:49.566048Z
-      ext_version: 0
-      ext_uuid: af271533-11b4-4d33-907e-39e91f713f2d
-    - id: 959
-      name: Ollama - /api/copy
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:48:28.698802Z
-      updated_at: 2025-09-24T11:48:28.698729Z
-      ext_version: 0
-      ext_uuid: 99d5af71-a7f9-4dae-a72f-e7834eb7f93d
-    - id: 953
-      data: ewogICJtb2RlbGZpbGUiOiAiIyBNb2RlbGZpbGUgZ2VuZXJhdGVkIGJ5IFwib2xsYW1hIHNob3dcIlxuIyBUbyBidWlsZCBhIG5ldyBNb2RlbGZpbGUgYmFzZWQgb24gdGhpcyBvbmUsIHJlcGxhY2UgdGhlIEZST00gbGluZSB3aXRoOlxuIyBGUk9NIGxsYXZhOmxhdGVzdFxuXG5GUk9NIC9Vc2Vycy9tYXR0Ly5vbGxhbWEvbW9kZWxzL2Jsb2JzL3NoYTI1NjoyMDA3NjVlMTI4MzY0MGZmYmQwMTMxODRiZjQ5NmUyNjEwMzJmYTc1Yjk5NDk4YTk2MTNiZTRlOTRkNjNhZDUyXG5URU1QTEFURSBcIlwiXCJ7eyAuU3lzdGVtIH19XG5VU0VSOiB7eyAuUHJvbXB0IH19XG5BU1NJU1RBTlQ6IFwiXCJcIlxuUEFSQU1FVEVSIG51bV9jdHggNDA5NlxuUEFSQU1FVEVSIHN0b3AgXCJcdTAwM2Mvc1x1MDAzZVwiXG5QQVJBTUVURVIgc3RvcCBcIlVTRVI6XCJcblBBUkFNRVRFUiBzdG9wIFwiQVNTSVNUQU5UOlwiIiwKICAicGFyYW1ldGVycyI6ICJudW1fa2VlcCAgICAgICAgICAgICAgICAgICAgICAgMjRcbnN0b3AgICAgICAgICAgICAgICAgICAgICAgICAgICBcIjx8c3RhcnRfaGVhZGVyX2lkfD5cIlxuc3RvcCAgICAgICAgICAgICAgICAgICAgICAgICAgIFwiPHxlbmRfaGVhZGVyX2lkfD5cIlxuc3RvcCAgICAgICAgICAgICAgICAgICAgICAgICAgIFwiPHxlb3RfaWR8PlwiIiwKICAidGVtcGxhdGUiOiAie3sgaWYgLlN5c3RlbSB9fTx8c3RhcnRfaGVhZGVyX2lkfD5zeXN0ZW08fGVuZF9oZWFkZXJfaWR8PlxuXG57eyAuU3lzdGVtIH19PHxlb3RfaWR8Pnt7IGVuZCB9fXt7IGlmIC5Qcm9tcHQgfX08fHN0YXJ0X2hlYWRlcl9pZHw+dXNlcjx8ZW5kX2hlYWRlcl9pZHw+XG5cbnt7IC5Qcm9tcHQgfX08fGVvdF9pZHw+e3sgZW5kIH19PHxzdGFydF9oZWFkZXJfaWR8PmFzc2lzdGFudDx8ZW5kX2hlYWRlcl9pZHw+XG5cbnt7IC5SZXNwb25zZSB9fTx8ZW90X2lkfD4iLAogICJkZXRhaWxzIjogewogICAgInBhcmVudF9tb2RlbCI6ICIiLAogICAgImZvcm1hdCI6ICJnZ3VmIiwKICAgICJmYW1pbHkiOiAibGxhbWEiLAogICAgImZhbWlsaWVzIjogWwogICAgICAibGxhbWEiCiAgICBdLAogICAgInBhcmFtZXRlcl9zaXplIjogIjguMEIiLAogICAgInF1YW50aXphdGlvbl9sZXZlbCI6ICJRNF8wIgogIH0sCiAgIm1vZGVsX2luZm8iOiB7CiAgICAiZ2VuZXJhbC5hcmNoaXRlY3R1cmUiOiAibGxhbWEiLAogICAgImdlbmVyYWwuZmlsZV90eXBlIjogMiwKICAgICJnZW5lcmFsLnBhcmFtZXRlcl9jb3VudCI6IDgwMzAyNjEyNDgsCiAgICAiZ2VuZXJhbC5xdWFudGl6YXRpb25fdmVyc2lvbiI6IDIsCiAgICAibGxhbWEuYXR0ZW50aW9uLmhlYWRfY291bnQiOiAzMiwKICAgICJsbGFtYS5hdHRlbnRpb24uaGVhZF9jb3VudF9rdiI6IDgsCiAgICAibGxhbWEuYXR0ZW50aW9uLmxheWVyX25vcm1fcm1zX2Vwc2lsb24iOiAwLjAwMDAxLAogICAgImxsYW1hLmJsb2NrX2NvdW50IjogMzIsCiAgICAibGxhbWEuY29udGV4dF9sZW5ndGgiOiA4MTkyLAogICAgImxsYW1hLmVtYmVkZGluZ19sZW5ndGgiOiA0MDk2LAogICAgImxsYW1hLmZlZWRfZm9yd2FyZF9sZW5ndGgiOiAxNDMzNiwKICAgICJsbGFtYS5yb3BlLmRpbWVuc2lvbl9jb3VudCI6IDEyOCwKICAgICJsbGFtYS5yb3BlLmZyZXFfYmFzZSI6IDUwMDAwMCwKICAgICJsbGFtYS52b2NhYl9zaXplIjogMTI4MjU2LAogICAgInRva2VuaXplci5nZ21sLmJvc190b2tlbl9pZCI6IDEyODAwMCwKICAgICJ0b2tlbml6ZXIuZ2dtbC5lb3NfdG9rZW5faWQiOiAxMjgwMDksCiAgICAidG9rZW5pemVyLmdnbWwubWVyZ2VzIjogW10sICAgCiAgICAidG9rZW5pemVyLmdnbWwubW9kZWwiOiAiZ3B0MiIsCiAgICAidG9rZW5pemVyLmdnbWwucHJlIjogImxsYW1hLWJwZSIsCiAgICAidG9rZW5pemVyLmdnbWwudG9rZW5fdHlwZSI6IFtdLCAgICAgICAgLwogICAgInRva2VuaXplci5nZ21sLnRva2VucyI6IFtdICAgICAKICB9Cn0=
-      name: Ollama - /api/show
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:39:28.741837Z
-      updated_at: 2025-09-24T11:39:28.741769Z
-      ext_version: 0
-      ext_uuid: a615015a-c808-496f-b807-1e193057d9ac
-    - id: 948
-      data: eyJtb2RlbHMiOlt7Im5hbWUiOiJnZW1tYTM6NGIiLCJtb2RlbCI6ImdlbW1hMzo0YiIsIm1vZGlmaWVkX2F0IjoiMjAyNS0wOS0xOVQxOTowNDowNS41MDA4NDQ2MyswMjowMCIsInNpemUiOjMzMzg4MDE4MDQsImRpZ2VzdCI6ImEyYWY2Y2MzZWI3ZmE4YmU4NTA0YWJhZjliMDRlODhmMTdhMTE5ZWMzZjA0YTNhZGRmNTVmOTI4NDExOTVmNWEiLCJkZXRhaWxzIjp7InBhcmVudF9tb2RlbCI6IiIsImZvcm1hdCI6ImdndWYiLCJmYW1pbHkiOiJnZW1tYTMiLCJmYW1pbGllcyI6WyJnZW1tYTMiXSwicGFyYW1ldGVyX3NpemUiOiI0LjNCIiwicXVhbnRpemF0aW9uX2xldmVsIjoiUTRfS19NIn19XX0=
-      name: Ollama - /api/tags
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-19T17:05:11.811529Z
-      updated_at: 2025-09-19T17:05:11.811399Z
-      ext_version: 0
-      ext_uuid: 712fc641-d993-4135-b364-59cb36e90669
