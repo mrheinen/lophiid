@@ -941,7 +941,11 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	} else {
 		if matchedRule.Alert {
-			s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d, URI: %s", matchedRule.ID, sReq.Uri))
+			if s.config.Alerting.WebInterfaceAddress != "" {
+				s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d\nURI: %s\nLink: %s/requests?q=session_id:%d", matchedRule.ID, sReq.Uri, s.config.Alerting.WebInterfaceAddress, sReq.SessionID))
+			} else {
+				s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d\nURI: %s", matchedRule.ID, sReq.Uri))
+			}
 		}
 	}
 

@@ -92,8 +92,9 @@ type Config struct {
 		CommandTimeout  time.Duration `fig:"command_timeout" default:"10s"`
 	} `fig:"scripting"`
 	Alerting struct {
-		Interval time.Duration `fig:"interval" default:"2m"`
-		Telegram struct {
+		Interval            time.Duration `fig:"interval" default:"2m"`
+		WebInterfaceAddress string        `fig:"web_interface_address" default:""`
+		Telegram            struct {
 			ApiKey    string `fig:"api_key"`
 			ChannelID int    `fig:"channel_id"`
 		} `fig:"telegram"`
