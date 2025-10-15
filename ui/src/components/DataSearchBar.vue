@@ -1,6 +1,6 @@
 <template>
       <span style="width: 100%">
-      <form @submit.prevent="performNewSearch()">
+      <form @submit.prevent="performNewSearch()" style="display: flex">
           <IconField iconPosition="left">
             <InputIcon
               ref="icon"
@@ -16,6 +16,8 @@
             :modelname="modelname"
           >
           </SearchPopover>
+          <FormSelect v-if="showage" ref="ageSelector" v-model="selectedAge"
+          :options="ageOptions" optionLabel="name" optionValue="value" placeholder="Months back" />
       </form>
       </span>
 </template>
@@ -26,11 +28,22 @@ export default {
   components: {
     SearchPopover,
   },
-  props: ["options", "query", "modelname", "isloading"],
+  props: ["options", "query", "modelname", "isloading", "showage", "defaultage"],
   emits: ["search"],
   data() {
     return {
       localQuery: null,
+      selectedAge: 0,
+      ageOptions: [
+        { name: "1 month", value: 1 },
+        { name: "2 months", value: 2 },
+        { name: "3 months", value: 3 },
+        { name: "6 months", value: 6 },
+        { name: "12 months", value: 12 },
+        { name: "18 months", value: 18 },
+        { name: "24 months", value: 24 },
+        { name: "36 months", value: 36 },
+      ],
     }
   },
   methods: {
@@ -41,12 +54,16 @@ export default {
       this.$refs.spop.show(event);
     },
     performNewSearch() {
-      this.$emit('search', this.localQuery);
+      this.$emit('search',this.localQuery, this.selectedAge);
     },
   },
   created() {
     if (this.$route.query.q) {
       this.localQuery = this.$route.query.q;
+    }
+
+    if (this.showage) {
+      this.selectedAge = parseInt(this.defaultage, 10);
     }
   },
   computed: {
@@ -61,6 +78,10 @@ export default {
 <style scoped>
 
 .p-inputtext {
+  width: 100%;
+}
+
+.p-iconfield {
   width: 100%;
 }
 

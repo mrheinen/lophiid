@@ -53,12 +53,17 @@
 
           <DataColumn field="method" header="Method" style="width: 6%">
           </DataColumn>
-          <DataColumn field="parsed.uri_body" header="Uri / Body">
+          <DataColumn header="Uri / Body">
+            <template #body="slotProps">
+                {{ slotProps.data.parsed.uri_body }}
+                <i v-if="slotProps.data.block == 1" class="pi pi-lock"></i>
+            </template>
           </DataColumn>
           <DataColumn header="Content ID" style="width: 8%">
             <template #body="slotProps">
                 <a :href="config.contentLink + '?q=id:' + slotProps.data.content_id">
                   {{ slotProps.data.content_id }}</a>
+
             </template>
           </DataColumn>
           <DataColumn header="Actions" style="width: 6%">
