@@ -43,6 +43,13 @@ backend:
     # When new honeypots are registered, this content ID will be set as th
     # default content id.
     # honeypot_default_content_id: 77
+  ratelimiter:
+    rate_window: 1h
+    bucket_duration: 1m
+    max_ip_requests_per_window: 500
+    max_ip_requests_per_bucket: 50
+    max_uri_requests_per_window: 1500
+    max_uri_requests_per_bucket: 200
 
 alerting:
   # The alerting interval.  Alerts are aggregated and send every <interval>.
@@ -101,16 +108,10 @@ whois_manager:
   cache_expiration_time: 12h
   max_attempts: 6
 
-ratelimiter:
-  rate_window: 1h
-  bucket_duration: 1m
-  max_ip_requests_per_window: 500
-  max_ip_requests_per_bucket: 50
-  max_uri_requests_per_window: 1500
-  max_uri_requests_per_bucket: 200
 ai:
   # Whether to enable the responder.
   enable_responder: 1
+  enable_shell_emulation: 1
   # The primary LLM to use for lookups.
   primary_llm:
     # API location. Note that the implementation was tested with Gemma 2 27b and
