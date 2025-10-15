@@ -364,38 +364,6 @@ rules:
       responder_regex: ""
       responder_decoder: NONE
 contents:
-    - id: 961
-      name: Ollama - /api/blobs/* (HEAD)
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:55:50.060285Z
-      updated_at: 2025-09-24T11:55:50.060226Z
-      ext_version: 0
-      ext_uuid: 76f0b5b0-2e26-427f-b831-4b6d42d1ccee
-    - id: 955
-      data: ewogICJtb2RlbCI6ICJhbGwtbWluaWxtIiwKICAiZW1iZWRkaW5ncyI6IFtbCiAgICAwLjAxMDA3MTAyOSwgLTAuMDAxNzU5NDg2MiwgMC4wNTAwNzIyMSwgMC4wNDY5Mjk3MiwgMC4wNTQ5MTY4MTQsCiAgICAwLjAwODU5OTcwNCwgMC4xMDU0NDE0MTQsIC0wLjAyNTg3ODEzOSwgMC4xMjk1ODEyOSwgMC4wMzE5NTIzNDgKICBdXSwKICAidG90YWxfZHVyYXRpb24iOiAxNDE0MzkxNywKICAibG9hZF9kdXJhdGlvbiI6IDEwMTk1MDAsCiAgInByb21wdF9ldmFsX2NvdW50IjogOAp9
-      name: Ollama - /api/embed
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:43:28.067465Z
-      updated_at: 2025-09-24T11:43:28.067366Z
-      ext_version: 0
-      ext_uuid: 8f89637a-4aee-46bf-923d-05282f62a5ed
-    - id: 949
-      name: Ollama - /api/pull
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      script: "\n\nfunction __validate() {\n\n  return \"\"\n}\n\nfunction createResponse() {\n\n  try {\n    var obj = JSON.parse(request.bodyString());\n  } catch (e) {\n    util.log.error('could not parse JSON' + e);\n    return;\n  }\n\n  if ('model' in obj) {\n    // store the requested model in the cache so that we can use this model in other responses.\n    util.cache.set(\"ollama_model\", obj.model);\n  }\n  \n  response.setBody('{  \"status\": \"pulling manifest\" }');\n}"
-      created_at: 2025-09-19T17:07:26.230816Z
-      updated_at: 2025-10-03T13:25:53.535451Z
-      ext_version: 0
-      ext_uuid: 297c6bea-0afb-4302-9a17-b895b1677ebe
     - id: 948
       name: Ollama - /api/tags
       description: ""
@@ -418,26 +386,45 @@ contents:
       updated_at: 2025-09-23T17:38:49.397968Z
       ext_version: 0
       ext_uuid: 1c7c1bee-b558-468d-898a-99e2ec89997d
-    - id: 952
-      data: eyJzdGF0dXMiOiJyZWFkaW5nIG1vZGVsIG1ldGFkYXRhIn0KeyJzdGF0dXMiOiJjcmVhdGluZyBzeXN0ZW0gbGF5ZXIifQp7InN0YXR1cyI6InVzaW5nIGFscmVhZHkgY3JlYXRlZCBsYXllciBzaGEyNTY6MjJmN2Y4ZWY1ZjRjNzkxYzFiMDNkN2ViNDE0Mzk5Mjk0NzY0ZDdjYzgyYzdlOTRhYTgxYTFmZWI4MGE5ODNhMiJ9Cnsic3RhdHVzIjoidXNpbmcgYWxyZWFkeSBjcmVhdGVkIGxheWVyIHNoYTI1Njo4YzE3YzJlYmIwZWEwMTFiZTk5ODFjYzM5MjJkYjhjYThmYTYxZTgyOGM1ZDNmNDRjYjZhZTM0MmJmODA0NjBiIn0KeyJzdGF0dXMiOiJ1c2luZyBhbHJlYWR5IGNyZWF0ZWQgbGF5ZXIgc2hhMjU2OjdjMjNmYjM2ZDgwMTQxYzRhYjhjZGJiNjFlZTQ3OTAxMDJlYmQyYmY3YWVmZjQxNDQ1MzE3N2Q0ZjIxMTBlNWQifQp7InN0YXR1cyI6InVzaW5nIGFscmVhZHkgY3JlYXRlZCBsYXllciBzaGEyNTY6MmUwNDkzZjY3ZDBjOGM5YzY4YThhZWFjZGY2YTM4YTIxNTFjYjNjNGMxZDQyYWNjZjI5NmUxOTgxMDUyNzk4OCJ9Cnsic3RhdHVzIjoidXNpbmcgYWxyZWFkeSBjcmVhdGVkIGxheWVyIHNoYTI1NjoyNzU5Mjg2YmFhODc1ZGMyMmRlNTM5NGI0YTkyNTcwMWIxODk2YTdlM2Y4ZTUzMjc1YzM2Zjc1YTg3N2E4MmM5In0KeyJzdGF0dXMiOiJ3cml0aW5nIGxheWVyIHNoYTI1NjpkZjMwMDQ1ZmU5MGYwZDc1MGRiODJhMDU4MTA5Y2VjZDZkNGRlOWM5MGEzZDc1YjE5YzA5ZTVmNjQ1ODBiYjQyIn0KeyJzdGF0dXMiOiJ3cml0aW5nIGxheWVyIHNoYTI1NjpmMThhNjhlYjA5YmY5MjViYjFiNjY5NDkwNDA3YzFiMTI1MWM1ZGI5OGRjNGQzZDgxZjMwODg0OThlYTU1NjkwIn0KeyJzdGF0dXMiOiJ3cml0aW5nIG1hbmlmZXN0In0KeyJzdGF0dXMiOiJzdWNjZXNzIn0=
-      name: Ollama - /api/create
+    - id: 961
+      name: Ollama - /api/blobs/* (HEAD)
       description: ""
       content_type: application/json
       server: Apache
       status_code: "200"
-      created_at: 2025-09-24T11:35:51.554181Z
-      updated_at: 2025-09-24T11:35:51.554085Z
+      created_at: 2025-09-24T11:55:50.060285Z
+      updated_at: 2025-09-24T11:55:50.060226Z
       ext_version: 0
-      ext_uuid: 41454a4d-6124-4148-a177-5f8d74013263
+      ext_uuid: 76f0b5b0-2e26-427f-b831-4b6d42d1ccee
+    - id: 960
+      name: Ollama - /api/blobs/*
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "201"
+      created_at: 2025-09-24T11:50:17.592411Z
+      updated_at: 2025-09-24T11:54:21.905731Z
+      ext_version: 0
+      ext_uuid: dd5129c0-461c-46f5-9383-2ce6b73fc274
+    - id: 959
+      name: Ollama - /api/copy
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:48:28.698802Z
+      updated_at: 2025-09-24T11:48:28.698729Z
+      ext_version: 0
+      ext_uuid: 99d5af71-a7f9-4dae-a72f-e7834eb7f93d
     - id: 950
       name: Ollama - /api/generate
       description: ""
       content_type: application/json
       server: Apache
       status_code: "200"
-      script: "function __validate() {\n  request.body = \"{}\"\n  return \"\";\n}\n\nfunction createResponse() {\n\n  if (request.bodyString() == \"\") {\n    return \"no request body received\";\n  }\n\n  var obj = JSON.parse(request.bodyString());\n  if (!obj.hasOwnProperty(\"prompt\")) {\n   return \"no prompt found in request body\";\n }\n\n  returnObject = {\n  \"model\": obj.model,\n  \"created_at\": \"2025-09-03T15:36:02.583064Z\",\n  \"response\": obj.prompt,\n  \"done\": true,\n  \"total_duration\": 8493852375,\n  \"load_duration\": 6589624375,\n  \"prompt_eval_count\": 14,\n  \"prompt_eval_duration\": 119039000,\n  \"eval_count\": 110,\n  \"eval_duration\": 1779061000\n};\n\n  \n  var cacheKey = \"llm_was_called\";\n\n  var count = util.cache.get(cacheKey);\n\n  if (count == \"\") {\n    util.cache.set(cacheKey, \"1\");\n  } else {\n    count = parseInt(count, 10);\n    \n    if (count > 10) {\n      response.setBody(JSON.stringify(returnObject));\n      return;\n    }\n\n    count = count + 1;\n    util.cache.set(cacheKey, count.toString());\n  }\n\n  var res = util.responder.respond(\"HELPFUL_AI\", obj.prompt, \"\");\n  if (res == \"\") {\n    return \"llm returned empty response\";\n  }\n\n  returnObject.response = res;\n  response.setBody(JSON.stringify(returnObject));\n  return \"\";\n}"
+      script: "function __validate() {\n  request.body = \"{}\"\n  return \"\";\n}\n\nfunction createResponse() {\n\n  if (request.bodyString() == \"\") {\n    return \"no request body received\";\n  }\n\n  try {\n    var obj = JSON.parse(request.bodyString());\n  } catch (e) {\n    util.log.error(\"could not parse JSON: \" + e);\n    return \"invalid JSON in request body\";\n  }\n  \n  if (!obj.hasOwnProperty(\"prompt\")) {\n   return \"no prompt found in request body\";\n }\n\n  returnObject = {\n  \"model\": obj.model,\n  \"created_at\": \"2025-09-03T15:36:02.583064Z\",\n  \"response\": obj.prompt,\n  \"done\": true,\n  \"total_duration\": 8493852375,\n  \"load_duration\": 6589624375,\n  \"prompt_eval_count\": 14,\n  \"prompt_eval_duration\": 119039000,\n  \"eval_count\": 110,\n  \"eval_duration\": 1779061000\n};\n\n  \n  var cacheKey = \"llm_was_called\";\n\n  var count = util.cache.get(cacheKey);\n\n  if (count == \"\") {\n    util.cache.set(cacheKey, \"1\");\n  } else {\n    count = parseInt(count, 10);\n    \n    if (count > 10) {\n      response.setBody(JSON.stringify(returnObject));\n      return;\n    }\n\n    count = count + 1;\n    util.cache.set(cacheKey, count.toString());\n  }\n\n  var res = util.responder.respond(\"HELPFUL_AI\", obj.prompt, \"\");\n  if (res == \"\") {\n    return \"llm returned empty response\";\n  }\n\n  returnObject.response = res;\n  response.setBody(JSON.stringify(returnObject));\n  return \"\";\n}"
       created_at: 2025-09-20T18:35:06.881365Z
-      updated_at: 2025-10-13T14:24:55.717496Z
+      updated_at: 2025-10-15T09:18:53.074919Z
       ext_version: 0
       ext_uuid: 531fd029-3c24-4e5d-971c-06a527cf1e2f
     - id: 953
@@ -461,59 +448,6 @@ contents:
       updated_at: 2025-09-24T11:47:49.566048Z
       ext_version: 0
       ext_uuid: af271533-11b4-4d33-907e-39e91f713f2d
-    - id: 962
-      data: ewogICJtb2RlbCI6ICJtaXN0cmFsIiwKICAiY3JlYXRlZF9hdCI6ICIyMDIzLTExLTAzVDE1OjM2OjAyLjU4MzA2NFoiLAogICJyZXNwb25zZSI6ICIgVGhlIHNreSBhcHBlYXJzIGJsdWUgYmVjYXVzZSBvZiBhIHBoZW5vbWVub24gY2FsbGVkIFJheWxlaWdoIHNjYXR0ZXJpbmcuIiwKICAiZG9uZSI6IHRydWUsCiAgInRvdGFsX2R1cmF0aW9uIjogODQ5Mzg1MjM3NSwKICAibG9hZF9kdXJhdGlvbiI6IDY1ODk2MjQzNzUsCiAgInByb21wdF9ldmFsX2NvdW50IjogMTQsCiAgInByb21wdF9ldmFsX2R1cmF0aW9uIjogMTE5MDM5MDAwLAogICJldmFsX2NvdW50IjogMTEwLAogICJldmFsX2R1cmF0aW9uIjogMTc3OTA2MTAwMAp9
-      name: Ollama - /api/generate (static)
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T13:39:32.416822Z
-      updated_at: 2025-09-24T13:39:32.415709Z
-      ext_version: 0
-      ext_uuid: 23404d9b-ec79-4b45-9afa-f1e90c10dd00
-    - id: 960
-      name: Ollama - /api/blobs/*
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "201"
-      created_at: 2025-09-24T11:50:17.592411Z
-      updated_at: 2025-09-24T11:54:21.905731Z
-      ext_version: 0
-      ext_uuid: dd5129c0-461c-46f5-9383-2ce6b73fc274
-    - id: 959
-      name: Ollama - /api/copy
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:48:28.698802Z
-      updated_at: 2025-09-24T11:48:28.698729Z
-      ext_version: 0
-      ext_uuid: 99d5af71-a7f9-4dae-a72f-e7834eb7f93d
-    - id: 957
-      data: ewogICJlbWJlZGRpbmciOiBbCiAgICAwLjU2NzA0MDM4MzgxNTc2NTQsIDAuMDA5MjYwMTc0ODE4MzM2OTY0LCAwLjIzMTc4NzQ0MzE2MTAxMDc0LCAtMC4yOTE2MTczMDQwODY2ODUyLCAtMC44OTI0NTU2OTcwNTk2MzEzLAogICAgMC44Nzg1NTUyOTc4NTE1NjI1LCAtMC4zNDU3NjQyNzkzNjU1Mzk1NSwgMC41NzQyNTEwNTU3MTc0NjgzLCAtMC4wNDIyMjgzNTk3MjkwNTE1OSwgLTAuMTM3OTA2MDE0OTE5MjgxCiAgXQp9
-      name: Ollama - /api/embeddings
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:46:02.589201Z
-      updated_at: 2025-09-24T11:46:02.58908Z
-      ext_version: 0
-      ext_uuid: 0d8ed081-bfcb-4267-ad68-3554195d7c2a
-    - id: 956
-      data: ewogICJtb2RlbHMiOiBbCiAgICB7CiAgICAgICJuYW1lIjogIm1pc3RyYWw6bGF0ZXN0IiwKICAgICAgIm1vZGVsIjogIm1pc3RyYWw6bGF0ZXN0IiwKICAgICAgInNpemUiOiA1MTM3MDI1MDI0LAogICAgICAiZGlnZXN0IjogIjJhZTZmNmRkN2EzZGQ3MzQ3OTBiYmJmNThiODkwOWE2MDZlMGU3ZTk3ZTk0Yjc2MDRlMGFhN2FlNDQ5MGU2ZDgiLAogICAgICAiZGV0YWlscyI6IHsKICAgICAgICAicGFyZW50X21vZGVsIjogIiIsCiAgICAgICAgImZvcm1hdCI6ICJnZ3VmIiwKICAgICAgICAiZmFtaWx5IjogImxsYW1hIiwKICAgICAgICAiZmFtaWxpZXMiOiBbCiAgICAgICAgICAibGxhbWEiCiAgICAgICAgXSwKICAgICAgICAicGFyYW1ldGVyX3NpemUiOiAiNy4yQiIsCiAgICAgICAgInF1YW50aXphdGlvbl9sZXZlbCI6ICJRNF8wIgogICAgICB9LAogICAgICAiZXhwaXJlc19hdCI6ICIyMDI2LTA2LTA0VDE0OjM4OjMxLjgzNzUzLTA3OjAwIiwKICAgICAgInNpemVfdnJhbSI6IDUxMzcwMjUwMjQKICAgIH0KICBdCn0=
-      name: Ollama - /api/ps
-      description: ""
-      content_type: application/json
-      server: Apache
-      status_code: "200"
-      created_at: 2025-09-24T11:44:50.07016Z
-      updated_at: 2025-09-24T11:44:50.070023Z
-      ext_version: 0
-      ext_uuid: cbb8ca13-6b58-4275-8752-7ab8a972bc10
     - id: 954
       data: eyAic3RhdHVzIjogInJldHJpZXZpbmcgbWFuaWZlc3QiIH0K
       name: Ollama - /api/push
@@ -525,3 +459,69 @@ contents:
       updated_at: 2025-09-24T11:41:43.363206Z
       ext_version: 0
       ext_uuid: e3261098-8bc4-4cf1-a15f-9285885198c0
+    - id: 949
+      name: Ollama - /api/pull
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      script: "\n\nfunction __validate() {\n\n  return \"\"\n}\n\nfunction createResponse() {\n\n  try {\n    var obj = JSON.parse(request.bodyString());\n  } catch (e) {\n    util.log.error('could not parse JSON' + e);\n    return;\n  }\n\n  if ('model' in obj) {\n    // store the requested model in the cache so that we can use this model in other responses.\n    util.cache.set(\"ollama_model\", obj.model);\n  }\n  \n  response.setBody('{  \"status\": \"pulling manifest\" }');\n}"
+      created_at: 2025-09-19T17:07:26.230816Z
+      updated_at: 2025-10-03T13:25:53.535451Z
+      ext_version: 0
+      ext_uuid: 297c6bea-0afb-4302-9a17-b895b1677ebe
+    - id: 955
+      data: ewogICJtb2RlbCI6ICJhbGwtbWluaWxtIiwKICAiZW1iZWRkaW5ncyI6IFtbCiAgICAwLjAxMDA3MTAyOSwgLTAuMDAxNzU5NDg2MiwgMC4wNTAwNzIyMSwgMC4wNDY5Mjk3MiwgMC4wNTQ5MTY4MTQsCiAgICAwLjAwODU5OTcwNCwgMC4xMDU0NDE0MTQsIC0wLjAyNTg3ODEzOSwgMC4xMjk1ODEyOSwgMC4wMzE5NTIzNDgKICBdXSwKICAidG90YWxfZHVyYXRpb24iOiAxNDE0MzkxNywKICAibG9hZF9kdXJhdGlvbiI6IDEwMTk1MDAsCiAgInByb21wdF9ldmFsX2NvdW50IjogOAp9
+      name: Ollama - /api/embed
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:43:28.067465Z
+      updated_at: 2025-09-24T11:43:28.067366Z
+      ext_version: 0
+      ext_uuid: 8f89637a-4aee-46bf-923d-05282f62a5ed
+    - id: 962
+      data: ewogICJtb2RlbCI6ICJtaXN0cmFsIiwKICAiY3JlYXRlZF9hdCI6ICIyMDIzLTExLTAzVDE1OjM2OjAyLjU4MzA2NFoiLAogICJyZXNwb25zZSI6ICIgVGhlIHNreSBhcHBlYXJzIGJsdWUgYmVjYXVzZSBvZiBhIHBoZW5vbWVub24gY2FsbGVkIFJheWxlaWdoIHNjYXR0ZXJpbmcuIiwKICAiZG9uZSI6IHRydWUsCiAgInRvdGFsX2R1cmF0aW9uIjogODQ5Mzg1MjM3NSwKICAibG9hZF9kdXJhdGlvbiI6IDY1ODk2MjQzNzUsCiAgInByb21wdF9ldmFsX2NvdW50IjogMTQsCiAgInByb21wdF9ldmFsX2R1cmF0aW9uIjogMTE5MDM5MDAwLAogICJldmFsX2NvdW50IjogMTEwLAogICJldmFsX2R1cmF0aW9uIjogMTc3OTA2MTAwMAp9
+      name: Ollama - /api/generate (static)
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T13:39:32.416822Z
+      updated_at: 2025-09-24T13:39:32.415709Z
+      ext_version: 0
+      ext_uuid: 23404d9b-ec79-4b45-9afa-f1e90c10dd00
+    - id: 957
+      data: ewogICJlbWJlZGRpbmciOiBbCiAgICAwLjU2NzA0MDM4MzgxNTc2NTQsIDAuMDA5MjYwMTc0ODE4MzM2OTY0LCAwLjIzMTc4NzQ0MzE2MTAxMDc0LCAtMC4yOTE2MTczMDQwODY2ODUyLCAtMC44OTI0NTU2OTcwNTk2MzEzLAogICAgMC44Nzg1NTUyOTc4NTE1NjI1LCAtMC4zNDU3NjQyNzkzNjU1Mzk1NSwgMC41NzQyNTEwNTU3MTc0NjgzLCAtMC4wNDIyMjgzNTk3MjkwNTE1OSwgLTAuMTM3OTA2MDE0OTE5MjgxCiAgXQp9
+      name: Ollama - /api/embeddings
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:46:02.589201Z
+      updated_at: 2025-09-24T11:46:02.58908Z
+      ext_version: 0
+      ext_uuid: 0d8ed081-bfcb-4267-ad68-3554195d7c2a
+    - id: 952
+      data: eyJzdGF0dXMiOiJyZWFkaW5nIG1vZGVsIG1ldGFkYXRhIn0KeyJzdGF0dXMiOiJjcmVhdGluZyBzeXN0ZW0gbGF5ZXIifQp7InN0YXR1cyI6InVzaW5nIGFscmVhZHkgY3JlYXRlZCBsYXllciBzaGEyNTY6MjJmN2Y4ZWY1ZjRjNzkxYzFiMDNkN2ViNDE0Mzk5Mjk0NzY0ZDdjYzgyYzdlOTRhYTgxYTFmZWI4MGE5ODNhMiJ9Cnsic3RhdHVzIjoidXNpbmcgYWxyZWFkeSBjcmVhdGVkIGxheWVyIHNoYTI1Njo4YzE3YzJlYmIwZWEwMTFiZTk5ODFjYzM5MjJkYjhjYThmYTYxZTgyOGM1ZDNmNDRjYjZhZTM0MmJmODA0NjBiIn0KeyJzdGF0dXMiOiJ1c2luZyBhbHJlYWR5IGNyZWF0ZWQgbGF5ZXIgc2hhMjU2OjdjMjNmYjM2ZDgwMTQxYzRhYjhjZGJiNjFlZTQ3OTAxMDJlYmQyYmY3YWVmZjQxNDQ1MzE3N2Q0ZjIxMTBlNWQifQp7InN0YXR1cyI6InVzaW5nIGFscmVhZHkgY3JlYXRlZCBsYXllciBzaGEyNTY6MmUwNDkzZjY3ZDBjOGM5YzY4YThhZWFjZGY2YTM4YTIxNTFjYjNjNGMxZDQyYWNjZjI5NmUxOTgxMDUyNzk4OCJ9Cnsic3RhdHVzIjoidXNpbmcgYWxyZWFkeSBjcmVhdGVkIGxheWVyIHNoYTI1NjoyNzU5Mjg2YmFhODc1ZGMyMmRlNTM5NGI0YTkyNTcwMWIxODk2YTdlM2Y4ZTUzMjc1YzM2Zjc1YTg3N2E4MmM5In0KeyJzdGF0dXMiOiJ3cml0aW5nIGxheWVyIHNoYTI1NjpkZjMwMDQ1ZmU5MGYwZDc1MGRiODJhMDU4MTA5Y2VjZDZkNGRlOWM5MGEzZDc1YjE5YzA5ZTVmNjQ1ODBiYjQyIn0KeyJzdGF0dXMiOiJ3cml0aW5nIGxheWVyIHNoYTI1NjpmMThhNjhlYjA5YmY5MjViYjFiNjY5NDkwNDA3YzFiMTI1MWM1ZGI5OGRjNGQzZDgxZjMwODg0OThlYTU1NjkwIn0KeyJzdGF0dXMiOiJ3cml0aW5nIG1hbmlmZXN0In0KeyJzdGF0dXMiOiJzdWNjZXNzIn0=
+      name: Ollama - /api/create
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:35:51.554181Z
+      updated_at: 2025-09-24T11:35:51.554085Z
+      ext_version: 0
+      ext_uuid: 41454a4d-6124-4148-a177-5f8d74013263
+    - id: 956
+      data: ewogICJtb2RlbHMiOiBbCiAgICB7CiAgICAgICJuYW1lIjogIm1pc3RyYWw6bGF0ZXN0IiwKICAgICAgIm1vZGVsIjogIm1pc3RyYWw6bGF0ZXN0IiwKICAgICAgInNpemUiOiA1MTM3MDI1MDI0LAogICAgICAiZGlnZXN0IjogIjJhZTZmNmRkN2EzZGQ3MzQ3OTBiYmJmNThiODkwOWE2MDZlMGU3ZTk3ZTk0Yjc2MDRlMGFhN2FlNDQ5MGU2ZDgiLAogICAgICAiZGV0YWlscyI6IHsKICAgICAgICAicGFyZW50X21vZGVsIjogIiIsCiAgICAgICAgImZvcm1hdCI6ICJnZ3VmIiwKICAgICAgICAiZmFtaWx5IjogImxsYW1hIiwKICAgICAgICAiZmFtaWxpZXMiOiBbCiAgICAgICAgICAibGxhbWEiCiAgICAgICAgXSwKICAgICAgICAicGFyYW1ldGVyX3NpemUiOiAiNy4yQiIsCiAgICAgICAgInF1YW50aXphdGlvbl9sZXZlbCI6ICJRNF8wIgogICAgICB9LAogICAgICAiZXhwaXJlc19hdCI6ICIyMDI2LTA2LTA0VDE0OjM4OjMxLjgzNzUzLTA3OjAwIiwKICAgICAgInNpemVfdnJhbSI6IDUxMzcwMjUwMjQKICAgIH0KICBdCn0=
+      name: Ollama - /api/ps
+      description: ""
+      content_type: application/json
+      server: Apache
+      status_code: "200"
+      created_at: 2025-09-24T11:44:50.07016Z
+      updated_at: 2025-09-24T11:44:50.070023Z
+      ext_version: 0
+      ext_uuid: cbb8ca13-6b58-4275-8752-7ab8a972bc10
