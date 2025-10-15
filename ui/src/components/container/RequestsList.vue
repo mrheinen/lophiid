@@ -18,6 +18,8 @@
               :isloading="isLoading"
               @search="performNewSearch"
               modelname="request"
+              showage="1"
+              defaultage="3"
             ></DataSearchBar>
           </template>
           <template #empty>No data matched. </template>
@@ -122,7 +124,7 @@
 </template>
 
 <script>
-import { dateToString, sharedMixin } from "./../../helpers.js";
+import { getDateMinusMonths, dateToString, sharedMixin } from "./../../helpers.js";
 
 import RequestView from "./RequestView.vue";
 import DataSearchBar from "../DataSearchBar.vue";
@@ -146,6 +148,7 @@ export default {
       selectedLimit: 21,
       limitOptions: [10, 20, 30, 40, 50],
       query: null,
+      searchAgeMonths: 3,
       isSelectedElement: null,
       isSelectedId: 0,
       isLoading: false,
@@ -203,8 +206,9 @@ export default {
           }
         });
     },
-    performNewSearch(query) {
+    performNewSearch(query, searchAgeMonths) {
       this.query = query;
+      this.searchAgeMonths = searchAgeMonths;
       this.offset = 0;
       this.loadRequests(true);
     },
@@ -325,6 +329,16 @@ export default {
         this.limit;
 
       if (this.query) {
+        if (this.searchAgeMonths != 0) {
+          var searchLimit = getDateMinusMonths(this.searchAgeMonths);
+          if (!this.query.includes('created_at:') &&
+            !this.query.includes('created_at>') &&
+            !this.query.includes('created_at<')) {
+
+            this.query = this.query + " created_at>" + searchLimit;
+          }
+        }
+
         url += "&q=" + encodeURIComponent(this.query);
       }
 

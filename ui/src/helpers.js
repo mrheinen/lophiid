@@ -97,3 +97,14 @@ export const sharedMixin = {
     }
   }
 };
+
+export function getDateMinusMonths(monthsToSubtract) {
+  const date = new Date();
+  date.setMonth(date.getMonth() - monthsToSubtract);
+
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+
+  return month + "/" + day + "/" + year;
+}
