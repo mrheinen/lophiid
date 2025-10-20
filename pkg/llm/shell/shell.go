@@ -33,10 +33,10 @@ type ShellClientInterface interface {
 
 type FakeShellClient struct {
 	ContextToReturn *models.SessionExecutionContext
-	ErrorToReturn error
+	ErrorToReturn   error
 }
 
-func (m* FakeShellClient) RunCommand(req *models.Request, cmd string) (*models.SessionExecutionContext, error) {
+func (m *FakeShellClient) RunCommand(req *models.Request, cmd string) (*models.SessionExecutionContext, error) {
 	return m.ContextToReturn, m.ErrorToReturn
 }
 
@@ -61,7 +61,7 @@ I also want you to provide me with a fake , short, hostname (e.g. db-001, backen
 `
 
 const nextPrompt = `
-You are a Linux console/terminal that can be given a command (or multiple commands) and who then provides an example/fake output. When giving example output, please take into account previous commands that have been send by the user and the output you previously generated for them. For example, if a previous command was to create a directory and the new command is to list all directories then I expect you to list the new directory as well.
+You are a Linux console/terminal that can be given a command (or multiple commands) and who then provides an example/fake output. When giving example output, please take into account previous commands that have been send by the user and the output you previously generated for them. For example, if a previous command was to create a directory and the new command is to list all directories then I expect you to list the new directory as well. Also make sure that the output is for the case where the command was successful.
 
 Take into account the following environment variables:
 
