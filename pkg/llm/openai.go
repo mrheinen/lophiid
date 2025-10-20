@@ -206,13 +206,17 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 
 	var err error
 	var resp *openai.ChatCompletion
-//	if len(l.providers) > 0 {
-//		resp, err = l.client.Chat.Completions.New(ctx, param,
-//			option.WithJSONSet("provider.order", l.providers),
-//			option.WithJSONSet("provider.allow_fallbacks", false))
-//	} else {
-	resp, err = l.client.Chat.Completions.New(ctx, param)
-//	}
+	if len(l.providers) > 0 {
+		resp, err = l.client.Chat.Completions.New(ctx, param,
+			option.WithJSONSet("provider", map[string]any{
+				"require_parameters": true,
+				"order":              l.providers,
+				"allow_fallbacks":    true,
+				"data_collection":    "deny",
+			}))
+	} else {
+		resp, err = l.client.Chat.Completions.New(ctx, param)
+	}
 
 	if err != nil {
 		return "", fmt.Errorf("chat completion error: %v", err)
