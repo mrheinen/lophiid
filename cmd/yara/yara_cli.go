@@ -106,23 +106,23 @@ func main() {
 
 	}
 
-	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
+	primaryLLMClient := llm.NewLLMClient(cfg.AI.LLMManager.PrimaryLLM, "")
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
+	primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.LLMManager.CompletionTimeout, cfg.AI.LLMManager.ConcurrentRequests, true, cfg.AI.LLMManager.PromptPrefix, cfg.AI.LLMManager.PromptSuffix)
 
 	// Check if secondary LLM is configured (non-empty API key indicates configuration)
 	var llmManager llm.LLMManagerInterface
-	if cfg.AI.SecondaryLLM.ApiKey != "" {
+	if cfg.AI.LLMManager.SecondaryLLM.ApiKey != "" {
 		slog.Info("Secondary LLM configured, using DualLLMManager")
 
-		secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM, "")
-		secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
+		secondaryLLMClient := llm.NewLLMClient(cfg.AI.LLMManager.SecondaryLLM, "")
+		secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.LLMManager.CompletionTimeout, cfg.AI.LLMManager.ConcurrentRequests, true, cfg.AI.LLMManager.PromptPrefix, cfg.AI.LLMManager.PromptSuffix)
 
-		llmManager = llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
+		llmManager = llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.LLMManager.FallbackInterval)
 	} else {
 		slog.Info("Using single LLM manager")
-		llmManager = llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, time.Minute*3, 4, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
+		llmManager = primaryManager
 	}
 
 	mgr := yara.NewYaraManager(dbc, llmManager, *rulesDir, cfg.Yara.PrepareCommand, metrics)
