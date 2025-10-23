@@ -22,6 +22,7 @@ import (
 )
 
 var configFile = flag.String("c", "backend-config.json", "Location of the config")
+var logFile = flag.String("l", "shell.log", "Location of the log file")
 
 func main() {
 
@@ -33,7 +34,7 @@ func main() {
 		return
 	}
 
-	lf, err := os.OpenFile(cfg.AI.Triage.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	lf, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("Could not open logfile: %s\n", err)
 		return
@@ -46,20 +47,7 @@ func main() {
 	var programLevel = new(slog.LevelVar) // Info by default
 	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
-
-	switch cfg.AI.Triage.LogLevel {
-	case "info":
-		programLevel.Set(slog.LevelInfo)
-	case "warn":
-		programLevel.Set(slog.LevelWarn)
-	case "debug":
-		programLevel.Set(slog.LevelDebug)
-	case "error":
-		programLevel.Set(slog.LevelError)
-	default:
-		fmt.Printf("Unknown log level given. Using info")
-		programLevel.Set(slog.LevelInfo)
-	}
+	programLevel.Set(slog.LevelInfo)
 
 	db, err := kpgx.New(context.Background(), cfg.Backend.Database.Url,
 		ksql.Config{
@@ -72,16 +60,9 @@ func main() {
 
 	dbc := database.NewKSQLClient(&db)
 
-	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
-	if primaryLLMClient == nil {
-		slog.Error("Failed to create primary LLM client")
-		return
-	}
-
 	metricsRegistry := prometheus.NewRegistry()
-	llmCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	primaryManager := llm.NewLLMManager(primaryLLMClient, llmCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
+	primaryManager := llm.GetLLMManager(cfg.AI.LLMManager, llmMetrics)
 
 	shc := shell.NewShellClient(primaryManager, dbc)
 

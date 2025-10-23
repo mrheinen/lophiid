@@ -29,31 +29,31 @@ import (
 )
 
 type OpenAILLMClient struct {
-	client      *openai.Client
-	apiEndpoint string // E.g. http://localhost:8000/v1
-	Model       string
+	client *openai.Client
+	Model  string
 	// systemPrompt is used to construct the prompt. It needs to contain a
 	// single %s at a location where the request prompt needs to go.
 	systemPrompt string
 	// maxContextSize is the maximum number of characters allowed in the context
 	maxContextSize int64
 	schema         *openai.ResponseFormatJSONSchemaJSONSchemaParam
+	providers      []string
 }
 
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
 // model and maximum context size.
-func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, systemPrompt string, model string, maxContextSize int64) *OpenAILLMClient {
+func NewOpenAILLMClientWithModel(cfg LLMConfig, systemPrompt string) *OpenAILLMClient {
 	client := openai.NewClient(
-		option.WithAPIKey(apiKey),
-		option.WithBaseURL(apiEndpoint),
+		option.WithAPIKey(cfg.ApiKey),
+		option.WithBaseURL(cfg.ApiLocation),
 	)
 
 	ret := &OpenAILLMClient{
 		client:         &client,
-		apiEndpoint:    apiEndpoint,
 		systemPrompt:   systemPrompt,
-		Model:          model,
-		maxContextSize: maxContextSize,
+		Model:          cfg.Model,
+		maxContextSize: cfg.MaxContextSize,
+		providers:      cfg.OpenRouterProviders,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
@@ -65,30 +65,30 @@ func NewOpenAILLMClientWithModel(apiKey string, apiEndpoint string, systemPrompt
 	}
 
 	for _, m := range models.Data {
-		if m.ID == model {
+		if m.ID == cfg.Model {
 			return ret
 		}
 	}
 
-	slog.Error("could not find model", slog.String("model", model), slog.String("models", fmt.Sprintf("%+v", models.Data)))
+	slog.Error("could not find model", slog.String("model", cfg.Model), slog.String("models", fmt.Sprintf("%+v", models.Data)))
 	return nil
 }
 
 // NewOpenAILLMClient creates a new OpenAILLMClient and auto selects a model
 // from the API. Use this when talking with an API that only has one model.
-func NewOpenAILLMClient(apiKey string, apiEndpoint string, promptTemplate string, maxContextSize int64) *OpenAILLMClient {
+func NewOpenAILLMClient(cfg LLMConfig, promptTemplate string) *OpenAILLMClient {
 
 	client := openai.NewClient(
-		option.WithAPIKey(apiKey),
-		option.WithBaseURL(apiEndpoint),
+		option.WithAPIKey(cfg.ApiKey),
+		option.WithBaseURL(cfg.ApiLocation),
 	)
 
 	ret := &OpenAILLMClient{
 		client:         &client,
-		apiEndpoint:    apiEndpoint,
 		systemPrompt:   promptTemplate,
-		maxContextSize: maxContextSize,
+		maxContextSize: cfg.MaxContextSize,
 		schema:         nil,
+		providers:      cfg.OpenRouterProviders,
 	}
 
 	if err := ret.SelectModel(); err != nil {
@@ -204,7 +204,18 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		}
 	}
 
-	resp, err := l.client.Chat.Completions.New(ctx, param)
+	var err error
+	var resp *openai.ChatCompletion
+	if len(l.providers) > 0 {
+		resp, err = l.client.Chat.Completions.New(ctx, param,
+			option.WithJSONSet("provider", map[string]any{
+				"require_parameters": true,
+				"order":              l.providers,
+				"allow_fallbacks":    true,
+			}))
+	} else {
+		resp, err = l.client.Chat.Completions.New(ctx, param)
+	}
 
 	if err != nil {
 		return "", fmt.Errorf("chat completion error: %v", err)

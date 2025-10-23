@@ -75,9 +75,9 @@ func NewLLMClient(cfg LLMConfig, systemPrompt string) LLMClient {
 	switch cfg.ApiType {
 	case "openai":
 		if cfg.Model == "" {
-			return NewOpenAILLMClient(cfg.ApiKey, cfg.ApiLocation, systemPrompt, cfg.MaxContextSize)
+			return NewOpenAILLMClient(cfg, systemPrompt)
 		} else {
-			return NewOpenAILLMClientWithModel(cfg.ApiKey, cfg.ApiLocation, systemPrompt, cfg.Model, cfg.MaxContextSize)
+			return NewOpenAILLMClientWithModel(cfg, systemPrompt)
 		}
 	default:
 		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))

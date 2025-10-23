@@ -22,15 +22,25 @@ import "time"
 // initiate LLM instances.
 type LLMConfig struct {
 	// ApiType can be "openai" or "gemini"
-	ApiType               string        `fig:"api_type" default:"openai"`
-	ApiLocation           string        `fig:"api_location" default:"http://localhost:8000/v1"`
-	ApiKey                string        `fig:"api_key"`
-	Model                 string        `fig:"model" default:""`
-	MaxContextSize        int64         `fig:"max_context_size" default:"32000"`
-	PromptPrefix          string        `fig:"prompt_prefix" default:""`
-	PromptSuffix          string        `fig:"prompt_suffix" default:""`
-	LLMCompletionTimeout  time.Duration `fig:"llm_completion_timeout" default:"1m"`
-	LLMConcurrentRequests int           `fig:"llm_concurrent_requests" default:"5"`
-	// Gemini only.
-	GeminiThinkingBudget int32 `fig:"gemini_thinking_budget" default:"0"`
+	ApiType             string   `fig:"api_type" default:"openai"`
+	ApiLocation         string   `fig:"api_location" default:"http://localhost:8000/v1"`
+	ApiKey              string   `fig:"api_key"`
+	Model               string   `fig:"model" default:""`
+	MaxContextSize      int64    `fig:"max_context_size" default:"32000"`
+	OpenRouterProviders []string `fig:"openrouter_providers" default:""`
+}
+
+// LLMManagerConfig configures the LLMManager. The CacheExpirationTime is used
+// for the prompt cache which is shared between the two LLMs. A fallback
+// mechanism will cause the LLMManager to switch between the primary and
+// secondary LLM.
+type LLMManagerConfig struct {
+	PrimaryLLM          LLMConfig     `fig:"primary_llm"`
+	SecondaryLLM        LLMConfig     `fig:"secondary_llm"`
+	CacheExpirationTime time.Duration `fig:"cache_expiration_time" default:"24h"`
+	CompletionTimeout   time.Duration `fig:"completion_timeout" default:"1m"`
+	ConcurrentRequests  int           `fig:"concurrent_requests" default:"5"`
+	PromptPrefix        string        `fig:"prompt_prefix" default:""`
+	PromptSuffix        string        `fig:"prompt_suffix" default:""`
+	FallbackInterval    time.Duration `fig:"fallback_interval" default:"1h"`
 }

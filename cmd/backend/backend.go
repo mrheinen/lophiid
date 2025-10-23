@@ -41,6 +41,7 @@ import (
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/triage/describer"
+	"lophiid/pkg/triage/preprocess"
 	"lophiid/pkg/util"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
@@ -62,24 +63,6 @@ import (
 )
 
 var configFile = flag.String("c", "", "Config file")
-
-func getLLMManager(cfg backend.Config, llmMetrics *llm.LLMMetrics) llm.LLMManagerInterface {
-	pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
-	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, "")
-	primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
-
-	// Check if secondary LLM is configured (non-empty API key indicates configuration)
-	if cfg.AI.SecondaryLLM.ApiKey == "" {
-		slog.Info("Using single LLM manager")
-		return primaryManager
-	}
-
-	slog.Info("Secondary LLM configured, using DualLLMManager")
-	secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM, "")
-	secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
-
-	return llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
-}
 
 func main() {
 
@@ -220,18 +203,18 @@ func main() {
 
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 	if cfg.AI.EnableResponder {
-		llmManager := getLLMManager(cfg, llmMetrics)
+		llmManager := llm.GetLLMManager(cfg.AI.LLMManager, llmMetrics)
 		slog.Info("Creating responder")
 		llmResponder = responder.NewLLMResponder(llmManager, cfg.AI.MaxInputCharacters)
 	}
 
-	if cfg.AI.Triage.Enable {
+	if cfg.AI.Triage.Describer.Enable {
 		slog.Info("Creating describer client")
-		desClient = describer.GetNewCachedDescriberClient(dbc, cfg.AI.Triage.CacheExpirationTime)
+		desClient = describer.GetNewCachedDescriberClient(dbc, cfg.AI.Triage.Describer.CacheExpirationTime)
 	}
 
-	if cfg.AI.EnableShellEmulation {
-		llmManager := getLLMManager(cfg, llmMetrics)
+	if cfg.AI.ShellEmulation.Enable {
+		llmManager := llm.GetLLMManager(cfg.AI.ShellEmulation.LLMManager, llmMetrics)
 		shellClient = shell.NewShellClient(llmManager, dbc)
 	} else {
 		shellClient = &shell.FakeShellClient{
@@ -260,10 +243,14 @@ func main() {
 			break
 		}
 	}
-
 	slog.Info("Cleaned up stale sessions", slog.Int("count", totalSessionsCleaned))
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, cfg)
+	payloadLLMManager := llm.GetLLMManager(cfg.AI.Triage.PreProcess.LLMManager, llmMetrics)
+
+	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
+	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, preprocMetric)
+
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, preproc, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("error starting backend", slog.String("error", err.Error()))
 	}

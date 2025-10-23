@@ -56,6 +56,9 @@ type Request struct {
 	CmpHash        string                   `ksql:"cmp_hash" json:"cmp_hash" doc:"A hash to compare request across hosts"`
 	Tags           []TagPerRequestFull      `json:"tags"`
 	P0fResult      P0fResult                `json:"p0f_result"`
+	HasPayload     bool                     `ksql:"has_payload" json:"has_payload" doc:"Whether the request has a payload"`
+	Payload        string                   `ksql:"payload" json:"payload" doc:"The payload of the request"`
+	PayloadType    string                   `ksql:"payload_type" json:"payload_type" doc:"The payload type of the request"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }

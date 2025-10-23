@@ -89,7 +89,7 @@ func (b *Base64Extractor) FindAndAdd(data string) int64 {
 		if quo != 0 {
 			if (sLen-quo) >= 4 && v[sLen-1:] == "=" {
 				// Give it a final shot when the string ends with padding. We strip the
-				// first characters until the string can decode.
+				// first characters to see if it decodes.
 				v = v[quo:]
 			} else {
 				continue

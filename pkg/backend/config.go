@@ -120,21 +120,28 @@ type Config struct {
 	} `fig:"whois_manager"`
 
 	AI struct {
-		EnableResponder      bool          `fig:"enable_responder" default:"1" `
-		EnableShellEmulation bool          `fig:"enable_shell_emulation" default:"1" `
-		PrimaryLLM           llm.LLMConfig `fig:"primary_llm"`
-		SecondaryLLM         llm.LLMConfig `fig:"secondary_llm"`
-		CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"24h"`
+		EnableResponder bool `fig:"enable_responder" default:"1" `
 		// How long to lean on the secondary LLM after the primary failed before
 		// switching back to the primary.
-		FallbackInterval   time.Duration `fig:"fallback_interval" default:"1h"`
-		MaxInputCharacters int           `fig:"max_input_characters" default:"10000"`
-		Triage             struct {
-			Enable               bool          `fig:"enable"`
-			LogFile              string        `fig:"log_file" default:"triage.log" `
-			LogLevel             string        `fig:"log_level" default:"debug" `
-			MetricsListenAddress string        `fig:"metrics_listen_address" default:"localhost:8999" `
-			CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"8h"`
+		MaxInputCharacters int                  `fig:"max_input_characters" default:"10000"`
+		LLMManager         llm.LLMManagerConfig `fig:"llm_manager"`
+		ShellEmulation     struct {
+			Enable     bool                 `fig:"enable" default:"1" `
+			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+		} `fig:"shell_emulation"`
+		Triage struct {
+			Describer            struct {
+				Enable bool `fig:"enable" default:"1"`
+				IgnoreRegexList []string `fig:"ignore_regex_list"`
+				LogFile              string        `fig:"log_file" default:"triage.log" `
+				LogLevel             string        `fig:"log_level" default:"debug" `
+				MetricsListenAddress string        `fig:"metrics_listen_address" default:"localhost:8999" `
+				CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"8h"`
+
+			} `fig:"describer"`
+			PreProcess struct {
+				LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+			} `fig:"preprocess"`
 		} `fig:"triage"`
 	} `fig:"ai"`
 }
