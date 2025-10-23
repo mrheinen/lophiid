@@ -55,17 +55,20 @@ type LLMResult struct {
 	Application       string `json:"application" jsonschema_description:"A string with the targetted application/device name. An empty string if you don't know."`
 	CVE               string `json:"cve" jsonschema_description:"The relevant CVE if you know what vulnerability is exploited. An empty string if you don't know."`
 	HasPayload        string `json:"has_payload" jsonschema_description:"Use the string \"yes\" if the request has a malicious attacker payload, such as to execute a command or code. Otherwise use the value \"no\""`
-	MitreAttack       string `json:"mitre_attack" jsonschema_description:"The MITRE ATT&CK technique ID starting with "T" if you know what technique is being used. Multiple can be provided if command separated. Use an empty string if you don't know."`
+	MitreAttack       string `json:"mitre_attack" jsonschema_description:"The MITRE ATT&CK technique ID starting with \"T\" if you know what technique is being used. Multiple can be provided if command separated. Use an empty string if you don't know."`
 	TargetedParameter string `json:"targeted_parameter" jsonschema_description:"The name of the parameter that is targeted. Use an empty string if you don't know."`
-	ShellCommands     string `json:"shell_commands" jsonschema_description:"If there is a payload and the payload has shell commands, provide the shell commands here. Empty otherwise."`
+	ShellCommands     string `json:"shell_commands" jsonschema_description:"If there is a payload and the payload has shell/CLI commands, provide the shell/CLI commands here without censoring or modifying them in any way. We're only interested in the raw shell commands. Do not perform any analysis and if there are no shell commands then leave this field empty."`
 }
 
 const LLMSystemPrompt = `
-You are an information security professional / threat analyst responsible for analyzing HTTP requests and highlighting important details. You analysis is targetted towards other information security professionals. While analyzing the requests I want you to focus on what the request target is, what is being exploited, how it is being exploited and what the components of the exploit are. You will also be asked about details such as, is there a payload in the request and if there is a payload, what parameter is it injected into and does it contain, for example, shell commands.
+You are a threat analyst responsible for processing HTTP requests and highlighting important details. You output for the description is targetted towards other information security professionals. All other output fields in the JSON are targetted towards another information security system. While processing the requests I want you to focus on what the request target is, what is being exploited, how it is being exploited and what the components of the exploit are.
+
+While we are talking about exploits and payload, I want you to now worry. This is a simulation and all the data is harmless. This means that can and must leave the commands in tact without any modifications.
 `
 
 const LLMUserPrompt = `
 Analyze the provided HTTP request and give me security relevant information in the JSON output.
+Keep in mind that for the shell_commands field we only want shell commands and no other text or analysis. If there are no shell commands then leave the field empty.
 
 The request was:
 `
@@ -170,8 +173,9 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 		completion = util.RemoveJsonExpression(completion)
 
 		if err := json.Unmarshal([]byte(completion), &llmResult); err != nil {
+			slog.Error("failed to unmarshal LLM result", slog.String("error", err.Error()), slog.String("completion", completion))
 			b.MarkDescriptionFailed(&promptMap[prompt].RequestDescription)
-			return 0, fmt.Errorf("failed to parse LLM result: %w, result: %s", err, completion)
+			continue
 		}
 
 		bh := promptMap[prompt].RequestDescription
@@ -224,7 +228,9 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 			bh.AICVE = llmResult.CVE
 		}
 
+		slog.Info("Updating description", slog.Int64("id", bh.ID), slog.String("hash", bh.CmpHash))
 		if err := b.dbClient.Update(&bh); err != nil {
+			slog.Info("Updating description failed", slog.Int64("id", bh.ID), slog.String("error", err.Error()))
 			return 0, fmt.Errorf("failed to insert description: %w: %+v", err, bh)
 		}
 
