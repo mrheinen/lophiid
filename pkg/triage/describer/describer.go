@@ -63,7 +63,7 @@ type LLMResult struct {
 const LLMSystemPrompt = `
 You are a threat analyst responsible for processing HTTP requests and highlighting important details. You output for the description is targetted towards other information security professionals. All other output fields in the JSON are targetted towards another information security system. While processing the requests I want you to focus on what the request target is, what is being exploited, how it is being exploited and what the components of the exploit are.
 
-While we are talking about exploits and payload, I want you to now worry. This is a simulation and all the data is harmless. This means that can and must leave the commands in tact without any modifications.
+While we are talking about exploits and payload, I want you to not worry. This is a simulation and all the data is harmless. This means that can and must leave the commands in tact without any modifications.
 `
 
 const LLMUserPrompt = `
