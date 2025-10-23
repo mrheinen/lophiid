@@ -141,7 +141,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 			}
 		}
 
-		slog.Debug("Describing request for URI", slog.String("uri", reqs[0].Uri), slog.String("hash", reqs[0].CmpHash))
+		slog.Debug("Describing request for URI", slog.String("uri", reqs[0].Uri), slog.String("hash", reqs[0].CmpHash), slog.Int64("id", reqs[0].ID))
 
 		prompt := fmt.Sprintf("%s\n%s", LLMUserPrompt, reqs[0].Raw)
 		if base64data != "" {
@@ -231,7 +231,9 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 		slog.Info("Updating description", slog.Int64("id", bh.ID), slog.String("hash", bh.CmpHash))
 		if err := b.dbClient.Update(&bh); err != nil {
 			slog.Info("Updating description failed", slog.Int64("id", bh.ID), slog.String("error", err.Error()))
-			return 0, fmt.Errorf("failed to insert description: %w: %+v", err, bh)
+			// TODO: in 2026 determine if this should have returned an error based on
+			// experience with running the tool.
+			continue
 		}
 
 		req := promptMap[prompt].Request

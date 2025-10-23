@@ -27,6 +27,7 @@ type FakeDatabaseClient struct {
 	ContentIDToReturn               int64
 	ContentsToReturn                map[int64]models.Content
 	ErrorToReturn                   error
+	UpdateErrorToReturn             error
 	ContentRuleIDToReturn           int64
 	ContentRulesToReturn            []models.ContentRule
 	RequestsToReturn                []models.Request
@@ -76,6 +77,9 @@ func (f *FakeDatabaseClient) InsertExternalModel(dm models.ExternalDataModel) (m
 }
 func (f *FakeDatabaseClient) Update(dm models.DataModel) error {
 	f.LastDataModelSeen = dm
+	if f.UpdateErrorToReturn != nil {
+		return f.UpdateErrorToReturn
+	}
 	return f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) Delete(dm models.DataModel) error {
