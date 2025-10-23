@@ -46,6 +46,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/triage/describer"
+	"lophiid/pkg/triage/preprocess"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
@@ -99,12 +100,13 @@ type BackendServer struct {
 	llmResponder        responder.Responder
 	sessionMgr          session.SessionManager
 	describer           describer.DescriberClient
+	preprocessor        preprocess.PreProcessInterface
 	hCache              *util.StringMapCache[models.Honeypot]
 	HpDefaultContentID  int
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriberClient, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriberClient, preprocessor preprocess.PreProcessInterface, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
@@ -152,6 +154,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		describer:           describer,
 		hCache:              hCache,
 		HpDefaultContentID:  config.Backend.Advanced.HoneypotDefaultContentID,
+		preprocessor:        preprocessor,
 	}
 }
 
@@ -272,6 +275,7 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 		sReq.CmpHash = hash
 	}
 
+	sReq.PayloadType = constants.TriagePayloadTypeUnknown
 	return &sReq, nil
 }
 func MatchesString(method string, dataToSearch string, searchValue string) bool {
@@ -362,10 +366,8 @@ func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.R
 	var unservedRules []models.ContentRule
 	// Find out what rules match but haven't been served.
 	for _, r := range matchedRules {
-
 		if !session.HasServedRule(r.ID) {
 			unservedRules = append(unservedRules, r)
-
 			// A rule matching the same app id is prefered.
 			if r.AppID == session.LastRuleServed.AppID {
 				s.UpdateSessionWithRule(req.SourceIP, session, &r)
@@ -852,6 +854,39 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 	return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
 }
 
+func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool) (string, error) {
+
+	slog.Debug("auto responder!")
+
+	var preRes *preprocess.PreProcessResult
+	var err error
+	var payloadResponse string
+	if filter {
+		preRes, payloadResponse, err = s.preprocessor.MaybeProcess(sReq)
+	} else {
+		preRes, payloadResponse, err = s.preprocessor.Process(sReq)
+	}
+
+	if err != nil {
+		if errors.Is(err, preprocess.ErrNotProcessed) {
+			return "", fmt.Errorf("not pre-processed: %w", err)
+		} else {
+			return "", fmt.Errorf("error pre-processing: %s", err)
+		}
+	} else if preRes == nil {
+		return "", fmt.Errorf("no pre-processing response")
+	} else if !preRes.HasPayload {
+		return "", fmt.Errorf("no payload found")
+	} else {
+		slog.Debug("found payload!", slog.String("url", sReq.Uri))
+		sReq.HasPayload = true
+		sReq.Payload = preRes.Payload
+		sReq.PayloadType = preRes.PayloadType
+		sReq.RawResponse = payloadResponse
+		return payloadResponse, nil
+	}
+}
+
 // HandleProbe receives requests from te honeypots and tells them how to
 // respond.
 func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
@@ -878,6 +913,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			session.LastRuleServed.AppID = -1
 		}
 	}
+	sReq.SessionID = session.ID
 
 	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
 	if !allowRequest {
@@ -921,8 +957,9 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
 
 	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq, session)
+	matchedRuleIsDefault := false
 
-	// If there was no matche rule then serve the default rule of the honeypot.
+	// If there was no matched rule then serve the default rule of the honeypot.
 	if err != nil {
 		hp, err := s.getCachedHoneypot(sReq.HoneypotIP)
 
@@ -935,17 +972,19 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			matchedRule = s.safeRules.Get()[0]
 		} else {
 			// Fallback to an empty rule.
+			matchedRuleIsDefault = true
 			matchedRule.ContentID = hp.DefaultContentID
 			matchedRule.AppID = 0
 			matchedRule.ID = 0
 		}
-	} else {
-		if matchedRule.Alert {
-			if s.config.Alerting.WebInterfaceAddress != "" {
-				s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d\nURI: %s\nLink: %s/requests?q=session_id:%d", matchedRule.ID, sReq.Uri, s.config.Alerting.WebInterfaceAddress, sReq.SessionID))
-			} else {
-				s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d\nURI: %s", matchedRule.ID, sReq.Uri))
-			}
+	}
+
+	// Alert if necessary
+	if matchedRule.Alert {
+		if s.config.Alerting.WebInterfaceAddress != "" {
+			s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d\nURI: %s\nLink: %s/requests?q=session_id:%d", matchedRule.ID, sReq.Uri, s.config.Alerting.WebInterfaceAddress, sReq.SessionID))
+		} else {
+			s.alertMgr.SendBufferedMessage(fmt.Sprintf("Rule ID: %d\nURI: %s", matchedRule.ID, sReq.Uri))
 		}
 	}
 
@@ -957,7 +996,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	sReq.RuleID = matchedRule.ID
 	sReq.AppID = matchedRule.AppID
 	sReq.RuleUuid = matchedRule.ExtUuid
-	sReq.SessionID = session.ID
 
 	colEx := extractors.NewExtractorCollection(true)
 	colEx.ParseRequest(sReq)
@@ -1003,10 +1041,36 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	} else {
 
 		if matchedRule.Responder != "" && matchedRule.Responder != constants.ResponderTypeNone {
-			res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
-			sReq.RawResponse = string(res.Body)
+			if matchedRule.Responder == constants.ResponderTypeAuto {
+				payloadResponse, err := s.GetPreProcessResponse(sReq, false)
+
+				if err != nil {
+					if !errors.Is(err, preprocess.ErrNotProcessed) {
+						slog.Error("error pre-processing", slog.String("error", err.Error()))
+					}
+					res.Body = content.Data
+				} else {
+					res.Body = []byte(payloadResponse)
+				}
+			} else {
+				res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
+				sReq.RawResponse = string(res.Body)
+			}
 		} else {
 			res.Body = content.Data
+		}
+	}
+
+	if matchedRuleIsDefault {
+		payloadResponse, err := s.GetPreProcessResponse(sReq, true)
+
+		if err != nil {
+			if !errors.Is(err, preprocess.ErrNotProcessed) {
+				slog.Error("error pre-processing", slog.String("error", err.Error()))
+			}
+			res.Body = content.Data
+		} else {
+			res.Body = []byte(payloadResponse)
 		}
 	}
 

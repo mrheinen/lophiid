@@ -111,24 +111,56 @@ whois_manager:
 ai:
   # Whether to enable the responder.
   enable_responder: 1
-  enable_shell_emulation: 1
-  # The primary LLM to use for lookups.
-  primary_llm:
-    # API location. Note that the implementation was tested with Gemma 2 27b and
-    # is not guaranteed to work with other versions or other LLMs.
-    api_location: http://localhost:8000/v1
-    api_key: AAAAAAAAAAAAAAAAAA
-    # How long prompts and responses should be cached.
+
+  shell_emulation:
+    enable: 1
+    llm_manager:
+      # How long prompts and responses should be cached.
+      cache_expiration_time: 1h
+      completion_timeout: 60s
+      concurrent_requests: 5
+
+      primary_llm:
+        api_location: https://openrouter.ai/api/v1
+        model: qwen/qwen3-235b-a22b-2507
+        api_key: xxxxxx
+
+  # Configure the LLM manager. You can configure it with a primary LLM and a
+  # secondary LLM. If a secondary LLM is configured then the LLM Manager will
+  # switch to the secondary whenever the primary is unavailable. If the primary
+  # comes back then the LLM Manager will switch back (checks every X minutes).
+  llm_manager:
+    # How long prompts and responses should be cached. If multiple LLMs are
+    # configured then the cache is shared between them.
     cache_expiration_time: 24h
     # How long a completion is allowed to take.
-    llm_completion_timeout: 60s
+    completion_timeout: 60s
     # How many concurrent requests to send to the LLM API
-    llm_concurrent_requests: 5
-  # Maximum string length of the prompt input.
-  max_input_characters: 4096
-  describer:
-    enable: 1
-    log_file: describer.log
-    log_level: debug
-    metrics_listen_address: x.x.x.x:8999
-    cache_expiration_time: 8h
+    concurrent_requests: 5
+
+    # The primary LLM to use for lookups.
+    primary_llm:
+      # API location. Use any OpenAI API endpoint.
+      api_location: http://localhost:8000/v1
+      api_key: AAAAAAAAAAAAAAAAAA
+      # Maximum string length of the prompt input.
+      max_input_characters: 4096
+
+    triage:
+      describer:
+        enable: 1
+        log_file: describer.log
+        log_level: debug
+        metrics_listen_address: x.x.x.x:8999
+        cache_expiration_time: 8h
+
+    preprocess:
+      llm_manager:
+        # How long prompts and responses should be cached.
+        cache_expiration_time: 100h
+        completion_timeout: 60s
+        concurrent_requests: 5
+        primary_llm:
+          api_location: https://api.openai.com/v1
+          model: gpt-5-nano
+          api_key: xxxxx

@@ -38,7 +38,7 @@ func main() {
 		return
 	}
 
-	lf, err := os.OpenFile(cfg.AI.Triage.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	lf, err := os.OpenFile(cfg.AI.Triage.Describer.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("Could not open logfile: %s\n", err)
 		return
@@ -52,7 +52,7 @@ func main() {
 	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
 
-	switch cfg.AI.Triage.LogLevel {
+	switch cfg.AI.Triage.Describer.LogLevel {
 	case "info":
 		programLevel.Set(slog.LevelInfo)
 	case "warn":
@@ -80,7 +80,7 @@ func main() {
 	metricsRegistry := prometheus.NewRegistry()
 	http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
 	go func() {
-		if err := http.ListenAndServe(cfg.AI.Triage.MetricsListenAddress, nil); err != nil {
+		if err := http.ListenAndServe(cfg.AI.Triage.Describer.MetricsListenAddress, nil); err != nil {
 			slog.Error("Failed to start metrics server", "error", err)
 			os.Exit(1)
 		}
@@ -101,32 +101,10 @@ func main() {
 	deMtrics := describer.CreateDescriberMetrics(metricsRegistry)
 	var myDescriber *describer.CachedDescriptionManager
 
-	primaryLLMClient := llm.NewLLMClient(cfg.AI.PrimaryLLM, describer.LLMSystemPrompt)
-	if primaryLLMClient == nil {
-		slog.Error("Failed to create primary LLM client")
-		return
-	}
-
-	llmCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.AI.CacheExpirationTime)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	primaryManager := llm.NewLLMManager(primaryLLMClient, llmCache, llmMetrics, cfg.AI.PrimaryLLM.LLMCompletionTimeout, cfg.AI.PrimaryLLM.LLMConcurrentRequests, true, cfg.AI.PrimaryLLM.PromptPrefix, cfg.AI.PrimaryLLM.PromptSuffix)
+	llmManager := llm.GetLLMManager(cfg.AI.LLMManager, llmMetrics)
 
-	if cfg.AI.SecondaryLLM.ApiKey != "" {
-		slog.Info("Secondary LLM configured, using DualLLMManager")
-		secondaryLLMClient := llm.NewLLMClient(cfg.AI.SecondaryLLM, describer.LLMSystemPrompt)
-		if secondaryLLMClient == nil {
-			slog.Error("error creating secondary LLM client")
-			return
-		}
-
-		secondaryManager := llm.NewLLMManager(secondaryLLMClient, llmCache, llmMetrics, cfg.AI.SecondaryLLM.LLMCompletionTimeout, cfg.AI.SecondaryLLM.LLMConcurrentRequests, true, cfg.AI.SecondaryLLM.PromptPrefix, cfg.AI.SecondaryLLM.PromptSuffix)
-
-		dualManager := llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.FallbackInterval)
-		myDescriber = describer.GetNewCachedDescriptionManager(dbc, dualManager, ipEventManager, deMtrics)
-	} else {
-		slog.Info("Using single primary LLM")
-		myDescriber = describer.GetNewCachedDescriptionManager(dbc, primaryManager, ipEventManager, deMtrics)
-	}
+	myDescriber = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics)
 
 	for {
 		cnt, err := myDescriber.GenerateLLMDescriptions(*batchSize)

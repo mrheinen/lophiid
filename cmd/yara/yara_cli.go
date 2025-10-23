@@ -106,24 +106,8 @@ func main() {
 
 	}
 
-	primaryLLMClient := llm.NewLLMClient(cfg.AI.LLMManager.PrimaryLLM, "")
-	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	primaryManager := llm.NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.AI.LLMManager.CompletionTimeout, cfg.AI.LLMManager.ConcurrentRequests, true, cfg.AI.LLMManager.PromptPrefix, cfg.AI.LLMManager.PromptSuffix)
-
-	// Check if secondary LLM is configured (non-empty API key indicates configuration)
-	var llmManager llm.LLMManagerInterface
-	if cfg.AI.LLMManager.SecondaryLLM.ApiKey != "" {
-		slog.Info("Secondary LLM configured, using DualLLMManager")
-
-		secondaryLLMClient := llm.NewLLMClient(cfg.AI.LLMManager.SecondaryLLM, "")
-		secondaryManager := llm.NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.AI.LLMManager.CompletionTimeout, cfg.AI.LLMManager.ConcurrentRequests, true, cfg.AI.LLMManager.PromptPrefix, cfg.AI.LLMManager.PromptSuffix)
-
-		llmManager = llm.NewDualLLMManager(primaryManager, secondaryManager, cfg.AI.LLMManager.FallbackInterval)
-	} else {
-		slog.Info("Using single LLM manager")
-		llmManager = primaryManager
-	}
+	llmManager := llm.GetLLMManager(cfg.AI.LLMManager, llmMetrics)
 
 	mgr := yara.NewYaraManager(dbc, llmManager, *rulesDir, cfg.Yara.PrepareCommand, metrics)
 

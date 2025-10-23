@@ -212,7 +212,6 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 				"require_parameters": true,
 				"order":              l.providers,
 				"allow_fallbacks":    true,
-				"data_collection":    "deny",
 			}))
 	} else {
 		resp, err = l.client.Chat.Completions.New(ctx, param)

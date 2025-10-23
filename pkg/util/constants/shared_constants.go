@@ -80,6 +80,7 @@ const (
 	ResponderTypeNone                = "NONE"
 	ResponderTypeCommandInjection    = "COMMAND_INJECTION"
 	ResponderTypeSourceCodeExecution = "SOURCE_CODE_EXECUTION"
+	ResponderTypeAuto                = "AUTO"
 	ResponderTypeHelpfulAI           = "HELPFUL_AI"
 )
 
@@ -118,4 +119,10 @@ const (
 	LLMClientMessageSystem    = "system"
 	LLMClientMessageModel     = "model"
 	LLMClientMessageAssistant = "assistant"
+)
+
+const (
+	TriagePayloadTypeUnknown      = "UNKNOWN"
+	TriagePayloadTypeShellCommand = "SHELL_COMMAND"
+	TriagePayloadTypeFileAccess   = "FILE_ACCESS"
 )
