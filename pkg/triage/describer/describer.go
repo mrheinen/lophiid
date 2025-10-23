@@ -230,7 +230,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 
 		slog.Info("Updating description", slog.Int64("id", bh.ID), slog.String("hash", bh.CmpHash))
 		if err := b.dbClient.Update(&bh); err != nil {
-			slog.Info("Updating description failed", slog.Int64("id", bh.ID), slog.String("error", err.Error()))
+			slog.Error("Updating description failed", slog.Int64("id", bh.ID), slog.String("error", err.Error()))
 			// TODO: in 2026 determine if this should have returned an error based on
 			// experience with running the tool.
 			continue
