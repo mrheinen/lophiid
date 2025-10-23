@@ -44,7 +44,14 @@ func main() {
 		return
 	}
 	metricsRegistry := prometheus.NewRegistry()
-	llmClient := llm.NewOpenAILLMClient(*apiKey, *apiLocation, "", *maxContextLength)
+
+	llmConf := llm.LLMConfig{
+		ApiKey:         *apiKey,
+		ApiLocation:    *apiLocation,
+		MaxContextSize: *maxContextLength,
+	}
+
+	llmClient := llm.NewOpenAILLMClient(llmConf, "")
 
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", time.Hour)
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
