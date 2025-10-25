@@ -1,6 +1,7 @@
 package describer
 
 import (
+	"errors"
 	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
@@ -105,6 +106,30 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 			expectedEvents: 0,
 		},
 		{
+			name:      "database update fails - continues processing without error",
+			workCount: 1,
+			descriptions: []models.RequestDescription{
+				{
+					ExampleRequestID: 50,
+					TriageStatus:     constants.TriageStatusTypePending,
+				},
+			},
+			requests: []models.Request{
+				{
+					ID:      50,
+					Uri:     "/fail-update",
+					CmpHash: "hash_fail",
+					Raw:     "GET /fail-update HTTP/1.1",
+					RuleID:  0,
+				},
+			},
+			llmResponse:    `{"description":"Test update failure","vulnerability_type":"test","application":"web","malicious":"yes","has_payload":"no"}`,
+			updateErr:      errors.New("database update failed"),
+			expectedCount:  1,
+			expectError:    false,
+			expectedEvents: 0, // No event should be added when update fails
+		},
+		{
 			name:      "with base64 metadata",
 			workCount: 1,
 			descriptions: []models.RequestDescription{
@@ -146,7 +171,8 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 				RequestDescriptionsToReturn: tt.descriptions,
 				RequestsToReturn:            tt.requests,
 				MetadataToReturn:            tt.metadata,
-				ErrorToReturn:               tt.updateErr,
+				ErrorToReturn:               nil,
+				UpdateErrorToReturn:         tt.updateErr,
 			}
 
 			mockLLMClient := &llm.MockLLMClient{

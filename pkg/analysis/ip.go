@@ -161,11 +161,12 @@ func (i *IpEventManagerImpl) CreateScanEvents() int {
 			}
 
 			evt := models.IpEvent{
-				IP:      ip,
-				Type:    constants.IpEventTrafficClass,
-				Subtype: constants.IpEventSubTypeTrafficClassScanned,
-				Details: fmt.Sprintf("found %d events", cnt),
-				Source:  constants.IpEventSourceAnalysis,
+				IP:            ip,
+				Type:          constants.IpEventTrafficClass,
+				Subtype:       constants.IpEventSubTypeTrafficClassScanned,
+				Details:       fmt.Sprintf("found %d events", cnt),
+				Source:        constants.IpEventSourceAnalysis,
+				SourceRefType: constants.IpEventRefTypeNone,
 			}
 
 			i.AddEvent(&evt)
