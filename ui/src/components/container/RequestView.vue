@@ -49,9 +49,7 @@
           <PrimeTabs value="0">
             <TabList>
               <PrimeTab value="0">HTTP Request</PrimeTab>
-              <PrimeTab value="1" v-if="request.raw_response"
-                >HTTP Response</PrimeTab
-              >
+              <PrimeTab value="1" v-if="request.raw_response">HTTP Response</PrimeTab>
               <PrimeTab value="2" v-if="metadata.length">Metadata</PrimeTab>
               <PrimeTab value="3" v-if="localWhois">Whois</PrimeTab>
               <PrimeTab value="4">Debug</PrimeTab>
@@ -131,13 +129,25 @@
                 }}</pre>
               </TabPanel>
               <TabPanel value="4">
-                <div v-if="request.raw_response">
-                  <label class="label">Raw response</label>
-                  <pre class="rawrequest">{{ request.raw_response }}</pre>
-                  <br />
-                </div>
-                <div v-if="localDescription">
-                  <label class="label">AI description</label>
+              <div v-if="request.payload">
+                <label class="label">Request payload</label>
+                <RawHttpCard
+                v-if="request.payload"
+                label="Payload"
+                :data="request.payload"
+                ></RawHttpCard>
+              </div>
+
+              <table>
+                <tbody>
+                  <tr v-if="request.has_payload">
+                    <th>Payload type</th>
+                    <td>{{ request.payload_type }}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div v-if="localDescription">
                   <table>
                     <tbody>
                       <tr>
