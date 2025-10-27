@@ -138,9 +138,9 @@
                 ></RawHttpCard>
               </div>
 
-              <table>
+              <table v-if="request.has_payload">
                 <tbody>
-                  <tr v-if="request.has_payload">
+                  <tr>
                     <th>Payload type</th>
                     <td>{{ request.payload_type }}</td>
                   </tr>
