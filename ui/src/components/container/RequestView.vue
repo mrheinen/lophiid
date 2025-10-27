@@ -132,7 +132,6 @@
               <div v-if="request.payload">
                 <label class="label">Request payload</label>
                 <RawHttpCard
-                v-if="request.payload"
                 label="Payload"
                 :data="request.payload"
                 ></RawHttpCard>
