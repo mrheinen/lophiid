@@ -37,41 +37,41 @@ func TestProcess_NoPayload(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
-	
+
 	preprocessResult := PreProcessResult{
 		HasPayload:  false,
 		PayloadType: "",
 		Payload:     "",
 	}
-	
+
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
-	
+
 	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
-	
+
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:       "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+		Raw:       []byte("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
-	
+
 	// Execute
 	result, body, err := preprocess.Process(req)
-	
+
 	// Verify
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
-	
+
 	if result == nil {
 		t.Fatal("Expected result, got nil")
 	}
-	
+
 	if result.HasPayload {
 		t.Error("Expected HasPayload to be false")
 	}
-	
+
 	if body != "" {
 		t.Errorf("Expected empty body, got: %s", body)
 	}
@@ -82,13 +82,13 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
-	
+
 	preprocessResult := PreProcessResult{
 		HasPayload:  true,
 		PayloadType: "SHELL_COMMAND",
 		Payload:     "echo 'hello world'",
 	}
-	
+
 	expectedOutput := "hello world"
 	executionContext := &models.SessionExecutionContext{
 		SessionID:   100,
@@ -99,45 +99,45 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 		Input:       "echo 'hello world'",
 		Output:      expectedOutput,
 	}
-	
+
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 	fakeShell.ContextToReturn = executionContext
 	fakeShell.ErrorToReturn = nil
-	
+
 	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
-	
+
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:       "GET /?cmd=echo+hello HTTP/1.1\r\nHost: example.com\r\n\r\n",
+		Raw:       []byte("GET /?cmd=echo+hello HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
-	
+
 	// Execute
 	result, body, err := preprocess.Process(req)
-	
+
 	// Verify
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
-	
+
 	if result == nil {
 		t.Fatal("Expected result, got nil")
 	}
-	
+
 	if !result.HasPayload {
 		t.Error("Expected HasPayload to be true")
 	}
-	
+
 	if result.PayloadType != "SHELL_COMMAND" {
 		t.Errorf("Expected PayloadType 'SHELL_COMMAND', got: %s", result.PayloadType)
 	}
-	
+
 	if result.Payload != "echo 'hello world'" {
 		t.Errorf("Expected Payload 'echo 'hello world'', got: %s", result.Payload)
 	}
-	
+
 	if body != expectedOutput {
 		t.Errorf("Expected body '%s', got: %s", expectedOutput, body)
 	}
@@ -148,49 +148,49 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
-	
+
 	preprocessResult := PreProcessResult{
 		HasPayload:  true,
 		PayloadType: "FILE_ACCESS",
 		Payload:     "/etc/passwd",
 	}
-	
+
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
-	
+
 	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
-	
+
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:       "GET /?file=/etc/passwd HTTP/1.1\r\nHost: example.com\r\n\r\n",
+		Raw:       []byte("GET /?file=/etc/passwd HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
-	
+
 	// Execute
 	result, body, err := preprocess.Process(req)
-	
+
 	// Verify
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
-	
+
 	if result == nil {
 		t.Fatal("Expected result, got nil")
 	}
-	
+
 	if !result.HasPayload {
 		t.Error("Expected HasPayload to be true")
 	}
-	
+
 	if result.PayloadType != "FILE_ACCESS" {
 		t.Errorf("Expected PayloadType 'FILE_ACCESS', got: %s", result.PayloadType)
 	}
-	
+
 	if result.Payload != "/etc/passwd" {
 		t.Errorf("Expected Payload '/etc/passwd', got: %s", result.Payload)
 	}
-	
+
 	if body != "" {
 		t.Errorf("Expected empty body, got: %s", body)
 	}
@@ -201,45 +201,45 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
-	
+
 	preprocessResult := PreProcessResult{
 		HasPayload:  true,
 		PayloadType: "UNKNOWN",
 		Payload:     "some random payload",
 	}
-	
+
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
-	
+
 	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
-	
+
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:       "POST / HTTP/1.1\r\nHost: example.com\r\n\r\nsome data",
+		Raw:       []byte("POST / HTTP/1.1\r\nHost: example.com\r\n\r\nsome data"),
 	}
-	
+
 	// Execute
 	result, body, err := preprocess.Process(req)
-	
+
 	// Verify
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
-	
+
 	if result == nil {
 		t.Fatal("Expected result, got nil")
 	}
-	
+
 	if !result.HasPayload {
 		t.Error("Expected HasPayload to be true")
 	}
-	
+
 	if result.PayloadType != "UNKNOWN" {
 		t.Errorf("Expected PayloadType 'UNKNOWN', got: %s", result.PayloadType)
 	}
-	
+
 	if body != "" {
 		t.Errorf("Expected empty body, got: %s", body)
 	}
@@ -250,31 +250,31 @@ func TestProcess_LLMError(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
-	
+
 	expectedError := errors.New("LLM service unavailable")
 	mockLLM.CompletionToReturn = ""
 	mockLLM.ErrorToReturn = expectedError
-	
+
 	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
-	
+
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:       "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+		Raw:       []byte("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
-	
+
 	// Execute
 	result, body, err := preprocess.Process(req)
-	
+
 	// Verify
 	if err == nil {
 		t.Fatal("Expected error, got nil")
 	}
-	
+
 	if result != nil {
 		t.Errorf("Expected nil result, got: %v", result)
 	}
-	
+
 	if body != "" {
 		t.Errorf("Expected empty body, got: %s", body)
 	}
@@ -285,30 +285,30 @@ func TestProcess_InvalidJSON(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
-	
+
 	mockLLM.CompletionToReturn = "this is not valid JSON"
 	mockLLM.ErrorToReturn = nil
-	
+
 	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
-	
+
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:       "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n",
+		Raw:       []byte("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
-	
+
 	// Execute
 	result, body, err := preprocess.Process(req)
-	
+
 	// Verify
 	if err == nil {
 		t.Fatal("Expected error for invalid JSON, got nil")
 	}
-	
+
 	if result != nil {
 		t.Errorf("Expected nil result, got: %v", result)
 	}
-	
+
 	if body != "" {
 		t.Errorf("Expected empty body, got: %s", body)
 	}
@@ -319,41 +319,41 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
-	
+
 	preprocessResult := PreProcessResult{
 		HasPayload:  true,
 		PayloadType: "SHELL_COMMAND",
 		Payload:     "dangerous-command",
 	}
-	
+
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
-	
+
 	expectedError := errors.New("shell command execution failed")
 	fakeShell.ContextToReturn = nil
 	fakeShell.ErrorToReturn = expectedError
-	
+
 	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
-	
+
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:       "GET /?cmd=dangerous-command HTTP/1.1\r\nHost: example.com\r\n\r\n",
+		Raw:       []byte("GET /?cmd=dangerous-command HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
-	
+
 	// Execute
 	result, body, err := preprocess.Process(req)
-	
+
 	// Verify
 	if err == nil {
 		t.Fatal("Expected error, got nil")
 	}
-	
+
 	if result != nil {
 		t.Errorf("Expected nil result, got: %v", result)
 	}
-	
+
 	if body != "" {
 		t.Errorf("Expected empty body, got: %s", body)
 	}
@@ -364,13 +364,13 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
-	
+
 	preprocessResult := PreProcessResult{
 		HasPayload:  true,
 		PayloadType: "SHELL_COMMAND",
 		Payload:     "ls -la && pwd",
 	}
-	
+
 	expectedOutput := "total 8\ndrwxr-xr-x 2 root root 4096 Jan 1 00:00 .\ndrwxr-xr-x 3 root root 4096 Jan 1 00:00 ..\n/tmp"
 	executionContext := &models.SessionExecutionContext{
 		SessionID:   100,
@@ -381,41 +381,41 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 		Input:       "ls -la && pwd",
 		Output:      expectedOutput,
 	}
-	
+
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 	fakeShell.ContextToReturn = executionContext
 	fakeShell.ErrorToReturn = nil
-	
+
 	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
-	
+
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:       "GET /?cmd=ls+-la+%26%26+pwd HTTP/1.1\r\nHost: example.com\r\n\r\n",
+		Raw:      []byte("GET /?cmd=ls+-la+%26%26+pwd HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
-	
+
 	// Execute
 	result, body, err := preprocess.Process(req)
-	
+
 	// Verify
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
-	
+
 	if result == nil {
 		t.Fatal("Expected result, got nil")
 	}
-	
+
 	if !result.HasPayload {
 		t.Error("Expected HasPayload to be true")
 	}
-	
+
 	if result.PayloadType != "SHELL_COMMAND" {
 		t.Errorf("Expected PayloadType 'SHELL_COMMAND', got: %s", result.PayloadType)
 	}
-	
+
 	if body != expectedOutput {
 		t.Errorf("Expected body '%s', got: %s", expectedOutput, body)
 	}

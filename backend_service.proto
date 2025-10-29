@@ -135,7 +135,7 @@ message HttpRequest {
   bytes body = 7;
   string remote_address = 8;
   string honeypot_ip = 9;
-  string raw = 10;
+  bytes raw = 10;
 }
 
 // Contains all information needed to send an HTTP reply.

@@ -17,6 +17,7 @@
 package decoding
 
 import (
+	"bytes"
 	"encoding/hex"
 	"html"
 	"log/slog"
@@ -62,7 +63,7 @@ func StringsFromRequest(req *models.Request) []string {
 	var res []string
 	// TODO: Make this cleaner and access the actual
 	// header instead of grepping the entire request.
-	if strings.Contains(req.Raw, "application/x-www-form-urlencoded") {
+	if bytes.Contains(req.Raw, []byte("application/x-www-form-urlencoded")) {
 		body := string(req.Body)
 		params, err := url.ParseQuery(body)
 		// If we could not parse it or if the body doesn't look like form data at
