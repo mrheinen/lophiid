@@ -68,7 +68,7 @@ CREATE TABLE request (
   session_id      INT NOT NULL default 0,
   app_id          INT NOT NULL default 0,
   rule_id         INT NOT NULL DEFAULT 0,
-  rule_uuid       VARCHAR(36) default ''
+  rule_uuid       VARCHAR(36) default '',
   triage_payload         TEXT,
   triage_payload_type    PAYLOAD_TYPE default 'UNKNOWN',
   triage_has_payload     BOOL default FALSE,
