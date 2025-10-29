@@ -230,7 +230,7 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 		Query:         req.GetRequest().GetParsedUrl().GetRawQuery(),
 		Port:          req.GetRequest().GetParsedUrl().GetPort(),
 		ContentLength: req.GetRequest().GetContentLength(),
-		Raw:           []byte(req.GetRequest().GetRaw()),
+		Raw:           req.GetRequest().GetRaw(),
 		HoneypotIP:    req.GetRequest().GetHoneypotIp(),
 	}
 
