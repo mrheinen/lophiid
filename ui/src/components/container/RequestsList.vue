@@ -383,6 +383,7 @@ export default {
                 newReq.parsed.uri = newReq.uri;
               }
               newReq.parsed.body = atob(newReq.body);
+              newReq.parsed.raw = atob(newReq.raw);
               this.requests.push(newReq);
             }
             if (selectFirst) {
