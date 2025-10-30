@@ -125,4 +125,5 @@ const (
 	TriagePayloadTypeUnknown      = "UNKNOWN"
 	TriagePayloadTypeShellCommand = "SHELL_COMMAND"
 	TriagePayloadTypeFileAccess   = "FILE_ACCESS"
+	TriagePayloadTypeCodeExec     = "CODE_EXECUTION"
 )

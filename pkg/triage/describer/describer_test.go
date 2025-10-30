@@ -36,13 +36,13 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 					ExampleRequestID: 1,
 					TriageStatus:     constants.TriageStatusTypePending,
 				},
-			}, 
+			},
 			requests: []models.Request{
 				{
 					ID:      1,
 					Uri:     "/test",
 					CmpHash: "hash1",
-					Raw:     "GET /test HTTP/1.1",
+					Raw:     []byte("GET /test HTTP/1.1"),
 					RuleID:  4,
 				},
 			},
@@ -65,7 +65,7 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 					ID:      42,
 					Uri:     "/test",
 					CmpHash: "hash1",
-					Raw:     "GET /test HTTP/1.1",
+					Raw:     []byte("GET /test HTTP/1.1"),
 					RuleID:  0,
 				},
 			},
@@ -88,7 +88,7 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 					ID:      43,
 					Uri:     "/test",
 					CmpHash: "hash2",
-					Raw:     "GET /test HTTP/1.1",
+					Raw:     []byte("GET /test HTTP/1.1"),
 					RuleID:  0,
 				},
 			},
@@ -119,7 +119,7 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 					ID:      50,
 					Uri:     "/fail-update",
 					CmpHash: "hash_fail",
-					Raw:     "GET /fail-update HTTP/1.1",
+					Raw:     []byte("GET /fail-update HTTP/1.1"),
 					RuleID:  0,
 				},
 			},
@@ -143,7 +143,7 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 					ID:      44,
 					Uri:     "/test-base64",
 					CmpHash: "hash3",
-					Raw:     "GET /test-base64 HTTP/1.1",
+					Raw:     []byte("GET /test-base64 HTTP/1.1"),
 					RuleID:  0,
 				},
 			},
@@ -256,7 +256,7 @@ func TestApplicationLengthValidation(t *testing.T) {
 						ID:      1,
 						Uri:     "/test",
 						CmpHash: "hash1",
-						Raw:     "GET /test HTTP/1.1",
+						Raw:     []byte("GET /test HTTP/1.1"),
 					},
 				},
 			}
@@ -303,4 +303,3 @@ func TestApplicationLengthValidation(t *testing.T) {
 		})
 	}
 }
-

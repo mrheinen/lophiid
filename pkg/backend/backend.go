@@ -275,7 +275,7 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 		sReq.CmpHash = hash
 	}
 
-	sReq.PayloadType = constants.TriagePayloadTypeUnknown
+	sReq.TriagePayloadType = constants.TriagePayloadTypeUnknown
 	return &sReq, nil
 }
 func MatchesString(method string, dataToSearch string, searchValue string) bool {
@@ -819,7 +819,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.ContentRule, content *models.Content) string {
 	reg, err := regexp.Compile(rule.ResponderRegex)
 	if err == nil && reg != nil && s.llmResponder != nil {
-		match := reg.FindStringSubmatch(sReq.Raw)
+		match := reg.FindSubmatch(sReq.Raw)
 
 		if len(match) < 2 {
 			return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
@@ -828,14 +828,14 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 		final_match := ""
 		switch rule.ResponderDecoder {
 		case constants.ResponderDecoderTypeNone:
-			final_match = match[1]
+			final_match = string(match[1])
 		case constants.ResponderDecoderTypeUri:
-			final_match = decoding.DecodeURLOrEmptyString(match[1], true)
+			final_match = decoding.DecodeURLOrEmptyString(string(match[1]), true)
 			if final_match == "" {
-				slog.Error("could not decode URI", slog.String("match", match[1]))
+				slog.Error("could not decode URI", slog.String("match", string(match[1])))
 			}
 		case constants.ResponderDecoderTypeHtml:
-			final_match = decoding.DecodeHTML(match[1])
+			final_match = decoding.DecodeHTML(string(match[1]))
 		default:
 			slog.Error("unknown responder decoder", slog.String("decoder", rule.ResponderDecoder))
 		}
@@ -879,9 +879,9 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		return "", fmt.Errorf("no payload found")
 	} else {
 		slog.Debug("found payload!", slog.String("url", sReq.Uri))
-		sReq.HasPayload = true
-		sReq.Payload = preRes.Payload
-		sReq.PayloadType = preRes.PayloadType
+		sReq.TriageHasPayload = true
+		sReq.TriagePayload = preRes.Payload
+		sReq.TriagePayloadType = preRes.PayloadType
 		sReq.RawResponse = payloadResponse
 		return payloadResponse, nil
 	}

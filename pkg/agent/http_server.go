@@ -135,7 +135,7 @@ func (h *HttpServer) catchAll(w http.ResponseWriter, r *http.Request) {
 		RequestUri: r.RequestURI,
 		Request: &backend_service.HttpRequest{
 			TimeReceived:  time.Now().Unix(),
-			Raw:           string(raw),
+			Raw:           raw,
 			Method:        r.Method,
 			Proto:         r.Proto,
 			ContentLength: r.ContentLength,

@@ -23,42 +23,42 @@ import (
 )
 
 type Request struct {
-	ID             int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the request"`
-	Proto          string                   `ksql:"proto" json:"proto" doc:"The HTTP protocol (e.g. HTTP/1.0)"`
-	Host           string                   `ksql:"host" json:"host" doc:"The HTTP Host header value"`
-	Port           int64                    `ksql:"port" json:"port" doc:"The HTTP server port"`
-	Method         string                   `ksql:"method" json:"method" doc:"The HTTP method (e.g. GET, POST, PUT, DELETE, ...)"`
-	Uri            string                   `ksql:"uri" json:"uri" doc:"The request URI"`
-	Path           string                   `ksql:"path" json:"path" doc:"The URL path"`
-	Query          string                   `ksql:"query" json:"query" doc:"The query section of the URL"`
-	Referer        string                   `ksql:"referer" json:"referer" doc:"The referer header value"`
-	ContentType    string                   `ksql:"content_type" json:"content_type" doc:"The Content-Type header value"`
-	ContentLength  int64                    `ksql:"content_length" json:"content_length" doc:"The Content-Length header value"`
-	UserAgent      string                   `ksql:"user_agent" json:"user_agent" doc:"The User-Agent value"`
-	Headers        pgtype.FlatArray[string] `ksql:"headers" json:"headers" doc:"The client HTTP headers"`
-	Body           []byte                   `ksql:"body" json:"body" doc:"The request body"`
-	HoneypotIP     string                   `ksql:"honeypot_ip" json:"honeypot_ip" doc:"The honeypot IP that received the request"`
-	SourceIP       string                   `ksql:"source_ip" json:"source_ip" doc:"The HTTP client source IP"`
-	SourcePort     int64                    `ksql:"source_port" json:"source_port" doc:"The HTTP client source port"`
-	Raw            string                   `ksql:"raw" json:"raw" doc:"The raw HTTP request"`
-	RawResponse    string                   `ksql:"raw_response" json:"raw_response" doc:"The raw HTTP response (only used for scripted Content)"`
-	TimeReceived   time.Time                `ksql:"time_received,skipUpdates" json:"time_received" doc:"The date and time the honeypot received the request"`
-	CreatedAt      time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"The date and time of creation"`
-	UpdatedAt      time.Time                `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"The date and time of the last update"`
-	ContentID      int64                    `ksql:"content_id" json:"content_id" doc:"The Content ID that was served"`
-	SessionID      int64                    `ksql:"session_id" json:"session_id" doc:"The session ID of the request"`
-	AppID          int64                    `ksql:"app_id" json:"app_id" doc:"The App ID of the rule that matched this request"`
-	ContentDynamic bool                     `ksql:"content_dynamic" json:"content_dynamic" doc:"A bool indicating if the Content is dynamic (script based)"`
-	RuleID         int64                    `ksql:"rule_id" json:"rule_id" doc:"The ID of the rule that matched this request"`
-	RuleUuid       string                   `ksql:"rule_uuid" json:"rule_uuid" doc:"The UUID of the rule that matched this request"`
-	Starred        bool                     `ksql:"starred" json:"starred" doc:"A bool if the request is starred"`
-	BaseHash       string                   `ksql:"base_hash" json:"base_hash" doc:"A base hash to find roughly similar requests"`
-	CmpHash        string                   `ksql:"cmp_hash" json:"cmp_hash" doc:"A hash to compare request across hosts"`
-	Tags           []TagPerRequestFull      `json:"tags"`
-	P0fResult      P0fResult                `json:"p0f_result"`
-	HasPayload     bool                     `ksql:"has_payload" json:"has_payload" doc:"Whether the request has a payload"`
-	Payload        string                   `ksql:"payload" json:"payload" doc:"The payload of the request"`
-	PayloadType    string                   `ksql:"payload_type" json:"payload_type" doc:"The payload type of the request"`
+	ID                int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the request"`
+	Proto             string                   `ksql:"proto" json:"proto" doc:"The HTTP protocol (e.g. HTTP/1.0)"`
+	Host              string                   `ksql:"host" json:"host" doc:"The HTTP Host header value"`
+	Port              int64                    `ksql:"port" json:"port" doc:"The HTTP server port"`
+	Method            string                   `ksql:"method" json:"method" doc:"The HTTP method (e.g. GET, POST, PUT, DELETE, ...)"`
+	Uri               string                   `ksql:"uri" json:"uri" doc:"The request URI"`
+	Path              string                   `ksql:"path" json:"path" doc:"The URL path"`
+	Query             string                   `ksql:"query" json:"query" doc:"The query section of the URL"`
+	Referer           string                   `ksql:"referer" json:"referer" doc:"The referer header value"`
+	ContentType       string                   `ksql:"content_type" json:"content_type" doc:"The Content-Type header value"`
+	ContentLength     int64                    `ksql:"content_length" json:"content_length" doc:"The Content-Length header value"`
+	UserAgent         string                   `ksql:"user_agent" json:"user_agent" doc:"The User-Agent value"`
+	Headers           pgtype.FlatArray[string] `ksql:"headers" json:"headers" doc:"The client HTTP headers"`
+	Body              []byte                   `ksql:"body" json:"body" doc:"The request body"`
+	HoneypotIP        string                   `ksql:"honeypot_ip" json:"honeypot_ip" doc:"The honeypot IP that received the request"`
+	SourceIP          string                   `ksql:"source_ip" json:"source_ip" doc:"The HTTP client source IP"`
+	SourcePort        int64                    `ksql:"source_port" json:"source_port" doc:"The HTTP client source port"`
+	Raw               []byte                   `ksql:"raw" json:"raw" doc:"The raw HTTP request"`
+	RawResponse       string                   `ksql:"raw_response" json:"raw_response" doc:"The raw HTTP response (only used for scripted Content)"`
+	TimeReceived      time.Time                `ksql:"time_received,skipUpdates" json:"time_received" doc:"The date and time the honeypot received the request"`
+	CreatedAt         time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"The date and time of creation"`
+	UpdatedAt         time.Time                `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"The date and time of the last update"`
+	ContentID         int64                    `ksql:"content_id" json:"content_id" doc:"The Content ID that was served"`
+	SessionID         int64                    `ksql:"session_id" json:"session_id" doc:"The session ID of the request"`
+	AppID             int64                    `ksql:"app_id" json:"app_id" doc:"The App ID of the rule that matched this request"`
+	ContentDynamic    bool                     `ksql:"content_dynamic" json:"content_dynamic" doc:"A bool indicating if the Content is dynamic (script based)"`
+	RuleID            int64                    `ksql:"rule_id" json:"rule_id" doc:"The ID of the rule that matched this request"`
+	RuleUuid          string                   `ksql:"rule_uuid" json:"rule_uuid" doc:"The UUID of the rule that matched this request"`
+	Starred           bool                     `ksql:"starred" json:"starred" doc:"A bool if the request is starred"`
+	BaseHash          string                   `ksql:"base_hash" json:"base_hash" doc:"A base hash to find roughly similar requests"`
+	CmpHash           string                   `ksql:"cmp_hash" json:"cmp_hash" doc:"A hash to compare request across hosts"`
+	Tags              []TagPerRequestFull      `json:"tags"`
+	P0fResult         P0fResult                `json:"p0f_result"`
+	TriageHasPayload  bool                     `ksql:"triage_has_payload" json:"has_payload" doc:"Whether the request has a payload"`
+	TriagePayload     string                   `ksql:"triage_payload" json:"payload" doc:"The payload of the request"`
+	TriagePayloadType string                   `ksql:"triage_payload_type" json:"payload_type" doc:"The payload type of the request"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }

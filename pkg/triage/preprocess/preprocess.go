@@ -24,6 +24,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/shell"
+	"lophiid/pkg/util/constants"
 	"strings"
 	"time"
 )
@@ -49,12 +50,22 @@ type PreProcess struct {
 
 type PreProcessResult struct {
 	HasPayload  bool   `json:"has_payload" jsonschema_description:"This is a boolean field. Use the value 'true' if the request has a payload, such as to execute a command or inject code or open a file. Otherwise use the value 'false'"`
-	PayloadType string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\" and \"UNKNOWN\" (if you don't know)"`
+	PayloadType string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", "CODE_EXECUTION" and \"UNKNOWN\" (if you don't know)"`
 	Payload     string `json:"payload" jsonschema_description:"The payload if there is one. Empty otherwise"`
 }
 
 var ProcessPrompt = `
-Analyze the provided HTTP request and tell me in the JSON response whether the request has a payload in the has_payload field using a boolean (true or false) . Then tell me what kind of payload it is (payload_type) and you can choose between the strings "SHELL_COMMAND", "FILE_ACCESS" or "UNKNOWN". If you chose "SHELL_COMMAND" then provide the shell commands in the 'payload' field. If you chose "FILE_ACCESS" then provide the filename in the 'payload' field. If you chose "UNKNOWN" then provide whatever the payload is in the 'payload' field.
+Analyze the provided HTTP request and tell me in the JSON response whether the request has a payload in the has_payload field using a boolean (true or false) . Then tell me what kind of payload it is (payload_type) and you can choose between the strings:
+
+"SHELL_COMMAND" for anything that looks like shell/cli commands
+"FILE_ACCESS" for attempts to access a file (e.g. /etc/passwd)
+"CODE_EXECUTION" for attempts to execute code (like with <?php tags)
+"UNKNOWN" for when the payload type doesn't fall into the above categories.
+
+If you chose "SHELL_COMMAND" then provide the shell commands in the 'payload' field.
+If you chose "FILE_ACCESS" then provide the filename (full path) in the 'payload' field.
+If you chose "CODE_EXECUTION" then provide the code snippet that was attempted to be executed in the 'payload' field.
+If you chose "UNKNOWN" then provide whatever the payload is in the 'payload' field.
 
 The request is:
 
@@ -116,7 +127,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 	}
 
 	switch res.PayloadType {
-	case "SHELL_COMMAND":
+	case constants.TriagePayloadTypeShellCommand:
 		slog.Debug("Running shell command", slog.String("command", res.Payload))
 		shellStartTime := time.Now()
 		ctx, err := p.shellClient.RunCommand(req, res.Payload)
@@ -127,7 +138,10 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 
 		return res, ctx.Output, nil
 
-	case "FILE_ACCESS":
+	case constants.TriagePayloadTypeFileAccess:
+		return res, "", nil
+
+	case constants.TriagePayloadTypeCodeExec:
 		return res, "", nil
 	}
 

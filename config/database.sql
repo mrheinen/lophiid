@@ -28,7 +28,7 @@ CREATE TABLE content (
 
 CREATE TYPE METADATA_TYPE AS ENUM ('PAYLOAD_PING', 'PAYLOAD_LINK', 'PAYLOAD_TCP_LINK', 'PAYLOAD_NETCAT', 'SCRIPT_RESPONSE_BODY', 'DECODED_STRING_BASE64', 'DECODED_STRING_UNICODE');
 CREATE TYPE DOWNLOAD_STATUS AS ENUM ('UNKNOWN', 'SCHEDULED', 'DONE');
-CREATE TYPE PAYLOAD_TYPE AS ENUM ('UNKNOWN', 'SHELL_COMMAND', 'FILE_ACCESS');
+CREATE TYPE PAYLOAD_TYPE AS ENUM ('UNKNOWN', 'SHELL_COMMAND', 'FILE_ACCESS', 'CODE_EXECUTION');
 CREATE TYPE REQUEST_PURPOSE AS ENUM ('UNKNOWN', 'RECON', 'CRAWL', 'ATTACK');
 CREATE TYPE RESPONDER_TYPE AS ENUM ('NONE', 'AUTO', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION');
 CREATE TYPE RESPONDER_DECODER_TYPE AS ENUM ('NONE', 'URI', 'HTML');
@@ -53,7 +53,7 @@ CREATE TABLE request (
   headers         VARCHAR(4096) ARRAY,
   source_ip       VARCHAR(512),
   source_port     INT,
-  raw             TEXT,
+  raw             BYTEA NOT NULL DEFAULT ''::bytea,
   raw_response    TEXT,
   time_received   TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   created_at      TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
@@ -68,10 +68,10 @@ CREATE TABLE request (
   session_id      INT NOT NULL default 0,
   app_id          INT NOT NULL default 0,
   rule_id         INT NOT NULL DEFAULT 0,
-  rule_uuid       VARCHAR(36) default ''
-  payload         TEXT,
-  payload_type    PAYLOAD_TYPE default 'UNKNOWN',
-  has_payload     BOOL default FALSE,
+  rule_uuid       VARCHAR(36) default '',
+  triage_payload         TEXT,
+  triage_payload_type    PAYLOAD_TYPE default 'UNKNOWN',
+  triage_has_payload     BOOL default FALSE,
 );
 
 CREATE TABLE request_description (

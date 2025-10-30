@@ -933,7 +933,7 @@ func TestProcessQueue(t *testing.T) {
 				ID:   42,
 				Uri:  "/aaaaa",
 				Body: []byte("body body"),
-				Raw:  "nothing",
+				Raw:  []byte("nothing"),
 			},
 		},
 		{
@@ -946,7 +946,7 @@ func TestProcessQueue(t *testing.T) {
 				ID:   42,
 				Uri:  "/aaaaa",
 				Body: []byte("body body"),
-				Raw:  "nothing",
+				Raw:  []byte("nothing"),
 			},
 		},
 		{
@@ -959,7 +959,7 @@ func TestProcessQueue(t *testing.T) {
 				ID:   42,
 				Uri:  "/aaaaa",
 				Body: []byte("body body"),
-				Raw:  "nothing",
+				Raw:  []byte("nothing"),
 			},
 		},
 		{
@@ -972,7 +972,7 @@ func TestProcessQueue(t *testing.T) {
 				ID:         232,
 				Uri:        "/aaaaa",
 				Body:       []byte("body body ping -c 4 1.1.1.1 foo"),
-				Raw:        "nothing",
+				Raw:        []byte("nothing"),
 				HoneypotIP: "4.4.4.4",
 			},
 			expectedPingCommand: &backend_service.CommandPingAddress{
@@ -1461,7 +1461,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				ResponderDecoder: constants.ResponderDecoderTypeNone,
 			},
 			request: models.Request{
-				Raw: "aa 898989",
+				Raw: []byte("aa 898989"),
 			},
 			content: models.Content{
 				Data: []byte("not relevant"),
@@ -1481,7 +1481,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				ResponderDecoder: "DOESNOTEXIST",
 			},
 			request: models.Request{
-				Raw: "aa 898989",
+				Raw: []byte("aa 898989"),
 			},
 			content: models.Content{
 				Data: []byte("this should be returned"),
@@ -1501,7 +1501,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				ResponderDecoder: constants.ResponderDecoderTypeUri,
 			},
 			request: models.Request{
-				Raw: "foo=%2e%2e%2e%41%41",
+				Raw: []byte("foo=%2e%2e%2e%41%41"),
 			},
 			content: models.Content{
 				Data: []byte("not relevant"),
@@ -1521,7 +1521,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				ResponderDecoder: constants.ResponderDecoderTypeHtml,
 			},
 			request: models.Request{
-				Raw: "foo=&gt;&lt;",
+				Raw: []byte("foo=&gt;&lt;"),
 			},
 			content: models.Content{
 				Data: []byte("not relevant"),
@@ -1645,7 +1645,7 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 		responderResponse  string
 		responderRegex     string
 		responderDecoder   string
-		requestRaw         string
+		requestRaw         []byte
 		contentData        []byte
 		expectedBody       string
 	}{
@@ -1696,7 +1696,7 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 			responderResponse: "command response",
 			responderRegex:    "cmd=([^&]+)",
 			responderDecoder:  constants.ResponderDecoderTypeNone,
-			requestRaw:        "GET /test?cmd=whoami HTTP/1.0\r\nHost: 1.1.1.1\r\n\r\n",
+			requestRaw:        []byte("GET /test?cmd=whoami HTTP/1.0\r\nHost: 1.1.1.1\r\n\r\n"),
 			contentData:       []byte("default content"),
 			expectedBody:      "command response",
 		},
@@ -1705,7 +1705,7 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 			responderType:     constants.ResponderTypeCommandInjection,
 			responderResponse: "should not see this",
 			responderRegex:    ".*",
-			requestRaw:        "GET /test HTTP/1.0\r\n\r\n",
+			requestRaw:        []byte("GET /test HTTP/1.0\r\n\r\n"),
 			contentData:       []byte("fallback content"),
 			expectedBody:      "fallback content",
 		},
