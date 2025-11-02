@@ -1637,17 +1637,17 @@ func TestHandlePingStatus(t *testing.T) {
 func TestHandleProbeResponderLogic(t *testing.T) {
 	// Test the responder logic block from lines 1043-1061
 	for _, test := range []struct {
-		description        string
-		responderType      string
-		preprocessResult   *preprocess.PreProcessResult
-		preprocessBody     string
-		preprocessError    error
-		responderResponse  string
-		responderRegex     string
-		responderDecoder   string
-		requestRaw         []byte
-		contentData        []byte
-		expectedBody       string
+		description       string
+		responderType     string
+		preprocessResult  *preprocess.PreProcessResult
+		preprocessBody    string
+		preprocessError   error
+		responderResponse string
+		responderRegex    string
+		responderDecoder  string
+		requestRaw        []byte
+		contentData       []byte
+		expectedBody      string
 	}{
 		{
 			description:   "No responder - uses content data",
@@ -1720,15 +1720,15 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 				},
 				ContentRulesToReturn: []models.ContentRule{
 					{
-						ID:             1,
-						AppID:          1,
-						Method:         "GET",
-						Port:           80,
-						Uri:            "/test",
-						UriMatching:    "exact",
-						ContentID:      42,
-						Responder:      test.responderType,
-						ResponderRegex: test.responderRegex,
+						ID:               1,
+						AppID:            1,
+						Method:           "GET",
+						Port:             80,
+						Uri:              "/test",
+						UriMatching:      "exact",
+						ContentID:        42,
+						Responder:        test.responderType,
+						ResponderRegex:   test.responderRegex,
 						ResponderDecoder: test.responderDecoder,
 					},
 				},
@@ -1920,7 +1920,7 @@ func TestGetPreProcessResponse(t *testing.T) {
 
 			// Populate cache if needed
 			if test.cmpHashInCache {
-				b.payloadCache.Store("test_hash", "cached_payload")
+				b.payloadCache.Store("test_hash", struct{}{})
 			}
 
 			// Call the method

@@ -103,7 +103,7 @@ type BackendServer struct {
 	preprocessor        preprocess.PreProcessInterface
 	hCache              *util.StringMapCache[models.Honeypot]
 	HpDefaultContentID  int
-	payloadCache        *util.StringMapCache[string]
+	payloadCache        *util.StringMapCache[struct{}]
 }
 
 // NewBackendServer creates a new instance of the backend server.
@@ -130,7 +130,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	// The payload cache stores the compare hash of the request as key and is used
 	// to check if future requests for with that hash should also be triaged by
 	// AI to check if there is a payload.
-	plCache := util.NewStringMapCache[string]("payload_cache", time.Minute*45)
+	plCache := util.NewStringMapCache[struct{}]("payload_cache", time.Minute*45)
 	plCache.Start()
 
 	return &BackendServer{
@@ -903,7 +903,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	} else {
 		slog.Debug("found payload!", slog.String("url", sReq.Uri))
 		// Update the cache in order to also preprocess future similar requests.
-		s.payloadCache.Store(sReq.CmpHash, preRes.Payload)
+		s.payloadCache.Store(sReq.CmpHash, struct{}{})
 		sReq.TriageHasPayload = true
 		sReq.TriagePayload = preRes.Payload
 		sReq.TriagePayloadType = preRes.PayloadType
