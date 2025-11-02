@@ -510,6 +510,7 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	if ok && len(pcmds) > 0 {
 		ret := &backend_service.StatusResponse{}
 		for idx := range pcmds {
+			slog.Debug("sending ping command", slog.String("address", pcmds[idx].GetAddress()))
 			ret.Command = append(ret.Command, &backend_service.Command{
 				Command: &backend_service.Command_PingCmd{
 					PingCmd: &pcmds[idx],
