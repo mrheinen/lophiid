@@ -869,15 +869,13 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	var err error
 	var payloadResponse string
 
-	// Check the cache is the cmp_hash is in there. Remember that this hash is
-	// broad and should match all requests that are similar to the original one.
-	// This check here is therefore not limited to only the requests coming from
-	// the original IP. Instead we want to preprocess all similar requests in the
-	// future for the duration of the entry in the cache.
-	_, plErr := s.payloadCache.Get(sReq.CmpHash)
-
 	if filter {
-		if plErr == nil {
+		// Check the cache is the cmp_hash is in there. Remember that this hash is
+		// broad and should match all requests that are similar to the original one.
+		// This check here is therefore not limited to only the requests coming from
+		// the original IP. Instead we want to preprocess all similar requests in the
+		// future for the duration of the entry in the cache.
+		if _, err = s.payloadCache.Get(sReq.CmpHash); err == nil {
 			slog.Debug("found payload cmp_hash in cache!", slog.String("url", sReq.Uri))
 			preRes, payloadResponse, err = s.preprocessor.Process(sReq)
 		} else {
