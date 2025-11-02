@@ -1800,3 +1800,149 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPreProcessResponse(t *testing.T) {
+	for _, test := range []struct {
+		description       string
+		filter            bool
+		cmpHashInCache    bool
+		preprocessResult  *preprocess.PreProcessResult
+		preprocessBody    string
+		preprocessError   error
+		expectedError     bool
+		expectedResponse  string
+		expectedPayload   string
+		expectedHasMarked bool
+	}{
+		{
+			description: "success with filter=false",
+			filter:      false,
+			preprocessResult: &preprocess.PreProcessResult{
+				HasPayload:  true,
+				PayloadType: "SHELL_COMMAND",
+				Payload:     "ls -la",
+			},
+			preprocessBody:    "response body",
+			expectedError:     false,
+			expectedResponse:  "response body",
+			expectedPayload:   "ls -la",
+			expectedHasMarked: true,
+		},
+		{
+			description:    "success with filter=true and cache hit",
+			filter:         true,
+			cmpHashInCache: true,
+			preprocessResult: &preprocess.PreProcessResult{
+				HasPayload:  true,
+				PayloadType: "FILE_ACCESS",
+				Payload:     "/etc/passwd",
+			},
+			preprocessBody:    "file access response",
+			expectedError:     false,
+			expectedResponse:  "file access response",
+			expectedPayload:   "/etc/passwd",
+			expectedHasMarked: true,
+		},
+		{
+			description:    "success with filter=true and cache miss",
+			filter:         true,
+			cmpHashInCache: false,
+			preprocessResult: &preprocess.PreProcessResult{
+				HasPayload:  true,
+				PayloadType: "CODE_EXECUTION",
+				Payload:     "<?php echo 'test'; ?>",
+			},
+			preprocessBody:    "code exec response",
+			expectedError:     false,
+			expectedResponse:  "code exec response",
+			expectedPayload:   "<?php echo 'test'; ?>",
+			expectedHasMarked: true,
+		},
+		{
+			description:     "error: not processed",
+			filter:          false,
+			preprocessError: preprocess.ErrNotProcessed,
+			expectedError:   true,
+		},
+		{
+			description:     "error: generic error",
+			filter:          false,
+			preprocessError: errors.New("processing failed"),
+			expectedError:   true,
+		},
+		{
+			description: "error: no payload found",
+			filter:      false,
+			preprocessResult: &preprocess.PreProcessResult{
+				HasPayload:  false,
+				PayloadType: "",
+				Payload:     "",
+			},
+			expectedError: true,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fdbc := &database.FakeDatabaseClient{}
+			fakeJrunner := javascript.FakeJavascriptRunner{}
+			alertManager := alerting.NewAlertManager(42)
+			whoisManager := whois.FakeRdapManager{}
+			queryRunner := FakeQueryRunner{ErrorToReturn: nil}
+			reg := prometheus.NewRegistry()
+			bMetrics := CreateBackendMetrics(reg)
+			fakeLimiter := ratelimit.FakeRateLimiter{
+				BoolToReturn:  true,
+				ErrorToReturn: nil,
+			}
+			sMetrics := session.CreateSessionMetrics(reg)
+			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+			fIpMgr := analysis.FakeIpEventManager{}
+			fakeRes := &responder.FakeResponder{}
+			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
+
+			fakePreprocessor := preprocess.FakePreProcessor{
+				ResultToReturn: func() preprocess.PreProcessResult {
+					if test.preprocessResult != nil {
+						return *test.preprocessResult
+					}
+					return preprocess.PreProcessResult{}
+				}(),
+				BodyToTReturn: test.preprocessBody,
+				ErrorToReturn: test.preprocessError,
+			}
+
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+
+			// Setup test request
+			req := &models.Request{
+				CmpHash: "test_hash",
+				Uri:     "/test",
+			}
+
+			// Populate cache if needed
+			if test.cmpHashInCache {
+				b.payloadCache.Store("test_hash", "cached_payload")
+			}
+
+			// Call the method
+			response, err := b.GetPreProcessResponse(req, test.filter)
+
+			// Verify error expectation
+			if (err != nil) != test.expectedError {
+				t.Errorf("expected error=%t, got error=%v", test.expectedError, err)
+			}
+
+			// If we don't expect an error, verify the response
+			if !test.expectedError {
+				if response != test.expectedResponse {
+					t.Errorf("expected response=%s, got=%s", test.expectedResponse, response)
+				}
+				if req.TriagePayload != test.expectedPayload {
+					t.Errorf("expected payload=%s, got=%s", test.expectedPayload, req.TriagePayload)
+				}
+				if req.TriageHasPayload != test.expectedHasMarked {
+					t.Errorf("expected TriageHasPayload=%t, got=%t", test.expectedHasMarked, req.TriageHasPayload)
+				}
+			}
+		})
+	}
+}

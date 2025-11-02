@@ -103,6 +103,7 @@ type BackendServer struct {
 	preprocessor        preprocess.PreProcessInterface
 	hCache              *util.StringMapCache[models.Honeypot]
 	HpDefaultContentID  int
+	payloadCache        *util.StringMapCache[string]
 }
 
 // NewBackendServer creates a new instance of the backend server.
@@ -125,6 +126,12 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	// queries to the database.
 	hCache := util.NewStringMapCache[models.Honeypot]("honeypot_cache", time.Minute*15)
 	hCache.Start()
+
+	// The payload cache stores the compare hash of the request as key and is used
+	// to check if future requests for with that hash should also be triaged by
+	// AI to check if there is a payload.
+	plCache := util.NewStringMapCache[string]("payload_cache", time.Minute*45)
+	plCache.Start()
 
 	return &BackendServer{
 		dbClient:            c,
@@ -155,6 +162,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		hCache:              hCache,
 		HpDefaultContentID:  config.Backend.Advanced.HoneypotDefaultContentID,
 		preprocessor:        preprocessor,
+		payloadCache:        plCache,
 	}
 }
 
@@ -857,13 +865,27 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 
 func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool) (string, error) {
 
-	slog.Debug("auto responder!")
-
 	var preRes *preprocess.PreProcessResult
 	var err error
 	var payloadResponse string
+
+	// Check the cache is the cmp_hash is in there. Remember that this hash is
+	// broad and should match all requests that are similar to the original one.
+	// This check here is therefore not limited to only the requests coming from
+	// the original IP. Instead we want to preprocess all similar requests in the
+	// future for the duration of the entry in the cache.
+	_, plErr := s.payloadCache.Get(sReq.CmpHash)
+
 	if filter {
-		preRes, payloadResponse, err = s.preprocessor.MaybeProcess(sReq)
+		if plErr == nil {
+			slog.Debug("found payload cmp_hash in cache!", slog.String("url", sReq.Uri))
+			preRes, payloadResponse, err = s.preprocessor.Process(sReq)
+		} else {
+			// Use MaybeProcess which means that the preprocessing will only happen if
+			// the request matches certain characters (e.g. if has /bin/sh in the
+			// body).
+			preRes, payloadResponse, err = s.preprocessor.MaybeProcess(sReq)
+		}
 	} else {
 		preRes, payloadResponse, err = s.preprocessor.Process(sReq)
 	}
@@ -880,6 +902,8 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		return "", fmt.Errorf("no payload found")
 	} else {
 		slog.Debug("found payload!", slog.String("url", sReq.Uri))
+		// Update the cache in order to also preprocess future similar requests.
+		s.payloadCache.Store(sReq.CmpHash, preRes.Payload)
 		sReq.TriageHasPayload = true
 		sReq.TriagePayload = preRes.Payload
 		sReq.TriagePayloadType = preRes.PayloadType

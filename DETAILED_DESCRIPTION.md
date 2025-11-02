@@ -78,13 +78,15 @@ on the honeypot systems. All this information is available in the UI.
 
 ## AI / LLM integration
 
-Lophiid can use a local running LLM for three purposes:
+Lophiid can use an LLM for three purposes:
 
 - Generating realistic responses
 - Triaging the incoming requests
 - Creating summaries
 
 Small descriptions are below but for more information about the AI integration, look at [./AI.md](./AI.md).
+Any remote or local LLM provider who has an OpenAI compatible API can be used.
+
 ### Generating realistic responses
 
 Lophiid can use a local LLM to help it with creating the best response

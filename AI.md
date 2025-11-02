@@ -108,6 +108,11 @@ To use this render you let the regex grab the commands that the attacker is
 trying to execute on the honeypot. The responder will try to determine what the
 output of those commands would be and returns that.
 
+#### AUTO responder
+
+This responder will use AI to extract the payload itself from the request. You
+therefore do not need to specify a regex.
+
 #### Some implementation details
 
 The AI interaction caused by a rule is cached and the timeout of this cache is
