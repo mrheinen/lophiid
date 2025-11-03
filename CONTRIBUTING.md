@@ -9,7 +9,7 @@ We welcome and appreciate contributions! Here's how you can contribute:
 ## Contribution Guidelines:
 
 * For larger changes: ensure GitHub issue exists in which you propose your change and the approach for implementing it. We can discuss the approach in the bug to ensure the implementation will be compatible with the overall design and other ongoing changes.
-* PRs should not be larged than 300-400 changed lines. If you have more then
+* PRs should not be larger than 300-400 changed lines. If you have more then
   split the PR.
 * PRs should be for one functional change
 * Always add or update tests

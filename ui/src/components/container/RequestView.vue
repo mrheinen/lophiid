@@ -58,9 +58,9 @@
             <TabPanels>
               <TabPanel value="0">
                 <RawHttpCard
-                  v-if="request.raw"
+                  v-if="request.parsed.raw"
                   label="HTTP request"
-                  :data="request.raw"
+                  :data="request.parsed.raw"
                 ></RawHttpCard>
               </TabPanel>
               <TabPanel value="1" v-if="request.raw_response">
@@ -100,6 +100,14 @@
                     <p>{{ meta.data }}</p>
                   </div>
                 </div>
+
+                <div v-if="localPingMetadata.length">
+                  <label class="label">Extracted ping requests</label>
+                  <div v-for="meta in localPingMetadata" :key="meta.id">
+                    <p>{{ meta.data }}</p>
+                  </div>
+                </div>
+
                 <div v-if="localNetcatMetadata.length">
                   <label class="label">Extracted netcat links</label>
                   <div v-for="meta in localNetcatMetadata" :key="meta.id">
@@ -222,6 +230,7 @@ export default {
       localBase64Metadata: [],
       localLinkMetadata: [],
       localTCPMetadata: [],
+      localPingMetadata: [],
       localNetcatMetadata: [],
       localUnicodeMetadata: [],
     };
@@ -309,6 +318,7 @@ export default {
       this.localBase64Metadata = [];
       this.localLinkMetadata = [];
       this.localTCPMetadata = [];
+      this.localPingMetadata = [];
       this.localNetcatMetadata = [];
       this.localUnicodeMetadata = [];
       for (var i = 0; i < this.metadata.length; i++) {
@@ -318,6 +328,8 @@ export default {
           this.localLinkMetadata.push(this.metadata[i]);
         } else if (this.metadata[i].type == "PAYLOAD_TCP_LINK") {
           this.localTCPMetadata.push(this.metadata[i]);
+        } else if (this.metadata[i].type == "PAYLOAD_PING") {
+          this.localPingMetadata.push(this.metadata[i]);
         } else if (this.metadata[i].type == "PAYLOAD_NETCAT") {
           this.localNetcatMetadata.push(this.metadata[i]);
         } else if (this.metadata[i].type == "DECODED_STRING_UNICODE") {
