@@ -277,6 +277,21 @@ func TestParseQuery(t *testing.T) {
 			},
 		},
 		{
+			description:   "mix of ~ and :",
+			queryString:   "field~\" test:\\\"\"",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    " test:\"",
+						matching: LIKE,
+					},
+				},
+			},
+		},
+		{
 			description:   "malformed query - just negation",
 			queryString:   "!",
 			errorContains: "unexpected end of query",
