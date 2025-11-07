@@ -261,6 +261,22 @@ func TestParseQuery(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			description:   "escaped \\ within quotes",
+			queryString:   "field:\"test\\\\\"",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "test\\",
+						matching: IS,
+					},
+				},
+			},
+		},
 		{
 			description:   "escaped value within quotes with colon",
 			queryString:   "field:\"test:\\\"\"",
