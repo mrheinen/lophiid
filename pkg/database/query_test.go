@@ -261,7 +261,13 @@ func TestParseQuery(t *testing.T) {
 				},
 			},
 		},
-
+		{
+			description:   "escape of closing quote is error",
+			queryString:   "field:\"\\",
+			errorContains: "end quote is missing",
+			validFields:   []string{"field"},
+			result:        [][]SearchRequestsParam{},
+		},
 		{
 			description:   "escaped \\ within quotes",
 			queryString:   "field:\"test\\\\\"",
