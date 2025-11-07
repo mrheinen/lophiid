@@ -247,6 +247,36 @@ func TestParseQuery(t *testing.T) {
 			},
 		},
 		{
+			description:   "escaped value within quotes",
+			queryString:   "field:\"test\\\"\"",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "test\"",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "escaped value within quotes with colon",
+			queryString:   "field:\"test:\\\"\"",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "test:\"",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
 			description:   "malformed query - just negation",
 			queryString:   "!",
 			errorContains: "unexpected end of query",
