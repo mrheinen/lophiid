@@ -247,6 +247,73 @@ func TestParseQuery(t *testing.T) {
 			},
 		},
 		{
+			description:   "escaped value within quotes",
+			queryString:   "field:\"test\\\"\"",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "test\"",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "escape of closing quote is error",
+			queryString:   "field:\"\\",
+			errorContains: "end quote is missing",
+			validFields:   []string{"field"},
+			result:        [][]SearchRequestsParam{},
+		},
+		{
+			description:   "escaped \\ within quotes",
+			queryString:   "field:\"test\\\\\"",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "test\\",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "escaped value within quotes with colon",
+			queryString:   "field:\"test:\\\"\"",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "test:\"",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "mix of ~ and :",
+			queryString:   "field~\" test:\\\"\"",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    " test:\"",
+						matching: LIKE,
+					},
+				},
+			},
+		},
+		{
 			description:   "malformed query - just negation",
 			queryString:   "!",
 			errorContains: "unexpected end of query",

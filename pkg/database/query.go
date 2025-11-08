@@ -18,6 +18,7 @@ package database
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -118,15 +119,7 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 			keyword.WriteByte(q[i])
 		}
 
-		hasField := false
-		for _, field := range validFields {
-			if field == keyword.String() {
-				hasField = true
-				break
-			}
-		}
-
-		if !hasField {
+		if !slices.Contains(validFields, keyword.String()) {
 			return ret, fmt.Errorf("unknown search keyword: %s", keyword.String())
 		}
 
@@ -153,8 +146,14 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 		var value strings.Builder
 		if inQuote {
 			for ; q[i] != finishChar; i++ {
-				if i+1 >= len(q) {
+				// Last character
+				if i == (len(q) - 1) {
 					return ret, fmt.Errorf("end quote is missing")
+				}
+
+				// Skip escaped characters
+				if q[i] == '\\' && (i+2) <= (len(q)-1) {
+					i++
 				}
 				value.WriteByte(q[i])
 			}
