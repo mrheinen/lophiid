@@ -57,3 +57,15 @@ Note that you do not need to escape the single - (but you can if you want to).
 
 Use the macro %%COOKIE_EXP_DATE%% as a placeholder for the cookie expiration.
 This will be rendered into a date that is based on the current time + 24 hours.
+
+## Generating request related strings
+
+The following macros are available for request related strings:
+
+%%REQUEST_HONEYPOT_IP%% for the IP of the honeypot that received the request.
+%%REQUEST_PORT%% for the port the request was received on.
+%%REQUEST_SOURCE_IP%% for the source IP of the request (attacker IP).
+%%REQUEST_SOURCE_PORT%% for the source port of the request.
+
+This is for example useful when you want reply with a response that contains a
+link to the honeypot that originally received the request.
