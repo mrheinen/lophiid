@@ -127,3 +127,12 @@ const (
 	TriagePayloadTypeFileAccess   = "FILE_ACCESS"
 	TriagePayloadTypeCodeExec     = "CODE_EXECUTION"
 )
+
+// Template constants used by the templator.
+const (
+	TemplatorMacroExpiresDate = "%%COOKIE_EXP_DATE%%"
+	TemplatorMacroSourceIP    = "%%REQUEST_SOURCE_IP%%"
+	TemplatorMacroSourcePort  = "%%REQUEST_SOURCE_PORT%%"
+	TemplatorMacroHoneypotIP  = "%%REQUEST_HONEYPOT_IP%%"
+	TemplatorMacroPort        = "%%REQUEST_PORT%%"
+)
