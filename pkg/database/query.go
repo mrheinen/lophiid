@@ -138,7 +138,7 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 			finishChar = q[i]
 			inQuote = true
 			if i+1 >= len(q) {
-				return ret, fmt.Errorf("unexpected end of query")
+				return ret, fmt.Errorf("unexpected end of quoted query")
 			}
 			i++
 		}
