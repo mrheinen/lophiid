@@ -277,7 +277,7 @@ func (a *ApiServer) HandleDeleteContentRule(w http.ResponseWriter, req *http.Req
 
 func RenderTemplate(content models.Content) ([]byte, error) {
 	templr := templator.NewTemplator()
-	newData, err := templr.RenderTemplate(content.Data)
+	newData, err := templr.RenderTemplate(&models.Request{}, content.Data)
 	if err != nil {
 		return content.Data, fmt.Errorf("error rendering template: %s", err.Error())
 	}

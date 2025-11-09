@@ -1103,7 +1103,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	if templr == nil {
 		slog.Error("templator is not initialized")
 	} else {
-		newBody, err := templr.RenderTemplate(res.Body)
+		newBody, err := templr.RenderTemplate(sReq, res.Body)
 		if err != nil {
 			slog.Error("error rendering template", slog.String("error", err.Error()))
 		} else {
@@ -1129,7 +1129,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 
 		headerValue := headerParts[1]
-		newHdr, err := templr.RenderTemplate([]byte(headerParts[1]))
+		newHdr, err := templr.RenderTemplate(sReq, []byte(headerParts[1]))
 		if err != nil {
 			slog.Error("error rendering template for header", slog.String("error", err.Error()), slog.String("header", headerParts[1]))
 		} else {

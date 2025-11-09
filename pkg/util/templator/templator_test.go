@@ -18,6 +18,8 @@ package templator
 
 import (
 	"bytes"
+	"lophiid/pkg/database/models"
+	"strconv"
 	"testing"
 )
 
@@ -27,7 +29,9 @@ func TestRenderTemplateString(t *testing.T) {
 		t.Fatal("failed to get templator")
 	}
 
-	tmp, err := tmpr.RenderTemplate([]byte("%%STRING%%A%%5%%"))
+	fakeReq := &models.Request{}
+
+	tmp, err := tmpr.RenderTemplate(fakeReq, []byte("%%STRING%%A%%5%%"))
 	if err != nil {
 		t.Fatal("failed to render template")
 	}
@@ -36,7 +40,7 @@ func TestRenderTemplateString(t *testing.T) {
 		t.Errorf("expected \"AAAAA\", got \"%s\"", tmp)
 	}
 
-	tmp2, err := tmpr.RenderTemplate([]byte("%%STRING%%0-9AB%%10%%"))
+	tmp2, err := tmpr.RenderTemplate(fakeReq, []byte("%%STRING%%0-9AB%%10%%"))
 	if err != nil {
 		t.Fatal("failed to render template")
 	}
@@ -45,5 +49,57 @@ func TestRenderTemplateString(t *testing.T) {
 		if (c < '0' || c > '9') && c != 'B' && c != 'A' {
 			t.Errorf("expected only 0-9A-B, got %c", c)
 		}
+	}
+}
+
+func TestRenderTemplateRequestValues(t *testing.T) {
+	tmpr := NewTemplator()
+	if tmpr == nil {
+		t.Fatal("failed to get templator")
+	}
+
+	fakeReq := &models.Request{
+		SourceIP:   "1.1.1.1",
+		HoneypotIP: "2.2.2.2",
+		SourcePort: int64(18080),
+		Port:       int64(8080),
+	}
+
+	for _, test := range []struct {
+		description    string
+		macro          string
+		expectedResult string
+	}{
+		{
+			description:    "source ip",
+			macro:          "%%REQUEST_SOURCE_IP%%",
+			expectedResult: fakeReq.SourceIP,
+		},
+		{
+			description:    "honeypot ip",
+			macro:          "%%REQUEST_HONEYPOT_IP%%",
+			expectedResult: fakeReq.HoneypotIP,
+		},
+		{
+			description:    "source port",
+			macro:          "%%REQUEST_SOURCE_PORT%%",
+			expectedResult: strconv.FormatInt(fakeReq.SourcePort, 10),
+		},
+		{
+			description:    "port",
+			macro:          "%%REQUEST_PORT%%",
+			expectedResult: strconv.FormatInt(fakeReq.Port, 10),
+		},
+	} {
+
+		t.Run(test.description, func(t *testing.T) {
+			tmp, err := tmpr.RenderTemplate(fakeReq, []byte(test.macro))
+			if err != nil {
+				t.Fatal("failed to render template")
+			}
+			if !bytes.Equal(tmp, []byte(test.expectedResult)) {
+				t.Errorf("expected \"%s\", got \"%s\"", test.expectedResult, tmp)
+			}
+		})
 	}
 }

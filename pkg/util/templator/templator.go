@@ -20,7 +20,10 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/database/models"
+	"lophiid/pkg/util/constants"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -28,8 +31,6 @@ import (
 type Templator struct {
 	stringTagRegex *regexp.Regexp
 }
-
-const cookieExpiresDate = "%%COOKIE_EXP_DATE%%"
 
 var (
 	once          sync.Once
@@ -57,7 +58,7 @@ func NewTemplator() *Templator {
 
 // RenderTemplate renders a template by replacing the %% macros with their
 // relevant strings.
-func (t *Templator) RenderTemplate(template []byte) ([]byte, error) {
+func (t *Templator) RenderTemplate(req *models.Request, template []byte) ([]byte, error) {
 	// extract string tags
 	if bytes.Contains(template, []byte("%%STRING")) {
 		matches := t.stringTagRegex.FindAll(template, -1)
@@ -80,9 +81,18 @@ func (t *Templator) RenderTemplate(template []byte) ([]byte, error) {
 		}
 	}
 
-	if bytes.Contains(template, []byte(cookieExpiresDate)) {
-		expString := CookieExpiresDate(time.Hour * 24)
-		template = bytes.ReplaceAll(template, []byte(cookieExpiresDate), []byte(expString))
+	macroMap := map[string]string{
+		constants.TemplatorMacroExpiresDate: CookieExpiresDate(time.Hour * 24),
+		constants.TemplatorMacroHoneypotIP:  req.HoneypotIP,
+		constants.TemplatorMacroSourceIP:    req.SourceIP,
+		constants.TemplatorMacroSourcePort:  strconv.FormatInt(req.SourcePort, 10),
+		constants.TemplatorMacroPort:        strconv.FormatInt(req.Port, 10),
+	}
+
+	for k, v := range macroMap {
+		if bytes.Contains(template, []byte(k)) {
+			template = bytes.ReplaceAll(template, []byte(k), []byte(v))
+		}
 	}
 
 	return template, nil

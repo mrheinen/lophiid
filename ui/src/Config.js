@@ -45,7 +45,7 @@ export default {
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
   contentRuleRequestPurposes: ['UNKNOWN', 'RECON', 'CRAWL', 'ATTACK'],
   contentRuleHTTPMethods: ['ANY' , 'GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'],
-  ruleResponderTypes: ['NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION', 'HELPFUL_AI'],
+  ruleResponderTypes: ['NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION', 'AUTO', 'HELPFUL_AI'],
   ruleResponderDecoders: ['NONE', 'URI', 'HTML'],
 
   statusCodeValues: [
@@ -58,6 +58,7 @@ export default {
     { label: '401 - Unauthorized', value: '401' },
     { label: '403 - Access denied', value: '403' },
     { label: '404 - Not found', value: '404' },
+    { label: '405 - Method Not Allowed', value: '405' },
     { label: '500 - Server error', value: '500' }
   ],
 
