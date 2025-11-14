@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/util/constants"
 	"strings"
@@ -45,6 +46,7 @@ type PreProcessInterface interface {
 type PreProcess struct {
 	triageLLMManager llm.LLMManagerInterface
 	shellClient      shell.ShellClientInterface
+	codeEmu          code.CodeSnippetEmulatorInterface
 	metrics          *PreprocessMetrics
 }
 
@@ -85,7 +87,7 @@ func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, stri
 	return &f.ResultToReturn, f.BodyToTReturn, f.ErrorToReturn
 }
 
-func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, metrics *PreprocessMetrics) *PreProcess {
+func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, metrics *PreprocessMetrics) *PreProcess {
 	triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information")
 	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, metrics: metrics}
 }
@@ -142,7 +144,15 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 		return res, "", nil
 
 	case constants.TriagePayloadTypeCodeExec:
-		return res, "", nil
+		slog.Debug("Running code emulator", slog.String("code", res.Payload))
+		emuStartTime := time.Now()
+		cRes, err := p.codeEmu.Emulate(req, res.Payload)
+		if err != nil {
+			return nil, "", fmt.Errorf("running code emulator: %w", err)
+		}
+
+		p.metrics.codeEmuLLMResponseTime.Observe(time.Since(emuStartTime).Seconds())
+		return res, string(cRes.Stdout), nil
 	}
 
 	return res, "", nil

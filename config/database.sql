@@ -95,6 +95,20 @@ CREATE TABLE request_description (
   CONSTRAINT fk_example_request_id FOREIGN KEY(example_request_id) REFERENCES request(id)
 );
 
+CREATE TABLE llm_code_execution (
+  id                 SERIAL PRIMARY KEY,
+  created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  output             BYTEA NOT NULL DEFAULT ''::bytea,
+  language           VARCHAR(128),
+  headers            TEXT,
+  request_id         INT,
+  session_id         INT,
+  source_model       VARCHAR(256) default 'UNKNOWN',
+  CONSTRAINT fk_llm_sess_session_id FOREIGN KEY(session_id) REFERENCES public.session(id)
+);
+
+
 CREATE TABLE session_execution_context (
   id                 SERIAL PRIMARY KEY,
   created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
@@ -420,6 +434,8 @@ GRANT ALL PRIVILEGES ON request_description TO lo;
 GRANT ALL PRIVILEGES ON request_description_id_seq TO lo;
 GRANT ALL PRIVILEGES ON yara TO lo;
 GRANT ALL PRIVILEGES ON yara_id_seq TO lo;
+GRANT ALL PRIVILEGES ON llm_code_execution TO lo;
+GRANT ALL PRIVILEGES ON llm_code_execution_id_seq TO lo;
 
 
 CREATE INDEX session_ip ON session (

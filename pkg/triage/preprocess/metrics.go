@@ -26,6 +26,7 @@ type PreprocessMetrics struct {
 	totalFullPreprocessTime    prometheus.Histogram
 	payloadLLMResponseTime     prometheus.Histogram
 	shellLLMResponseTime       prometheus.Histogram
+	codeEmuLLMResponseTime     prometheus.Histogram
 	resultOfPayloadLLMRequests *prometheus.CounterVec
 }
 
@@ -43,14 +44,18 @@ func CreatePreprocessMetrics(reg prometheus.Registerer) *PreprocessMetrics {
 				Help:    "The response time of the shell LLM (success only)",
 				Buckets: metrics.SlowResponseTimebuckets},
 		),
-
+		codeEmuLLMResponseTime: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "lophiid_triage_preprocess_code_emu_llm_response_time",
+				Help:    "The response time of the code emu LLM (success only)",
+				Buckets: metrics.SlowResponseTimebuckets},
+		),
 		totalFullPreprocessTime: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "lophiid_triage_preprocess_payload_total_response_time",
 				Help:    "The response time of the preprocess function",
 				Buckets: metrics.SlowResponseTimebuckets},
 		),
-
 		resultOfPayloadLLMRequests: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "lophiid_triage_preprocess_payload_llm_requests_result_count",
@@ -60,6 +65,7 @@ func CreatePreprocessMetrics(reg prometheus.Registerer) *PreprocessMetrics {
 
 	reg.MustRegister(m.payloadLLMResponseTime)
 	reg.MustRegister(m.shellLLMResponseTime)
+	reg.MustRegister(m.codeEmuLLMResponseTime)
 	reg.MustRegister(m.totalFullPreprocessTime)
 	reg.MustRegister(m.resultOfPayloadLLMRequests)
 	return m
