@@ -38,6 +38,7 @@ type OpenAILLMClient struct {
 	maxContextSize int64
 	schema         *openai.ResponseFormatJSONSchemaJSONSchemaParam
 	providers      []string
+	debugEnabled   bool
 }
 
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
@@ -102,6 +103,11 @@ func NewOpenAILLMClient(cfg LLMConfig, promptTemplate string) *OpenAILLMClient {
 
 func (l *OpenAILLMClient) LoadedModel() string {
 	return l.Model
+}
+
+// EnableDebug enables or disables debug logging for OpenAI API calls
+func (l *OpenAILLMClient) EnableDebug(enabled bool) {
+	l.debugEnabled = enabled
 }
 
 func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) {
@@ -204,18 +210,20 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		}
 	}
 
-	var err error
-	var resp *openai.ChatCompletion
-	if len(l.providers) > 0 {
-		resp, err = l.client.Chat.Completions.New(ctx, param,
-			option.WithJSONSet("provider", map[string]any{
-				"require_parameters": true,
-				"order":              l.providers,
-				"allow_fallbacks":    true,
-			}))
-	} else {
-		resp, err = l.client.Chat.Completions.New(ctx, param)
+	var opts []option.RequestOption
+	if l.debugEnabled {
+		opts = append(opts, option.WithDebugLog(nil))
 	}
+
+	if len(l.providers) > 0 {
+		opts = append(opts, option.WithJSONSet("provider", map[string]any{
+			"require_parameters": true,
+			"order":              l.providers,
+			"allow_fallbacks":    true,
+		}))
+	}
+
+	resp, err := l.client.Chat.Completions.New(ctx, param, opts...)
 
 	if err != nil {
 		return "", fmt.Errorf("chat completion error: %v", err)
@@ -226,4 +234,183 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 	}
 
 	return resp.Choices[0].Message.Content, nil
+}
+
+// CompleteWithTools completes a sequence of LLM messages with tool support.
+func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
+	lastMessage := &msgs[len(msgs)-1]
+	if lastMessage.Role != constants.LLMClientMessageUser {
+		return "", fmt.Errorf("last message must be user")
+	}
+
+	param := openai.ChatCompletionNewParams{
+		Messages: []openai.ChatCompletionMessageParamUnion{},
+		Model:    l.Model,
+	}
+
+	if l.systemPrompt != "" && msgs[0].Role != constants.LLMClientMessageSystem {
+		param.Messages = append(param.Messages, openai.SystemMessage(l.systemPrompt))
+	}
+
+	for i := range msgs {
+		switch msgs[i].Role {
+		case constants.LLMClientMessageUser:
+			param.Messages = append(param.Messages, openai.UserMessage(msgs[i].Content))
+		case constants.LLMClientMessageAssistant:
+			param.Messages = append(param.Messages, openai.AssistantMessage(msgs[i].Content))
+		case constants.LLMClientMessageSystem:
+			for i := range param.Messages {
+				if *param.Messages[i].GetRole() == constants.LLMClientMessageSystem {
+					return "", fmt.Errorf("duplicate system message")
+				}
+			}
+			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
+		default:
+			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
+		}
+	}
+
+	// Add tools to the parameters
+	if len(tools) > 0 {
+		openaiTools := []openai.ChatCompletionToolUnionParam{}
+		for _, tool := range tools {
+			// Convert tool.Parameters to openai.FunctionParameters
+			var funcParams openai.FunctionParameters
+			if tool.Parameters != nil {
+				if params, ok := tool.Parameters.(map[string]interface{}); ok {
+					funcParams = openai.FunctionParameters(params)
+				}
+			}
+
+			openaiTools = append(openaiTools, openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+				Name:        tool.Name,
+				Description: openai.String(tool.Description),
+				Parameters:  funcParams,
+			}))
+		}
+		param.Tools = openaiTools
+	}
+
+	// Note: Response schema is NOT set initially when tools are present
+	// because OpenAI doesn't support using both simultaneously.
+	// The schema will be applied after all tool calls are complete.
+
+	var resp *openai.ChatCompletion
+	var err error
+
+	// Loop to handle tool calls
+	maxIterations := 10
+	for iteration := range maxIterations {
+		slog.Debug("tool calling iteration", slog.Int("iteration", iteration), slog.Int("message_count", len(param.Messages)))
+
+		var opts []option.RequestOption
+		if l.debugEnabled {
+			opts = append(opts, option.WithDebugLog(nil))
+		}
+
+		if len(l.providers) > 0 {
+			opts = append(opts, option.WithJSONSet("provider", map[string]any{
+				"require_parameters": true,
+				"order":              l.providers,
+				"allow_fallbacks":    true,
+			}))
+		}
+
+		resp, err = l.client.Chat.Completions.New(ctx, param, opts...)
+
+		if err != nil {
+			return "", fmt.Errorf("chat completion error: %v", err)
+		}
+
+		if len(resp.Choices) == 0 {
+			return "", fmt.Errorf("chat returned nothing")
+		}
+
+		choice := resp.Choices[0]
+		slog.Debug("received response",
+			slog.Int("iteration", iteration),
+			slog.Int("tool_calls_count", len(choice.Message.ToolCalls)),
+			slog.String("content", choice.Message.Content))
+
+		// Check if the model wants to call a tool
+		if len(choice.Message.ToolCalls) > 0 {
+			slog.Debug("processing tool calls", slog.Int("count", len(choice.Message.ToolCalls)))
+			// Add the assistant's message with tool calls to the conversation
+			param.Messages = append(param.Messages, choice.Message.ToParam())
+
+			// Execute each tool call
+			for _, toolCall := range choice.Message.ToolCalls {
+				toolName := toolCall.Function.Name
+				toolArgs := toolCall.Function.Arguments
+
+				slog.Debug("executing tool",
+					slog.String("tool", toolName),
+					slog.String("tool_call_id", toolCall.ID),
+					slog.String("args", toolArgs))
+
+				// Find the corresponding tool function
+				var toolFunc func(args string) (string, error)
+				for _, t := range tools {
+					if t.Name == toolName {
+						toolFunc = t.Function
+						break
+					}
+				}
+
+				if toolFunc == nil {
+					slog.Error("tool not found", slog.String("tool", toolName))
+					continue
+				}
+
+				result, err := toolFunc(toolArgs)
+				if err != nil {
+					slog.Error("error executing tool", slog.String("tool", toolName), slog.String("error", err.Error()))
+					result = "could not run tool successfully for you"
+				}
+
+				slog.Debug("tool result",
+					slog.String("tool", toolName),
+					slog.String("tool_call_id", toolCall.ID),
+					slog.String("result", result))
+
+				// Add the tool result to the conversation
+				param.Messages = append(param.Messages, openai.ToolMessage(result, toolCall.ID))
+			}
+			// Remove tools from params for the next iteration
+			// and add response schema if configured
+			param.Tools = nil
+			if l.schema != nil {
+				param.ResponseFormat = openai.ChatCompletionNewParamsResponseFormatUnion{
+					OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
+						JSONSchema: *l.schema,
+					},
+				}
+			}
+			// Continue the loop to get the final response
+			continue
+		}
+
+		// No tool calls in this iteration
+		// If tools were available but not used, and schema is set, we need to
+		// apply the schema and make another call to get formatted output
+		if param.Tools != nil && l.schema != nil {
+			slog.Debug("no tools called but schema required, applying schema for next iteration")
+			// Add the assistant's message to conversation
+			param.Messages = append(param.Messages, choice.Message.ToParam())
+			// Remove tools and add schema
+			param.Tools = nil
+			param.ResponseFormat = openai.ChatCompletionNewParamsResponseFormatUnion{
+				OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
+					JSONSchema: *l.schema,
+				},
+			}
+			continue
+		}
+
+		// No more tool calls, return the final response
+		slog.Debug("no tool calls, returning final response", slog.String("content", choice.Message.Content))
+		return choice.Message.Content, nil
+	}
+
+	return "", fmt.Errorf("exceeded maximum tool call iterations")
 }
