@@ -92,16 +92,30 @@ func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.S
 	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, metrics: metrics}
 }
 
+func RequestHas(req *models.Request, has string) bool {
+	return strings.Contains(req.BodyString(), has) || strings.Contains(req.Uri, has)
+}
+
 // MaybeProcess returns true if the request was handled.
 func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, string, error) {
 
 	// TODO: this is experimental and needs to be replaced with something better.
-	if !strings.Contains(req.BodyString(), "echo") &&
-		!strings.Contains(req.BodyString(), "expr") &&
-		!strings.Contains(req.BodyString(), "cat") &&
-		!strings.Contains(req.BodyString(), "passwd") &&
-		!strings.Contains(req.BodyString(), "hosts") &&
-		!strings.Contains(req.BodyString(), "/bin/") {
+	if !RequestHas(req, "echo") &&
+		!RequestHas(req, "expr") &&
+		!RequestHas(req, "cat") &&
+		!RequestHas(req, "passwd") &&
+		!RequestHas(req, "hosts") &&
+		!RequestHas(req, "/bin/") &&
+		!RequestHas(req, "java.") &&
+		!RequestHas(req, "<%") &&
+		!RequestHas(req, "<?php") &&
+		!RequestHas(req, "Runtime") &&
+		!RequestHas(req, "org.apache.") &&
+		!RequestHas(req, "request.") &&
+		!RequestHas(req, "out.") &&
+		!RequestHas(req, "ruby") &&
+		!RequestHas(req, "eval") &&
+		!RequestHas(req, "phpinfo") {
 		return nil, "", ErrNotProcessed
 	}
 
@@ -130,6 +144,10 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 
 	switch res.PayloadType {
 	case constants.TriagePayloadTypeShellCommand:
+		// if nil then the shell client is disabled
+		if p.shellClient == nil {
+			return nil, "", nil
+		}
 		slog.Debug("Running shell command", slog.String("command", res.Payload))
 		shellStartTime := time.Now()
 		ctx, err := p.shellClient.RunCommand(req, res.Payload)
@@ -144,6 +162,11 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 		return res, "", nil
 
 	case constants.TriagePayloadTypeCodeExec:
+		// If nil then the code emulator is disabled
+		if p.codeEmu == nil {
+			return nil, "", nil
+		}
+
 		slog.Debug("Running code emulator", slog.String("code", res.Payload))
 		emuStartTime := time.Now()
 		cRes, err := p.codeEmu.Emulate(req, res.Payload)
