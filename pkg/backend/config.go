@@ -129,15 +129,19 @@ type Config struct {
 			Enable     bool                 `fig:"enable" default:"1" `
 			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
 		} `fig:"shell_emulation"`
+		CodeEmulation struct {
+			Enable     bool                 `fig:"enable" default:"1" `
+			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+		} `fig:"code_emulation"`
+
 		Triage struct {
-			Describer            struct {
-				Enable bool `fig:"enable" default:"1"`
-				IgnoreRegexList []string `fig:"ignore_regex_list"`
+			Describer struct {
+				Enable               bool          `fig:"enable" default:"1"`
+				IgnoreRegexList      []string      `fig:"ignore_regex_list"`
 				LogFile              string        `fig:"log_file" default:"triage.log" `
 				LogLevel             string        `fig:"log_level" default:"debug" `
 				MetricsListenAddress string        `fig:"metrics_listen_address" default:"localhost:8999" `
 				CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"8h"`
-
 			} `fig:"describer"`
 			PreProcess struct {
 				LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
