@@ -18,6 +18,9 @@
 package code
 
 import (
+	"crypto/md5"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -49,6 +52,15 @@ type CodeSnippetEmulatorInterface interface {
 	Emulate(req *models.Request, code string) (*models.LLMCodeExecution, error)
 }
 
+type FakeCodeSnippetEmulator struct {
+	ErrorToReturn  error
+	ResultToReturn *models.LLMCodeExecution
+}
+
+func (f *FakeCodeSnippetEmulator) Emulate(req *models.Request, code string) (*models.LLMCodeExecution, error) {
+	return f.ResultToReturn, f.ErrorToReturn
+}
+
 type CodeSnippetEmulator struct {
 	dbClient   database.DatabaseClient
 	llmManager llm.LLMManagerInterface
@@ -62,8 +74,73 @@ func NewCodeSnippetEmulator(llmManager llm.LLMManagerInterface, dbClient databas
 	}
 }
 
+// StringToMD5 calculates the MD5 checksum of a string
+func (c *CodeSnippetEmulator) StringToMD5(input string) (string, error) {
+	hash := md5.Sum([]byte(input))
+	return hex.EncodeToString(hash[:]), nil
+}
+
+// StringFromBase64 decodes a base64 encoded string
+func (c *CodeSnippetEmulator) StringFromBase64(input string) (string, error) {
+	decoded, err := base64.StdEncoding.DecodeString(input)
+	if err != nil {
+		return "", fmt.Errorf("error decoding base64: %w", err)
+	}
+	return string(decoded), nil
+}
+
 func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models.LLMCodeExecution, error) {
-	res, err := c.llmManager.CompleteWithMessages(
+	// Define tools for code emulation
+	tools := []llm.LLMTool{
+		{
+			Name:        "string_to_md5",
+			Description: "Calculate the MD5 checksum of a string. Use this whenever you need to compute an MD5 hash of a string value.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"input": map[string]interface{}{
+						"type":        "string",
+						"description": "The string to calculate the MD5 checksum for",
+					},
+				},
+				"required": []string{"input"},
+			},
+			Function: func(args string) (string, error) {
+				var params struct {
+					Input string `json:"input"`
+				}
+				if err := json.Unmarshal([]byte(args), &params); err != nil {
+					return "", fmt.Errorf("error parsing arguments: %w", err)
+				}
+				return c.StringToMD5(params.Input)
+			},
+		},
+		{
+			Name:        "string_from_base64",
+			Description: "Decode a base64 encoded string. Use this whenever you need to decode a base64 string value.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"input": map[string]interface{}{
+						"type":        "string",
+						"description": "The base64 encoded string to decode",
+					},
+				},
+				"required": []string{"input"},
+			},
+			Function: func(args string) (string, error) {
+				var params struct {
+					Input string `json:"input"`
+				}
+				if err := json.Unmarshal([]byte(args), &params); err != nil {
+					return "", fmt.Errorf("error parsing arguments: %w", err)
+				}
+				return c.StringFromBase64(params.Input)
+			},
+		},
+	}
+
+	res, err := c.llmManager.CompleteWithTools(
 		[]llm.LLMMessage{
 			{
 				Role:    constants.LLMClientMessageSystem,
@@ -74,6 +151,7 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 				Content: code,
 			},
 		},
+		tools,
 	)
 
 	if err != nil {
