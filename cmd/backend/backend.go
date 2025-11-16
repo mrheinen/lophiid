@@ -39,6 +39,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/triage/preprocess"
@@ -246,9 +247,12 @@ func main() {
 	slog.Info("Cleaned up stale sessions", slog.Int("count", totalSessionsCleaned))
 
 	payloadLLMManager := llm.GetLLMManager(cfg.AI.Triage.PreProcess.LLMManager, llmMetrics)
+	codeLLMManager := llm.GetLLMManager(cfg.AI.CodeEmulation.LLMManager, llmMetrics)
+
+	codeEmu := code.NewCodeSnippetEmulator(codeLLMManager, dbc)
 
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
-	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, preprocMetric)
+	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, preprocMetric)
 
 	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, preproc, cfg)
 	if err = bs.Start(); err != nil {
