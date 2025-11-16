@@ -40,6 +40,11 @@ func (m *MockLLMManager) CompleteWithMessages(msgs []LLMMessage) (string, error)
 	return m.CompletionToReturn, m.ErrorToReturn
 }
 
+func (m *MockLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (string, error) {
+	m.LastReceivedMessages = msgs
+	return m.CompletionToReturn, m.ErrorToReturn
+}
+
 func (m *MockLLMManager) SetResponseSchemaFromObject(obj any, title string) {
 	// No-op for testing
 }
