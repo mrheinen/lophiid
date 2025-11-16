@@ -99,7 +99,7 @@ CREATE TABLE llm_code_execution (
   id                 SERIAL PRIMARY KEY,
   created_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
   updated_at         TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
-  output             BYTEA NOT NULL DEFAULT ''::bytea,
+  stdout             BYTEA NOT NULL DEFAULT ''::bytea,
   language           VARCHAR(128),
   headers            TEXT,
   request_id         INT,
