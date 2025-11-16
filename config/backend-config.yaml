@@ -5,7 +5,7 @@ backend:
   log_file: backend.log
   downloader:
     # Location where downloaded malware will be stored.
-    malware_download_dir: /home/niels/malware/
+    malware_download_dir: /home/user/malware/
     # The malware downloaded HTTP client timeout. This should be relatively high
     # because sometimes malware is served from very slow IoT devices.
     http_timeout: 10m
@@ -41,15 +41,17 @@ backend:
     # requests reset the timeout.
     session_tracking_timeout: 15m
     # When new honeypots are registered, this content ID will be set as th
-    # default content id.
-    # honeypot_default_content_id: 77
+    # default content id. Absolutely make sure that this content ID exists.
+    # You will want to create a content first and then put the ID here.
+    honeypot_default_content_id: 77
+
   ratelimiter:
     rate_window: 1h
     bucket_duration: 1m
-    max_ip_requests_per_window: 500
-    max_ip_requests_per_bucket: 50
-    max_uri_requests_per_window: 1500
-    max_uri_requests_per_bucket: 200
+    max_ip_requests_per_window: 1000
+    max_ip_requests_per_bucket: 200
+    max_uri_requests_per_window: 5000
+    max_uri_requests_per_bucket: 300
 
 alerting:
   # The alerting interval.  Alerts are aggregated and send every <interval>.
@@ -112,6 +114,7 @@ ai:
   # Whether to enable the responder.
   enable_responder: 1
 
+  # Configure shell emulation.
   shell_emulation:
     enable: 1
     llm_manager:
@@ -124,6 +127,20 @@ ai:
         api_location: https://openrouter.ai/api/v1
         model: qwen/qwen3-235b-a22b-2507
         api_key: xxxxxx
+
+
+  code_emulation:
+    enable: 1
+    llm_manager:
+      # How long prompts and responses should be cached.
+      cache_expiration_time: 1h
+      completion_timeout: 60s
+      concurrent_requests: 5
+
+      primary_llm:
+        api_location: https://openrouter.ai/api/v1
+        model: qwen/qwen3-coder-30b-a3b-instruct
+        api_key: xxxxxxx
 
   # Configure the LLM manager. You can configure it with a primary LLM and a
   # secondary LLM. If a secondary LLM is configured then the LLM Manager will
@@ -146,21 +163,21 @@ ai:
       # Maximum string length of the prompt input.
       max_input_characters: 4096
 
-    triage:
-      describer:
-        enable: 1
-        log_file: describer.log
-        log_level: debug
-        metrics_listen_address: x.x.x.x:8999
-        cache_expiration_time: 8h
+  triage:
+    describer:
+      enable: 1
+      log_file: describer.log
+      log_level: debug
+      metrics_listen_address: x.x.x.x:8999
+      cache_expiration_time: 8h
 
-    preprocess:
-      llm_manager:
-        # How long prompts and responses should be cached.
-        cache_expiration_time: 100h
-        completion_timeout: 60s
-        concurrent_requests: 5
-        primary_llm:
-          api_location: https://api.openai.com/v1
-          model: gpt-5-nano
-          api_key: xxxxx
+  preprocess:
+    llm_manager:
+      # How long prompts and responses should be cached.
+      cache_expiration_time: 100h
+      completion_timeout: 60s
+      concurrent_requests: 5
+      primary_llm:
+        api_location: https://api.openai.com/v1
+        model: gpt-5-nano
+        api_key: xxxxx
