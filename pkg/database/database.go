@@ -50,6 +50,7 @@ var SessionTable = ksql.NewTable("session")
 var RequestDescriptionTable = ksql.NewTable("request_description")
 var SessionContextTable = ksql.NewTable("session_execution_context")
 var YaraTable = ksql.NewTable("yara")
+var CodeEmuTable = ksql.NewTable("llm_code_execution")
 
 type DatabaseClient interface {
 	Close()
@@ -183,6 +184,7 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["RequestDescription"] = &RequestDescriptionTable
 	sqlTable["Yara"] = &YaraTable
 	sqlTable["SessionExecutionContext"] = &SessionContextTable
+	sqlTable["LLMCodeExecution"] = &CodeEmuTable
 
 	table, ok := sqlTable[name]
 	if !ok {
