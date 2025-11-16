@@ -217,11 +217,6 @@ func main() {
 	if cfg.AI.ShellEmulation.Enable {
 		llmManager := llm.GetLLMManager(cfg.AI.ShellEmulation.LLMManager, llmMetrics)
 		shellClient = shell.NewShellClient(llmManager, dbc)
-	} else {
-		shellClient = &shell.FakeShellClient{
-			ErrorToReturn:   errors.New("shell is disabled"),
-			ContextToReturn: &models.SessionExecutionContext{},
-		}
 	}
 
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, shellClient, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
@@ -247,9 +242,13 @@ func main() {
 	slog.Info("Cleaned up stale sessions", slog.Int("count", totalSessionsCleaned))
 
 	payloadLLMManager := llm.GetLLMManager(cfg.AI.Triage.PreProcess.LLMManager, llmMetrics)
-	codeLLMManager := llm.GetLLMManager(cfg.AI.CodeEmulation.LLMManager, llmMetrics)
 
-	codeEmu := code.NewCodeSnippetEmulator(codeLLMManager, dbc)
+	var codeEmu code.CodeSnippetEmulatorInterface
+
+	if cfg.AI.CodeEmulation.Enable {
+		codeLLMManager := llm.GetLLMManager(cfg.AI.CodeEmulation.LLMManager, llmMetrics)
+		codeEmu = code.NewCodeSnippetEmulator(codeLLMManager, dbc)
+	}
 
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
 	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, preprocMetric)
