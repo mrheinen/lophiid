@@ -89,7 +89,7 @@ func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, stri
 
 func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, metrics *PreprocessMetrics) *PreProcess {
 	triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information")
-	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, metrics: metrics}
+	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, metrics: metrics}
 }
 
 func RequestHas(req *models.Request, has string) bool {
