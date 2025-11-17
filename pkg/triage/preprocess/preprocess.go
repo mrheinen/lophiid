@@ -52,17 +52,19 @@ type PreProcess struct {
 
 type PreProcessResult struct {
 	HasPayload  bool   `json:"has_payload" jsonschema_description:"This is a boolean field. Use the value 'true' if the request has a payload, such as to execute a command or inject code or open a file. Otherwise use the value 'false'"`
-	PayloadType string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", "CODE_EXECUTION" and \"UNKNOWN\" (if you don't know)"`
+	PayloadType string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\" and \"UNKNOWN\" (if you don't know)"`
 	Payload     string `json:"payload" jsonschema_description:"The payload if there is one. Empty otherwise"`
 }
 
 var ProcessPrompt = `
 Analyze the provided HTTP request and tell me in the JSON response whether the request has a payload in the has_payload field using a boolean (true or false) . Then tell me what kind of payload it is (payload_type) and you can choose between the strings:
 
+"CODE_EXECUTION" for attempts to execute code (like with <?php tags)
 "SHELL_COMMAND" for anything that looks like shell/cli commands
 "FILE_ACCESS" for attempts to access a file (e.g. /etc/passwd)
-"CODE_EXECUTION" for attempts to execute code (like with <?php tags)
 "UNKNOWN" for when the payload type doesn't fall into the above categories.
+
+Important: If you see code execution that also has shell/cli commands then always choose CODE_EXECUTION.
 
 If you chose "SHELL_COMMAND" then provide the shell commands in the 'payload' field.
 If you chose "FILE_ACCESS" then provide the filename (full path) in the 'payload' field.
