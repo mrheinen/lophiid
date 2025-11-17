@@ -27,6 +27,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 )
@@ -62,15 +63,18 @@ func (f *FakeCodeSnippetEmulator) Emulate(req *models.Request, code string) (*mo
 }
 
 type CodeSnippetEmulator struct {
-	dbClient   database.DatabaseClient
-	llmManager llm.LLMManagerInterface
+	dbClient    database.DatabaseClient
+	llmManager  llm.LLMManagerInterface
+	shellClient shell.ShellClientInterface
 }
 
-func NewCodeSnippetEmulator(llmManager llm.LLMManagerInterface, dbClient database.DatabaseClient) *CodeSnippetEmulator {
+// NewCodeSnippetEmulator creates a new CodeSnippetEmulator.
+func NewCodeSnippetEmulator(llmManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, dbClient database.DatabaseClient) *CodeSnippetEmulator {
 	llmManager.SetResponseSchemaFromObject(CodeOutput{}, "The code output")
 	return &CodeSnippetEmulator{
-		llmManager: llmManager,
-		dbClient:   dbClient,
+		llmManager:  llmManager,
+		dbClient:    dbClient,
+		shellClient: shellClient,
 	}
 }
 
@@ -87,6 +91,14 @@ func (c *CodeSnippetEmulator) StringFromBase64(input string) (string, error) {
 		return "", fmt.Errorf("error decoding base64: %w", err)
 	}
 	return string(decoded), nil
+}
+
+func (c *CodeSnippetEmulator) ShellCommandToOutput(req *models.Request, input string) (string, error) {
+	result, err := c.shellClient.RunCommand(req, input)
+	if err != nil {
+		return "", fmt.Errorf("error running command: %w", err)
+	}
+	return result.Output, nil
 }
 
 func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models.LLMCodeExecution, error) {
@@ -138,6 +150,33 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 				return c.StringFromBase64(params.Input)
 			},
 		},
+	}
+
+	// If the shell client is defined, add it to the tool list.
+	if c.shellClient != nil {
+		tools = append(tools, llm.LLMTool{
+			Name:        "shell_command_to_output",
+			Description: "Turns shell commands into its output. Use this whenever you need the output of a shell command (or multiple commands at once)",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"input": map[string]any{
+						"type":        "string",
+						"description": "The shell command. Can be multiple commands at once.",
+					},
+				},
+				"required": []string{"input"},
+			},
+			Function: func(args string) (string, error) {
+				var params struct {
+					Input string `json:"input"`
+				}
+				if err := json.Unmarshal([]byte(args), &params); err != nil {
+					return "", fmt.Errorf("error parsing arguments: %w", err)
+				}
+				return c.ShellCommandToOutput(req, params.Input)
+			},
+		})
 	}
 
 	res, err := c.llmManager.CompleteWithTools(

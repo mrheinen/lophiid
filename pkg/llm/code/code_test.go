@@ -28,6 +28,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/llm/shell"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,10 +43,11 @@ func testRequest() *models.Request {
 }
 
 // testEmulator creates a CodeSnippetEmulator with mocks
-func testEmulator(llmManager *llm.MockLLMManager, dbClient *database.FakeDatabaseClient) *CodeSnippetEmulator {
+func testEmulator(llmManager *llm.MockLLMManager, dbClient *database.FakeDatabaseClient, shellClient shell.ShellClientInterface) *CodeSnippetEmulator {
 	return &CodeSnippetEmulator{
-		llmManager: llmManager,
-		dbClient:   dbClient,
+		llmManager:  llmManager,
+		dbClient:    dbClient,
+		shellClient: shellClient,
 	}
 }
 
@@ -57,8 +59,9 @@ func TestEmulate_Success(t *testing.T) {
 	mockDB := &database.FakeDatabaseClient{
 		ErrorToReturn: nil,
 	}
+	mockShell := &shell.FakeShellClient{}
 
-	emulator := testEmulator(mockLLM, mockDB)
+	emulator := testEmulator(mockLLM, mockDB, mockShell)
 	req := testRequest()
 
 	result, err := emulator.Emulate(req, "print('Hello World')")
@@ -79,8 +82,9 @@ func TestEmulate_LLMManagerError(t *testing.T) {
 		ErrorToReturn:      fmt.Errorf("llm api failure"),
 	}
 	mockDB := &database.FakeDatabaseClient{}
+	mockShell := &shell.FakeShellClient{}
 
-	emulator := testEmulator(mockLLM, mockDB)
+	emulator := testEmulator(mockLLM, mockDB, mockShell)
 	req := testRequest()
 
 	result, err := emulator.Emulate(req, "some code")
@@ -97,8 +101,9 @@ func TestEmulate_JSONUnmarshalError(t *testing.T) {
 		ErrorToReturn:      nil,
 	}
 	mockDB := &database.FakeDatabaseClient{}
+	mockShell := &shell.FakeShellClient{}
 
-	emulator := testEmulator(mockLLM, mockDB)
+	emulator := testEmulator(mockLLM, mockDB, mockShell)
 	req := testRequest()
 
 	result, err := emulator.Emulate(req, "some code")
@@ -115,8 +120,9 @@ func TestEmulate_DatabaseError(t *testing.T) {
 	mockDB := &database.FakeDatabaseClient{
 		ErrorToReturn: fmt.Errorf("database connection failed"),
 	}
+	mockShell := &shell.FakeShellClient{}
 
-	emulator := testEmulator(mockLLM, mockDB)
+	emulator := testEmulator(mockLLM, mockDB, mockShell)
 	req := testRequest()
 
 	result, err := emulator.Emulate(req, "echo 'test'")
@@ -135,8 +141,9 @@ func TestEmulate_JSONWithMarkdownWrapper(t *testing.T) {
 		ErrorToReturn:      nil,
 	}
 	mockDB := &database.FakeDatabaseClient{}
+	mockShell := &shell.FakeShellClient{}
 
-	emulator := testEmulator(mockLLM, mockDB)
+	emulator := testEmulator(mockLLM, mockDB, mockShell)
 	req := testRequest()
 
 	result, err := emulator.Emulate(req, "printf(\"test\");")
@@ -153,8 +160,9 @@ func TestEmulate_EmptyStdout(t *testing.T) {
 		ErrorToReturn:      nil,
 	}
 	mockDB := &database.FakeDatabaseClient{}
+	mockShell := &shell.FakeShellClient{}
 
-	emulator := testEmulator(mockLLM, mockDB)
+	emulator := testEmulator(mockLLM, mockDB, mockShell)
 	req := testRequest()
 
 	result, err := emulator.Emulate(req, "// no output")
@@ -191,4 +199,22 @@ func TestStringFromBase64_InvalidInput(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error decoding base64")
 	assert.Empty(t, result)
+}
+
+func TestEmulate_WithNilShellClient(t *testing.T) {
+	mockLLM := &llm.MockLLMManager{
+		CompletionToReturn: `{"stdout": "output", "headers": "", "language": "python"}`,
+		ErrorToReturn:      nil,
+	}
+	mockDB := &database.FakeDatabaseClient{}
+
+	// Create emulator with nil shellClient
+	emulator := testEmulator(mockLLM, mockDB, nil)
+	req := testRequest()
+
+	result, err := emulator.Emulate(req, "print('test')")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "output", string(result.Stdout))
 }
