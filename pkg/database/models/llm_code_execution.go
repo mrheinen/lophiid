@@ -27,6 +27,7 @@ type LLMCodeExecution struct {
 	SessionID   int64     `ksql:"session_id" json:"session_id" doc:"Database ID for the session"`
 	RequestID   int64     `ksql:"request_id" json:"request_id" doc:"Database ID for the request"`
 	Stdout      []byte    `ksql:"stdout" json:"stdout" doc:"Output of the AI"`
+	Snippet     []byte    `ksql:"snippet" json:"snippet" doc:"The code snippet"`
 	Language    string    `ksql:"language" json:"language" doc:"The language of the code"`
 	SourceModel string    `ksql:"source_model" json:"source_model" doc:"The model responsible for the execution"`
 	Headers     string    `ksql:"headers" json:"headers" doc:"The headers of the code"`

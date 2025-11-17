@@ -168,6 +168,7 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 		Stdout:      []byte(result.Stdout),
 		Headers:     result.Headers,
 		Language:    result.Language,
+		Snippet:     []byte(code),
 		RequestID:   req.ID,
 		SessionID:   req.SessionID,
 		SourceModel: c.llmManager.LoadedModel(),
