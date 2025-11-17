@@ -26,13 +26,22 @@ import (
 type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
 	CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error)
+	CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error)
 	SetResponseSchemaFromObject(obj any, title string)
 	LoadedModel() string
+	EnableDebug(enabled bool)
 }
 
 type LLMMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+}
+
+type LLMTool struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Parameters  any    `json:"parameters"`
+	Function    func(args string) (string, error)
 }
 
 type MockLLMClient struct {
@@ -50,11 +59,19 @@ func (m *MockLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMess
 	return m.CompletionToReturn, m.ErrorToReturn
 }
 
+func (m *MockLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
+	return m.CompletionToReturn, m.ErrorToReturn
+}
+
 func (m *MockLLMClient) LoadedModel() string {
 	return "gpt-3.5-turbo"
 }
 
 func (m *MockLLMClient) SetResponseSchemaFromObject(obj any, title string) {
+}
+
+func (m *MockLLMClient) EnableDebug(enabled bool) {
+	// No-op for mock
 }
 
 // GenerateSchema generates a schema for the OpenAI API. Useful for structured

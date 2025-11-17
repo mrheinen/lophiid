@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -39,6 +38,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/triage/preprocess"
@@ -216,11 +216,6 @@ func main() {
 	if cfg.AI.ShellEmulation.Enable {
 		llmManager := llm.GetLLMManager(cfg.AI.ShellEmulation.LLMManager, llmMetrics)
 		shellClient = shell.NewShellClient(llmManager, dbc)
-	} else {
-		shellClient = &shell.FakeShellClient{
-			ErrorToReturn:   errors.New("shell is disabled"),
-			ContextToReturn: &models.SessionExecutionContext{},
-		}
 	}
 
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, shellClient, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
@@ -247,8 +242,15 @@ func main() {
 
 	payloadLLMManager := llm.GetLLMManager(cfg.AI.Triage.PreProcess.LLMManager, llmMetrics)
 
+	var codeEmu code.CodeSnippetEmulatorInterface
+
+	if cfg.AI.CodeEmulation.Enable {
+		codeLLMManager := llm.GetLLMManager(cfg.AI.CodeEmulation.LLMManager, llmMetrics)
+		codeEmu = code.NewCodeSnippetEmulator(codeLLMManager, shellClient, dbc)
+	}
+
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
-	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, preprocMetric)
+	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, preprocMetric)
 
 	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, preproc, cfg)
 	if err = bs.Start(); err != nil {

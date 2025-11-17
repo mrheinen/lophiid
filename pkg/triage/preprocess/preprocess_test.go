@@ -21,6 +21,7 @@ import (
 	"errors"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/shell"
 	"testing"
 
@@ -47,8 +48,9 @@ func TestProcess_NoPayload(t *testing.T) {
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -105,8 +107,9 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 	mockLLM.ErrorToReturn = nil
 	fakeShell.ContextToReturn = executionContext
 	fakeShell.ErrorToReturn = nil
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -147,6 +150,7 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 	// Setup
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 	metrics := createTestMetrics()
 
 	preprocessResult := PreProcessResult{
@@ -159,7 +163,7 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -200,6 +204,7 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	// Setup
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 	metrics := createTestMetrics()
 
 	preprocessResult := PreProcessResult{
@@ -212,7 +217,7 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -249,13 +254,14 @@ func TestProcess_LLMError(t *testing.T) {
 	// Setup
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 	metrics := createTestMetrics()
 
 	expectedError := errors.New("LLM service unavailable")
 	mockLLM.CompletionToReturn = ""
 	mockLLM.ErrorToReturn = expectedError
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -284,12 +290,13 @@ func TestProcess_InvalidJSON(t *testing.T) {
 	// Setup
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 	metrics := createTestMetrics()
 
 	mockLLM.CompletionToReturn = "this is not valid JSON"
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -319,6 +326,7 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	metrics := createTestMetrics()
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 
 	preprocessResult := PreProcessResult{
 		HasPayload:  true,
@@ -334,7 +342,7 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	fakeShell.ContextToReturn = nil
 	fakeShell.ErrorToReturn = expectedError
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -363,6 +371,7 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	// Setup
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 	metrics := createTestMetrics()
 
 	preprocessResult := PreProcessResult{
@@ -388,12 +397,12 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	fakeShell.ContextToReturn = executionContext
 	fakeShell.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
 		SessionID: 100,
-		Raw:      []byte("GET /?cmd=ls+-la+%26%26+pwd HTTP/1.1\r\nHost: example.com\r\n\r\n"),
+		Raw:       []byte("GET /?cmd=ls+-la+%26%26+pwd HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
 
 	// Execute

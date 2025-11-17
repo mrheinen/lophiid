@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/util/constants"
 	"strings"
@@ -45,22 +46,25 @@ type PreProcessInterface interface {
 type PreProcess struct {
 	triageLLMManager llm.LLMManagerInterface
 	shellClient      shell.ShellClientInterface
+	codeEmu          code.CodeSnippetEmulatorInterface
 	metrics          *PreprocessMetrics
 }
 
 type PreProcessResult struct {
 	HasPayload  bool   `json:"has_payload" jsonschema_description:"This is a boolean field. Use the value 'true' if the request has a payload, such as to execute a command or inject code or open a file. Otherwise use the value 'false'"`
-	PayloadType string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", "CODE_EXECUTION" and \"UNKNOWN\" (if you don't know)"`
+	PayloadType string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\" and \"UNKNOWN\" (if you don't know)"`
 	Payload     string `json:"payload" jsonschema_description:"The payload if there is one. Empty otherwise"`
 }
 
 var ProcessPrompt = `
 Analyze the provided HTTP request and tell me in the JSON response whether the request has a payload in the has_payload field using a boolean (true or false) . Then tell me what kind of payload it is (payload_type) and you can choose between the strings:
 
+"CODE_EXECUTION" for attempts to execute code (like with <?php tags)
 "SHELL_COMMAND" for anything that looks like shell/cli commands
 "FILE_ACCESS" for attempts to access a file (e.g. /etc/passwd)
-"CODE_EXECUTION" for attempts to execute code (like with <?php tags)
 "UNKNOWN" for when the payload type doesn't fall into the above categories.
+
+Important: If you see code execution that also has shell/cli commands then always choose CODE_EXECUTION.
 
 If you chose "SHELL_COMMAND" then provide the shell commands in the 'payload' field.
 If you chose "FILE_ACCESS" then provide the filename (full path) in the 'payload' field.
@@ -85,21 +89,35 @@ func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, stri
 	return &f.ResultToReturn, f.BodyToTReturn, f.ErrorToReturn
 }
 
-func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, metrics *PreprocessMetrics) *PreProcess {
+func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, metrics *PreprocessMetrics) *PreProcess {
 	triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information")
-	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, metrics: metrics}
+	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, metrics: metrics}
+}
+
+func RequestHas(req *models.Request, has string) bool {
+	return strings.Contains(req.BodyString(), has) || strings.Contains(req.Uri, has)
 }
 
 // MaybeProcess returns true if the request was handled.
 func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, string, error) {
 
 	// TODO: this is experimental and needs to be replaced with something better.
-	if !strings.Contains(req.BodyString(), "echo") &&
-		!strings.Contains(req.BodyString(), "expr") &&
-		!strings.Contains(req.BodyString(), "cat") &&
-		!strings.Contains(req.BodyString(), "passwd") &&
-		!strings.Contains(req.BodyString(), "hosts") &&
-		!strings.Contains(req.BodyString(), "/bin/") {
+	if !RequestHas(req, "echo") &&
+		!RequestHas(req, "expr") &&
+		!RequestHas(req, "cat") &&
+		!RequestHas(req, "passwd") &&
+		!RequestHas(req, "hosts") &&
+		!RequestHas(req, "/bin/") &&
+		!RequestHas(req, "java.") &&
+		!RequestHas(req, "<%") &&
+		!RequestHas(req, "<?php") &&
+		!RequestHas(req, "Runtime") &&
+		!RequestHas(req, "org.apache.") &&
+		!RequestHas(req, "request.") &&
+		!RequestHas(req, "out.") &&
+		!RequestHas(req, "ruby") &&
+		!RequestHas(req, "eval") &&
+		!RequestHas(req, "phpinfo") {
 		return nil, "", ErrNotProcessed
 	}
 
@@ -128,6 +146,10 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 
 	switch res.PayloadType {
 	case constants.TriagePayloadTypeShellCommand:
+		// if nil then the shell client is disabled
+		if p.shellClient == nil {
+			return nil, "", nil
+		}
 		slog.Debug("Running shell command", slog.String("command", res.Payload))
 		shellStartTime := time.Now()
 		ctx, err := p.shellClient.RunCommand(req, res.Payload)
@@ -142,7 +164,20 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 		return res, "", nil
 
 	case constants.TriagePayloadTypeCodeExec:
-		return res, "", nil
+		// If nil then the code emulator is disabled
+		if p.codeEmu == nil {
+			return nil, "", nil
+		}
+
+		slog.Debug("Running code emulator", slog.String("code", res.Payload))
+		emuStartTime := time.Now()
+		cRes, err := p.codeEmu.Emulate(req, res.Payload)
+		if err != nil {
+			return nil, "", fmt.Errorf("running code emulator: %w", err)
+		}
+
+		p.metrics.codeEmuLLMResponseTime.Observe(time.Since(emuStartTime).Seconds())
+		return res, string(cRes.Stdout), nil
 	}
 
 	return res, "", nil
