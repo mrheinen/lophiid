@@ -94,6 +94,10 @@ func (c *CodeSnippetEmulator) StringFromBase64(input string) (string, error) {
 }
 
 func (c *CodeSnippetEmulator) ShellCommandToOutput(req *models.Request, input string) (string, error) {
+	if c.shellClient == nil {
+		return "", fmt.Errorf("shell client not configured")
+	}
+
 	result, err := c.shellClient.RunCommand(req, input)
 	if err != nil {
 		return "", fmt.Errorf("error running command: %w", err)
@@ -101,8 +105,19 @@ func (c *CodeSnippetEmulator) ShellCommandToOutput(req *models.Request, input st
 	return result.Output, nil
 }
 
-func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models.LLMCodeExecution, error) {
-	// Define tools for code emulation
+func parseToolInput(args string) (string, error) {
+	var params struct {
+		Input string `json:"input"`
+	}
+
+	if err := json.Unmarshal([]byte(args), &params); err != nil {
+		return "", fmt.Errorf("error parsing arguments: %w", err)
+	}
+
+	return params.Input, nil
+}
+
+func (c *CodeSnippetEmulator) buildTools(req *models.Request) []llm.LLMTool {
 	tools := []llm.LLMTool{
 		{
 			Name:        "string_to_md5",
@@ -118,13 +133,11 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 				"required": []string{"input"},
 			},
 			Function: func(args string) (string, error) {
-				var params struct {
-					Input string `json:"input"`
+				input, err := parseToolInput(args)
+				if err != nil {
+					return "", err
 				}
-				if err := json.Unmarshal([]byte(args), &params); err != nil {
-					return "", fmt.Errorf("error parsing arguments: %w", err)
-				}
-				return c.StringToMD5(params.Input)
+				return c.StringToMD5(input)
 			},
 		},
 		{
@@ -141,18 +154,15 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 				"required": []string{"input"},
 			},
 			Function: func(args string) (string, error) {
-				var params struct {
-					Input string `json:"input"`
+				input, err := parseToolInput(args)
+				if err != nil {
+					return "", err
 				}
-				if err := json.Unmarshal([]byte(args), &params); err != nil {
-					return "", fmt.Errorf("error parsing arguments: %w", err)
-				}
-				return c.StringFromBase64(params.Input)
+				return c.StringFromBase64(input)
 			},
 		},
 	}
 
-	// If the shell client is defined, add it to the tool list.
 	if c.shellClient != nil {
 		tools = append(tools, llm.LLMTool{
 			Name:        "shell_command_to_output",
@@ -168,16 +178,20 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 				"required": []string{"input"},
 			},
 			Function: func(args string) (string, error) {
-				var params struct {
-					Input string `json:"input"`
+				input, err := parseToolInput(args)
+				if err != nil {
+					return "", err
 				}
-				if err := json.Unmarshal([]byte(args), &params); err != nil {
-					return "", fmt.Errorf("error parsing arguments: %w", err)
-				}
-				return c.ShellCommandToOutput(req, params.Input)
+				return c.ShellCommandToOutput(req, input)
 			},
 		})
 	}
+
+	return tools
+}
+
+func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models.LLMCodeExecution, error) {
+	tools := c.buildTools(req)
 
 	res, err := c.llmManager.CompleteWithTools(
 		[]llm.LLMMessage{
