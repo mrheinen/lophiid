@@ -95,10 +95,10 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 		{
 			Name:        "string_to_md5",
 			Description: "Calculate the MD5 checksum of a string. Use this whenever you need to compute an MD5 hash of a string value.",
-			Parameters: map[string]interface{}{
+			Parameters: map[string]any{
 				"type": "object",
-				"properties": map[string]interface{}{
-					"input": map[string]interface{}{
+				"properties": map[string]any{
+					"input": map[string]any{
 						"type":        "string",
 						"description": "The string to calculate the MD5 checksum for",
 					},
@@ -118,10 +118,10 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 		{
 			Name:        "string_from_base64",
 			Description: "Decode a base64 encoded string. Use this whenever you need to decode a base64 string value.",
-			Parameters: map[string]interface{}{
+			Parameters: map[string]any{
 				"type": "object",
-				"properties": map[string]interface{}{
-					"input": map[string]interface{}{
+				"properties": map[string]any{
+					"input": map[string]any{
 						"type":        "string",
 						"description": "The base64 encoded string to decode",
 					},
