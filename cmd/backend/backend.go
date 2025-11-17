@@ -246,7 +246,7 @@ func main() {
 
 	if cfg.AI.CodeEmulation.Enable {
 		codeLLMManager := llm.GetLLMManager(cfg.AI.CodeEmulation.LLMManager, llmMetrics)
-		codeEmu = code.NewCodeSnippetEmulator(codeLLMManager, dbc)
+		codeEmu = code.NewCodeSnippetEmulator(codeLLMManager, shellClient, dbc)
 	}
 
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
