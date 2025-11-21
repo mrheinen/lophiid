@@ -17,10 +17,11 @@
 package models
 
 type TagPerRequest struct {
-	ID            int64 `ksql:"id,skipInserts" json:"id"`
-	TagID         int64 `ksql:"tag_id" json:"tag_id"`
-	RequestID     int64 `ksql:"request_id" json:"request_id"`
-	TagPerQueryID int64 `ksql:"tag_per_query_id" json:"tag_per_query_id"`
+	ID            int64  `ksql:"id,skipInserts" json:"id"`
+	TagID         int64  `ksql:"tag_id" json:"tag_id"`
+	RequestID     int64  `ksql:"request_id" json:"request_id"`
+	TagPerQueryID *int64 `ksql:"tag_per_query_id" json:"tag_per_query_id"`
+	TagPerRuleID  *int64 `ksql:"tag_per_rule_id" json:"tag_per_rule_id"`
 }
 
 func (c *TagPerRequest) ModelID() int64 { return c.ID }

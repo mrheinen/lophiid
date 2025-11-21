@@ -56,6 +56,7 @@ type Request struct {
 	CmpHash           string                   `ksql:"cmp_hash" json:"cmp_hash" doc:"A hash to compare request across hosts"`
 	Tags              []TagPerRequestFull      `json:"tags"`
 	P0fResult         P0fResult                `json:"p0f_result"`
+	Triaged           bool                     `ksql:"triaged" json:"triaged" doc:"Whether the request was triaged"`
 	TriageHasPayload  bool                     `ksql:"triage_has_payload" json:"has_payload" doc:"Whether the request has a payload"`
 	TriagePayload     string                   `ksql:"triage_payload" json:"payload" doc:"The payload of the request"`
 	TriagePayloadType string                   `ksql:"triage_payload_type" json:"payload_type" doc:"The payload type of the request"`

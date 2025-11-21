@@ -50,7 +50,7 @@ CREATE TABLE request (
   content_length  INT,
   user_agent      VARCHAR(2048),
   body            BYTEA NOT NULL DEFAULT ''::bytea,
-  headers         VARCHAR(4096) ARRAY,
+  headers         VARCHAR(16000) ARRAY,
   source_ip       VARCHAR(512),
   source_port     INT,
   raw             BYTEA NOT NULL DEFAULT ''::bytea,
@@ -69,6 +69,7 @@ CREATE TABLE request (
   app_id          INT NOT NULL default 0,
   rule_id         INT NOT NULL DEFAULT 0,
   rule_uuid       VARCHAR(36) default '',
+  triaged                BOOL default false,
   triage_payload         TEXT,
   triage_payload_type    PAYLOAD_TYPE default 'UNKNOWN',
   triage_has_payload     BOOL default FALSE,
@@ -325,6 +326,39 @@ CREATE TABLE tag (
   PRIMARY KEY(id)
 );
 
+CREATE TABLE tag_per_rule (
+  id SERIAL PRIMARY KEY,
+  rule_id INT,
+  tag_id INT,
+  created_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  CONSTRAINT fk_per_rule_tag_id
+    FOREIGN KEY (rule_id) REFERENCES content_rule(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_per_tag_id
+    FOREIGN KEY (tag_id) REFERENCES tag(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE rule_tag_per_request (
+  id SERIAL,
+  tag_id INT,
+  request_id INT,
+  tag_per_rule_id INT,
+  created_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  CONSTRAINT fk_rule_per_request_tag_id
+    FOREIGN KEY (tag_id) REFERENCES tag(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_tag_per_rule_id
+    FOREIGN KEY (tag_per_rule_id) REFERENCES tag_per_rule(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_rule_per_request_request_id
+    FOREIGN KEY (request_id) REFERENCES request_refs(id)
+    ON DELETE CASCADE
+);
+
+
 -- If a query or a tag gets deleted, we also want this one gone.
 CREATE TABLE tag_per_query (
   id SERIAL PRIMARY KEY,
@@ -352,6 +386,9 @@ CREATE TABLE tag_per_request (
   -- a query, we will also delete all the tags that that query put on requests.
   CONSTRAINT fk_tag_per_query_id
     FOREIGN KEY (tag_per_query_id) REFERENCES tag_per_query(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_tag_per_rule_id
+    FOREIGN KEY (tag_per_rule_id) REFERENCES tag_per_rule(id)
     ON DELETE CASCADE,
   CONSTRAINT fk_per_request_request_id
     FOREIGN KEY (request_id) REFERENCES request(id)
@@ -399,8 +436,6 @@ GRANT ALL PRIVILEGES ON content TO lo;
 GRANT ALL PRIVILEGES ON content_id_seq TO lo;
 GRANT ALL PRIVILEGES ON session_execution_context TO lo;
 GRANT ALL PRIVILEGES ON session_execution_context_id_seq TO lo;
-
-
 GRANT ALL PRIVILEGES ON content_rule TO lo;
 GRANT ALL PRIVILEGES ON content_rule_id_seq TO lo;
 GRANT ALL PRIVILEGES ON request TO lo;
@@ -437,7 +472,19 @@ GRANT ALL PRIVILEGES ON yara TO lo;
 GRANT ALL PRIVILEGES ON yara_id_seq TO lo;
 GRANT ALL PRIVILEGES ON llm_code_execution TO lo;
 GRANT ALL PRIVILEGES ON llm_code_execution_id_seq TO lo;
+GRANT ALL PRIVILEGES ON tag_per_rule TO lo;
+GRANT ALL PRIVILEGES ON tag_per_rule_id_seq TO lo;
+GRANT ALL PRIVILEGES ON rule_tag_per_request TO lo;
+GRANT ALL PRIVILEGES ON rule_tag_per_request_id_seq TO lo;
 
+-- Index for port filtering (e.g., WHERE source_port = 443)
+CREATE INDEX idx_request_source_port ON request (source_port);
+
+-- Index for content type filtering (e.g., WHERE content_type = 'application/json')
+CREATE INDEX idx_request_content_type ON request (content_type);
+
+-- Optimized for text searching (e.g., LIKE '%pattern%')
+CREATE INDEX idx_request_triage_payload_trgm ON request USING gin (triage_payload gin_trgm_ops);
 
 CREATE INDEX session_ip ON session (
   started_at desc,

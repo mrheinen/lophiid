@@ -106,7 +106,7 @@ func (q *QueryRunnerImpl) Run(UpdateWindow time.Duration) error {
 
 				if !hasTag {
 					tagToAdd := models.TagPerRequest{
-						TagPerQueryID: t.ID,
+						TagPerQueryID: &t.ID,
 						RequestID:     req.ID,
 						TagID:         t.TagID,
 					}

@@ -229,6 +229,45 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		rb.AppUuid = app.ExtUuid
 	}
 
+	currentTags, err := a.dbc.SearchTagPerRule(0, 200, fmt.Sprintf("rule_id:%d", rb.ID))
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("unable to query tags: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	existingTagsMap := make(map[int64]models.TagPerRule)
+	submittedTagsMap := make(map[int64]bool)
+	for _, t := range currentTags {
+		existingTagsMap[t.TagID] = t
+	}
+
+	// Check which tags to add.
+	for _, t := range rb.TagsToApply {
+		submittedTagsMap[t.TagID] = true
+		if _, ok := existingTagsMap[t.TagID]; !ok {
+			fmt.Printf("Adding new rule tag: %+v\n", t)
+			_, err := a.dbc.Insert(&models.TagPerRule{
+				TagID:  t.TagID,
+				RuleID: rb.ID,
+			})
+
+			if err != nil {
+				slog.Warn("Could not add rule tag", slog.String("error", err.Error()))
+			}
+		}
+	}
+
+	// Check which tags to remove.
+	for k, v := range existingTagsMap {
+		if _, ok := submittedTagsMap[k]; !ok {
+			fmt.Printf("Removing rule tag: %d\n", v.TagID)
+			err := a.dbc.Delete(&v)
+			if err != nil {
+				slog.Warn("Could not delete rule tag", slog.String("error", err.Error()))
+			}
+		}
+	}
+
 	if rb.ID == 0 {
 		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {

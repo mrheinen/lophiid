@@ -120,6 +120,13 @@ var tagPerQueryConfig = SearchConfig{
 	OrderBy:       "",
 }
 
+var tagPerRuleConfig = SearchConfig{
+	Table:         &TagPerRuleTable,
+	TableName:     "tag_per_rule",
+	AllowedFields: getDatamodelDatabaseFields(models.TagPerRule{}),
+	OrderBy:       "",
+}
+
 var tagPerRequestConfig = SearchConfig{
 	Table:         &TagPerRequestTable,
 	TableName:     "tag_per_request",

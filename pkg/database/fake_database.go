@@ -54,6 +54,7 @@ type FakeDatabaseClient struct {
 	YarasToReturn                   []models.Yara
 	SimpleQueryResult               any
 	SessionExecutionContextToReturn []models.SessionExecutionContext
+	TagsPerRuleToReturn             []models.TagPerRule
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -154,6 +155,9 @@ func (f *FakeDatabaseClient) SearchWhois(offset int64, limit int64, query string
 }
 func (f *FakeDatabaseClient) SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error) {
 	return f.RequestDescriptionsToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchTagPerRule(offset int64, limit int64, query string) ([]models.TagPerRule, error) {
+	return f.TagsPerRuleToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) {
 	return f.SimpleQueryResult, f.ErrorToReturn
