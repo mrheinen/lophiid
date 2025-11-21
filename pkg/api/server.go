@@ -245,7 +245,6 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	for _, t := range rb.TagsToApply {
 		submittedTagsMap[t.TagID] = true
 		if _, ok := existingTagsMap[t.TagID]; !ok {
-			fmt.Printf("Adding new rule tag: %+v\n", t)
 			_, err := a.dbc.Insert(&models.TagPerRule{
 				TagID:  t.TagID,
 				RuleID: rb.ID,
@@ -260,7 +259,6 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	// Check which tags to remove.
 	for k, v := range existingTagsMap {
 		if _, ok := submittedTagsMap[k]; !ok {
-			fmt.Printf("Removing rule tag: %d\n", v.TagID)
 			err := a.dbc.Delete(&v)
 			if err != nil {
 				slog.Warn("Could not delete rule tag", slog.String("error", err.Error()))
@@ -827,7 +825,6 @@ func (a *ApiServer) HandleUpsertStoredQuery(w http.ResponseWriter, req *http.Req
 	for _, t := range qj.TagsToApply {
 		submittedTagsMap[t.TagID] = true
 		if _, ok := existingTagsMap[t.TagID]; !ok {
-			fmt.Printf("Adding new query tag: %+v\n", t)
 			_, err := a.dbc.Insert(&models.TagPerQuery{
 				TagID:   t.TagID,
 				QueryID: qj.ID,
@@ -842,7 +839,6 @@ func (a *ApiServer) HandleUpsertStoredQuery(w http.ResponseWriter, req *http.Req
 	// Check which tags to remove.
 	for k, v := range existingTagsMap {
 		if _, ok := submittedTagsMap[k]; !ok {
-			fmt.Printf("Removing query tag: %d\n", v.TagID)
 			err := a.dbc.Delete(&v)
 			if err != nil {
 				slog.Warn("Could not delete query tag", slog.String("error", err.Error()))
