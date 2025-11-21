@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -16,10 +16,14 @@
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package models
 
-type TagPerQuery struct {
-	ID      int64  `ksql:"id,skipInserts" json:"id"`
-	TagID   int64  `ksql:"tag_id" json:"tag_id"`
-	QueryID int64 `ksql:"query_id" json:"query_id"`
+import "time"
+
+type TagPerRule struct {
+	ID        int64     `ksql:"id,skipInserts" json:"id"`
+	TagID     int64     `ksql:"tag_id" json:"tag_id"`
+	RuleID    int64     `ksql:"rule_id" json:"rule_id"`
+	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"The date and time of creation"`
+	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"The date and time of the last update"`
 }
 
-func (c *TagPerQuery) ModelID() int64 { return c.ID }
+func (c *TagPerRule) ModelID() int64 { return c.ID }

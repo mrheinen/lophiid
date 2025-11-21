@@ -183,6 +183,18 @@
               />
             </div>
           </div>
+          <div class="">
+            <div>
+              <label class="label">Tags to apply</label>
+              <MultiSelect
+                v-model="localRule.parsed.tags_to_apply"
+                placeholder="Select labels"
+                optionLabel="name"
+                :options="tags"
+              ></MultiSelect>
+            </div>
+          </div>
+
 
           <div>
             <label class="label">Misc options</label>
@@ -280,6 +292,8 @@ export default {
   inject: ["config"],
   data() {
     return {
+      tags: [],
+      tagPerIdMap: new Map(),
       localRule: {
         uri_matching: "exact",
         body_matching: "none",
@@ -287,6 +301,7 @@ export default {
         ports: [],
         parsed: {
           port_field: "",
+          tags_to_apply: [],
         }
       },
       appValues: [],
@@ -332,6 +347,14 @@ export default {
     submitForm() {
       const ruleToSubmit = Object.assign({}, this.localRule);
 
+      ruleToSubmit.tags_to_apply = [];
+      ruleToSubmit.parsed.tags_to_apply.forEach((tag) => {
+        ruleToSubmit.tags_to_apply.push({
+          tag_id: tag.id,
+        });
+      })
+
+      // Remove the added fields.
       ruleToSubmit.ports = [];
       if (ruleToSubmit.parsed.port_field && ruleToSubmit.parsed.port_field != "") {
 
@@ -400,6 +423,38 @@ export default {
           }
         });
     },
+    getAllTags() {
+      fetch(this.config.backendAddress + "/tag/segment?offset=0&limit=1000&q=", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "API-Key": this.$store.getters.apiToken,
+        },
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+            return null;
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (!response){
+            return;
+          }
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            if (response.data) {
+              this.tags = response.data;
+              response.data.forEach((tag) => {
+                this.tagPerIdMap.set(tag.id, tag);
+              })
+            }
+          }
+        });
+    },
     loadApps(callback) {
       const url =
         this.config.backendAddress + "/app/segment?q=&limit=1000&offset=0";
@@ -443,6 +498,15 @@ export default {
       if (this.localRule.ports && this.localRule.ports != "") {
         this.localRule.parsed.port_field = this.localRule.ports.join(",");
       }
+
+      this.localRule.parsed.tags_to_apply = []
+
+      if (this.localRule.tags_to_apply) {
+        this.localRule.tags_to_apply.forEach((qtag) => {
+          this.localRule.parsed.tags_to_apply.push(this.tagPerIdMap.get(qtag.tag_id));
+        })
+      }
+
     },
     contentid() {
       if (this.contentid > 0) {
@@ -460,6 +524,7 @@ export default {
   },
   created() {
     this.loadApps(function () {});
+    this.getAllTags();
   },
 };
 </script>
@@ -468,6 +533,10 @@ export default {
 textarea {
   width: 100%;
   height: 400px;
+}
+
+.p-multiselect {
+  width: 100%;
 }
 
 .p-select {

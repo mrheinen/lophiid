@@ -888,6 +888,8 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		preRes, payloadResponse, err = s.preprocessor.Process(sReq)
 	}
 
+	sReq.Triaged = true
+
 	if err != nil {
 		if errors.Is(err, preprocess.ErrNotProcessed) {
 			return "", fmt.Errorf("not pre-processed: %w", err)
@@ -897,6 +899,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	} else if preRes == nil {
 		return "", fmt.Errorf("no pre-processing response")
 	} else if !preRes.HasPayload {
+		sReq.TriageHasPayload = false
 		return "", fmt.Errorf("no payload found")
 	} else {
 		slog.Debug("found payload!", slog.String("url", sReq.Uri))
@@ -1019,6 +1022,23 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	sReq.RuleID = matchedRule.ID
 	sReq.AppID = matchedRule.AppID
 	sReq.RuleUuid = matchedRule.ExtUuid
+	sReq.CreatedAt = time.Now().UTC()
+
+	dm, err := s.dbClient.Insert(sReq)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save request to database: %s", err)
+	}
+	sReq = dm.(*models.Request)
+
+	if len(matchedRule.TagsToApply) > 0 {
+		for _, tagperrule := range matchedRule.TagsToApply {
+			go func() {
+				if _, err := s.dbClient.Insert(&models.TagPerRequest{TagID: tagperrule.TagID, RequestID: sReq.ID, TagPerRuleID: &tagperrule.ID}); err != nil {
+					slog.Error("error inserting tag", slog.Int64("tag_per_rule_id", tagperrule.TagID), slog.String("error", err.Error()))
+				}
+			}()
+		}
+	}
 
 	colEx := extractors.NewExtractorCollection(true)
 	colEx.ParseRequest(sReq)
@@ -1205,13 +1225,13 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 
 	s.whoisMgr.LookupIP(req.SourceIP)
 
-	dm, err := s.dbClient.Insert(req)
+	err := s.dbClient.Update(req)
 	if err != nil {
-		return fmt.Errorf("error saving request: %s", err)
+		return fmt.Errorf("error updating request: %s", err)
 	}
 
 	if s.describer != nil {
-		err := s.describer.MaybeAddNewHash(req.CmpHash, dm.(*models.Request))
+		err := s.describer.MaybeAddNewHash(req.CmpHash, req)
 		if err != nil {
 			slog.Error("error adding new hash", slog.String("error", err.Error()))
 		}
@@ -1228,7 +1248,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 				Source:        constants.IpEventSourceRule,
 				SourceRef:     fmt.Sprintf("%d", rule.ID),
 				SourceRefType: constants.IpEventRefTypeRuleId,
-				RequestID:     dm.ModelID(),
+				RequestID:     req.ID,
 				HoneypotIP:    req.HoneypotIP,
 			})
 		case models.RuleRequestPurposeCrawl:
@@ -1240,7 +1260,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 				SourceRef:     fmt.Sprintf("%d", rule.ID),
 				SourceRefType: constants.IpEventRefTypeRuleId,
 				Details:       "rule indicated the IP crawled",
-				RequestID:     dm.ModelID(),
+				RequestID:     req.ID,
 				HoneypotIP:    req.HoneypotIP,
 			})
 		case models.RuleRequestPurposeRecon:
@@ -1252,7 +1272,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 				Subtype:       constants.IpEventSubTypeTrafficClassRecon,
 				SourceRefType: constants.IpEventRefTypeRuleId,
 				Details:       "rule indicated the IP reconned",
-				RequestID:     dm.ModelID(),
+				RequestID:     req.ID,
 				HoneypotIP:    req.HoneypotIP,
 			})
 		}
@@ -1261,7 +1281,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 	downloadsScheduled := 0
 	pingsScheduled := 0
 
-	eCollector.IterateMetadata(dm.ModelID(), func(m *models.RequestMetadata) error {
+	eCollector.IterateMetadata(req.ID, func(m *models.RequestMetadata) error {
 
 		switch m.Type {
 		case constants.ExtractorTypeLink:
@@ -1270,7 +1290,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 				if err != nil {
 					slog.Warn("error converting URL", slog.String("url", m.Data), slog.String("error", err.Error()))
 				} else {
-					s.ScheduleDownloadOfPayload(req.SourceIP, req.HoneypotIP, m.Data, ip, ipBasedUrl, hostHeader, dm.ModelID())
+					s.ScheduleDownloadOfPayload(req.SourceIP, req.HoneypotIP, m.Data, ip, ipBasedUrl, hostHeader, req.ID)
 					downloadsScheduled += 1
 				}
 			} else {

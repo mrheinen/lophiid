@@ -51,6 +51,7 @@ var RequestDescriptionTable = ksql.NewTable("request_description")
 var SessionContextTable = ksql.NewTable("session_execution_context")
 var YaraTable = ksql.NewTable("yara")
 var CodeEmuTable = ksql.NewTable("llm_code_execution")
+var TagPerRuleTable = ksql.NewTable("tag_per_rule")
 
 type DatabaseClient interface {
 	Close()
@@ -79,15 +80,16 @@ type DatabaseClient interface {
 	SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]models.Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
+	SearchTagPerRule(offset int64, limit int64, query string) ([]models.TagPerRule, error)
 	SearchTagPerRequest(offset int64, limit int64, query string) ([]models.TagPerRequest, error)
 	GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error)
 	GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error)
-	SimpleQuery(query string, result interface{}) (interface{}, error)
+	SimpleQuery(query string, result any) (any, error)
 }
 
 // Helper function to get database field names.
-func getDatamodelDatabaseFields(datamodel interface{}) []string {
+func getDatamodelDatabaseFields(datamodel any) []string {
 	var ret []string
 
 	val := reflect.TypeOf(datamodel)
@@ -116,7 +118,7 @@ type FieldDocEntry struct {
 
 // GetDatamodelDocumentationMap returns a map with the field name as key and
 // field documentation as value.
-func GetDatamodelDocumentationMap(datamodel interface{}) map[string]FieldDocEntry {
+func GetDatamodelDocumentationMap(datamodel any) map[string]FieldDocEntry {
 	ret := make(map[string]FieldDocEntry)
 	t := reflect.TypeOf(datamodel)
 	for i := range t.NumField() {
@@ -185,6 +187,7 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["Yara"] = &YaraTable
 	sqlTable["SessionExecutionContext"] = &SessionContextTable
 	sqlTable["LLMCodeExecution"] = &CodeEmuTable
+	sqlTable["TagPerRule"] = &TagPerRuleTable
 
 	table, ok := sqlTable[name]
 	if !ok {
@@ -262,13 +265,13 @@ func (d *KSQLClient) GetRequestByID(id int64) (models.Request, error) {
 	return rs, err
 }
 
-func (d *KSQLClient) SimpleQuery(query string, result interface{}) (interface{}, error) {
+func (d *KSQLClient) SimpleQuery(query string, result any) (any, error) {
 	err := d.db.Query(d.ctx, result, query)
 	return result, err
 }
 
 // Search performs a generic search operation using the provided configuration
-func (d *KSQLClient) Search(offset int64, limit int64, query string, config SearchConfig, result interface{}) error {
+func (d *KSQLClient) Search(offset int64, limit int64, query string, config SearchConfig, result any) error {
 	params, err := ParseQuery(query, config.AllowedFields)
 	if err != nil {
 		return fmt.Errorf("cannot parse query \"%s\" -> %s", query, err.Error())
@@ -391,6 +394,15 @@ func (d *KSQLClient) SearchYara(offset int64, limit int64, query string) ([]mode
 func (d *KSQLClient) SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error) {
 	var result []models.ContentRule
 	err := d.Search(offset, limit, query, contentRulesConfig, &result)
+
+	// Post-process stored query results to add tags
+	for i := range result {
+		tags, err := d.SearchTagPerRule(0, 200, fmt.Sprintf("rule_id:%d", result[i].ID))
+		if err != nil {
+			return result, fmt.Errorf("cannot get tags for rule: %s", err.Error())
+		}
+		result[i].TagsToApply = append(result[i].TagsToApply, tags...)
+	}
 	return result, err
 }
 
@@ -481,6 +493,12 @@ func (d *KSQLClient) SearchWhois(offset int64, limit int64, query string) ([]mod
 func (d *KSQLClient) SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error) {
 	var result []models.TagPerQuery
 	err := d.Search(offset, limit, query, tagPerQueryConfig, &result)
+	return result, err
+}
+
+func (d *KSQLClient) SearchTagPerRule(offset int64, limit int64, query string) ([]models.TagPerRule, error) {
+	var result []models.TagPerRule
+	err := d.Search(offset, limit, query, tagPerRuleConfig, &result)
 	return result, err
 }
 
