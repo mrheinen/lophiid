@@ -23,26 +23,26 @@ type MockLLMManager struct {
 	LastReceivedMessages []LLMMessage
 }
 
-func (m *MockLLMManager) Complete(prompt string, cacheResult bool) (string, error) {
-	return m.CompletionToReturn, m.ErrorToReturn
+func (m *MockLLMManager) Complete(prompt string, cacheResult bool) (LLMResult, error) {
+	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }
 
-func (m *MockLLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[string]string, error) {
-	result := make(map[string]string)
+func (m *MockLLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[string]LLMResult, error) {
+	result := make(map[string]LLMResult)
 	for _, prompt := range prompts {
-		result[prompt] = m.CompletionToReturn
+		result[prompt] = LLMResult{Output: m.CompletionToReturn, FromCache: false}
 	}
 	return result, m.ErrorToReturn
 }
 
-func (m *MockLLMManager) CompleteWithMessages(msgs []LLMMessage) (string, error) {
+func (m *MockLLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, error) {
 	m.LastReceivedMessages = msgs
-	return m.CompletionToReturn, m.ErrorToReturn
+	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }
 
-func (m *MockLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (string, error) {
+func (m *MockLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMResult, error) {
 	m.LastReceivedMessages = msgs
-	return m.CompletionToReturn, m.ErrorToReturn
+	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }
 
 func (m *MockLLMManager) SetResponseSchemaFromObject(obj any, title string) {

@@ -167,9 +167,10 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 	}
 
 	b.metrics.completeMultipleResponsetime.Observe(time.Since(start).Seconds())
-	for prompt, completion := range result {
+	for prompt, completionResult := range result {
 		var llmResult LLMResult
 
+		completion := completionResult.Output
 		completion = util.RemoveJsonExpression(completion)
 
 		if err := json.Unmarshal([]byte(completion), &llmResult); err != nil {

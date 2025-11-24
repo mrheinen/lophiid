@@ -28,6 +28,7 @@ type PreprocessMetrics struct {
 	shellLLMResponseTime       prometheus.Histogram
 	codeEmuLLMResponseTime     prometheus.Histogram
 	resultOfPayloadLLMRequests *prometheus.CounterVec
+	triageResultCacheHits      *prometheus.CounterVec
 }
 
 func CreatePreprocessMetrics(reg prometheus.Registerer) *PreprocessMetrics {
@@ -61,6 +62,11 @@ func CreatePreprocessMetrics(reg prometheus.Registerer) *PreprocessMetrics {
 				Name: "lophiid_triage_preprocess_payload_llm_requests_result_count",
 				Help: "The counters of the result of the payload LLM requests"},
 			[]string{"result"}),
+		triageResultCacheHits: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "lophiid_triage_preprocess_first_triage_cache_hit",
+				Help: "How many cache hits the first triage has"},
+			[]string{"result"}),
 	}
 
 	reg.MustRegister(m.payloadLLMResponseTime)
@@ -68,5 +74,6 @@ func CreatePreprocessMetrics(reg prometheus.Registerer) *PreprocessMetrics {
 	reg.MustRegister(m.codeEmuLLMResponseTime)
 	reg.MustRegister(m.totalFullPreprocessTime)
 	reg.MustRegister(m.resultOfPayloadLLMRequests)
+	reg.MustRegister(m.triageResultCacheHits)
 	return m
 }
