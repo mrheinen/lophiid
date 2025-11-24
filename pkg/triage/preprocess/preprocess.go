@@ -191,6 +191,12 @@ func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {
 		return nil, fmt.Errorf("error getting LLM response: %w", err)
 	}
 
+	if res.FromCache {
+		p.metrics.triageResultCacheHits.WithLabelValues("hit").Inc()
+	} else {
+		p.metrics.triageResultCacheHits.WithLabelValues("miss").Inc()
+	}
+
 	result := PreProcessResult{}
 	if err := json.Unmarshal([]byte(res.Output), &result); err != nil {
 		return nil, fmt.Errorf("error parsing response: %w, json: %s", err, res.Output)
