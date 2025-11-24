@@ -17,6 +17,7 @@
 package util
 
 import (
+	"hash/fnv"
 	"math/rand"
 	"os"
 	"reflect"
@@ -70,4 +71,14 @@ func GenerateRandomString(length int, inputChars string) string {
 
 func GenerateRandomAlphaNumericString(length int) string {
 	return GenerateRandomString(length, printableAlphaNumericChars)
+}
+
+// FastCacheHash is a simple hash function that uses the FNV-1a algorithm.
+// Can only be used for caching operations.
+func FastCacheHash(data string) []byte {
+	h := fnv.New128a()
+	r := make([]byte, 128)
+	h.Write([]byte(data))
+	h.Sum(r)
+	return r
 }

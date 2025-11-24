@@ -136,3 +136,8 @@ const (
 	TemplatorMacroHoneypotIP  = "%%REQUEST_HONEYPOT_IP%%"
 	TemplatorMacroPort        = "%%REQUEST_PORT%%"
 )
+
+const (
+	LLMCacheHit  = "hit"
+	LLMCacheMiss = "miss"
+)

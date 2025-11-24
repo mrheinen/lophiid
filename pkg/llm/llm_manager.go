@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"sync"
 	"time"
 
@@ -37,8 +38,8 @@ type LLMResult struct {
 type LLMManagerInterface interface {
 	Complete(prompt string, cacheResult bool) (LLMResult, error)
 	CompleteMultiple(prompts []string, cacheResult bool) (map[string]LLMResult, error)
-	CompleteWithMessages(msgs []LLMMessage) (LLMResult, error)
-	CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMResult, error)
+	CompleteWithMessages(msgs []LLMMessage, cacheResult bool) (LLMResult, error)
+	CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error)
 	SetResponseSchemaFromObject(obj any, title string)
 	LoadedModel() string
 }
@@ -66,6 +67,28 @@ func NewLLMManager(client LLMClient, pCache *util.StringMapCache[string], metric
 		promptSuffix:      promptSuffix,
 		stripThinking:     stripThinking,
 	}
+}
+
+// CreateCacheKeyFromMessages creates a cache key based on the LLM messages
+func CreateCacheKeyFromMessages(msgs []LLMMessage) string {
+	ret := ""
+	for _, msg := range msgs {
+		tmpHash := util.FastCacheHash(msg.Content)
+		ret = ret + string(tmpHash)
+	}
+
+	return ret
+}
+
+func (l *LLMManager) getPromptFromCache(prompt string) (string, error) {
+	entry, err := l.pCache.Get(prompt)
+	if err != nil {
+		l.metrics.llmCacheHits.WithLabelValues(constants.LLMCacheMiss).Inc()
+		return "", err
+	} else {
+		l.metrics.llmCacheHits.WithLabelValues(constants.LLMCacheHit).Inc()
+	}
+	return *entry, nil
 }
 
 func (l *LLMManager) LoadedModel() string {
@@ -111,9 +134,9 @@ func (l *LLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[s
 }
 
 func (l *LLMManager) Complete(prompt string, cacheResult bool) (LLMResult, error) {
-	entry, err := l.pCache.Get(prompt)
+	entry, err := l.getPromptFromCache(prompt)
 	if err == nil {
-		return LLMResult{Output: *entry, FromCache: true}, nil
+		return LLMResult{Output: entry, FromCache: true}, nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), l.completionTimeout)
@@ -141,9 +164,15 @@ func (l *LLMManager) Complete(prompt string, cacheResult bool) (LLMResult, error
 	return LLMResult{Output: retStr, FromCache: false}, nil
 }
 
-func (l *LLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, error) {
+func (l *LLMManager) CompleteWithMessages(msgs []LLMMessage, cacheResult bool) (LLMResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), l.completionTimeout)
 	defer cancel()
+
+	cacheKey := CreateCacheKeyFromMessages(msgs)
+	entry, err := l.getPromptFromCache(cacheKey)
+	if err == nil {
+		return LLMResult{Output: entry, FromCache: true}, nil
+	}
 
 	start := time.Now()
 	retStr, err := l.client.CompleteWithMessages(ctx, msgs)
@@ -159,10 +188,20 @@ func (l *LLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, error) 
 		retStr = util.RemoveThinkingFromResponse(retStr)
 	}
 
+	if cacheResult {
+		l.pCache.Store(cacheKey, retStr)
+	}
+
 	return LLMResult{Output: retStr, FromCache: false}, nil
 }
 
-func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMResult, error) {
+func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error) {
+	cacheKey := CreateCacheKeyFromMessages(msgs)
+	entry, err := l.getPromptFromCache(cacheKey)
+	if err == nil {
+		return LLMResult{Output: entry, FromCache: true}, nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), l.completionTimeout)
 	defer cancel()
 
@@ -178,6 +217,10 @@ func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMR
 
 	if l.stripThinking {
 		retStr = util.RemoveThinkingFromResponse(retStr)
+	}
+
+	if cacheResult {
+		l.pCache.Store(cacheKey, retStr)
 	}
 
 	return LLMResult{Output: retStr, FromCache: false}, nil
@@ -243,7 +286,7 @@ func (d *DualLLMManager) Complete(prompt string, cacheResult bool) (LLMResult, e
 	return result, nil
 }
 
-func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, error) {
+func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage, cacheResult bool) (LLMResult, error) {
 	d.mutex.Lock()
 	// Check if we should switch back to primary after fallback interval
 	if d.usingSecondary && time.Since(d.lastFailureTime) > d.fallbackInterval {
@@ -254,7 +297,7 @@ func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, err
 	d.mutex.Unlock()
 
 	if !usingSecondary {
-		result, err := d.primary.CompleteWithMessages(msgs)
+		result, err := d.primary.CompleteWithMessages(msgs, cacheResult)
 		if err == nil {
 			return result, nil
 		}
@@ -269,7 +312,7 @@ func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, err
 
 	// Use secondary client
 	slog.Info("Using secondary LLM client", slog.Bool("fallback_mode", usingSecondary))
-	result, err := d.secondary.CompleteWithMessages(msgs)
+	result, err := d.secondary.CompleteWithMessages(msgs, cacheResult)
 	if err != nil {
 		return LLMResult{}, fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
 	}
@@ -277,7 +320,7 @@ func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, err
 	return result, nil
 }
 
-func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMResult, error) {
+func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error) {
 	d.mutex.Lock()
 	// Check if we should switch back to primary after fallback interval
 	if d.usingSecondary && time.Since(d.lastFailureTime) > d.fallbackInterval {
@@ -288,7 +331,7 @@ func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (
 	d.mutex.Unlock()
 
 	if !usingSecondary {
-		result, err := d.primary.CompleteWithTools(msgs, tools)
+		result, err := d.primary.CompleteWithTools(msgs, tools, cacheResult)
 		if err == nil {
 			return result, nil
 		}
@@ -303,7 +346,7 @@ func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (
 
 	// Use secondary client
 	slog.Info("Using secondary LLM client", slog.Bool("fallback_mode", usingSecondary))
-	result, err := d.secondary.CompleteWithTools(msgs, tools)
+	result, err := d.secondary.CompleteWithTools(msgs, tools, cacheResult)
 	if err != nil {
 		return LLMResult{}, fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
 	}

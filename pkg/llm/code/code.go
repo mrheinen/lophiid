@@ -205,6 +205,7 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 			},
 		},
 		tools,
+		true,
 	)
 
 	if err != nil {
