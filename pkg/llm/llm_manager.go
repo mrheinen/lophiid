@@ -78,7 +78,12 @@ func (l *LLMManager) SetResponseSchemaFromObject(obj any, title string) {
 
 // CompleteMultiple completes multiple prompts in parallel. It will return a map
 func (l *LLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[string]LLMResult, error) {
-	var result sync.Map
+	type resultTuple struct {
+		prompt string
+		result LLMResult
+	}
+	resultsChan := make(chan resultTuple, len(prompts))
+
 	p := pool.New().WithErrors().WithMaxGoroutines(l.multiplePoolSize)
 
 	for _, prompt := range prompts {
@@ -89,18 +94,18 @@ func (l *LLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[s
 				return err
 			}
 
-			result.Store(localPrompt, ret)
+			resultsChan <- resultTuple{prompt: localPrompt, result: ret}
 			return nil
 		})
 	}
 
 	err := p.Wait()
+	close(resultsChan)
 
-	finalResult := make(map[string]LLMResult)
-	result.Range(func(key, value interface{}) bool {
-		finalResult[key.(string)] = value.(LLMResult)
-		return true
-	})
+	finalResult := make(map[string]LLMResult, len(prompts))
+	for res := range resultsChan {
+		finalResult[res.prompt] = res.result
+	}
 
 	return finalResult, err
 }
