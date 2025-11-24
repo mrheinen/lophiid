@@ -188,8 +188,8 @@ func (d *YaraManager) CreateLLMDescriptions(scanResults map[*models.Download][]Y
 			return scanResults, fmt.Errorf("error completing prompt: %w", err)
 		}
 
-		fmt.Printf("Description for %s:\n%s\n", dl.FileLocation, result)
-		dl.YaraDescription = result
+		fmt.Printf("Description for %s:\n%s\n", dl.FileLocation, result.Output)
+		dl.YaraDescription = result.Output
 		scanResults[dl] = res
 	}
 

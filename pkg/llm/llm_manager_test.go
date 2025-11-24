@@ -43,8 +43,8 @@ func TestComplete(t *testing.T) {
 		t.Errorf("unexpected error: %s", err)
 	}
 
-	if res != testCompletionString {
-		t.Errorf("expected %s, got %s", testCompletionString, res)
+	if res.Output != testCompletionString {
+		t.Errorf("expected %s, got %s", testCompletionString, res.Output)
 	}
 }
 
@@ -64,8 +64,8 @@ func TestCompleteWithPrefix(t *testing.T) {
 		t.Errorf("unexpected error: %s", err)
 	}
 
-	if res != testCompletionString {
-		t.Errorf("expected %s, got %s", testCompletionString, res)
+	if res.Output != testCompletionString {
+		t.Errorf("expected %s, got %s", testCompletionString, res.Output)
 	}
 
 	if !strings.HasPrefix(client.LastReceivedPrompt, testPrefix) {
@@ -88,8 +88,8 @@ func TestCompleteWithSuffix(t *testing.T) {
 		t.Errorf("unexpected error: %s", err)
 	}
 
-	if res != testCompletionString {
-		t.Errorf("expected %s, got %s", testCompletionString, res)
+	if res.Output != testCompletionString {
+		t.Errorf("expected %s, got %s", testCompletionString, res.Output)
 	}
 
 	if !strings.HasSuffix(client.LastReceivedPrompt, testSuffix) {
@@ -139,8 +139,8 @@ func TestCompleteMultiple(t *testing.T) {
 	}
 
 	for _, p := range prompts {
-		if resMap[p] != testCompletionString {
-			t.Errorf("expected %s, got %s", testCompletionString, resMap[p])
+		if resMap[p].Output != testCompletionString {
+			t.Errorf("expected %s, got %s", testCompletionString, resMap[p].Output)
 		}
 	}
 }
@@ -166,8 +166,8 @@ func TestCompleteWithStripThinking(t *testing.T) {
 	}
 
 	// Verify that the thinking section was removed
-	if res != expectedResult {
-		t.Errorf("expected %q after stripping thinking, got %q", expectedResult, res)
+	if res.Output != expectedResult {
+		t.Errorf("expected %q after stripping thinking, got %q", expectedResult, res.Output)
 	}
 
 	// Create a separate client for testing without stripping thinking
@@ -179,8 +179,8 @@ func TestCompleteWithStripThinking(t *testing.T) {
 	resNoStrip, _ := lmNoStrip.Complete("test prompt", true)
 
 	// Verify that the thinking section was preserved
-	if resNoStrip != responseWithThinking {
-		t.Errorf("expected original response %q when not stripping thinking, got %q", responseWithThinking, resNoStrip)
+	if resNoStrip.Output != responseWithThinking {
+		t.Errorf("expected original response %q when not stripping thinking, got %q", responseWithThinking, resNoStrip.Output)
 	}
 }
 
@@ -266,15 +266,15 @@ func TestDualLLMManager(t *testing.T) {
 
 			if !tt.expectError {
 				if tt.expectSecondary {
-					if result["test prompt"] != tt.secondaryResponse {
-						t.Errorf("expected secondary response %q but got %q", tt.secondaryResponse, result["test prompt"])
+					if result["test prompt"].Output != tt.secondaryResponse {
+						t.Errorf("expected secondary response %q but got %q", tt.secondaryResponse, result["test prompt"].Output)
 					}
 					if !strings.Contains(dualManager.LoadedModel(), "(secondary)") {
 						t.Error("expected LoadedModel to indicate secondary client")
 					}
 				} else {
-					if result["test prompt"] != tt.primaryResponse {
-						t.Errorf("expected primary response %q but got %q", tt.primaryResponse, result["test prompt"])
+					if result["test prompt"].Output != tt.primaryResponse {
+						t.Errorf("expected primary response %q but got %q", tt.primaryResponse, result["test prompt"].Output)
 					}
 					if strings.Contains(dualManager.LoadedModel(), "(secondary)") {
 						t.Error("expected LoadedModel to indicate primary client")
@@ -331,8 +331,8 @@ func TestDualLLMManagerFallbackRecovery(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if result["test prompt"] != "secondary response" {
-		t.Errorf("expected secondary response but got %q", result["test prompt"])
+	if result["test prompt"].Output != "secondary response" {
+		t.Errorf("expected secondary response but got %q", result["test prompt"].Output)
 	}
 
 	// Wait for fallback interval to pass
@@ -346,7 +346,7 @@ func TestDualLLMManagerFallbackRecovery(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if result["test prompt"] != "primary response" {
-		t.Errorf("expected primary response after recovery but got %q", result["test prompt"])
+	if result["test prompt"].Output != "primary response" {
+		t.Errorf("expected primary response after recovery but got %q", result["test prompt"].Output)
 	}
 }

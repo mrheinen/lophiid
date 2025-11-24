@@ -27,12 +27,18 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
+// LLMResult contains the output of an LLM operation and metadata
+type LLMResult struct {
+	Output    string
+	FromCache bool
+}
+
 // LLMManagerInterface defines the interface for LLM operations
 type LLMManagerInterface interface {
-	Complete(prompt string, cacheResult bool) (string, error)
-	CompleteMultiple(prompts []string, cacheResult bool) (map[string]string, error)
-	CompleteWithMessages(msgs []LLMMessage) (string, error)
-	CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (string, error)
+	Complete(prompt string, cacheResult bool) (LLMResult, error)
+	CompleteMultiple(prompts []string, cacheResult bool) (map[string]LLMResult, error)
+	CompleteWithMessages(msgs []LLMMessage) (LLMResult, error)
+	CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMResult, error)
 	SetResponseSchemaFromObject(obj any, title string)
 	LoadedModel() string
 }
@@ -71,7 +77,7 @@ func (l *LLMManager) SetResponseSchemaFromObject(obj any, title string) {
 }
 
 // CompleteMultiple completes multiple prompts in parallel. It will return a map
-func (l *LLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[string]string, error) {
+func (l *LLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[string]LLMResult, error) {
 	var result sync.Map
 	p := pool.New().WithErrors().WithMaxGoroutines(l.multiplePoolSize)
 
@@ -90,19 +96,19 @@ func (l *LLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[s
 
 	err := p.Wait()
 
-	finalResult := make(map[string]string)
+	finalResult := make(map[string]LLMResult)
 	result.Range(func(key, value interface{}) bool {
-		finalResult[key.(string)] = value.(string)
+		finalResult[key.(string)] = value.(LLMResult)
 		return true
 	})
 
 	return finalResult, err
 }
 
-func (l *LLMManager) Complete(prompt string, cacheResult bool) (string, error) {
+func (l *LLMManager) Complete(prompt string, cacheResult bool) (LLMResult, error) {
 	entry, err := l.pCache.Get(prompt)
 	if err == nil {
-		return *entry, nil
+		return LLMResult{Output: *entry, FromCache: true}, nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), l.completionTimeout)
@@ -114,7 +120,7 @@ func (l *LLMManager) Complete(prompt string, cacheResult bool) (string, error) {
 	if err != nil {
 		slog.Error("error completing prompt", slog.String("prompt", prompt), slog.String("error", err.Error()))
 		l.metrics.llmErrorCount.Inc()
-		return "", fmt.Errorf("error completing prompt: %w", err)
+		return LLMResult{}, fmt.Errorf("error completing prompt: %w", err)
 	}
 
 	l.metrics.llmQueryResponseTime.Observe(time.Since(start).Seconds())
@@ -127,10 +133,10 @@ func (l *LLMManager) Complete(prompt string, cacheResult bool) (string, error) {
 		l.pCache.Store(prompt, retStr)
 	}
 
-	return retStr, nil
+	return LLMResult{Output: retStr, FromCache: false}, nil
 }
 
-func (l *LLMManager) CompleteWithMessages(msgs []LLMMessage) (string, error) {
+func (l *LLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), l.completionTimeout)
 	defer cancel()
 
@@ -139,7 +145,7 @@ func (l *LLMManager) CompleteWithMessages(msgs []LLMMessage) (string, error) {
 
 	if err != nil {
 		l.metrics.llmErrorCount.Inc()
-		return "", fmt.Errorf("error completing prompt: %w", err)
+		return LLMResult{}, fmt.Errorf("error completing prompt: %w", err)
 	}
 
 	l.metrics.llmQueryResponseTime.Observe(time.Since(start).Seconds())
@@ -148,10 +154,10 @@ func (l *LLMManager) CompleteWithMessages(msgs []LLMMessage) (string, error) {
 		retStr = util.RemoveThinkingFromResponse(retStr)
 	}
 
-	return retStr, nil
+	return LLMResult{Output: retStr, FromCache: false}, nil
 }
 
-func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (string, error) {
+func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), l.completionTimeout)
 	defer cancel()
 
@@ -160,7 +166,7 @@ func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (stri
 
 	if err != nil {
 		l.metrics.llmErrorCount.Inc()
-		return "", fmt.Errorf("error completing prompt with tools: %w", err)
+		return LLMResult{}, fmt.Errorf("error completing prompt with tools: %w", err)
 	}
 
 	l.metrics.llmQueryResponseTime.Observe(time.Since(start).Seconds())
@@ -169,7 +175,7 @@ func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (stri
 		retStr = util.RemoveThinkingFromResponse(retStr)
 	}
 
-	return retStr, nil
+	return LLMResult{Output: retStr, FromCache: false}, nil
 }
 
 // DualLLMManager manages primary and secondary LLM clients with fallback functionality
@@ -198,7 +204,7 @@ func (d *DualLLMManager) SetResponseSchemaFromObject(obj any, title string) {
 }
 
 // Complete attempts to complete a single prompt using the primary client, falls back to secondary on error
-func (d *DualLLMManager) Complete(prompt string, cacheResult bool) (string, error) {
+func (d *DualLLMManager) Complete(prompt string, cacheResult bool) (LLMResult, error) {
 	d.mutex.Lock()
 	// Check if we should switch back to primary after fallback interval
 	if d.usingSecondary && time.Since(d.lastFailureTime) > d.fallbackInterval {
@@ -226,13 +232,13 @@ func (d *DualLLMManager) Complete(prompt string, cacheResult bool) (string, erro
 	slog.Info("Using secondary LLM client", slog.Bool("fallback_mode", usingSecondary))
 	result, err := d.secondary.Complete(prompt, cacheResult)
 	if err != nil {
-		return "", fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
+		return LLMResult{}, fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
 	}
 
 	return result, nil
 }
 
-func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage) (string, error) {
+func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, error) {
 	d.mutex.Lock()
 	// Check if we should switch back to primary after fallback interval
 	if d.usingSecondary && time.Since(d.lastFailureTime) > d.fallbackInterval {
@@ -260,13 +266,13 @@ func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage) (string, error)
 	slog.Info("Using secondary LLM client", slog.Bool("fallback_mode", usingSecondary))
 	result, err := d.secondary.CompleteWithMessages(msgs)
 	if err != nil {
-		return "", fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
+		return LLMResult{}, fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
 	}
 
 	return result, nil
 }
 
-func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (string, error) {
+func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMResult, error) {
 	d.mutex.Lock()
 	// Check if we should switch back to primary after fallback interval
 	if d.usingSecondary && time.Since(d.lastFailureTime) > d.fallbackInterval {
@@ -294,14 +300,14 @@ func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (
 	slog.Info("Using secondary LLM client", slog.Bool("fallback_mode", usingSecondary))
 	result, err := d.secondary.CompleteWithTools(msgs, tools)
 	if err != nil {
-		return "", fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
+		return LLMResult{}, fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
 	}
 
 	return result, nil
 }
 
 // CompleteMultiple attempts to complete prompts using the primary client, falls back to secondary on error
-func (d *DualLLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[string]string, error) {
+func (d *DualLLMManager) CompleteMultiple(prompts []string, cacheResult bool) (map[string]LLMResult, error) {
 
 	d.mutex.Lock()
 	// Check if we should switch back to primary after fallback interval

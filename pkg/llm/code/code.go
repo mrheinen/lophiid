@@ -212,8 +212,8 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 	}
 
 	result := &CodeOutput{}
-	if err = json.Unmarshal([]byte(util.RemoveJsonExpression(res)), result); err != nil {
-		slog.Error("error parsing json", slog.String("error", err.Error()), slog.String("json", res))
+	if err = json.Unmarshal([]byte(util.RemoveJsonExpression(res.Output)), result); err != nil {
+		slog.Error("error parsing json", slog.String("error", err.Error()), slog.String("json", res.Output))
 		return nil, err
 	}
 

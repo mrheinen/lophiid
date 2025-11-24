@@ -192,8 +192,8 @@ func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {
 	}
 
 	result := PreProcessResult{}
-	if err := json.Unmarshal([]byte(res), &result); err != nil {
-		return nil, fmt.Errorf("error parsing response: %w, json: %s", err, res)
+	if err := json.Unmarshal([]byte(res.Output), &result); err != nil {
+		return nil, fmt.Errorf("error parsing response: %w, json: %s", err, res.Output)
 	}
 
 	return &result, nil
