@@ -23,6 +23,7 @@ import (
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/shell"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -429,3 +430,51 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 		t.Errorf("Expected body '%s', got: %s", expectedOutput, body)
 	}
 }
+
+func TestComplete_HostHeaderRemoval(t *testing.T) {
+	// Setup
+	mockLLM := &llm.MockLLMManager{}
+	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+	metrics := createTestMetrics()
+
+	preprocessResult := PreProcessResult{
+		HasPayload:  false,
+		PayloadType: "",
+		Payload:     "",
+	}
+
+	jsonResult, _ := json.Marshal(preprocessResult)
+	mockLLM.CompletionToReturn = string(jsonResult)
+	mockLLM.ErrorToReturn = nil
+
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+
+	reqRaw := "GET / HTTP/1.1\nHost: example.com\nUser-Agent: TestBot\n\n"
+	req := &models.Request{
+		ID:        1,
+		SessionID: 100,
+		Raw:       []byte(reqRaw),
+	}
+
+	// Execute
+	_, err := preprocess.Complete(req)
+
+	// Verify
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if strings.Contains(mockLLM.LastReceivedPrompt, "Host:") {
+		t.Error("Expected Host header to be removed from prompt")
+	}
+
+	if !strings.Contains(mockLLM.LastReceivedPrompt, "User-Agent: TestBot") {
+		t.Error("Expected User-Agent header to be preserved in prompt")
+	}
+
+	if !strings.Contains(mockLLM.LastReceivedPrompt, "GET / HTTP/1.1") {
+		t.Error("Expected request line to be preserved in prompt")
+	}
+}
+

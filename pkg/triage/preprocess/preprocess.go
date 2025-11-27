@@ -184,7 +184,17 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 }
 
 func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {
-	finalPrompt := fmt.Sprintf("%s%s", ProcessPrompt, req.Raw)
+	// Remove the Host header from the request data. It is not really important
+	// for the AI lookup but removing it makes prompt caching much more efficient.
+	requestData := ""
+	for line := range strings.SplitSeq(string(req.Raw), "\n") {
+		if strings.HasPrefix(strings.ToLower(line), "host:") {
+			continue
+		}
+		requestData += line + "\n"
+	}
+
+	finalPrompt := fmt.Sprintf("%s%s", ProcessPrompt, requestData)
 
 	res, err := p.triageLLMManager.Complete(finalPrompt, true)
 	if err != nil {
