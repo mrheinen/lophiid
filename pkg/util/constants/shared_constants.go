@@ -141,3 +141,8 @@ const (
 	LLMCacheHit  = "hit"
 	LLMCacheMiss = "miss"
 )
+
+const (
+	// The replacement tag for LLM responses. Used in the backend and preprocessor
+	LLMReplacementTag = "%%%LOPHIID_PAYLOAD_RESPONSE%%%"
+)

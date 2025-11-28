@@ -29,8 +29,8 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 
 	// First make sure there actually is a replacement tag. If the tag is missing
 	// then we will append one to the end of the template.
-	if !strings.Contains(template, LLMReplacementTag) {
-		template = fmt.Sprintf("%s\n%s", template, LLMReplacementTag)
+	if !strings.Contains(template, constants.LLMReplacementTag) {
+		template = fmt.Sprintf("%s\n%s", template, constants.LLMReplacementTag)
 	}
 
 	var basePrompt string
@@ -42,7 +42,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		commands := util.SplitCommandsOnSemi(promptInput)
 		if len(commands) == 0 {
 			slog.Debug("no commands found", slog.String("input", promptInput))
-			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), nil
+			return strings.Replace(template, constants.LLMReplacementTag, LLMReplacementFallbackString, 1), nil
 		}
 
 		promptInputs := []string{}
@@ -53,7 +53,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		resMap, err := l.llmManager.CompleteMultiple(promptInputs, true)
 		if err != nil {
 			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
-			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
+			return strings.Replace(template, constants.LLMReplacementTag, LLMReplacementFallbackString, 1), err
 		}
 
 		for _, prompt := range promptInputs {
@@ -69,7 +69,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		result, err := l.llmManager.Complete(finalPrompt, true)
 		if err != nil {
 			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
-			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
+			return strings.Replace(template, constants.LLMReplacementTag, LLMReplacementFallbackString, 1), err
 		}
 		res = result.Output
 
@@ -79,7 +79,7 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		result, err := l.llmManager.Complete(finalPrompt, true)
 		if err != nil {
 			slog.Error("could not complete LLM request", slog.String("error", err.Error()))
-			return strings.Replace(template, LLMReplacementTag, LLMReplacementFallbackString, 1), err
+			return strings.Replace(template, constants.LLMReplacementTag, LLMReplacementFallbackString, 1), err
 		}
 		res = result.Output
 
@@ -88,5 +88,5 @@ func (l *LLMResponder) Respond(resType string, promptInput string, template stri
 		return "", fmt.Errorf("invalid responder type: %s", resType)
 	}
 
-	return strings.Replace(template, LLMReplacementTag, res, 1), nil
+	return strings.Replace(template, constants.LLMReplacementTag, res, 1), nil
 }
