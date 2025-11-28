@@ -126,13 +126,17 @@ type Config struct {
 		MaxInputCharacters int                  `fig:"max_input_characters" default:"10000"`
 		LLMManager         llm.LLMManagerConfig `fig:"llm_manager"`
 		ShellEmulation     struct {
-			Enable     bool                 `fig:"enable" default:"1" `
+			Enable     bool                 `fig:"enable" default:"0" `
 			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
 		} `fig:"shell_emulation"`
 		CodeEmulation struct {
-			Enable     bool                 `fig:"enable" default:"1" `
+			Enable     bool                 `fig:"enable" default:"0" `
 			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
 		} `fig:"code_emulation"`
+		FileEmulation struct {
+			Enable     bool                 `fig:"enable" default:"0" `
+			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+		} `fig:"file_emulation"`
 
 		Triage struct {
 			Describer struct {

@@ -1758,13 +1758,13 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 			}
 			fakeDescriber := describer.FakeDescriberClient{}
 			fakePreprocessor := preprocess.FakePreProcessor{
-				ResultToReturn: func() preprocess.PreProcessResult {
+				ResultToReturn: func() *preprocess.PreProcessResult {
 					if test.preprocessResult != nil {
-						return *test.preprocessResult
+						return test.preprocessResult
 					}
-					return preprocess.PreProcessResult{}
+					return &preprocess.PreProcessResult{}
 				}(),
-				BodyToTReturn: test.preprocessBody,
+				PayloadResult: &preprocess.PayloadProcessingResult{Output: test.preprocessBody},
 				ErrorToReturn: test.preprocessError,
 			}
 
@@ -1906,13 +1906,13 @@ func TestGetPreProcessResponse(t *testing.T) {
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 			fakePreprocessor := preprocess.FakePreProcessor{
-				ResultToReturn: func() preprocess.PreProcessResult {
+				ResultToReturn: func() *preprocess.PreProcessResult {
 					if test.preprocessResult != nil {
-						return *test.preprocessResult
+						return test.preprocessResult
 					}
-					return preprocess.PreProcessResult{}
+					return &preprocess.PreProcessResult{}
 				}(),
-				BodyToTReturn: test.preprocessBody,
+				PayloadResult: &preprocess.PayloadProcessingResult{Output: test.preprocessBody},
 				ErrorToReturn: test.preprocessError,
 			}
 
@@ -1939,7 +1939,7 @@ func TestGetPreProcessResponse(t *testing.T) {
 
 			// If we don't expect an error, verify the response
 			if !test.expectedError {
-				if response != test.expectedResponse {
+				if response.Output != test.expectedResponse {
 					t.Errorf("expected response=%s, got=%s", test.expectedResponse, response)
 				}
 				if req.TriagePayload != test.expectedPayload {

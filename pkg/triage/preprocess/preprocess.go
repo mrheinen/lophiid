@@ -24,6 +24,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/code"
+	"lophiid/pkg/llm/file"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/util/constants"
 	"strings"
@@ -39,14 +40,15 @@ const (
 var ErrNotProcessed = errors.New("is not processed")
 
 type PreProcessInterface interface {
-	MaybeProcess(req *models.Request) (*PreProcessResult, string, error)
-	Process(req *models.Request) (*PreProcessResult, string, error)
+	MaybeProcess(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error)
+	Process(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error)
 }
 
 type PreProcess struct {
 	triageLLMManager llm.LLMManagerInterface
 	shellClient      shell.ShellClientInterface
 	codeEmu          code.CodeSnippetEmulatorInterface
+	fileEmu          file.FileAccessEmulatorInterface
 	metrics          *PreprocessMetrics
 }
 
@@ -54,6 +56,11 @@ type PreProcessResult struct {
 	HasPayload  bool   `json:"has_payload" jsonschema_description:"This is a boolean field. Use the value 'true' if the request has a payload, such as to execute a command or inject code or open a file. Otherwise use the value 'false'"`
 	PayloadType string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\" and \"UNKNOWN\" (if you don't know)"`
 	Payload     string `json:"payload" jsonschema_description:"The payload if there is one. Empty otherwise"`
+}
+
+type PayloadProcessingResult struct {
+	Output  string
+	Headers string
 }
 
 var ProcessPrompt = `
@@ -76,22 +83,22 @@ The request is:
 `
 
 type FakePreProcessor struct {
-	ResultToReturn PreProcessResult
-	BodyToTReturn  string
+	ResultToReturn *PreProcessResult
+	PayloadResult  *PayloadProcessingResult
 	ErrorToReturn  error
 }
 
-func (f *FakePreProcessor) MaybeProcess(req *models.Request) (*PreProcessResult, string, error) {
-	return &f.ResultToReturn, f.BodyToTReturn, f.ErrorToReturn
+func (f *FakePreProcessor) MaybeProcess(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error) {
+	return f.ResultToReturn, f.PayloadResult, f.ErrorToReturn
 }
 
-func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, string, error) {
-	return &f.ResultToReturn, f.BodyToTReturn, f.ErrorToReturn
+func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error) {
+	return f.ResultToReturn, f.PayloadResult, f.ErrorToReturn
 }
 
-func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, metrics *PreprocessMetrics) *PreProcess {
+func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, metrics *PreprocessMetrics) *PreProcess {
 	triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information")
-	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, metrics: metrics}
+	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, metrics: metrics}
 }
 
 func RequestHas(req *models.Request, has string) bool {
@@ -99,7 +106,7 @@ func RequestHas(req *models.Request, has string) bool {
 }
 
 // MaybeProcess returns true if the request was handled.
-func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, string, error) {
+func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error) {
 
 	// TODO: this is experimental and needs to be replaced with something better.
 	if !RequestHas(req, "echo") &&
@@ -118,13 +125,13 @@ func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, strin
 		!RequestHas(req, "ruby") &&
 		!RequestHas(req, "eval") &&
 		!RequestHas(req, "phpinfo") {
-		return nil, "", ErrNotProcessed
+		return nil, nil, ErrNotProcessed
 	}
 
 	return p.Process(req)
 }
 
-func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, error) {
+func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error) {
 	startTime := time.Now()
 
 	defer func() {
@@ -134,53 +141,65 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, string, er
 	res, err := p.Complete(req)
 	if err != nil {
 		p.metrics.resultOfPayloadLLMRequests.WithLabelValues(llmResultFailed).Add(1)
-		return nil, "", fmt.Errorf("processing request: %w", err)
+		return nil, nil, fmt.Errorf("processing request: %w", err)
 	}
 
 	p.metrics.resultOfPayloadLLMRequests.WithLabelValues(llmResultSuccess).Add(1)
 	p.metrics.payloadLLMResponseTime.Observe(time.Since(startTime).Seconds())
 
 	if !res.HasPayload {
-		return res, "", nil
+		return res, nil, nil
 	}
 
 	switch res.PayloadType {
 	case constants.TriagePayloadTypeShellCommand:
 		// if nil then the shell client is disabled
 		if p.shellClient == nil {
-			return nil, "", nil
+			return nil, nil, nil
 		}
 		slog.Debug("Running shell command", slog.String("command", res.Payload))
 		shellStartTime := time.Now()
 		ctx, err := p.shellClient.RunCommand(req, res.Payload)
 		if err != nil {
-			return nil, "", fmt.Errorf("running shell command: %w", err)
+			return nil, nil, fmt.Errorf("running shell command: %w", err)
 		}
 		p.metrics.shellLLMResponseTime.Observe(time.Since(shellStartTime).Seconds())
 
-		return res, ctx.Output, nil
+		return res, &PayloadProcessingResult{Output: ctx.Output}, nil
 
 	case constants.TriagePayloadTypeFileAccess:
-		return res, "", nil
+		if p.fileEmu == nil {
+			return nil, nil, nil
+		}
+		slog.Debug("Running file emulator", slog.String("file", res.Payload))
+		fileStartTime := time.Now()
+		fRes, err := p.fileEmu.Emulate(req, res.Payload)
+		if err != nil {
+			return nil, nil, fmt.Errorf("running file emulator: %w", err)
+		}
+
+		p.metrics.fileEmuLLMResponseTime.Observe(time.Since(fileStartTime).Seconds())
+
+		return res, &PayloadProcessingResult{Output: fRes}, nil
 
 	case constants.TriagePayloadTypeCodeExec:
 		// If nil then the code emulator is disabled
 		if p.codeEmu == nil {
-			return nil, "", nil
+			return nil, nil, nil
 		}
 
 		slog.Debug("Running code emulator", slog.String("code", res.Payload))
 		emuStartTime := time.Now()
 		cRes, err := p.codeEmu.Emulate(req, res.Payload)
 		if err != nil {
-			return nil, "", fmt.Errorf("running code emulator: %w", err)
+			return nil, nil, fmt.Errorf("running code emulator: %w", err)
 		}
 
 		p.metrics.codeEmuLLMResponseTime.Observe(time.Since(emuStartTime).Seconds())
-		return res, string(cRes.Stdout), nil
+		return res, &PayloadProcessingResult{Output: string(cRes.Stdout), Headers: string(cRes.Headers)}, nil
 	}
 
-	return res, "", nil
+	return res, nil, nil
 }
 
 func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {
