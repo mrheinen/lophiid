@@ -4,7 +4,6 @@ type Responder interface {
 	Respond(resType string, promptInput string, template string) (string, error)
 }
 
-const LLMReplacementTag = "%%%LOPHIID_PAYLOAD_RESPONSE%%%"
 const LLMReplacementFallbackString = ""
 
 type FakeResponder struct {
