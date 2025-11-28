@@ -25,6 +25,7 @@ import (
 type LLMMetrics struct {
 	llmQueryResponseTime prometheus.Histogram
 	llmErrorCount        prometheus.Counter
+	llmCacheHits         *prometheus.CounterVec
 }
 
 // Register Metrics
@@ -41,8 +42,14 @@ func CreateLLMMetrics(reg prometheus.Registerer) *LLMMetrics {
 				Name: "lophiid_backend_llm_error_count",
 				Help: "Total LLM comunication errors",
 			}),
+		llmCacheHits: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_llm_cache_hits",
+				Help: "How many cache hits the first triage has"},
+			[]string{"result"}),
 	}
 
+	reg.MustRegister(m.llmCacheHits)
 	reg.MustRegister(m.llmQueryResponseTime)
 	reg.MustRegister(m.llmErrorCount)
 	return m

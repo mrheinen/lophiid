@@ -35,12 +35,12 @@ func (m *MockLLMManager) CompleteMultiple(prompts []string, cacheResult bool) (m
 	return result, m.ErrorToReturn
 }
 
-func (m *MockLLMManager) CompleteWithMessages(msgs []LLMMessage) (LLMResult, error) {
+func (m *MockLLMManager) CompleteWithMessages(msgs []LLMMessage, cacheResult bool) (LLMResult, error) {
 	m.LastReceivedMessages = msgs
 	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }
 
-func (m *MockLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool) (LLMResult, error) {
+func (m *MockLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error) {
 	m.LastReceivedMessages = msgs
 	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }

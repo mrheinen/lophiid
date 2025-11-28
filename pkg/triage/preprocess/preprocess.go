@@ -192,9 +192,9 @@ func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {
 	}
 
 	if res.FromCache {
-		p.metrics.triageResultCacheHits.WithLabelValues("hit").Inc()
+		p.metrics.triageResultCacheHits.WithLabelValues(constants.LLMCacheHit).Inc()
 	} else {
-		p.metrics.triageResultCacheHits.WithLabelValues("miss").Inc()
+		p.metrics.triageResultCacheHits.WithLabelValues(constants.LLMCacheMiss).Inc()
 	}
 
 	result := PreProcessResult{}

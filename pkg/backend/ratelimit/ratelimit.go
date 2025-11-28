@@ -185,6 +185,13 @@ func (r *WindowRateLimiter) allowRequestForIP(req *models.Request) (bool, error)
 }
 
 func (r *WindowRateLimiter) allowRequestForURI(req *models.Request) (bool, error) {
+
+	// Always allow requests to "/". It's too common to ratelimit and we therefore
+	// depend here on the IP ratelimiter to limit the number of requests.
+	if req.Uri == "/" {
+		return true, nil
+	}
+
 	uriRateKey := req.BaseHash
 
 	r.rateURIMu.Lock()

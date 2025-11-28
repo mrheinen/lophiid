@@ -219,12 +219,12 @@ func TestAllowRequestForIP(t *testing.T) {
 
 func TestAllowRequestForURI(t *testing.T) {
 	tests := []struct {
-		name           string
-		req            *models.Request
-		requestCount   int
-		expectedAllow  bool
-		expectedError  error
-		setupRequests  int  // number of requests to make before the actual test
+		name          string
+		req           *models.Request
+		requestCount  int
+		expectedAllow bool
+		expectedError error
+		setupRequests int  // number of requests to make before the actual test
 		newBucket     bool // whether this should create a new bucket
 	}{
 		{
@@ -235,7 +235,7 @@ func TestAllowRequestForURI(t *testing.T) {
 			requestCount:  1,
 			expectedAllow: true,
 			expectedError: nil,
-			newBucket:    true,
+			newBucket:     true,
 		},
 		{
 			name: "request within limits",
@@ -267,6 +267,18 @@ func TestAllowRequestForURI(t *testing.T) {
 			expectedError: ErrURIWindowLimitExceeded,
 		},
 		{
+			name: "window limit not exceeded for /",
+			req: &models.Request{
+				Uri:      "/",
+				BaseHash: "hash4",
+			},
+			requestCount:  7,
+			setupRequests: 6, // make 6 requests first to reach the window limit
+			expectedAllow: true,
+			expectedError: nil,
+		},
+
+		{
 			name: "different URIs don't interfere",
 			req: &models.Request{
 				BaseHash: "hash5",
@@ -274,7 +286,7 @@ func TestAllowRequestForURI(t *testing.T) {
 			requestCount:  1,
 			expectedAllow: true,
 			expectedError: nil,
-			newBucket:    true,
+			newBucket:     true,
 		},
 	}
 
@@ -282,12 +294,12 @@ func TestAllowRequestForURI(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a new rate limiter for each test
 			r := NewWindowRateLimiter(
-				time.Second*5,        // window
-				time.Second,          // bucket duration
-				10,                   // max IP requests per window (not used in this test)
-				5,                    // max IP requests per bucket (not used in this test)
-				6,                    // max URI requests per window
-				5,                    // max URI requests per bucket
+				time.Second*5, // window
+				time.Second,   // bucket duration
+				10,            // max IP requests per window (not used in this test)
+				5,             // max IP requests per bucket (not used in this test)
+				6,             // max URI requests per window
+				5,             // max URI requests per bucket
 				CreateRatelimiterMetrics(prometheus.NewRegistry()),
 			)
 

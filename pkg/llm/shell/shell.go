@@ -165,7 +165,7 @@ func (s *ShellClient) RunCommand(req *models.Request, cmd string) (*models.Sessi
 		})
 	}
 
-	res, err := s.llmManager.CompleteWithMessages(msgs)
+	res, err := s.llmManager.CompleteWithMessages(msgs, true)
 
 	if err != nil {
 		slog.Error("error running command", slog.String("error", err.Error()), slog.String("command", cmd))
