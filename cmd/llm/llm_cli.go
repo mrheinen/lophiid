@@ -22,6 +22,7 @@ import (
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"os"
 	"time"
 
@@ -59,7 +60,7 @@ func main() {
 	llmResponder := responder.NewLLMResponder(llmManager, *maxInputLength)
 	startTime := time.Now()
 
-	res, err := llmResponder.Respond(*responderType, *query, responder.LLMReplacementTag)
+	res, err := llmResponder.Respond(*responderType, *query, constants.LLMReplacementTag)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
