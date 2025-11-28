@@ -1672,7 +1672,7 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 			preprocessBody:  "root",
 			preprocessError: nil,
 			contentData:     []byte("default content"),
-			expectedBody:    "root",
+			expectedBody:    "default content\nroot",
 		},
 		{
 			description:      "ResponderTypeAuto with ErrNotProcessed - uses content data",

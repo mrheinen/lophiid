@@ -40,6 +40,10 @@ type BackendMetrics struct {
 	methodPerRequest          *prometheus.CounterVec
 	requestsPerPort           *prometheus.CounterVec
 	rateLimiterRejects        *prometheus.CounterVec
+	firstTriageResult         *prometheus.CounterVec
+	firstTriageSelection      *prometheus.CounterVec
+	firstTriagePayloadType    *prometheus.CounterVec
+	firstTriageTotal          *prometheus.CounterVec
 }
 
 // Register Metrics
@@ -103,8 +107,32 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 				Name: "lophiid_backend_rate_limiter_rejects_total",
 				Help: "Amount of rejects per type (window or bucket)"},
 			[]string{"type"}),
+		firstTriageTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_first_triage_count",
+				Help: "Counter of first triage"},
+			[]string{"result"}),
+		firstTriageResult: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_first_triage_result_total",
+				Help: "Result counter of first triage"},
+			[]string{"result"}),
+		firstTriageSelection: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_first_triage_selection_total",
+				Help: "Result counter how the selection was done"},
+			[]string{"result"}),
+		firstTriagePayloadType: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_first_triage_payload_type_total",
+				Help: "The type of payload the triage found"},
+			[]string{"result"}),
 	}
 
+	reg.MustRegister(m.firstTriageTotal)
+	reg.MustRegister(m.firstTriageResult)
+	reg.MustRegister(m.firstTriageSelection)
+	reg.MustRegister(m.firstTriagePayloadType)
 	reg.MustRegister(m.reqsQueueGauge)
 	reg.MustRegister(m.rpcResponseTime)
 	reg.MustRegister(m.reqsQueueResponseTime)

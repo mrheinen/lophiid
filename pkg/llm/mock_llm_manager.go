@@ -21,9 +21,11 @@ type MockLLMManager struct {
 	CompletionToReturn   string
 	ErrorToReturn        error
 	LastReceivedMessages []LLMMessage
+	LastReceivedPrompt   string
 }
 
 func (m *MockLLMManager) Complete(prompt string, cacheResult bool) (LLMResult, error) {
+	m.LastReceivedPrompt = prompt
 	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }
 
