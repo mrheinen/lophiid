@@ -314,6 +314,16 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 	}
 }
 
+// AddLLMResponseToContent adds the LLM response to the content.
+func AddLLMResponseToContent(content *models.Content, llmResponse string) string {
+	template := string(content.Data)
+	if !strings.Contains(template, constants.LLMReplacementTag) {
+		template = fmt.Sprintf("%s\n%s", template, constants.LLMReplacementTag)
+	}
+
+	return strings.Replace(template, constants.LLMReplacementTag, llmResponse, 1)
+}
+
 func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session) (models.ContentRule, error) {
 	matchedPriority1 := []models.ContentRule{}
 	matchedPriority2 := []models.ContentRule{}
@@ -831,7 +841,7 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 		match := reg.FindSubmatch(sReq.Raw)
 
 		if len(match) < 2 {
-			return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
+			return strings.Replace(string(content.Data), constants.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
 		}
 
 		final_match := ""
@@ -850,7 +860,7 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 		}
 
 		if final_match == "" {
-			return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
+			return strings.Replace(string(content.Data), constants.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
 		}
 
 		body, err := s.llmResponder.Respond(rule.Responder, final_match, string(content.Data))
@@ -860,7 +870,7 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 		return body
 	}
 	// Remove the tag and send the template as-is
-	return strings.Replace(string(content.Data), responder.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
+	return strings.Replace(string(content.Data), constants.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
 }
 
 func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool) (string, error) {
@@ -868,6 +878,8 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	var preRes *preprocess.PreProcessResult
 	var err error
 	var payloadResponse string
+
+	s.metrics.firstTriageTotal.WithLabelValues("input_count").Inc()
 
 	if filter {
 		// Check the cache is the cmp_hash is in there. Remember that this hash is
@@ -877,40 +889,54 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		// future for the duration of the entry in the cache.
 		if _, err = s.payloadCache.Get(sReq.CmpHash); err == nil {
 			slog.Debug("found payload cmp_hash in cache!", slog.String("url", sReq.Uri))
+			s.metrics.firstTriageSelection.WithLabelValues("filter_accept_similar").Inc()
 			preRes, payloadResponse, err = s.preprocessor.Process(sReq)
 		} else {
 			// Use MaybeProcess which means that the preprocessing will only happen if
 			// the request matches certain characters (e.g. if has /bin/sh in the
 			// body).
 			preRes, payloadResponse, err = s.preprocessor.MaybeProcess(sReq)
+			if err != nil && errors.Is(err, preprocess.ErrNotProcessed) {
+				s.metrics.firstTriageSelection.WithLabelValues("filter_reject").Inc()
+				return "", fmt.Errorf("not pre-processed: %w", err)
+			}
+			s.metrics.firstTriageSelection.WithLabelValues("filter_accept").Inc()
 		}
 	} else {
 		preRes, payloadResponse, err = s.preprocessor.Process(sReq)
+		s.metrics.firstTriageSelection.WithLabelValues("direct_accept").Inc()
 	}
 
 	sReq.Triaged = true
 
 	if err != nil {
-		if errors.Is(err, preprocess.ErrNotProcessed) {
-			return "", fmt.Errorf("not pre-processed: %w", err)
-		} else {
-			return "", fmt.Errorf("error pre-processing: %s", err)
-		}
-	} else if preRes == nil {
-		return "", fmt.Errorf("no pre-processing response")
-	} else if !preRes.HasPayload {
-		sReq.TriageHasPayload = false
-		return "", fmt.Errorf("no payload found")
-	} else {
-		slog.Debug("found payload!", slog.String("url", sReq.Uri))
-		// Update the cache in order to also preprocess future similar requests.
-		s.payloadCache.Store(sReq.CmpHash, struct{}{})
-		sReq.TriageHasPayload = true
-		sReq.TriagePayload = preRes.Payload
-		sReq.TriagePayloadType = preRes.PayloadType
-		sReq.RawResponse = payloadResponse
-		return payloadResponse, nil
+		s.metrics.firstTriageResult.WithLabelValues("error").Inc()
+		return "", fmt.Errorf("error pre-processing: %s", err)
 	}
+
+	if preRes == nil {
+		s.metrics.firstTriageResult.WithLabelValues("error_no_response").Inc()
+		return "", fmt.Errorf("no pre-processing response")
+	}
+
+	if !preRes.HasPayload {
+		sReq.TriageHasPayload = false
+		s.metrics.firstTriageResult.WithLabelValues("success_no_payload").Inc()
+		return "", fmt.Errorf("no payload found")
+	}
+
+	slog.Debug("found payload!", slog.String("url", sReq.Uri))
+	s.metrics.firstTriageResult.WithLabelValues("success_payload").Inc()
+	s.metrics.firstTriagePayloadType.WithLabelValues(preRes.PayloadType).Inc()
+
+	// Update the cache in order to also preprocess future similar requests.
+	s.payloadCache.Store(sReq.CmpHash, struct{}{})
+
+	sReq.TriageHasPayload = true
+	sReq.TriagePayload = preRes.Payload
+	sReq.TriagePayloadType = preRes.PayloadType
+	sReq.RawResponse = payloadResponse
+	return payloadResponse, nil
 }
 
 // HandleProbe receives requests from te honeypots and tells them how to
@@ -1093,7 +1119,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 					}
 					res.Body = content.Data
 				} else {
-					res.Body = []byte(payloadResponse)
+					res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse))
 				}
 			} else {
 				res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
@@ -1113,7 +1139,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			}
 			res.Body = content.Data
 		} else {
-			res.Body = []byte(payloadResponse)
+			res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse))
 		}
 	}
 
