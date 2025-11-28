@@ -1041,6 +1041,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}
 
 	if matchedRule.Block {
+		s.metrics.requestsBlocked.Inc()
 		return nil, status.Errorf(codes.PermissionDenied, "Rule blocks request")
 	}
 
@@ -1137,6 +1138,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			if !errors.Is(err, preprocess.ErrNotProcessed) {
 				slog.Error("error pre-processing", slog.String("error", err.Error()))
 			}
+			slog.Error("error pre-processing", slog.String("error", err.Error()))
 			res.Body = content.Data
 		} else {
 			res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse))

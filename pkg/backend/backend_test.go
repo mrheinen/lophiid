@@ -44,6 +44,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/vingarcia/ksql"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -903,6 +904,11 @@ func TestHandleProbe(t *testing.T) {
 
 		if statusErr.Code() != codes.PermissionDenied {
 			t.Errorf("Expected PermissionDenied error but got: %v", statusErr.Code())
+		}
+
+		metric := testutil.ToFloat64(bMetrics.requestsBlocked)
+		if metric != 1 {
+			t.Errorf("Expected metric to be 1 but got: %f", metric)
 		}
 
 		if statusErr.Message() != "Rule blocks request" {
