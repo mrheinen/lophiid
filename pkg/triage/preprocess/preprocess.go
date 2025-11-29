@@ -118,12 +118,19 @@ func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *Payl
 	if !RequestHas(req, "echo") &&
 		!RequestHas(req, "expr") &&
 		!RequestHas(req, "cat") &&
-		!RequestHas(req, "passwd") &&
-		!RequestHas(req, "hosts") &&
+		!RequestHas(req, "/etc") &&
+		!RequestHas(req, "/var") &&
+		!RequestHas(req, ".ini") &&
+		!RequestHas(req, ".log") &&
+		!RequestHas(req, ".txt") &&
+		!RequestHas(req, ".php") &&
+		!RequestHas(req, ".jsp") &&
+		!RequestHas(req, ".jar") &&
 		!RequestHas(req, "/bin/") &&
 		!RequestHas(req, "java.") &&
 		!RequestHas(req, "<%") &&
 		!RequestHas(req, "<?php") &&
+		!RequestHas(req, "<?=") &&
 		!RequestHas(req, "Runtime") &&
 		!RequestHas(req, "org.apache.") &&
 		!RequestHas(req, "request.") &&
@@ -133,6 +140,8 @@ func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *Payl
 		!RequestHas(req, "select") &&
 		!RequestHas(req, "union") &&
 		!RequestHas(req, "from") &&
+		!RequestHas(req, "--") &&
+		!RequestHas(req, "\\-\\-") &&
 		!RequestHas(req, "where") &&
 		!RequestHas(req, "sleep") &&
 		!RequestHas(req, "benchmark") &&
