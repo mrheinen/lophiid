@@ -145,7 +145,9 @@ func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *Payl
 		!RequestHas(req, "\\-\\-") &&
 		!RequestHasCaseInsensitive(req, "md5") &&
 		!RequestHasCaseInsensitive(req, "select") &&
+		!RequestHasCaseInsensitive(req, "version()") &&
 		!RequestHasCaseInsensitive(req, "union") &&
+		!RequestHasCaseInsensitive(req, "concat") &&
 		!RequestHasCaseInsensitive(req, "from") &&
 		!RequestHasCaseInsensitive(req, "where") &&
 		!RequestHasCaseInsensitive(req, "sleep") &&
