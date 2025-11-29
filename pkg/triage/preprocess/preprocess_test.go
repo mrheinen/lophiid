@@ -24,6 +24,7 @@ import (
 	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/file"
 	"lophiid/pkg/llm/shell"
+	"lophiid/pkg/llm/sql"
 	"strings"
 	"testing"
 
@@ -52,8 +53,9 @@ func TestProcess_NoPayload(t *testing.T) {
 	mockLLM.ErrorToReturn = nil
 	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -112,8 +114,9 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 	fakeShell.ErrorToReturn = nil
 	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -146,7 +149,80 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 	}
 
 	if pRes.Output != expectedOutput {
-		t.Errorf("Expected body '%s', got: %s", expectedOutput, pRes)
+		t.Errorf("Expected body '%s', got: %s", expectedOutput, pRes.Output)
+	}
+}
+
+func TestProcess_SqlInjectionPayload(t *testing.T) {
+	// Setup
+	mockLLM := &llm.MockLLMManager{}
+	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	metrics := createTestMetrics()
+
+	preprocessResult := PreProcessResult{
+		HasPayload:  true,
+		PayloadType: "SQL_INJECTION",
+		Payload:     "' OR 1=1 --",
+	}
+
+	sqlOutput := &sql.SqlInjectionOutput{
+		Output:  "id,name\n1,admin\n2,user",
+		IsBlind: false,
+		DelayMs: 0,
+	}
+	fakeSqlEmu.OutputToReturn = sqlOutput
+
+	jsonResult, _ := json.Marshal(preprocessResult)
+	mockLLM.CompletionToReturn = string(jsonResult)
+	mockLLM.ErrorToReturn = nil
+
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+
+	req := &models.Request{
+		ID:        1,
+		SessionID: 100,
+		Raw:       []byte("GET /?id=' OR 1=1 -- HTTP/1.1\r\nHost: example.com\r\n\r\n"),
+	}
+
+	// Execute
+	result, pRes, err := preprocess.Process(req)
+
+	// Verify
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("Expected result, got nil")
+	}
+
+	if !result.HasPayload {
+		t.Error("Expected HasPayload to be true")
+	}
+
+	if result.PayloadType != "SQL_INJECTION" {
+		t.Errorf("Expected PayloadType 'SQL_INJECTION', got: %s", result.PayloadType)
+	}
+
+	if result.Payload != "' OR 1=1 --" {
+		t.Errorf("Expected Payload '' OR 1=1 --', got: %s", result.Payload)
+	}
+
+	if pRes == nil {
+		t.Errorf("Expected payload response, got nil")
+	} else {
+		if pRes.Output != "id,name\n1,admin\n2,user" {
+			t.Errorf("Expected output 'id,name\n1,admin\n2,user', got: %s", pRes.Output)
+		}
+		if pRes.SqlIsBlind {
+			t.Error("Expected SqlIsBlind to be false")
+		}
+		if pRes.SqlDelayMs != 0 {
+			t.Errorf("Expected SqlDelayMs 0, got: %d", pRes.SqlDelayMs)
+		}
 	}
 }
 
@@ -170,7 +246,8 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -227,7 +304,8 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	mockLLM.ErrorToReturn = nil
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -256,7 +334,7 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	}
 
 	if pRes != nil {
-		t.Errorf("Expected empty body, got: %s", pRes)
+		t.Errorf("Expected empty body, got: %+v", pRes)
 	}
 }
 
@@ -272,7 +350,8 @@ func TestProcess_LLMError(t *testing.T) {
 	mockLLM.ErrorToReturn = expectedError
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -293,7 +372,7 @@ func TestProcess_LLMError(t *testing.T) {
 	}
 
 	if pRes != nil {
-		t.Errorf("Expected empty body, got: %s", pRes)
+		t.Errorf("Expected empty body, got: %+v", pRes)
 	}
 }
 
@@ -308,7 +387,8 @@ func TestProcess_InvalidJSON(t *testing.T) {
 	mockLLM.ErrorToReturn = nil
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -329,7 +409,7 @@ func TestProcess_InvalidJSON(t *testing.T) {
 	}
 
 	if pRes != nil {
-		t.Errorf("Expected empty body, got: %s", pRes)
+		t.Errorf("Expected empty body, got: %+v", pRes)
 	}
 }
 
@@ -355,7 +435,8 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	fakeShell.ErrorToReturn = expectedError
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -376,7 +457,7 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	}
 
 	if pRes != nil {
-		t.Errorf("Expected empty body, got: %s", pRes)
+		t.Errorf("Expected empty body, got: %+v", pRes)
 	}
 }
 
@@ -411,7 +492,8 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	fakeShell.ErrorToReturn = nil
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -440,7 +522,7 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	}
 
 	if pRes.Output != expectedOutput {
-		t.Errorf("Expected body '%s', got: %s", expectedOutput, pRes)
+		t.Errorf("Expected body '%s', got: %s", expectedOutput, pRes.Output)
 	}
 }
 
@@ -462,7 +544,8 @@ func TestComplete_HostHeaderRemoval(t *testing.T) {
 	mockLLM.ErrorToReturn = nil
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
 
 	reqRaw := "GET / HTTP/1.1\nHost: example.com\nUser-Agent: TestBot\n\n"
 	req := &models.Request{

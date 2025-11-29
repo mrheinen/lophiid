@@ -137,6 +137,10 @@ type Config struct {
 			Enable     bool                 `fig:"enable" default:"0" `
 			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
 		} `fig:"file_emulation"`
+		SqlEmulation struct {
+			Enable     bool                 `fig:"enable" default:"0" `
+			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+		} `fig:"sql_emulation"`
 
 		Triage struct {
 			Describer struct {

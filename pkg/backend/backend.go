@@ -64,6 +64,7 @@ import (
 const userAgent = "Wget/1.13.4 (linux-gnu)"
 const maxUrlsToExtractForDownload = 15
 const maxPingsToExtract = 5
+const maxSqlDelayMs = 10000
 
 type ReqQueueEntry struct {
 	req        *models.Request
@@ -896,9 +897,15 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 			// the request matches certain characters (e.g. if has /bin/sh in the
 			// body).
 			preRes, payloadResponse, err = s.preprocessor.MaybeProcess(sReq)
-			if err != nil && errors.Is(err, preprocess.ErrNotProcessed) {
-				s.metrics.firstTriageSelection.WithLabelValues("filter_reject").Inc()
-				return nil, fmt.Errorf("not pre-processed: %w", err)
+			if err != nil {
+
+				if errors.Is(err, preprocess.ErrNotProcessed) {
+					s.metrics.firstTriageSelection.WithLabelValues("filter_reject").Inc()
+					return nil, preprocess.ErrNotProcessed
+				} else {
+					s.metrics.firstTriageSelection.WithLabelValues("preprocess_error").Inc()
+					return nil, fmt.Errorf("not preprocess error: %w", err)
+				}
 			}
 			s.metrics.firstTriageSelection.WithLabelValues("filter_accept").Inc()
 		}
@@ -925,6 +932,11 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		return nil, fmt.Errorf("no payload found")
 	}
 
+	if payloadResponse == nil {
+		slog.Error("no payload response", slog.String("url", sReq.Uri), slog.String("cmp_hash", sReq.CmpHash))
+		return nil, fmt.Errorf("no payload response found")
+	}
+
 	slog.Debug("found payload!", slog.String("url", sReq.Uri))
 	s.metrics.firstTriageResult.WithLabelValues("success_payload").Inc()
 	s.metrics.firstTriagePayloadType.WithLabelValues(preRes.PayloadType).Inc()
@@ -937,6 +949,39 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	sReq.TriagePayloadType = preRes.PayloadType
 	sReq.RawResponse = payloadResponse.Output
 	return payloadResponse, nil
+}
+
+func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.Content, res *backend_service.HttpResponse, finalHeaders *map[string]string, rpcStartTime time.Time, filter bool) {
+	payloadResponse, err := s.GetPreProcessResponse(sReq, filter)
+
+	if err != nil {
+		if !errors.Is(err, preprocess.ErrNotProcessed) {
+			slog.Error("error pre-processing", slog.String("error", err.Error()))
+		}
+		res.Body = content.Data
+		return
+	}
+
+	if payloadResponse.SqlDelayMs > 0 {
+		rpcDuration := time.Since(rpcStartTime).Milliseconds()
+		timeRemainMs := payloadResponse.SqlDelayMs - int(rpcDuration)
+
+		if timeRemainMs <= 0 {
+			slog.Debug("skipping sql delay", slog.Int("timeRemainMs", timeRemainMs))
+		} else {
+			slog.Debug("sql delay", slog.Int("timeRemainMs", timeRemainMs))
+			if timeRemainMs < maxSqlDelayMs {
+				time.Sleep(time.Duration(timeRemainMs) * time.Millisecond)
+			} else {
+				slog.Error("sql delay too large", slog.Int("timeRemainMs", timeRemainMs))
+			}
+		}
+	}
+
+	res.Body = []byte(AddLLMResponseToContent(content, payloadResponse.Output))
+	if payloadResponse.Headers != "" {
+		util.ParseHeaders(payloadResponse.Headers, finalHeaders)
+	}
 }
 
 // HandleProbe receives requests from te honeypots and tells them how to
@@ -1126,20 +1171,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 		if matchedRule.Responder != "" && matchedRule.Responder != constants.ResponderTypeNone {
 			if matchedRule.Responder == constants.ResponderTypeAuto {
-				payloadResponse, err := s.GetPreProcessResponse(sReq, false)
-
-				if err != nil {
-					if !errors.Is(err, preprocess.ErrNotProcessed) {
-						slog.Error("error pre-processing", slog.String("error", err.Error()))
-					}
-					res.Body = content.Data
-				} else {
-					res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse.Output))
-					if payloadResponse.Headers != "" {
-						util.ParseHeaders(payloadResponse.Headers, &finalHeaders)
-					}
-
-				}
+				s.handlePreProcess(sReq, &content, res, &finalHeaders, rpcStartTime, false)
 			} else {
 				res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
 				sReq.RawResponse = string(res.Body)
@@ -1150,20 +1182,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}
 
 	if matchedRuleIsDefault {
-		payloadResponse, err := s.GetPreProcessResponse(sReq, true)
-
-		if err != nil {
-			if !errors.Is(err, preprocess.ErrNotProcessed) {
-				slog.Error("error pre-processing", slog.String("error", err.Error()))
-			}
-			slog.Error("error pre-processing", slog.String("error", err.Error()))
-			res.Body = content.Data
-		} else {
-			res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse.Output))
-			if payloadResponse.Headers != "" {
-				util.ParseHeaders(payloadResponse.Headers, &finalHeaders)
-			}
-		}
+		s.handlePreProcess(sReq, &content, res, &finalHeaders, rpcStartTime, true)
 	}
 
 	// Apply the templating and render the macros after the scripts have run. This

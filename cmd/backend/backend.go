@@ -41,6 +41,7 @@ import (
 	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/file"
 	"lophiid/pkg/llm/shell"
+	"lophiid/pkg/llm/sql"
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/triage/preprocess"
 	"lophiid/pkg/util"
@@ -256,8 +257,14 @@ func main() {
 		fileEmu = file.NewFileAccessEmulator(fileLLMManager)
 	}
 
+	var sqlEmu sql.SqlInjectionEmulatorInterface
+	if cfg.AI.SqlEmulation.Enable {
+		sqlLLMManager := llm.GetLLMManager(cfg.AI.SqlEmulation.LLMManager, llmMetrics)
+		sqlEmu = sql.NewSqlInjectionEmulator(sqlLLMManager)
+	}
+
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
-	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, preprocMetric)
+	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, preprocMetric)
 
 	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, preproc, cfg)
 	if err = bs.Start(); err != nil {

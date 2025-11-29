@@ -1940,13 +1940,115 @@ func TestGetPreProcessResponse(t *testing.T) {
 			// If we don't expect an error, verify the response
 			if !test.expectedError {
 				if response.Output != test.expectedResponse {
-					t.Errorf("expected response=%s, got=%s", test.expectedResponse, response)
+					t.Errorf("expected response=%s, got=%+v", test.expectedResponse, response)
 				}
 				if req.TriagePayload != test.expectedPayload {
 					t.Errorf("expected payload=%s, got=%s", test.expectedPayload, req.TriagePayload)
 				}
 				if req.TriageHasPayload != test.expectedHasMarked {
 					t.Errorf("expected TriageHasPayload=%t, got=%t", test.expectedHasMarked, req.TriageHasPayload)
+				}
+			}
+		})
+	}
+}
+
+func TestHandlePreProcess(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{}
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	fakeLimiter := ratelimit.FakeRateLimiter{
+		BoolToReturn:  true,
+		ErrorToReturn: nil,
+	}
+	sMetrics := session.CreateSessionMetrics(reg)
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	fIpMgr := analysis.FakeIpEventManager{}
+	fakeRes := &responder.FakeResponder{}
+	fakeDescriber := describer.FakeDescriberClient{}
+
+	for _, test := range []struct {
+		description      string
+		preprocessResult *preprocess.PreProcessResult
+		payloadResponse  *preprocess.PayloadProcessingResult
+		preprocessError  error
+		expectedBody     string
+		expectedHeaders  []string // Keys that should exist in headers
+		expectedSqlDelay int
+	}{
+		{
+			description: "Success with payload response",
+			preprocessResult: &preprocess.PreProcessResult{
+				HasPayload:  true,
+				PayloadType: "SQLI",
+				Payload:     "' OR 1=1 --",
+			},
+			payloadResponse: &preprocess.PayloadProcessingResult{
+				Output:     "Injected content",
+				Headers:    "X-Injected: true",
+				SqlDelayMs: 0,
+			},
+			preprocessError: nil,
+			expectedBody:    "Original content\nInjected content",
+			expectedHeaders: []string{"X-Injected"},
+		},
+		{
+			description:      "Error during preprocessing (ErrNotProcessed)",
+			preprocessResult: nil,
+			preprocessError:  preprocess.ErrNotProcessed,
+			expectedBody:     "Original content",
+		},
+		{
+			description: "Success with SQL delay",
+			preprocessResult: &preprocess.PreProcessResult{
+				HasPayload:  true,
+				PayloadType: "SQLI",
+			},
+			payloadResponse: &preprocess.PayloadProcessingResult{
+				Output:     "Delayed content",
+				SqlDelayMs: 50, // Small delay for test
+			},
+			preprocessError: nil,
+			expectedBody:    "Original content\nDelayed content",
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fakePreprocessor := preprocess.FakePreProcessor{
+				ResultToReturn: test.preprocessResult,
+				PayloadResult:  test.payloadResponse,
+				ErrorToReturn:  test.preprocessError,
+			}
+
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+
+			content := &models.Content{
+				Data: []byte("Original content"),
+			}
+			res := &backend_service.HttpResponse{
+				Body:   []byte("Original content"),
+				Header: []*backend_service.KeyValue{},
+			}
+			finalHeaders := make(map[string]string)
+			sReq := &models.Request{
+				Uri: "/test",
+			}
+
+			startTime := time.Now()
+			b.handlePreProcess(sReq, content, res, &finalHeaders, startTime, false)
+
+			// Verify body
+			if string(res.Body) != test.expectedBody {
+				t.Errorf("expected body %q, got %q", test.expectedBody, string(res.Body))
+			}
+
+			// Verify headers
+			for _, h := range test.expectedHeaders {
+				if _, ok := finalHeaders[h]; !ok {
+					t.Errorf("expected header %s to be present", h)
 				}
 			}
 		})

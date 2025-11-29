@@ -126,6 +126,7 @@ const (
 	TriagePayloadTypeShellCommand = "SHELL_COMMAND"
 	TriagePayloadTypeFileAccess   = "FILE_ACCESS"
 	TriagePayloadTypeCodeExec     = "CODE_EXECUTION"
+	TriagePayloadTypeSqlInjection = "SQL_INJECTION"
 )
 
 // Template constants used by the templator.
