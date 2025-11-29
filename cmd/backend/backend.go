@@ -39,6 +39,7 @@ import (
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/code"
+	"lophiid/pkg/llm/file"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/triage/preprocess"
@@ -249,8 +250,14 @@ func main() {
 		codeEmu = code.NewCodeSnippetEmulator(codeLLMManager, shellClient, dbc)
 	}
 
+	var fileEmu file.FileAccessEmulatorInterface
+	if cfg.AI.FileEmulation.Enable {
+		fileLLMManager := llm.GetLLMManager(cfg.AI.FileEmulation.LLMManager, llmMetrics)
+		fileEmu = file.NewFileAccessEmulator(fileLLMManager)
+	}
+
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
-	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, preprocMetric)
+	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, preprocMetric)
 
 	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, preproc, cfg)
 	if err = bs.Start(); err != nil {

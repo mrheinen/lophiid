@@ -22,6 +22,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/code"
+	"lophiid/pkg/llm/file"
 	"lophiid/pkg/llm/shell"
 	"strings"
 	"testing"
@@ -50,8 +51,9 @@ func TestProcess_NoPayload(t *testing.T) {
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -60,7 +62,7 @@ func TestProcess_NoPayload(t *testing.T) {
 	}
 
 	// Execute
-	result, body, err := preprocess.Process(req)
+	result, pRes, err := preprocess.Process(req)
 
 	// Verify
 	if err != nil {
@@ -75,8 +77,8 @@ func TestProcess_NoPayload(t *testing.T) {
 		t.Error("Expected HasPayload to be false")
 	}
 
-	if body != "" {
-		t.Errorf("Expected empty body, got: %s", body)
+	if pRes != nil {
+		t.Error("Expected pRes to be nil")
 	}
 }
 
@@ -109,8 +111,9 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 	fakeShell.ContextToReturn = executionContext
 	fakeShell.ErrorToReturn = nil
 	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -119,7 +122,7 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 	}
 
 	// Execute
-	result, body, err := preprocess.Process(req)
+	result, pRes, err := preprocess.Process(req)
 
 	// Verify
 	if err != nil {
@@ -142,8 +145,8 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 		t.Errorf("Expected Payload 'echo 'hello world'', got: %s", result.Payload)
 	}
 
-	if body != expectedOutput {
-		t.Errorf("Expected body '%s', got: %s", expectedOutput, body)
+	if pRes.Output != expectedOutput {
+		t.Errorf("Expected body '%s', got: %s", expectedOutput, pRes)
 	}
 }
 
@@ -152,6 +155,7 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{}
 	fakeShell := &shell.FakeShellClient{}
 	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 	metrics := createTestMetrics()
 
 	preprocessResult := PreProcessResult{
@@ -160,11 +164,13 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 		Payload:     "/etc/passwd",
 	}
 
+	fakeFileEmu.ContentToReturn = "root:x:0:0:root:/root:/bin/bash"
+
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -173,7 +179,7 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 	}
 
 	// Execute
-	result, body, err := preprocess.Process(req)
+	result, pRes, err := preprocess.Process(req)
 
 	// Verify
 	if err != nil {
@@ -196,8 +202,10 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 		t.Errorf("Expected Payload '/etc/passwd', got: %s", result.Payload)
 	}
 
-	if body != "" {
-		t.Errorf("Expected empty body, got: %s", body)
+	if pRes == nil {
+		t.Errorf("Expected payload response, got nil")
+	} else if pRes.Output != "root:x:0:0:root:/root:/bin/bash" {
+		t.Errorf("Expected body 'root:x:0:0:root:/root:/bin/bash', got: %s", pRes.Output)
 	}
 }
 
@@ -217,8 +225,9 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -227,7 +236,7 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	}
 
 	// Execute
-	result, body, err := preprocess.Process(req)
+	result, pRes, err := preprocess.Process(req)
 
 	// Verify
 	if err != nil {
@@ -246,8 +255,8 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 		t.Errorf("Expected PayloadType 'UNKNOWN', got: %s", result.PayloadType)
 	}
 
-	if body != "" {
-		t.Errorf("Expected empty body, got: %s", body)
+	if pRes != nil {
+		t.Errorf("Expected empty body, got: %s", pRes)
 	}
 }
 
@@ -261,8 +270,9 @@ func TestProcess_LLMError(t *testing.T) {
 	expectedError := errors.New("LLM service unavailable")
 	mockLLM.CompletionToReturn = ""
 	mockLLM.ErrorToReturn = expectedError
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -271,7 +281,7 @@ func TestProcess_LLMError(t *testing.T) {
 	}
 
 	// Execute
-	result, body, err := preprocess.Process(req)
+	result, pRes, err := preprocess.Process(req)
 
 	// Verify
 	if err == nil {
@@ -282,8 +292,8 @@ func TestProcess_LLMError(t *testing.T) {
 		t.Errorf("Expected nil result, got: %v", result)
 	}
 
-	if body != "" {
-		t.Errorf("Expected empty body, got: %s", body)
+	if pRes != nil {
+		t.Errorf("Expected empty body, got: %s", pRes)
 	}
 }
 
@@ -296,8 +306,9 @@ func TestProcess_InvalidJSON(t *testing.T) {
 
 	mockLLM.CompletionToReturn = "this is not valid JSON"
 	mockLLM.ErrorToReturn = nil
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -306,7 +317,7 @@ func TestProcess_InvalidJSON(t *testing.T) {
 	}
 
 	// Execute
-	result, body, err := preprocess.Process(req)
+	result, pRes, err := preprocess.Process(req)
 
 	// Verify
 	if err == nil {
@@ -317,8 +328,8 @@ func TestProcess_InvalidJSON(t *testing.T) {
 		t.Errorf("Expected nil result, got: %v", result)
 	}
 
-	if body != "" {
-		t.Errorf("Expected empty body, got: %s", body)
+	if pRes != nil {
+		t.Errorf("Expected empty body, got: %s", pRes)
 	}
 }
 
@@ -342,8 +353,9 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	expectedError := errors.New("shell command execution failed")
 	fakeShell.ContextToReturn = nil
 	fakeShell.ErrorToReturn = expectedError
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -352,7 +364,7 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	}
 
 	// Execute
-	result, body, err := preprocess.Process(req)
+	result, pRes, err := preprocess.Process(req)
 
 	// Verify
 	if err == nil {
@@ -363,8 +375,8 @@ func TestProcess_ShellCommandError(t *testing.T) {
 		t.Errorf("Expected nil result, got: %v", result)
 	}
 
-	if body != "" {
-		t.Errorf("Expected empty body, got: %s", body)
+	if pRes != nil {
+		t.Errorf("Expected empty body, got: %s", pRes)
 	}
 }
 
@@ -397,8 +409,9 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	mockLLM.ErrorToReturn = nil
 	fakeShell.ContextToReturn = executionContext
 	fakeShell.ErrorToReturn = nil
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -407,7 +420,7 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	}
 
 	// Execute
-	result, body, err := preprocess.Process(req)
+	result, pRes, err := preprocess.Process(req)
 
 	// Verify
 	if err != nil {
@@ -426,8 +439,8 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 		t.Errorf("Expected PayloadType 'SHELL_COMMAND', got: %s", result.PayloadType)
 	}
 
-	if body != expectedOutput {
-		t.Errorf("Expected body '%s', got: %s", expectedOutput, body)
+	if pRes.Output != expectedOutput {
+		t.Errorf("Expected body '%s', got: %s", expectedOutput, pRes)
 	}
 }
 
@@ -447,8 +460,9 @@ func TestComplete_HostHeaderRemoval(t *testing.T) {
 	jsonResult, _ := json.Marshal(preprocessResult)
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, metrics)
 
 	reqRaw := "GET / HTTP/1.1\nHost: example.com\nUser-Agent: TestBot\n\n"
 	req := &models.Request{
@@ -477,4 +491,3 @@ func TestComplete_HostHeaderRemoval(t *testing.T) {
 		t.Error("Expected request line to be preserved in prompt")
 	}
 }
-

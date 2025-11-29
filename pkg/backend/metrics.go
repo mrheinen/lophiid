@@ -44,6 +44,7 @@ type BackendMetrics struct {
 	firstTriageSelection      *prometheus.CounterVec
 	firstTriagePayloadType    *prometheus.CounterVec
 	firstTriageTotal          *prometheus.CounterVec
+	requestsBlocked           prometheus.Counter
 }
 
 // Register Metrics
@@ -88,7 +89,7 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 		honeypotRequests: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "lophiid_backend_honeypot_requests_total",
-				Help: "How HTTP requests honeypots get"},
+				Help: "How many HTTP requests honeypots get"},
 			[]string{"ip"},
 		),
 		methodPerRequest: prometheus.NewCounterVec(
@@ -102,6 +103,10 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 				Name: "lophiid_backend_request_per_port_total",
 				Help: "Amount of requests per HTTP port"},
 			[]string{"port"}),
+		requestsBlocked: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_request_blocked_total",
+				Help: "Amount of requests blocked by rules"}),
 		rateLimiterRejects: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "lophiid_backend_rate_limiter_rejects_total",
@@ -129,6 +134,7 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 			[]string{"result"}),
 	}
 
+	reg.MustRegister(m.requestsBlocked)
 	reg.MustRegister(m.firstTriageTotal)
 	reg.MustRegister(m.firstTriageResult)
 	reg.MustRegister(m.firstTriageSelection)

@@ -873,11 +873,11 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 	return strings.Replace(string(content.Data), constants.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
 }
 
-func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool) (string, error) {
+func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool) (*preprocess.PayloadProcessingResult, error) {
 
 	var preRes *preprocess.PreProcessResult
 	var err error
-	var payloadResponse string
+	var payloadResponse *preprocess.PayloadProcessingResult
 
 	s.metrics.firstTriageTotal.WithLabelValues("input_count").Inc()
 
@@ -898,7 +898,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 			preRes, payloadResponse, err = s.preprocessor.MaybeProcess(sReq)
 			if err != nil && errors.Is(err, preprocess.ErrNotProcessed) {
 				s.metrics.firstTriageSelection.WithLabelValues("filter_reject").Inc()
-				return "", fmt.Errorf("not pre-processed: %w", err)
+				return nil, fmt.Errorf("not pre-processed: %w", err)
 			}
 			s.metrics.firstTriageSelection.WithLabelValues("filter_accept").Inc()
 		}
@@ -911,18 +911,18 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 
 	if err != nil {
 		s.metrics.firstTriageResult.WithLabelValues("error").Inc()
-		return "", fmt.Errorf("error pre-processing: %s", err)
+		return nil, fmt.Errorf("error pre-processing: %s", err)
 	}
 
 	if preRes == nil {
 		s.metrics.firstTriageResult.WithLabelValues("error_no_response").Inc()
-		return "", fmt.Errorf("no pre-processing response")
+		return nil, fmt.Errorf("no pre-processing response")
 	}
 
 	if !preRes.HasPayload {
 		sReq.TriageHasPayload = false
 		s.metrics.firstTriageResult.WithLabelValues("success_no_payload").Inc()
-		return "", fmt.Errorf("no payload found")
+		return nil, fmt.Errorf("no payload found")
 	}
 
 	slog.Debug("found payload!", slog.String("url", sReq.Uri))
@@ -935,7 +935,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	sReq.TriageHasPayload = true
 	sReq.TriagePayload = preRes.Payload
 	sReq.TriagePayloadType = preRes.PayloadType
-	sReq.RawResponse = payloadResponse
+	sReq.RawResponse = payloadResponse.Output
 	return payloadResponse, nil
 }
 
@@ -1041,6 +1041,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}
 
 	if matchedRule.Block {
+		s.metrics.requestsBlocked.Inc()
 		return nil, status.Errorf(codes.PermissionDenied, "Rule blocks request")
 	}
 
@@ -1089,6 +1090,20 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	res := &backend_service.HttpResponse{}
 	res.StatusCode = content.StatusCode
+
+	// Prepare the final headers for the request. These can still be subject to
+	// change due to the script response, the LLM response or the Content headers.
+	finalHeaders := make(map[string]string)
+	finalHeaders["Content-Type"] = content.ContentType
+	finalHeaders["Server"] = content.Server
+
+	for k, v := range finalHeaders {
+		res.Header = append(res.Header, &backend_service.KeyValue{
+			Key:   k,
+			Value: v,
+		})
+	}
+
 	if content.Script != "" {
 		slog.Debug("running script")
 		err := s.jRunner.RunScript(content.Script, *sReq, res, colEx, false)
@@ -1119,7 +1134,11 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 					}
 					res.Body = content.Data
 				} else {
-					res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse))
+					res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse.Output))
+					if payloadResponse.Headers != "" {
+						util.ParseHeaders(payloadResponse.Headers, &finalHeaders)
+					}
+
 				}
 			} else {
 				res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
@@ -1137,9 +1156,13 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			if !errors.Is(err, preprocess.ErrNotProcessed) {
 				slog.Error("error pre-processing", slog.String("error", err.Error()))
 			}
+			slog.Error("error pre-processing", slog.String("error", err.Error()))
 			res.Body = content.Data
 		} else {
-			res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse))
+			res.Body = []byte(AddLLMResponseToContent(&content, payloadResponse.Output))
+			if payloadResponse.Headers != "" {
+				util.ParseHeaders(payloadResponse.Headers, &finalHeaders)
+			}
 		}
 	}
 
@@ -1156,16 +1179,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			res.Body = newBody
 		}
 	}
-
-	// Append custom headers
-	res.Header = append(res.Header, &backend_service.KeyValue{
-		Key:   "Content-type",
-		Value: content.ContentType,
-	})
-	res.Header = append(res.Header, &backend_service.KeyValue{
-		Key:   "Server",
-		Value: content.Server,
-	})
 
 	for _, header := range content.Headers {
 		headerParts := strings.SplitN(header, ": ", 2)
