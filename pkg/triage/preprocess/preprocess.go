@@ -111,6 +111,10 @@ func RequestHas(req *models.Request, has string) bool {
 	return strings.Contains(req.BodyString(), has) || strings.Contains(req.Uri, has)
 }
 
+func RequestHasCaseInsensitive(req *models.Request, has string) bool {
+	return strings.Contains(strings.ToLower(req.BodyString()), has) || strings.Contains(strings.ToLower(req.Uri), has)
+}
+
 // MaybeProcess returns true if the request was handled.
 func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error) {
 
@@ -131,20 +135,22 @@ func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *Payl
 		!RequestHas(req, "<%") &&
 		!RequestHas(req, "<?php") &&
 		!RequestHas(req, "<?=") &&
-		!RequestHas(req, "Runtime") &&
+		!RequestHas(req, "untime") &&
 		!RequestHas(req, "org.apache.") &&
 		!RequestHas(req, "request.") &&
 		!RequestHas(req, "out.") &&
 		!RequestHas(req, "ruby") &&
 		!RequestHas(req, "eval") &&
-		!RequestHas(req, "select") &&
-		!RequestHas(req, "union") &&
-		!RequestHas(req, "from") &&
 		!RequestHas(req, "--") &&
 		!RequestHas(req, "\\-\\-") &&
-		!RequestHas(req, "where") &&
-		!RequestHas(req, "sleep") &&
-		!RequestHas(req, "benchmark") &&
+		!RequestHasCaseInsensitive(req, "select") &&
+		!RequestHasCaseInsensitive(req, "union") &&
+		!RequestHasCaseInsensitive(req, "from") &&
+		!RequestHasCaseInsensitive(req, "where") &&
+		!RequestHasCaseInsensitive(req, "sleep") &&
+		!RequestHasCaseInsensitive(req, "benchmark") &&
+		!RequestHasCaseInsensitive(req, "waitfor") &&
+		!RequestHasCaseInsensitive(req, "delay") &&
 		!RequestHas(req, "phpinfo") {
 		return nil, nil, ErrNotProcessed
 	}
