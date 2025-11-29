@@ -17,6 +17,11 @@ You need to analyze the provided SQL injection and determine:
 2. Whether it is a blind SQL injection.
 3. If the attacker expects a delay (e.g. using SLEEP(), BENCHMARK(), pg_sleep(), etc.), determine the expected delay in milliseconds.
 
+I will provide you with the HTTP request that contains the SQL injection. Use this information to understand the context of the injection, such as:
+- The application being targeted (inferred from the URL or headers).
+- The type of database that might be in use (if the application is known).
+- The fields that are likely being queried (based on the URL parameters or body).
+
 If the injection expects a delay, you should specify the delay in milliseconds. If not, set the delay to 0.
 If the injection is a blind SQL injection, set is_blind to true.
 Provide the output of the query in the "output" field. If there is no output (e.g. purely timing based or error based but no data returned), leave it empty or provide an error message if appropriate.
@@ -61,7 +66,7 @@ func (s *SqlInjectionEmulator) Emulate(req *models.Request, payload string) (*Sq
 			},
 			{
 				Role:    constants.LLMClientMessageUser,
-				Content: fmt.Sprintf("The SQL injection payload is: %s", payload),
+				Content: fmt.Sprintf("The SQL injection payload is: %s\n\nThe HTTP request is:\n%s", payload, string(req.Raw)),
 			},
 		},
 		true,
