@@ -64,6 +64,7 @@ import (
 const userAgent = "Wget/1.13.4 (linux-gnu)"
 const maxUrlsToExtractForDownload = 15
 const maxPingsToExtract = 5
+const maxSqlDelayMs = 10000
 
 type ReqQueueEntry struct {
 	req        *models.Request
@@ -896,9 +897,15 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 			// the request matches certain characters (e.g. if has /bin/sh in the
 			// body).
 			preRes, payloadResponse, err = s.preprocessor.MaybeProcess(sReq)
-			if err != nil && errors.Is(err, preprocess.ErrNotProcessed) {
-				s.metrics.firstTriageSelection.WithLabelValues("filter_reject").Inc()
-				return nil, fmt.Errorf("not pre-processed: %w", err)
+			if err != nil {
+
+				if errors.Is(err, preprocess.ErrNotProcessed) {
+					s.metrics.firstTriageSelection.WithLabelValues("filter_reject").Inc()
+					return nil, preprocess.ErrNotProcessed
+				} else {
+					s.metrics.firstTriageSelection.WithLabelValues("preprocess_error").Inc()
+					return nil, fmt.Errorf("not preprocess error: %w", err)
+				}
 			}
 			s.metrics.firstTriageSelection.WithLabelValues("filter_accept").Inc()
 		}
@@ -923,6 +930,11 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		sReq.TriageHasPayload = false
 		s.metrics.firstTriageResult.WithLabelValues("success_no_payload").Inc()
 		return nil, fmt.Errorf("no payload found")
+	}
+
+	if payloadResponse == nil {
+		slog.Error("no payload response", slog.String("url", sReq.Uri), slog.String("cmp_hash", sReq.CmpHash))
+		return nil, fmt.Errorf("no payload response found")
 	}
 
 	slog.Debug("found payload!", slog.String("url", sReq.Uri))
@@ -954,11 +966,15 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		rpcDuration := time.Since(rpcStartTime).Milliseconds()
 		timeRemainMs := payloadResponse.SqlDelayMs - int(rpcDuration)
 
-		if timeRemainMs < 0 {
+		if timeRemainMs <= 0 {
 			slog.Debug("skipping sql delay", slog.Int("timeRemainMs", timeRemainMs))
 		} else {
 			slog.Debug("sql delay", slog.Int("timeRemainMs", timeRemainMs))
-			time.Sleep(time.Duration(timeRemainMs) * time.Millisecond)
+			if timeRemainMs < maxSqlDelayMs {
+				time.Sleep(time.Duration(timeRemainMs) * time.Millisecond)
+			} else {
+				slog.Error("sql delay too large", slog.Int("timeRemainMs", timeRemainMs))
+			}
 		}
 	}
 
