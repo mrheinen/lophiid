@@ -26,6 +26,7 @@ import (
 	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/file"
 	"lophiid/pkg/llm/shell"
+	"lophiid/pkg/llm/sql"
 	"lophiid/pkg/util/constants"
 	"strings"
 	"time"
@@ -49,6 +50,7 @@ type PreProcess struct {
 	shellClient      shell.ShellClientInterface
 	codeEmu          code.CodeSnippetEmulatorInterface
 	fileEmu          file.FileAccessEmulatorInterface
+	sqlEmu           sql.SqlInjectionEmulatorInterface
 	metrics          *PreprocessMetrics
 }
 
@@ -59,8 +61,10 @@ type PreProcessResult struct {
 }
 
 type PayloadProcessingResult struct {
-	Output  string
-	Headers string
+	Output     string
+	Headers    string
+	SqlIsBlind bool
+	SqlDelayMs int
 }
 
 var ProcessPrompt = `
@@ -69,6 +73,7 @@ Analyze the provided HTTP request and tell me in the JSON response whether the r
 "CODE_EXECUTION" for attempts to execute code (like with <?php tags)
 "SHELL_COMMAND" for anything that looks like shell/cli commands
 "FILE_ACCESS" for attempts to access a file (e.g. /etc/passwd)
+"SQL_INJECTION" for SQL injection attempts (e.g. ' OR 1=1, UNION SELECT)
 "UNKNOWN" for when the payload type doesn't fall into the above categories.
 
 Important: If you see code execution that also has shell/cli commands then always choose CODE_EXECUTION.
@@ -76,6 +81,7 @@ Important: If you see code execution that also has shell/cli commands then alway
 If you chose "SHELL_COMMAND" then provide the shell commands in the 'payload' field.
 If you chose "FILE_ACCESS" then provide the filename (full path) in the 'payload' field.
 If you chose "CODE_EXECUTION" then provide the code snippet that was attempted to be executed in the 'payload' field.
+If you chose "SQL_INJECTION" then provide the SQL injection payload in the 'payload' field.
 If you chose "UNKNOWN" then provide whatever the payload is in the 'payload' field.
 
 The request is:
@@ -96,9 +102,9 @@ func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, *Pay
 	return f.ResultToReturn, f.PayloadResult, f.ErrorToReturn
 }
 
-func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, metrics *PreprocessMetrics) *PreProcess {
+func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, metrics *PreprocessMetrics) *PreProcess {
 	triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information")
-	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, metrics: metrics}
+	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, metrics: metrics}
 }
 
 func RequestHas(req *models.Request, has string) bool {
@@ -124,6 +130,12 @@ func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *Payl
 		!RequestHas(req, "out.") &&
 		!RequestHas(req, "ruby") &&
 		!RequestHas(req, "eval") &&
+		!RequestHas(req, "select") &&
+		!RequestHas(req, "union") &&
+		!RequestHas(req, "from") &&
+		!RequestHas(req, "where") &&
+		!RequestHas(req, "sleep") &&
+		!RequestHas(req, "benchmark") &&
 		!RequestHas(req, "phpinfo") {
 		return nil, nil, ErrNotProcessed
 	}
@@ -197,6 +209,21 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 
 		p.metrics.codeEmuLLMResponseTime.Observe(time.Since(emuStartTime).Seconds())
 		return res, &PayloadProcessingResult{Output: string(cRes.Stdout), Headers: string(cRes.Headers)}, nil
+
+	case constants.TriagePayloadTypeSqlInjection:
+		if p.sqlEmu == nil {
+			return nil, nil, nil
+		}
+		slog.Debug("Running sql emulator", slog.String("payload", res.Payload))
+		sqlStartTime := time.Now()
+		sRes, err := p.sqlEmu.Emulate(req, res.Payload)
+		if err != nil {
+			return nil, nil, fmt.Errorf("running sql emulator: %w", err)
+		}
+
+		p.metrics.sqlEmuLLMResponseTime.Observe(time.Since(sqlStartTime).Seconds())
+
+		return res, &PayloadProcessingResult{Output: sRes.Output, SqlIsBlind: sRes.IsBlind, SqlDelayMs: sRes.DelayMs}, nil
 	}
 
 	return res, nil, nil
