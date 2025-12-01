@@ -57,9 +57,9 @@ type Request struct {
 	Tags              []TagPerRequestFull      `json:"tags"`
 	P0fResult         P0fResult                `json:"p0f_result"`
 	Triaged           bool                     `ksql:"triaged" json:"triaged" doc:"Whether the request was triaged"`
-	TriageHasPayload  bool                     `ksql:"triage_has_payload" json:"has_payload" doc:"Whether the request has a payload"`
-	TriagePayload     string                   `ksql:"triage_payload" json:"payload" doc:"The payload of the request"`
-	TriagePayloadType string                   `ksql:"triage_payload_type" json:"payload_type" doc:"The payload type of the request"`
+	TriageHasPayload  bool                     `ksql:"triage_has_payload" json:"triage_has_payload" doc:"Whether the request has a payload"`
+	TriagePayload     string                   `ksql:"triage_payload" json:"triage_payload" doc:"The payload of the request"`
+	TriagePayloadType string                   `ksql:"triage_payload_type" json:"triage_payload_type" doc:"The payload type of the request"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }

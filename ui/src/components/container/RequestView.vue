@@ -137,19 +137,19 @@
                 }}</pre>
               </TabPanel>
               <TabPanel value="4">
-              <div v-if="request.payload">
+              <div v-if="request.triage_payload">
                 <label class="label">Request payload</label>
                 <RawHttpCard
                 label="Payload"
-                :data="request.payload"
+                :data="request.triage_payload"
                 ></RawHttpCard>
               </div>
 
-              <table v-if="request.has_payload">
+              <table v-if="request.triage_has_payload">
                 <tbody>
                   <tr>
                     <th>Payload type</th>
-                    <td>{{ request.payload_type }}</td>
+                    <td>{{ request.triage_payload_type }}</td>
                   </tr>
                 </tbody>
               </table>
