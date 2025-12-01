@@ -107,7 +107,7 @@ func main() {
 	}
 
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	llmManager := llm.GetLLMManager(cfg.AI.LLMManager, llmMetrics)
+	llmManager := llm.GetLLMManager(cfg.AI.Responder.LLMManager, llmMetrics)
 
 	mgr := yara.NewYaraManager(dbc, llmManager, *rulesDir, cfg.Yara.PrepareCommand, metrics)
 
