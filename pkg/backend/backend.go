@@ -885,6 +885,13 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 }
 
 func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes *preprocess.PreProcessResult) {
+
+	if preRes.PayloadType != constants.TriagePayloadTypeShellCommand &&
+		preRes.PayloadType != constants.TriagePayloadTypeCodeExec &&
+		preRes.PayloadType != constants.TriagePayloadTypeSqlInjection {
+		return
+	}
+
 	cKey := fmt.Sprintf("%d:%s:%s", sReq.SessionID, sReq.CmpHash, preRes.TargetedParameter)
 	pHash := util.FastCacheHash(preRes.Payload)
 
@@ -906,7 +913,7 @@ func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes
 			IP:            sReq.SourceIP,
 			Type:          constants.IpEventSessionInfo,
 			Subtype:       constants.IpEventSubTypeSuccessivePayload,
-			Details:       "successive payloads for session",
+			Details:       fmt.Sprintf("successive payloads - %s", preRes.PayloadType),
 			Source:        constants.IpEventSourceAnalysis,
 			SourceRef:     fmt.Sprintf("%d", sReq.SessionID),
 			SourceRefType: constants.IpEventRefTypeSessionId,

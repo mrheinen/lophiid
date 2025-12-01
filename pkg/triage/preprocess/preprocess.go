@@ -56,7 +56,7 @@ type PreProcess struct {
 
 type PreProcessResult struct {
 	HasPayload        bool   `json:"has_payload" jsonschema_description:"This is a boolean field. Use the value 'true' if the request has a payload, such as to execute a command or inject code or open a file. Otherwise use the value 'false'"`
-	TargetedParameter string `json:"targeted_parameter" jsonschema_description:"The name of the parameter that is targeted. Use an empty string if you don't know."`
+	TargetedParameter string `json:"targeted_parameter" jsonschema_description:"The name of the HTTP URL/body parameter that is targeted. Use an empty string if you don't know."`
 	PayloadType       string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\" and \"UNKNOWN\" (if you don't know)"`
 	Payload           string `json:"payload" jsonschema_description:"The payload if there is one. Empty otherwise"`
 }
@@ -69,7 +69,7 @@ type PayloadProcessingResult struct {
 }
 
 var ProcessPrompt = `
-Analyze the provided HTTP request and tell me in the JSON response whether the request has a payload in the has_payload field using a boolean (true or false) . Tell me the name of the parameter that is targeted in the targeted_parameter field or leave it empty if no parameter is targeted or when you don't know. Then tell me what kind of payload it is (payload_type) and you can choose between the strings:
+Analyze the provided HTTP request and tell me in the JSON response whether the request has a payload in the has_payload field using a boolean (true or false) . Tell me the name of the HTTP URL/body parameter that is targeted in the targeted_parameter field or leave it empty if no parameter is targeted or when you don't know. Then tell me what kind of payload it is (payload_type) and you can choose between the strings:
 
 "CODE_EXECUTION" for attempts to execute code (like with <?php tags)
 "SHELL_COMMAND" for anything that looks like shell/cli commands
@@ -246,7 +246,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 
 		return res, &PayloadProcessingResult{Output: sRes.Output, SqlIsBlind: sRes.IsBlind, SqlDelayMs: sRes.DelayMs}, nil
 	default:
-		slog.Debug("Unknown payload type", slog.String("payload", res.Payload))
+		slog.Debug("Unknown payload type", slog.String("type", res.PayloadType), slog.String("payload", res.Payload))
 
 	}
 
