@@ -204,8 +204,8 @@ func main() {
 	var shellClient shell.ShellClientInterface
 
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	if cfg.AI.EnableResponder {
-		llmManager := llm.GetLLMManager(cfg.AI.LLMManager, llmMetrics)
+	if cfg.AI.Responder.Enable {
+		llmManager := llm.GetLLMManager(cfg.AI.Responder.LLMManager, llmMetrics)
 		slog.Info("Creating responder")
 		llmResponder = responder.NewLLMResponder(llmManager, cfg.AI.MaxInputCharacters)
 	}

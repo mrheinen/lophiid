@@ -914,8 +914,6 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		s.metrics.firstTriageSelection.WithLabelValues("direct_accept").Inc()
 	}
 
-	sReq.Triaged = true
-
 	if err != nil {
 		s.metrics.firstTriageResult.WithLabelValues("error").Inc()
 		return nil, fmt.Errorf("error pre-processing: %s", err)
@@ -925,6 +923,10 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		s.metrics.firstTriageResult.WithLabelValues("error_no_response").Inc()
 		return nil, fmt.Errorf("no pre-processing response")
 	}
+
+	// Mark as triaged only after we have a valid preprocessing result.
+	// This ensures Triaged=true only when we have definitive results.
+	sReq.Triaged = true
 
 	if !preRes.HasPayload {
 		sReq.TriageHasPayload = false
@@ -937,7 +939,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		return nil, fmt.Errorf("no payload response found")
 	}
 
-	slog.Debug("found payload!", slog.String("url", sReq.Uri))
+	slog.Debug("found payload!", slog.String("url", sReq.Uri), slog.String("type", preRes.PayloadType))
 	s.metrics.firstTriageResult.WithLabelValues("success_payload").Inc()
 	s.metrics.firstTriagePayloadType.WithLabelValues(preRes.PayloadType).Inc()
 
@@ -948,6 +950,16 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	sReq.TriagePayload = preRes.Payload
 	sReq.TriagePayloadType = preRes.PayloadType
 	sReq.RawResponse = payloadResponse.Output
+
+	slog.Debug("triage complete",
+		slog.Int64("request_id", sReq.ID),
+		slog.String("cmp_hash", sReq.CmpHash),
+		slog.Bool("triaged", sReq.Triaged),
+		slog.Bool("triage_has_payload", sReq.TriageHasPayload),
+		slog.String("triage_payload_type", sReq.TriagePayloadType),
+		slog.String("triage_payload", sReq.TriagePayload),
+		slog.Int("raw_response_len", len(sReq.RawResponse)))
+
 	return payloadResponse, nil
 }
 
@@ -958,11 +970,13 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		if !errors.Is(err, preprocess.ErrNotProcessed) {
 			slog.Error("error pre-processing", slog.String("error", err.Error()))
 		}
+		slog.Error("pre-processing failed", slog.String("cmp_hash", sReq.CmpHash), slog.String("uri", sReq.Uri))
 		res.Body = content.Data
 		return
 	}
 
 	if payloadResponse.SqlDelayMs > 0 {
+		slog.Debug("sql delay", slog.Int("ms", payloadResponse.SqlDelayMs))
 		rpcDuration := time.Since(rpcStartTime).Milliseconds()
 		timeRemainMs := payloadResponse.SqlDelayMs - int(rpcDuration)
 
@@ -1282,6 +1296,17 @@ func (s *BackendServer) ProcessReqsQueue() {
 func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentRule, eCollector *extractors.ExtractorCollection) error {
 
 	s.whoisMgr.LookupIP(req.SourceIP)
+
+	// Log triage state before database update to help debug potential race conditions
+	if req.Triaged {
+		slog.Debug("updating triaged request",
+			slog.Int64("request_id", req.ID),
+			slog.String("cmp_hash", req.CmpHash),
+			slog.Bool("triaged", req.Triaged),
+			slog.Bool("triage_has_payload", req.TriageHasPayload),
+			slog.String("triage_payload_type", req.TriagePayloadType),
+			slog.Int("raw_response_len", len(req.RawResponse)))
+	}
 
 	err := s.dbClient.Update(req)
 	if err != nil {

@@ -1,6 +1,33 @@
 package util
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+// TestFastCacheHash verifies that different inputs produce different hashes.
+// This is a regression test for a bug where the hash was not being returned
+// correctly, causing all inputs to produce the same hash (128 zero bytes).
+func TestFastCacheHash(t *testing.T) {
+	hash1 := FastCacheHash("hello world")
+	hash2 := FastCacheHash("different input")
+	hash3 := FastCacheHash("hello world") // Same as hash1
+
+	// Different inputs must produce different hashes
+	assert.False(t, bytes.Equal(hash1, hash2), "Different inputs should produce different hashes")
+
+	// Same input must produce same hash
+	assert.True(t, bytes.Equal(hash1, hash3), "Same input should produce same hash")
+
+	// Hash should not be all zeros (the bug produced 128 zero bytes)
+	allZeros := make([]byte, len(hash1))
+	assert.False(t, bytes.Equal(hash1, allZeros), "Hash should not be all zeros")
+
+	// FNV-128a produces 16-byte hash
+	assert.Equal(t, 16, len(hash1), "FNV-128a should produce 16-byte hash")
+}
 
 func TestIsValidUUID(t *testing.T) {
 

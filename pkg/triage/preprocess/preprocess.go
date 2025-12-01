@@ -146,6 +146,7 @@ func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *Payl
 		!RequestHasCaseInsensitive(req, "md5") &&
 		!RequestHasCaseInsensitive(req, "select") &&
 		!RequestHasCaseInsensitive(req, "version()") &&
+		!RequestHasCaseInsensitive(req, "@@version") &&
 		!RequestHasCaseInsensitive(req, "union") &&
 		!RequestHasCaseInsensitive(req, "concat") &&
 		!RequestHasCaseInsensitive(req, "from") &&
@@ -230,6 +231,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 
 	case constants.TriagePayloadTypeSqlInjection:
 		if p.sqlEmu == nil {
+			slog.Error("sql emulator disabled")
 			return nil, nil, nil
 		}
 		slog.Debug("Running sql emulator", slog.String("payload", res.Payload))
@@ -242,6 +244,9 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 		p.metrics.sqlEmuLLMResponseTime.Observe(time.Since(sqlStartTime).Seconds())
 
 		return res, &PayloadProcessingResult{Output: sRes.Output, SqlIsBlind: sRes.IsBlind, SqlDelayMs: sRes.DelayMs}, nil
+	default:
+	slog.Debug("Unknown payload type", slog.String("payload", res.Payload))
+
 	}
 
 	return res, nil, nil

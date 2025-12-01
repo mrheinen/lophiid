@@ -62,7 +62,7 @@ func main() {
 
 	metricsRegistry := prometheus.NewRegistry()
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	primaryManager := llm.GetLLMManager(cfg.AI.LLMManager, llmMetrics)
+	primaryManager := llm.GetLLMManager(cfg.AI.Responder.LLMManager, llmMetrics)
 
 	shc := shell.NewShellClient(primaryManager, dbc)
 
