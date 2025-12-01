@@ -151,6 +151,7 @@ CREATE TYPE public.ip_event_sub_type AS ENUM (
     'URI_RATE_WINDOW',
     'URI_RATE_BUCKET',
     'IP_RATE_BUCKET',
+    'SUCCESSIVE_PAYLOAD',
     'SUCCESS',
     'FAILURE'
 );
@@ -176,6 +177,7 @@ CREATE TYPE public.ip_event_type AS ENUM (
     'SENT_MALWARE',
     'SENT_NEW_MALWARE',
     'TRAFFIC_CLASS',
+    'SESSION_INFO',
     'PING'
 );
 
@@ -928,6 +930,7 @@ CREATE TABLE public.request (
     rule_uuid character varying(36) DEFAULT ''::character varying,
     triage_payload text,
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_target_parameter character varying(2048),
     triage_has_payload boolean DEFAULT false
 )
 PARTITION BY RANGE (created_at);

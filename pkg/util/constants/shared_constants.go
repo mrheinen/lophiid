@@ -25,6 +25,7 @@ const (
 	IpEventHostC2        = "HOST_C2"
 	IpEventRateLimited   = "RATELIMITED"
 	IpEventPing          = "PING"
+	IpEventSessionInfo   = "SESSION_INFO"
 )
 
 // This needs to be kept in sync with IP_EVENT_SUB_TYPE in the database.
@@ -49,6 +50,8 @@ const (
 
 	IpEventSubTypeSuccess = "SUCCESS"
 	IpEventSubTypeFailure = "FAILURE"
+
+	IpEventSubTypeSuccessivePayload = "SUCCESSIVE_PAYLOAD"
 )
 
 // These need to be kept in sync with IP_EVENT_REF_TYPE in the database.

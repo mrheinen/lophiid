@@ -34,6 +34,7 @@ import (
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/triage/preprocess"
+	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
@@ -1926,7 +1927,7 @@ func TestGetPreProcessResponse(t *testing.T) {
 
 			// Populate cache if needed
 			if test.cmpHashInCache {
-				b.payloadCache.Store("test_hash", struct{}{})
+				b.payloadCmpHashCache.Store("test_hash", struct{}{})
 			}
 
 			// Call the method
@@ -2049,6 +2050,128 @@ func TestHandlePreProcess(t *testing.T) {
 			for _, h := range test.expectedHeaders {
 				if _, ok := finalHeaders[h]; !ok {
 					t.Errorf("expected header %s to be present", h)
+				}
+			}
+		})
+	}
+}
+
+func TestCheckForConsecutivePayloads(t *testing.T) {
+	for _, test := range []struct {
+		description        string
+		requests           []*models.Request
+		preResults         []*preprocess.PreProcessResult
+		expectedEventCount int
+	}{
+		{
+			description: "Different payloads in same parameter creates event",
+			requests: []*models.Request{
+				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+			},
+			preResults: []*preprocess.PreProcessResult{
+				{TargetedParameter: "cmd", Payload: "whoami"},
+				{TargetedParameter: "cmd", Payload: "id"},
+			},
+			expectedEventCount: 1,
+		},
+		{
+			description: "Same payload in same parameter creates no event",
+			requests: []*models.Request{
+				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+			},
+			preResults: []*preprocess.PreProcessResult{
+				{TargetedParameter: "cmd", Payload: "whoami"},
+				{TargetedParameter: "cmd", Payload: "whoami"},
+			},
+			expectedEventCount: 0,
+		},
+		{
+			description: "Different session IDs do not share cache state",
+			requests: []*models.Request{
+				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 200, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+			},
+			preResults: []*preprocess.PreProcessResult{
+				{TargetedParameter: "cmd", Payload: "whoami"},
+				{TargetedParameter: "cmd", Payload: "id"},
+			},
+			expectedEventCount: 0,
+		},
+		{
+			description: "Different CmpHash does not trigger event",
+			requests: []*models.Request{
+				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, CmpHash: "hash2", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+			},
+			preResults: []*preprocess.PreProcessResult{
+				{TargetedParameter: "cmd", Payload: "whoami"},
+				{TargetedParameter: "cmd", Payload: "id"},
+			},
+			expectedEventCount: 0,
+		},
+		{
+			description: "Different targeted parameters do not trigger event",
+			requests: []*models.Request{
+				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+			},
+			preResults: []*preprocess.PreProcessResult{
+				{TargetedParameter: "cmd", Payload: "whoami"},
+				{TargetedParameter: "file", Payload: "whoami"},
+			},
+			expectedEventCount: 0,
+		},
+		{
+			description: "Multiple different payloads create multiple events",
+			requests: []*models.Request{
+				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 3, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+			},
+			preResults: []*preprocess.PreProcessResult{
+				{TargetedParameter: "cmd", Payload: "whoami"},
+				{TargetedParameter: "cmd", Payload: "id"},
+				{TargetedParameter: "cmd", Payload: "uname -a"},
+			},
+			expectedEventCount: 2,
+		},
+		{
+			description: "Single request creates no event",
+			requests: []*models.Request{
+				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+			},
+			preResults: []*preprocess.PreProcessResult{
+				{TargetedParameter: "cmd", Payload: "whoami"},
+			},
+			expectedEventCount: 0,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fIpMgr := analysis.FakeIpEventManager{}
+
+			b := &BackendServer{
+				payloadSessionCache: util.NewStringMapCache[map[string]int64]("test", time.Hour),
+				ipEventManager:      &fIpMgr,
+			}
+
+			for i, req := range test.requests {
+				b.CheckForConsecutivePayloads(req, test.preResults[i])
+			}
+
+			if len(fIpMgr.Events) != test.expectedEventCount {
+				t.Errorf("expected %d events, got %d", test.expectedEventCount, len(fIpMgr.Events))
+			}
+
+			// If we expect an event, verify it has the correct type and subtype.
+			if test.expectedEventCount > 0 {
+				evt := fIpMgr.Events[0]
+				if evt.Type != constants.IpEventSessionInfo {
+					t.Errorf("expected event type %s, got %s", constants.IpEventSessionInfo, evt.Type)
+				}
+				if evt.Subtype != constants.IpEventSubTypeSuccessivePayload {
+					t.Errorf("expected event subtype %s, got %s", constants.IpEventSubTypeSuccessivePayload, evt.Subtype)
 				}
 			}
 		})
