@@ -102,7 +102,7 @@ func main() {
 	var myDescriber *describer.CachedDescriptionManager
 
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	llmManager := llm.GetLLMManager(cfg.AI.LLMManager, llmMetrics)
+	llmManager := llm.GetLLMManager(cfg.AI.Triage.Describer.LLMManager, llmMetrics)
 
 	myDescriber = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics)
 
