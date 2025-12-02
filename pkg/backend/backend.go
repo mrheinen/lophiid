@@ -1002,19 +1002,23 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	sReq.TriageHasPayload = true
 	sReq.TriagePayload = preRes.Payload
 	sReq.TriagePayloadType = preRes.PayloadType
-	sReq.TriageTargetParameter = &preRes.TargetedParameter
 	sReq.RawResponse = payloadResponse.Output
+	if preRes.TargetedParameter != "" {
+		sReq.TriageTargetParameter = &preRes.TargetedParameter
+	}
 
-	slog.Debug("triage complete",
+	logArgs := []any{
 		slog.Int64("request_id", sReq.ID),
 		slog.String("cmp_hash", sReq.CmpHash),
 		slog.Bool("triaged", sReq.Triaged),
 		slog.Bool("triage_has_payload", sReq.TriageHasPayload),
-		slog.String("triage_target_parameter", *sReq.TriageTargetParameter),
 		slog.String("triage_payload_type", sReq.TriagePayloadType),
-		slog.String("triage_payload", sReq.TriagePayload),
-		slog.Int("raw_response_len", len(sReq.RawResponse)))
-
+		slog.Int("raw_response_len", len(sReq.RawResponse)),
+	}
+	if sReq.TriageTargetParameter != nil {
+		logArgs = append(logArgs, slog.String("triage_target_parameter", *sReq.TriageTargetParameter))
+	}
+	slog.Debug("updating triaged request", logArgs...)
 	return payloadResponse, nil
 }
 
@@ -1354,14 +1358,18 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 
 	// Log triage state before database update to help debug potential race conditions
 	if req.Triaged {
-		slog.Debug("updating triaged request",
+		logArgs := []any{
 			slog.Int64("request_id", req.ID),
 			slog.String("cmp_hash", req.CmpHash),
 			slog.Bool("triaged", req.Triaged),
 			slog.Bool("triage_has_payload", req.TriageHasPayload),
-			slog.String("triage_target_parameter", *req.TriageTargetParameter),
 			slog.String("triage_payload_type", req.TriagePayloadType),
-			slog.Int("raw_response_len", len(req.RawResponse)))
+			slog.Int("raw_response_len", len(req.RawResponse)),
+		}
+		if req.TriageTargetParameter != nil {
+			logArgs = append(logArgs, slog.String("triage_target_parameter", *req.TriageTargetParameter))
+		}
+		slog.Debug("updating triaged request", logArgs...)
 	}
 
 	err := s.dbClient.Update(req)
