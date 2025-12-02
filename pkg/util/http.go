@@ -32,8 +32,7 @@ func ParseHeaders(raw string, headers *map[string]string) {
 		*headers = make(map[string]string)
 	}
 
-	lines := strings.Split(raw, "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(raw, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

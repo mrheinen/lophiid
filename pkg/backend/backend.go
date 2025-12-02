@@ -1211,13 +1211,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	finalHeaders["Content-Type"] = content.ContentType
 	finalHeaders["Server"] = content.Server
 
-	for k, v := range finalHeaders {
-		res.Header = append(res.Header, &backend_service.KeyValue{
-			Key:   k,
-			Value: v,
-		})
-	}
-
 	if content.Script != "" {
 		slog.Debug("running script")
 		err := s.jRunner.RunScript(content.Script, *sReq, res, colEx, false)
@@ -1268,23 +1261,23 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	}
 
+	// Add the content headers to the final header list.
 	for _, header := range content.Headers {
-		headerParts := strings.SplitN(header, ": ", 2)
-		if len(headerParts) != 2 {
-			slog.Warn("Invalid header for content ID", slog.String("header", header), slog.Int64("content_id", content.ID))
-			continue
+		util.ParseHeaders(header, &finalHeaders)
+	}
+
+	// Render any template values in the headers.
+	for key, value := range finalHeaders {
+		newHdr, err := templr.RenderTemplate(sReq, []byte(value))
+		if err != nil {
+			slog.Error("error rendering template for header", slog.String("error", err.Error()), slog.String("header", key))
+		} else {
+			value = string(newHdr)
 		}
 
-		headerValue := headerParts[1]
-		newHdr, err := templr.RenderTemplate(sReq, []byte(headerParts[1]))
-		if err != nil {
-			slog.Error("error rendering template for header", slog.String("error", err.Error()), slog.String("header", headerParts[1]))
-		} else {
-			headerValue = string(newHdr)
-		}
 		res.Header = append(res.Header, &backend_service.KeyValue{
-			Key:   headerParts[0],
-			Value: headerValue,
+			Key:   key,
+			Value: value,
 		})
 	}
 
