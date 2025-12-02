@@ -892,37 +892,33 @@ func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes
 		return
 	}
 
-	cKey := fmt.Sprintf("%d:%s:%s", sReq.SessionID, sReq.CmpHash, preRes.TargetedParameter)
-	pHash := util.FastCacheHash(preRes.Payload)
+	cKey := fmt.Sprintf("%d:%s:%s:%s", sReq.SessionID, sReq.CmpHash, preRes.PayloadType, preRes.TargetedParameter)
+	pHash := string(util.FastCacheHash(preRes.Payload))
 
-	val, err := s.payloadSessionCache.Get(cKey)
-	if err != nil {
-		// So this is the first request we see for the the session,cmp hash and
-		// parameter combination. Just register it in the cache and move on.
-		s.payloadSessionCache.Store(cKey, map[string]int64{string(pHash): sReq.ID})
-		return
-	}
-
-	// Cool so we have seen payloads for this session, cmp hash and parameter
-	// combination. Now we want to find out if this is a new payload.
-	_, ok := (*val)[string(pHash)]
-	if !ok {
-		// Nice ! This payload was not seen before. Create an event.
-		slog.Debug("found new consecutive payload for session", slog.Int64("session_id", sReq.SessionID), slog.String("cmp_hash", sReq.CmpHash), slog.String("target_param", preRes.TargetedParameter))
-		s.ipEventManager.AddEvent(&models.IpEvent{
-			IP:            sReq.SourceIP,
-			Type:          constants.IpEventSessionInfo,
-			Subtype:       constants.IpEventSubTypeSuccessivePayload,
-			Details:       fmt.Sprintf("successive payloads - %s", preRes.PayloadType),
-			Source:        constants.IpEventSourceAnalysis,
-			SourceRef:     fmt.Sprintf("%d", sReq.SessionID),
-			SourceRefType: constants.IpEventRefTypeSessionId,
-			RequestID:     sReq.ID,
-			HoneypotIP:    sReq.HoneypotIP,
-		})
-
-		(*val)[string(pHash)] = sReq.ID
-	}
+	s.payloadSessionCache.GetOrCreate(cKey,
+		func() map[string]int64 { return make(map[string]int64) },
+		func(val *map[string]int64) {
+			if _, ok := (*val)[pHash]; !ok {
+				// This payload was not seen before for this session/cmp_hash/param combo.
+				if len(*val) > 0 {
+					// Only create event if we've seen at least one other payload before.
+					slog.Debug("found new consecutive payload for session", slog.Int64("session_id", sReq.SessionID), slog.String("cmp_hash", sReq.CmpHash), slog.String("target_param", preRes.TargetedParameter))
+					s.ipEventManager.AddEvent(&models.IpEvent{
+						IP:            sReq.SourceIP,
+						Type:          constants.IpEventSessionInfo,
+						Subtype:       constants.IpEventSubTypeSuccessivePayload,
+						Details:       fmt.Sprintf("successive payloads - %s", preRes.PayloadType),
+						Source:        constants.IpEventSourceAnalysis,
+						SourceRef:     fmt.Sprintf("%d", sReq.SessionID),
+						SourceRefType: constants.IpEventRefTypeSessionId,
+						RequestID:     sReq.ID,
+						HoneypotIP:    sReq.HoneypotIP,
+					})
+				}
+				(*val)[pHash] = sReq.ID
+			}
+		},
+	)
 }
 
 func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool) (*preprocess.PayloadProcessingResult, error) {

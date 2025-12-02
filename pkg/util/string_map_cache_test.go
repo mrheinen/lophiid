@@ -165,3 +165,50 @@ func TestStringMapCacheCheck(t *testing.T) {
 		t.Errorf("expected captured value to be 'value1', got '%s'", capturedValue)
 	}
 }
+
+func TestStringMapCacheGetOrCreate(t *testing.T) {
+	c := NewStringMapCache[map[string]int]("test", time.Hour)
+
+	// Test creating a new entry
+	var callbackCalled bool
+	c.GetOrCreate("key1",
+		func() map[string]int { return make(map[string]int) },
+		func(val *map[string]int) {
+			callbackCalled = true
+			(*val)["a"] = 1
+		},
+	)
+
+	if !callbackCalled {
+		t.Error("expected callback to be called")
+	}
+
+	// Verify entry was created and modified
+	ret, err := c.Get("key1")
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+	if (*ret)["a"] != 1 {
+		t.Errorf("expected map[a]=1, got %v", *ret)
+	}
+
+	// Test getting existing entry and modifying it
+	c.GetOrCreate("key1",
+		func() map[string]int { return make(map[string]int) },
+		func(val *map[string]int) {
+			(*val)["b"] = 2
+		},
+	)
+
+	ret, err = c.Get("key1")
+	if err != nil {
+		t.Errorf("got error: %s", err)
+	}
+	// Should have both values
+	if (*ret)["a"] != 1 {
+		t.Errorf("expected map[a]=1, got %v", *ret)
+	}
+	if (*ret)["b"] != 2 {
+		t.Errorf("expected map[b]=2, got %v", *ret)
+	}
+}
