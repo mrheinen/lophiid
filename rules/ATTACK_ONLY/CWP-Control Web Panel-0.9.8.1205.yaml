@@ -1,0 +1,89 @@
+app:
+    id: 184
+    name: Control Web Panel
+    version: 0.9.8.1205
+    vendor: CWP
+    os: Linux
+    link: https://www.cvedetails.com/cve/CVE-2025-48703/
+    created_at: 2025-12-02T19:25:23.775369Z
+    updated_at: 2025-12-02T19:28:25.85472Z
+    ext_version: 0
+    ext_uuid: 41cc7efc-5eed-4058-93fd-46400dff01cf
+    cves:
+        - CVE-2025-48703
+rules:
+    - id: 1007
+      uri: index.php?module=filemanager&acc=changePerm
+      body: ""
+      method: ANY
+      port: 0
+      ports: []
+      uri_matching: suffix
+      body_matching: none
+      content_id: 998
+      app_id: 184
+      app_uuid: 41cc7efc-5eed-4058-93fd-46400dff01cf
+      content_uuid: c5c5cb83-0fe3-4ec1-80f4-11f9c4b44402
+      created_at: 2025-12-02T19:27:49.438962Z
+      updated_at: 2025-12-02T19:27:53.801231Z
+      alert: true
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: b4ea2eca-3f06-42b5-a41d-8d76a1a294f6
+      request_purpose: ATTACK
+      responder: AUTO
+      responder_regex: ""
+      responder_decoder: NONE
+      tagstoapply: []
+    - id: 1006
+      uri: /
+      body: ""
+      method: GET
+      port: 0
+      ports: []
+      uri_matching: exact
+      body_matching: none
+      content_id: 997
+      app_id: 184
+      app_uuid: 41cc7efc-5eed-4058-93fd-46400dff01cf
+      content_uuid: d44378f0-0e9b-4940-a020-c74bc75a2a45
+      created_at: 2025-12-02T19:25:46.04166Z
+      updated_at: 2025-12-02T19:25:46.041617Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: 7043351a-67ca-4dad-a784-3aeb3eec0782
+      request_purpose: UNKNOWN
+      responder: NONE
+      responder_regex: ""
+      responder_decoder: NONE
+      tagstoapply: []
+contents:
+    - id: 998
+      name: Control Web Panel - Payload
+      description: ""
+      content_type: text/plain; charset=UTF-8
+      server: Apache
+      status_code: "200"
+      created_at: 2025-12-02T19:27:08.19868Z
+      updated_at: 2025-12-02T19:27:08.19822Z
+      ext_version: 0
+      ext_uuid: c5c5cb83-0fe3-4ec1-80f4-11f9c4b44402
+    - id: 997
+      data: PCFET0NUWVBFIGh0bWwgUFVCTElDICItLy9XM0MvL0RURCBYSFRNTCAxLjEvL0VOIiAiaHR0cDovL3d3dy53My5vcmcvVFIveGh0bWwxMS9EVEQveGh0bWwxMS5kdGQiPg0KPGh0bWw+PGhlYWQ+DQoJCTx0aXRsZT5IVFRQIFNlcnZlciBUZXN0IFBhZ2UgcG93ZXJlZCBieSBDZW50T1MtV2ViUGFuZWwuY29tPC90aXRsZT4NCgkJPG1ldGEgaHR0cC1lcXVpdj0iQ29udGVudC1UeXBlIiBjb250ZW50PSJ0ZXh0L2h0bWw7IGNoYXJzZXQ9VVRGLTgiPg0KCQk8c3R5bGUgdHlwZT0idGV4dC9jc3MiPg0KCQkJYm9keSB7DQoJCQkJYmFja2dyb3VuZC1jb2xvcjogI2VjZWZmMTsNCgkJCQljb2xvcjogIzAwMDsNCgkJCQlmb250LXNpemU6IDAuOWVtOw0KCQkJCWZvbnQtZmFtaWx5OiBzYW5zLXNlcmlmLGhlbHZldGljYTsNCgkJCQltYXJnaW46IDA7DQoJCQkJcGFkZGluZzogMDsNCgkJCX0NCgkJCTpsaW5rIHsNCgkJCQljb2xvcjogIzAwMDBGRjsNCgkJCQl0ZXh0LWRlY29yYXRpb246bm9uZTsNCgkJCX0NCgkJCTp2aXNpdGVkIHsNCgkJCQljb2xvcjogIzAwMDBGRjsNCgkJCX0NCgkJCWE6aG92ZXIgew0KCQkJCWNvbG9yOiAjMDAwMEZGOw0KCQkJfQ0KCQkJaDEgew0KCQkJCXRleHQtYWxpZ246IGNlbnRlcjsNCgkJCQltYXJnaW46IDA7DQoJCQkJcGFkZGluZzogMC42ZW0gMmVtIDAuNGVtOw0KCQkJCWJhY2tncm91bmQtY29sb3I6ICMyRDQ3NjA7DQoJCQkJY29sb3I6ICNmZmZmZmY7DQoJCQkJZm9udC13ZWlnaHQ6IG5vcm1hbDsNCgkJCQlmb250LXNpemU6IDEuNzVlbTsNCgkJCQlib3JkZXItYm90dG9tOiAycHggc29saWQgIzAwMDsNCgkJCX0NCgkJCWgxIHN0cm9uZyB7DQoJCQkJZm9udC13ZWlnaHQ6IGJvbGQ7DQoJCQl9DQoJCQloMiB7DQoJCQkJZm9udC1zaXplOiAxLjFlbTsNCgkJCQlmb250LXdlaWdodDogYm9sZDsNCgkJCX0NCgkJCS5jb250ZW50IHsNCgkJCQlwYWRkaW5nOiAxZW0gNWVtOw0KCQkJfQ0KCQkJLmNvbnRlbnQtY29sdW1ucyB7DQoJCQkJLyogU2V0dGluZyByZWxhdGl2ZSBwb3NpdGlvbmluZyBhbGxvd3MgZm9yIA0KCQkJCWFic29sdXRlIHBvc2l0aW9uaW5nIGZvciBzdWItY2xhc3NlcyAqLw0KCQkJCXBvc2l0aW9uOiByZWxhdGl2ZTsNCgkJCQlwYWRkaW5nLXRvcDogMWVtOw0KCQkJfQ0KCQkJLmNvbnRlbnQtY29sdW1uLWxlZnQgew0KCQkJCS8qIFZhbHVlIGZvciBJRS9XaW47IHdpbGwgYmUgb3ZlcndyaXR0ZW4gZm9yIG90aGVyIGJyb3dzZXJzICovDQoJCQkJd2lkdGg6IDQ3JTsNCgkJCQlwYWRkaW5nLXJpZ2h0OiAzJTsNCgkJCQlmbG9hdDogbGVmdDsNCgkJCQlwYWRkaW5nLWJvdHRvbTogMmVtOw0KCQkJfQ0KCQkJLmNvbnRlbnQtY29sdW1uLXJpZ2h0IHsNCgkJCQkvKiBWYWx1ZXMgZm9yIElFL1dpbjsgd2lsbCBiZSBvdmVyd3JpdHRlbiBmb3Igb3RoZXIgYnJvd3NlcnMgKi8NCgkJCQl3aWR0aDogNDclOw0KCQkJCXBhZGRpbmctbGVmdDogMyU7DQoJCQkJZmxvYXQ6IGxlZnQ7DQoJCQkJcGFkZGluZy1ib3R0b206IDJlbTsNCgkJCX0NCgkJCS5jb250ZW50LWNvbHVtbnM+LmNvbnRlbnQtY29sdW1uLWxlZnQsIC5jb250ZW50LWNvbHVtbnM+LmNvbnRlbnQtY29sdW1uLXJpZ2h0IHsNCgkJCQkvKiBOb24tSUUvV2luICovDQoJCQl9DQoJCQlpbWcgew0KCQkJCWJvcmRlcjogMnB4IHNvbGlkICNmZmY7DQoJCQkJcGFkZGluZzogMnB4Ow0KCQkJCW1hcmdpbjogMnB4Ow0KCQkJfQ0KCQkJYTpob3ZlciBpbWcgew0KCQkJCWJvcmRlcjogMnB4IHNvbGlkICMzMzk5RkY7DQoJCQl9DQoJCTwvc3R5bGU+DQoJPC9oZWFkPg0KDQoJPGJvZHk+DQoJPC9hPjxoMT5IVFRQIFRlc3QgUGFnZTxicj48Zm9udCBzaXplPSItMSI+PHN0cm9uZz5wb3dlcmVkIGJ5PC9zdHJvbmc+PC9mb250PjxzdHJvbmc+IENXUCB8IENlbnRPUy1XZWJQYW5lbC5jb208L3N0cm9uZz48L2gxPg0KCQk8ZGl2IGNsYXNzPSJjb250ZW50Ij4NCgkJPGNlbnRlcj48YSBocmVmPSJodHRwOi8vY2VudG9zLXdlYnBhbmVsLmNvbSI+PGltZyBzcmM9Imh0dHA6Ly9jZW50b3Mtd2VicGFuZWwuY29tL3dwLWNvbnRlbnQvdXBsb2Fkcy8yMDE1LzExL2N3cF9sb2dvLnBuZyI+PC9hPjwvY2VudGVyPg0KCQkJPGhyPjwvaHI+DQoJCQk8ZGl2IGNsYXNzPSJjb250ZW50LW1pZGRsZSI+DQoJCQkJPGNlbnRlcj48cD5UaGlzIHBhZ2UgaXMgdXNlZCB0byB0ZXN0IHRoZSBwcm9wZXIgb3BlcmF0aW9uIG9mIHRoZSBIVFRQDQogc2VydmVyIGFmdGVyIGl0IGhhcyBiZWVuIGluc3RhbGxlZC4gSWYgeW91IGNhbiByZWFkIHRoaXMgcGFnZSBpdCBtZWFucyANCnRoYXQgdGhlIEhUVFAgc2VydmVyIGluc3RhbGxlZCBhdCB0aGlzIHNpdGUgaXMgd29ya2luZyBwcm9wZXJseS48L3A+PC9jZW50ZXI+DQoJCQk8L2Rpdj4NCjxocj4NCgkJCTxkaXYgY2xhc3M9ImNvbnRlbnQtY29sdW1ucyI+DQoJCQkJPGRpdiBjbGFzcz0iY29udGVudC1jb2x1bW4tbGVmdCI+DQoJCQkJCTxjZW50ZXI+PGgyPklmIHlvdSBhcmUgYSBtZW1iZXIgb2YgdGhlIGdlbmVyYWwgcHVibGljOjwvaDI+PC9jZW50ZXI+DQoNCgkJCQkJPHA+VGhlIGZhY3QgdGhhdCB5b3UgYXJlIHNlZWluZyB0aGlzIHBhZ2UgaW5kaWNhdGVzIHRoYXQgdGhlIA0Kd2Vic2l0ZSB5b3UganVzdCB2aXNpdGVkIGlzIGVpdGhlciBleHBlcmllbmNpbmcgcHJvYmxlbXMgb3IgaXMgDQp1bmRlcmdvaW5nIHJvdXRpbmUgbWFpbnRlbmFuY2UuPC9wPg0KDQoJCQkJCTxwPklmIHlvdSB3b3VsZCBsaWtlIHRvIGxldCB0aGUgYWRtaW5pc3RyYXRvcnMgb2YgdGhpcyB3ZWJzaXRlIGtub3cNCiB0aGF0IHlvdSd2ZSBzZWVuIHRoaXMgcGFnZSBpbnN0ZWFkIG9mIHRoZSBwYWdlIHlvdSBleHBlY3RlZCwgeW91IHNob3VsZA0KIHNlbmQgdGhlbSBlLW1haWwuIEluIGdlbmVyYWwsIG1haWwgc2VudCB0byB0aGUgbmFtZSAid2VibWFzdGVyIiBhbmQgDQpkaXJlY3RlZCB0byB0aGUgd2Vic2l0ZSdzIGRvbWFpbiBzaG91bGQgcmVhY2ggdGhlIGFwcHJvcHJpYXRlIHBlcnNvbi48L3A+DQoNCgkJCQkJPHA+Rm9yIGV4YW1wbGUsIGlmIHlvdSBleHBlcmllbmNlZCBwcm9ibGVtcyB3aGlsZSB2aXNpdGluZyB3d3cuZXhhbXBsZS5jb20sIHlvdSBzaG91bGQgc2VuZCBlLW1haWwgdG8gIndlYm1hc3RlckBleGFtcGxlLmNvbSIuPC9wPg0KCQkJCTwvZGl2Pg0KDQoJCQkJPGRpdiBjbGFzcz0iY29udGVudC1jb2x1bW4tcmlnaHQiPg0KCQkJCQk8Y2VudGVyPjxoMj5JZiB5b3UgYXJlIHRoZSB3ZWJzaXRlIGFkbWluaXN0cmF0b3I6PC9oMj48L2NlbnRlcj4NCg0KCQkJCQk8cD5Zb3UgbWF5IG5vdyBhZGQgY29udGVudCB0byB0aGUgZGlyZWN0b3J5IDx0dD4vaG9tZS9VU0VSTkFNRS9wdWJsaWNfaHRtbDwvdHQ+Lg0KIE5vdGUgdGhhdCB1bnRpbCB5b3UgZG8gc28sIHBlb3BsZSB2aXNpdGluZyB5b3VyIHdlYnNpdGUgd2lsbCBzZWUgdGhpcyANCnBhZ2UgYW5kIG5vdCB5b3VyIGNvbnRlbnQuIFRvIHByZXZlbnQgdGhpcyBwYWdlIGZyb20gZXZlciBiZWluZyB1c2VkLCANCmRlbGV0ZSBpbmRleC5odG1sIGluIDx0dD4vcHVibGljX2h0bWw8L3R0Pi48L3A+DQoNCgkJCQkJCTxwPllvdSBhcmUgZnJlZSB0byB1c2UgdGhlIGltYWdlcyBiZWxvdyBvbiBMaW51eCBwb3dlcmVkIEhUVFAgc2VydmVycy4gIFRoYW5rcyBmb3IgdXNpbmcgQ2VudE9TLVdlYlBhbmVsITwvcD4NCg0KCQkJCQkJPHA+PGEgaHJlZj0iaHR0cDovL2NlbnRvcy13ZWJwYW5lbC5jb20iPjxpbWcgc3JjPSJodHRwOi8vY2VudG9zLXdlYnBhbmVsLmNvbS93cC1jb250ZW50L3VwbG9hZHMvMjAxNS8xMS9jd3BfbG9nby5wbmciIHdpZHRoPSIyMCUiID48L2E+IDwvcD4NCgkJCQk8L2Rpdj4NCgkJCTwvZGl2Pg0KICAgICAgICAgICAgICAgIDwvZGl2Pg0KICAgICAgICAgICAgICAgIDxkaXYgY2xhc3M9ImNvbnRlbnQiPg0KICAgICAgICAgICAgICAgICAgICAgICAgPGNlbnRlcj48ZGl2IGNsYXNzPSJjb250ZW50LW1pZGRsZSI+PGgyPkFib3V0IENlbnRPUy1XZWJQYW5lbDo8L2gyPjxiPlRoZSBDZW50T1MtV2ViUGFuZWwgLSA8L2I+DQphIEZyZWUgV2ViIEhvc3RpbmcgY29udHJvbCBwYW5lbCBkZXNpZ25lZCBmb3IgcXVpY2sgYW5kIGVhc3kgbWFuYWdlbWVudCBvZiAoRGVkaWNhdGVkICYgVlBTKSBzZXJ2ZXJzIG1pbnVzIHRoZSBjaG9yZSBhbmQgZWZmb3J0IHRvIHVzZSBzc2ggY29uc29sZSBmb3IgZXZlcnkgdGltZSB5b3Ugd2FudCB0byBkbyBzb21ldGhpbmcsIG9mZmVycyBhIGh1Z2UgbnVtYmVyIG9mIG9wdGlvbnMgYW5kIGZlYXR1cmVzIGZvciBzZXJ2ZXIgbWFuYWdlbWVudCBpbiBpdHMgY29udHJvbCBwYW5lbCBwYWNrYWdlLjxwPjwvcD4NCjxiPjxwPkZvciBpbmZvcm1hdGlvbiBvbiBDZW50T1MtV2ViUGFuZWwgcGxlYXNlIHZpc2l0IHRoZSA8YSBocmVmPSJodHRwOi8vY2VudG9zLXdlYnBhbmVsLmNvbSI+Q2VudE9TLVdlYlBhbmVsLmNvbTwvYT4uPC9wPjwvY2VudGVyPjwvYj4NCjxocj4NCjxjZW50ZXI+PHA+PGJyPjwvcD48aDI+Tm90ZTo8L2gyPjxwPkNlbnRPUy1XZWJQYW5lbCBpcyBTb2Z0d2FyZSBhbmQgaXQgaXMgdXNlZCB0byANCnBvd2VyIHRoaXMgd2Vic2l0ZTsgaG93ZXZlciwgdGhlIHdlYnNlcnZlciBpcyBvd25lZCBieSB0aGUgZG9tYWluIG93bmVyIA0KYW5kIG5vdCB0aGUgQ2VudE9TLVdlYlBhbmVsLjwvcD4gIDxiPklmIHlvdSBoYXZlIGlzc3VlcyB3aXRoIHRoZSBjb250ZW50IG9mIHRoaXMgc2l0ZSwgY29udGFjdCB0aGUgb3duZXIgb2YgdGhlIGRvbWFpbiwgbm90IHRoZSBDZW50T1MtV2ViUGFuZWwuPC9iPg0KDQo8cD5Gb3IgZXhhbXBsZSwgaWYgdGhpcyB3ZWJzaXRlIGlzIHd3dy5leGFtcGxlLmNvbSwgeW91IHdvdWxkIGZpbmQgdGhlIA0Kb3duZXIgb2YgdGhlIGV4YW1wbGUuY29tIGRvbWFpbiBhdCB0aGUgZm9sbG93aW5nIFdIT0lTIHNlcnZlcjogPGEgaHJlZj0iaHR0cDovL3dob2lzLmRvbWFpbnRvb2xzLmNvbSI+aHR0cDovL3dob2lzLmRvbWFpbnRvb2xzLmNvbTwvYT48L3A+PC9jZW50ZXI+DQoNCiAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2Pg0KCQk8L2Rpdj4NCjwvaHI+DQo8aHI+PC9ocj4NCg0KPC9ib2R5PjwvaHRtbD4=
+      name: Control Web Panel - /
+      description: 'Fetched from URL: http://example.com/'
+      content_type: text/html
+      server: Apache/2.4.52 (Unix) OpenSSL/1.0.2k-fips
+      status_code: "200"
+      headers:
+        - 'Content-Length: 5069'
+        - 'Last-Modified: Tue, 20 Jul 2021 11:43:28 GMT'
+        - 'Etag: "13cd-5c78c8ff37800"'
+        - 'Accept-Ranges: bytes'
+      created_at: 2025-12-02T19:25:46.03009Z
+      updated_at: 2025-12-02T19:25:46.030013Z
+      ext_version: 0
+      ext_uuid: d44378f0-0e9b-4940-a020-c74bc75a2a45
