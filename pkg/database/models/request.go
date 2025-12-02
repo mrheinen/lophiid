@@ -60,7 +60,7 @@ type Request struct {
 	TriageHasPayload      bool                     `ksql:"triage_has_payload" json:"triage_has_payload" doc:"Whether the request has a payload"`
 	TriagePayload         string                   `ksql:"triage_payload" json:"triage_payload" doc:"The payload of the request"`
 	TriagePayloadType     string                   `ksql:"triage_payload_type" json:"triage_payload_type" doc:"The payload type of the request"`
-	TriageTargetParameter string                   `ksql:"triage_target_parameter" json:"triage_target_parameter" doc:"The parameter being targeted"`
+	TriageTargetParameter *string                  `ksql:"triage_target_parameter" json:"triage_target_parameter" doc:"The parameter being targeted"`
 }
 
 func (c *Request) ModelID() int64 { return c.ID }

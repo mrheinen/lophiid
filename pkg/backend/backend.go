@@ -1002,7 +1002,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	sReq.TriageHasPayload = true
 	sReq.TriagePayload = preRes.Payload
 	sReq.TriagePayloadType = preRes.PayloadType
-	sReq.TriageTargetParameter = preRes.TargetedParameter
+	sReq.TriageTargetParameter = &preRes.TargetedParameter
 	sReq.RawResponse = payloadResponse.Output
 
 	slog.Debug("triage complete",
@@ -1010,7 +1010,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		slog.String("cmp_hash", sReq.CmpHash),
 		slog.Bool("triaged", sReq.Triaged),
 		slog.Bool("triage_has_payload", sReq.TriageHasPayload),
-		slog.String("triage_target_parameter", sReq.TriageTargetParameter),
+		slog.String("triage_target_parameter", *sReq.TriageTargetParameter),
 		slog.String("triage_payload_type", sReq.TriagePayloadType),
 		slog.String("triage_payload", sReq.TriagePayload),
 		slog.Int("raw_response_len", len(sReq.RawResponse)))
@@ -1359,7 +1359,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 			slog.String("cmp_hash", req.CmpHash),
 			slog.Bool("triaged", req.Triaged),
 			slog.Bool("triage_has_payload", req.TriageHasPayload),
-			slog.String("triage_target_parameter", req.TriageTargetParameter),
+			slog.String("triage_target_parameter", *req.TriageTargetParameter),
 			slog.String("triage_payload_type", req.TriagePayloadType),
 			slog.Int("raw_response_len", len(req.RawResponse)))
 	}
