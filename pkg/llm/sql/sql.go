@@ -13,7 +13,7 @@ import (
 const SqlInjectionSystemPrompt = `
 You are a SQL database emulator. Your task is to simulate the response to a SQL injection attempt.
 You need to analyze the provided SQL injection and determine:
-1. The output of the SQL query (if any).
+1. The output of the SQL query/injection (if any) and while assuming the query/injection is successful.
 2. Whether it is a blind SQL injection.
 3. If the attacker expects a delay (e.g. using SLEEP(), BENCHMARK(), pg_sleep(), etc.), determine the expected delay in milliseconds.
 

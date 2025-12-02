@@ -104,7 +104,13 @@ type BackendServer struct {
 	preprocessor        preprocess.PreProcessInterface
 	hCache              *util.StringMapCache[models.Honeypot]
 	HpDefaultContentID  int
-	payloadCache        *util.StringMapCache[struct{}]
+	// payloadCmpHashCache is used to cache cmp_hash for requests to allow similar
+	// requests to be handled by the triage process.
+	payloadCmpHashCache *util.StringMapCache[struct{}]
+	// payloadSessionCache uses the session ID, cmp_hash and attacked parameter
+	// as key. The value is a map where each key is a hash of the payload with the
+	// request ID as value.
+	payloadSessionCache *util.StringMapCache[map[string]int64]
 }
 
 // NewBackendServer creates a new instance of the backend server.
@@ -131,8 +137,11 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	// The payload cache stores the compare hash of the request as key and is used
 	// to check if future requests for with that hash should also be triaged by
 	// AI to check if there is a payload.
-	plCache := util.NewStringMapCache[struct{}]("payload_cache", time.Minute*45)
+	plCache := util.NewStringMapCache[struct{}]("payload_cmp_hash_cache", time.Minute*45)
 	plCache.Start()
+
+	cpCache := util.NewStringMapCache[map[string]int64]("consecutive_payload_cache", time.Minute*20)
+	cpCache.Start()
 
 	return &BackendServer{
 		dbClient:            c,
@@ -163,7 +172,8 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		hCache:              hCache,
 		HpDefaultContentID:  config.Backend.Advanced.HoneypotDefaultContentID,
 		preprocessor:        preprocessor,
-		payloadCache:        plCache,
+		payloadCmpHashCache: plCache,
+		payloadSessionCache: cpCache,
 	}
 }
 
@@ -874,6 +884,43 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 	return strings.Replace(string(content.Data), constants.LLMReplacementTag, responder.LLMReplacementFallbackString, 1)
 }
 
+func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes *preprocess.PreProcessResult) {
+
+	if preRes.PayloadType != constants.TriagePayloadTypeShellCommand &&
+		preRes.PayloadType != constants.TriagePayloadTypeCodeExec &&
+		preRes.PayloadType != constants.TriagePayloadTypeSqlInjection {
+		return
+	}
+
+	cKey := fmt.Sprintf("%d:%s:%s:%s", sReq.SessionID, sReq.CmpHash, preRes.PayloadType, preRes.TargetedParameter)
+	pHash := string(util.FastCacheHash(preRes.Payload))
+
+	s.payloadSessionCache.GetOrCreate(cKey,
+		func() map[string]int64 { return make(map[string]int64) },
+		func(val *map[string]int64) {
+			if _, ok := (*val)[pHash]; !ok {
+				// This payload was not seen before for this session/cmp_hash/param combo.
+				if len(*val) > 0 {
+					// Only create event if we've seen at least one other payload before.
+					slog.Debug("found new consecutive payload for session", slog.Int64("session_id", sReq.SessionID), slog.String("cmp_hash", sReq.CmpHash), slog.String("target_param", preRes.TargetedParameter))
+					s.ipEventManager.AddEvent(&models.IpEvent{
+						IP:            sReq.SourceIP,
+						Type:          constants.IpEventSessionInfo,
+						Subtype:       constants.IpEventSubTypeSuccessivePayload,
+						Details:       fmt.Sprintf("successive payloads - %s", preRes.PayloadType),
+						Source:        constants.IpEventSourceAnalysis,
+						SourceRef:     fmt.Sprintf("%d", sReq.SessionID),
+						SourceRefType: constants.IpEventRefTypeSessionId,
+						RequestID:     sReq.ID,
+						HoneypotIP:    sReq.HoneypotIP,
+					})
+				}
+				(*val)[pHash] = sReq.ID
+			}
+		},
+	)
+}
+
 func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool) (*preprocess.PayloadProcessingResult, error) {
 
 	var preRes *preprocess.PreProcessResult
@@ -888,7 +935,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		// This check here is therefore not limited to only the requests coming from
 		// the original IP. Instead we want to preprocess all similar requests in the
 		// future for the duration of the entry in the cache.
-		if _, err = s.payloadCache.Get(sReq.CmpHash); err == nil {
+		if _, err = s.payloadCmpHashCache.Get(sReq.CmpHash); err == nil {
 			slog.Debug("found payload cmp_hash in cache!", slog.String("url", sReq.Uri))
 			s.metrics.firstTriageSelection.WithLabelValues("filter_accept_similar").Inc()
 			preRes, payloadResponse, err = s.preprocessor.Process(sReq)
@@ -944,22 +991,30 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	s.metrics.firstTriagePayloadType.WithLabelValues(preRes.PayloadType).Inc()
 
 	// Update the cache in order to also preprocess future similar requests.
-	s.payloadCache.Store(sReq.CmpHash, struct{}{})
+	s.payloadCmpHashCache.Store(sReq.CmpHash, struct{}{})
+
+	s.CheckForConsecutivePayloads(sReq, preRes)
 
 	sReq.TriageHasPayload = true
 	sReq.TriagePayload = preRes.Payload
 	sReq.TriagePayloadType = preRes.PayloadType
 	sReq.RawResponse = payloadResponse.Output
+	if preRes.TargetedParameter != "" {
+		sReq.TriageTargetParameter = &preRes.TargetedParameter
+	}
 
-	slog.Debug("triage complete",
+	logArgs := []any{
 		slog.Int64("request_id", sReq.ID),
 		slog.String("cmp_hash", sReq.CmpHash),
 		slog.Bool("triaged", sReq.Triaged),
 		slog.Bool("triage_has_payload", sReq.TriageHasPayload),
 		slog.String("triage_payload_type", sReq.TriagePayloadType),
-		slog.String("triage_payload", sReq.TriagePayload),
-		slog.Int("raw_response_len", len(sReq.RawResponse)))
-
+		slog.Int("raw_response_len", len(sReq.RawResponse)),
+	}
+	if sReq.TriageTargetParameter != nil {
+		logArgs = append(logArgs, slog.String("triage_target_parameter", *sReq.TriageTargetParameter))
+	}
+	slog.Debug("updating triaged request", logArgs...)
 	return payloadResponse, nil
 }
 
@@ -1299,13 +1354,18 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 
 	// Log triage state before database update to help debug potential race conditions
 	if req.Triaged {
-		slog.Debug("updating triaged request",
+		logArgs := []any{
 			slog.Int64("request_id", req.ID),
 			slog.String("cmp_hash", req.CmpHash),
 			slog.Bool("triaged", req.Triaged),
 			slog.Bool("triage_has_payload", req.TriageHasPayload),
 			slog.String("triage_payload_type", req.TriagePayloadType),
-			slog.Int("raw_response_len", len(req.RawResponse)))
+			slog.Int("raw_response_len", len(req.RawResponse)),
+		}
+		if req.TriageTargetParameter != nil {
+			logArgs = append(logArgs, slog.String("triage_target_parameter", *req.TriageTargetParameter))
+		}
+		slog.Debug("updating triaged request", logArgs...)
 	}
 
 	err := s.dbClient.Update(req)
