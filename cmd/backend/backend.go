@@ -205,7 +205,12 @@ func main() {
 
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 	if cfg.AI.Responder.Enable {
-		llmManager := llm.GetLLMManager(cfg.AI.Responder.LLMManager, llmMetrics)
+		responderLLMCfg, err := cfg.GetLLMConfig(cfg.AI.Responder.LLMConfig)
+		if err != nil {
+			slog.Error("error getting responder LLM config", slog.String("error", err.Error()))
+			return
+		}
+		llmManager := llm.GetLLMManager(responderLLMCfg, llmMetrics)
 		slog.Info("Creating responder")
 		llmResponder = responder.NewLLMResponder(llmManager, cfg.AI.MaxInputCharacters)
 	}
@@ -216,7 +221,12 @@ func main() {
 	}
 
 	if cfg.AI.ShellEmulation.Enable {
-		llmManager := llm.GetLLMManager(cfg.AI.ShellEmulation.LLMManager, llmMetrics)
+		shellLLMCfg, err := cfg.GetLLMConfig(cfg.AI.ShellEmulation.LLMConfig)
+		if err != nil {
+			slog.Error("error getting shell emulation LLM config", slog.String("error", err.Error()))
+			return
+		}
+		llmManager := llm.GetLLMManager(shellLLMCfg, llmMetrics)
 		shellClient = shell.NewShellClient(llmManager, dbc)
 	}
 
@@ -242,24 +252,44 @@ func main() {
 	}
 	slog.Info("Cleaned up stale sessions", slog.Int("count", totalSessionsCleaned))
 
-	payloadLLMManager := llm.GetLLMManager(cfg.AI.Triage.PreProcess.LLMManager, llmMetrics)
+	preprocessLLMCfg, err := cfg.GetLLMConfig(cfg.AI.Triage.PreProcess.LLMConfig)
+	if err != nil {
+		slog.Error("error getting preprocess LLM config", slog.String("error", err.Error()))
+		return
+	}
+	payloadLLMManager := llm.GetLLMManager(preprocessLLMCfg, llmMetrics)
 
 	var codeEmu code.CodeSnippetEmulatorInterface
 
 	if cfg.AI.CodeEmulation.Enable {
-		codeLLMManager := llm.GetLLMManager(cfg.AI.CodeEmulation.LLMManager, llmMetrics)
+		codeLLMCfg, err := cfg.GetLLMConfig(cfg.AI.CodeEmulation.LLMConfig)
+		if err != nil {
+			slog.Error("error getting code emulation LLM config", slog.String("error", err.Error()))
+			return
+		}
+		codeLLMManager := llm.GetLLMManager(codeLLMCfg, llmMetrics)
 		codeEmu = code.NewCodeSnippetEmulator(codeLLMManager, shellClient, dbc)
 	}
 
 	var fileEmu file.FileAccessEmulatorInterface
 	if cfg.AI.FileEmulation.Enable {
-		fileLLMManager := llm.GetLLMManager(cfg.AI.FileEmulation.LLMManager, llmMetrics)
+		fileLLMCfg, err := cfg.GetLLMConfig(cfg.AI.FileEmulation.LLMConfig)
+		if err != nil {
+			slog.Error("error getting file emulation LLM config", slog.String("error", err.Error()))
+			return
+		}
+		fileLLMManager := llm.GetLLMManager(fileLLMCfg, llmMetrics)
 		fileEmu = file.NewFileAccessEmulator(fileLLMManager)
 	}
 
 	var sqlEmu sql.SqlInjectionEmulatorInterface
 	if cfg.AI.SqlEmulation.Enable {
-		sqlLLMManager := llm.GetLLMManager(cfg.AI.SqlEmulation.LLMManager, llmMetrics)
+		sqlLLMCfg, err := cfg.GetLLMConfig(cfg.AI.SqlEmulation.LLMConfig)
+		if err != nil {
+			slog.Error("error getting SQL emulation LLM config", slog.String("error", err.Error()))
+			return
+		}
+		sqlLLMManager := llm.GetLLMManager(sqlLLMCfg, llmMetrics)
 		sqlEmu = sql.NewSqlInjectionEmulator(sqlLLMManager)
 	}
 

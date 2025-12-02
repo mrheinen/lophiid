@@ -107,7 +107,12 @@ func main() {
 	}
 
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	llmManager := llm.GetLLMManager(cfg.AI.Responder.LLMManager, llmMetrics)
+	responderLLMCfg, err := cfg.GetLLMConfig(cfg.AI.Responder.LLMConfig)
+	if err != nil {
+		slog.Error("error getting responder LLM config", slog.String("error", err.Error()))
+		return
+	}
+	llmManager := llm.GetLLMManager(responderLLMCfg, llmMetrics)
 
 	mgr := yara.NewYaraManager(dbc, llmManager, *rulesDir, cfg.Yara.PrepareCommand, metrics)
 

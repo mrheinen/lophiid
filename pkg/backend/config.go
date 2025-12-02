@@ -17,6 +17,7 @@
 package backend
 
 import (
+	"fmt"
 	"lophiid/pkg/llm"
 	"time"
 )
@@ -120,44 +121,65 @@ type Config struct {
 	} `fig:"whois_manager"`
 
 	AI struct {
-		// How long to lean on the secondary LLM after the primary failed before
-		// switching back to the primary.
 		MaxInputCharacters int `fig:"max_input_characters" default:"10000"`
 
+		// LLMConfigs holds named LLM configurations that can be referenced by other settings.
+		LLMConfigs []NamedLLMConfig `fig:"llm_configs"`
+
 		Responder struct {
-			Enable     bool                 `fig:"enable" default:"0" `
-			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+			Enable    bool   `fig:"enable" default:"0"`
+			LLMConfig string `fig:"llm_config"`
 		} `fig:"llm_responder"`
 		ShellEmulation struct {
-			Enable     bool                 `fig:"enable" default:"0" `
-			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+			Enable    bool   `fig:"enable" default:"0"`
+			LLMConfig string `fig:"llm_config"`
 		} `fig:"shell_emulation"`
 		CodeEmulation struct {
-			Enable     bool                 `fig:"enable" default:"0" `
-			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+			Enable    bool   `fig:"enable" default:"0"`
+			LLMConfig string `fig:"llm_config"`
 		} `fig:"code_emulation"`
 		FileEmulation struct {
-			Enable     bool                 `fig:"enable" default:"0" `
-			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+			Enable    bool   `fig:"enable" default:"0"`
+			LLMConfig string `fig:"llm_config"`
 		} `fig:"file_emulation"`
 		SqlEmulation struct {
-			Enable     bool                 `fig:"enable" default:"0" `
-			LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+			Enable    bool   `fig:"enable" default:"0"`
+			LLMConfig string `fig:"llm_config"`
 		} `fig:"sql_emulation"`
 
 		Triage struct {
 			Describer struct {
-				Enable               bool                 `fig:"enable" default:"1"`
-				LLMManager           llm.LLMManagerConfig `fig:"llm_manager"`
-				IgnoreRegexList      []string             `fig:"ignore_regex_list"`
-				LogFile              string               `fig:"log_file" default:"triage.log" `
-				LogLevel             string               `fig:"log_level" default:"debug" `
-				MetricsListenAddress string               `fig:"metrics_listen_address" default:"localhost:8999" `
-				CacheExpirationTime  time.Duration        `fig:"cache_expiration_time" default:"8h"`
+				Enable               bool          `fig:"enable" default:"1"`
+				LLMConfig            string        `fig:"llm_config"`
+				IgnoreRegexList      []string      `fig:"ignore_regex_list"`
+				LogFile              string        `fig:"log_file" default:"triage.log"`
+				LogLevel             string        `fig:"log_level" default:"debug"`
+				MetricsListenAddress string        `fig:"metrics_listen_address" default:"localhost:8999"`
+				CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"8h"`
 			} `fig:"describer"`
 			PreProcess struct {
-				LLMManager llm.LLMManagerConfig `fig:"llm_manager"`
+				LLMConfig string `fig:"llm_config"`
 			} `fig:"preprocess"`
 		} `fig:"triage"`
 	} `fig:"ai"`
+}
+
+// NamedLLMConfig wraps an LLMManagerConfig with a name for referencing.
+type NamedLLMConfig struct {
+	Name   string               `fig:"name"`
+	Config llm.LLMManagerConfig `fig:"config"`
+}
+
+// GetLLMConfig returns the LLM configuration for the given name.
+// Returns an error if the configuration is not found.
+func (c *Config) GetLLMConfig(name string) (llm.LLMManagerConfig, error) {
+	if len(c.AI.LLMConfigs) == 0 {
+		return llm.LLMManagerConfig{}, fmt.Errorf("no LLM configs defined")
+	}
+	for _, cfg := range c.AI.LLMConfigs {
+		if cfg.Name == name {
+			return cfg.Config, nil
+		}
+	}
+	return llm.LLMManagerConfig{}, fmt.Errorf("LLM config %q not found", name)
 }

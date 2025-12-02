@@ -111,73 +111,82 @@ whois_manager:
   max_attempts: 6
 
 ai:
-  # Whether to enable the responder.
-  enable_responder: 1
+  # Named LLM configurations that can be referenced by other settings.
+  # This avoids duplicating LLM config across multiple features.
+  # You can configure each with a primary LLM and an optional secondary LLM.
+  # If a secondary LLM is configured, the LLM Manager will switch to it
+  # whenever the primary is unavailable and switch back when primary recovers.
+  llm_configs:
+    # Default configuration - used for most features
+    - name: default
+      config:
+        # How long prompts and responses should be cached.
+        cache_expiration_time: 24h
+        # How long a completion is allowed to take.
+        completion_timeout: 60s
+        # How many concurrent requests to send to the LLM API.
+        concurrent_requests: 5
+        primary_llm:
+          # API location. Use any OpenAI-compatible API endpoint.
+          api_location: http://localhost:8000/v1
+          api_key: YOUR_API_KEY_HERE
+          model: your-model-name
 
-  # Configure shell emulation.
+    # Example of a fast model for high-volume tasks
+    - name: fast
+      config:
+        cache_expiration_time: 1h
+        completion_timeout: 60s
+        concurrent_requests: 10
+        primary_llm:
+          api_location: https://openrouter.ai/api/v1
+          model: google/gemini-2.5-flash-lite
+          api_key: YOUR_API_KEY_HERE
+
+    # Example of a code-focused model
+    - name: coder
+      config:
+        cache_expiration_time: 1h
+        completion_timeout: 60s
+        concurrent_requests: 5
+        primary_llm:
+          api_location: https://openrouter.ai/api/v1
+          model: qwen/qwen3-coder-30b-a3b-instruct
+          api_key: YOUR_API_KEY_HERE
+
+  # Enable the LLM responder for dynamic responses.
+  llm_responder:
+    enable: 1
+    llm_config: default
+
+  # Configure shell command emulation.
   shell_emulation:
     enable: 1
-    llm_manager:
-      # How long prompts and responses should be cached.
-      cache_expiration_time: 1h
-      completion_timeout: 60s
-      concurrent_requests: 5
+    llm_config: fast
 
-      primary_llm:
-        api_location: https://openrouter.ai/api/v1
-        model: qwen/qwen3-235b-a22b-2507
-        api_key: xxxxxx
-
-
+  # Configure code snippet emulation.
   code_emulation:
     enable: 1
-    llm_manager:
-      # How long prompts and responses should be cached.
-      cache_expiration_time: 1h
-      completion_timeout: 60s
-      concurrent_requests: 5
+    llm_config: coder
 
-      primary_llm:
-        api_location: https://openrouter.ai/api/v1
-        model: qwen/qwen3-coder-30b-a3b-instruct
-        api_key: xxxxxxx
+  # Configure file access emulation.
+  file_emulation:
+    enable: 1
+    llm_config: coder
 
-  # Configure the LLM manager. You can configure it with a primary LLM and a
-  # secondary LLM. If a secondary LLM is configured then the LLM Manager will
-  # switch to the secondary whenever the primary is unavailable. If the primary
-  # comes back then the LLM Manager will switch back (checks every X minutes).
-  llm_manager:
-    # How long prompts and responses should be cached. If multiple LLMs are
-    # configured then the cache is shared between them.
-    cache_expiration_time: 24h
-    # How long a completion is allowed to take.
-    completion_timeout: 60s
-    # How many concurrent requests to send to the LLM API
-    concurrent_requests: 5
-
-    # The primary LLM to use for lookups.
-    primary_llm:
-      # API location. Use any OpenAI API endpoint.
-      api_location: http://localhost:8000/v1
-      api_key: AAAAAAAAAAAAAAAAAA
-      # Maximum string length of the prompt input.
-      max_input_characters: 4096
+  # Configure SQL injection emulation.
+  sql_emulation:
+    enable: 1
+    llm_config: coder
 
   triage:
     describer:
       enable: 1
+      llm_config: default
       log_file: describer.log
       log_level: debug
       metrics_listen_address: x.x.x.x:8999
       cache_expiration_time: 8h
 
-  preprocess:
-    llm_manager:
-      # How long prompts and responses should be cached.
-      cache_expiration_time: 100h
-      completion_timeout: 60s
-      concurrent_requests: 5
-      primary_llm:
-        api_location: https://api.openai.com/v1
-        model: gpt-5-nano
-        api_key: xxxxx
+    preprocess:
+      llm_config: fast
