@@ -49,6 +49,9 @@ import (
 	"github.com/vingarcia/ksql"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func GetContextWithAuthMetadata() context.Context {
@@ -834,6 +837,38 @@ func TestHandleProbe(t *testing.T) {
 
 	})
 
+	t.Run("Content headers are added to response", func(t *testing.T) {
+		fdbc.ContentsToReturn[99] = models.Content{
+			ID:          99,
+			Data:        []byte("test data"),
+			ContentType: "text/html",
+			Server:      "TestServer",
+			Headers:     pgtype.FlatArray[string]{"X-Custom-Header: custom-value", "X-Another: another-value"},
+		}
+		fdbc.ContentRulesToReturn = append(fdbc.ContentRulesToReturn, models.ContentRule{
+			ID: 99, AppID: 42, Method: "GET", Port: 80, Uri: "/headers-test", UriMatching: "exact", ContentID: 99,
+		})
+		b.LoadRules()
+
+		probeReq.RequestUri = "/headers-test"
+		probeReq.Request.ParsedUrl.Path = "/headers-test"
+		res, err := b.HandleProbe(ctx, &probeReq)
+		require.NoError(t, err)
+
+		// Convert header slice to map for easier assertion
+		headerMap := make(map[string]string)
+		for _, h := range res.Response.Header {
+			headerMap[h.Key] = h.Value
+		}
+
+		assert.Equal(t, "custom-value", headerMap["X-Custom-Header"])
+		assert.Equal(t, "another-value", headerMap["X-Another"])
+		assert.Equal(t, "text/html", headerMap["Content-Type"])
+		assert.Equal(t, "TestServer", headerMap["Server"])
+
+		<-b.reqsQueue // drain
+	})
+
 	t.Run("database error", func(t *testing.T) {
 		// Now we simulate a database error. Should never occur ;p
 		fdbc.ContentsToReturn = map[int64]models.Content{}
@@ -918,6 +953,81 @@ func TestHandleProbe(t *testing.T) {
 
 		// No request should be added to the queue for blocked requests
 	})
+}
+
+// TestHandleProbePreprocessHeaders verifies that headers returned by the
+// preprocessor are properly added to the final HTTP response.
+func TestHandleProbePreprocessHeaders(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{
+		ContentsToReturn: map[int64]models.Content{
+			100: {
+				ID:   100,
+				Data: []byte("preprocess content"),
+			},
+		},
+		ContentRulesToReturn: []models.ContentRule{
+			{ID: 100, AppID: 42, Method: "GET", Port: 80, Uri: "/preprocess-headers", UriMatching: "exact", ContentID: 100, Responder: constants.ResponderTypeAuto},
+		},
+	}
+
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{}
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	fakeLimiter := ratelimit.FakeRateLimiter{
+		BoolToReturn:  true,
+		ErrorToReturn: nil,
+	}
+	sMetrics := session.CreateSessionMetrics(reg)
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	fIpMgr := analysis.FakeIpEventManager{}
+	fakeRes := &responder.FakeResponder{}
+	fakeDescriber := describer.FakeDescriberClient{}
+	fakePreprocessor := preprocess.FakePreProcessor{
+		ResultToReturn: &preprocess.PreProcessResult{
+			HasPayload:  true,
+			PayloadType: "SQLI",
+		},
+		PayloadResult: &preprocess.PayloadProcessingResult{
+			Output:  "injected output",
+			Headers: "X-Preprocess: preprocess-value\nX-LLM-Generated: true",
+		},
+	}
+
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b.LoadRules()
+
+	ctx := GetContextWithAuthMetadata()
+	probeReq := &backend_service.HandleProbeRequest{
+		RequestUri: "/preprocess-headers",
+		Request: &backend_service.HttpRequest{
+			Proto:         "HTTP/1.0",
+			Method:        "GET",
+			HoneypotIp:    "1.1.1.1",
+			Body:          []byte("body"),
+			RemoteAddress: "2.2.2.2:1337",
+			ParsedUrl: &backend_service.ParsedURL{
+				Port: 80,
+				Path: "/preprocess-headers",
+			},
+		},
+	}
+
+	res, err := b.HandleProbe(ctx, probeReq)
+	require.NoError(t, err)
+
+	// Convert header slice to map for easier assertion
+	headerMap := make(map[string]string)
+	for _, h := range res.Response.Header {
+		headerMap[h.Key] = h.Value
+	}
+
+	assert.Equal(t, "preprocess-value", headerMap["X-Preprocess"])
+	assert.Equal(t, "true", headerMap["X-LLM-Generated"])
+
+	<-b.reqsQueue // drain
 }
 
 func TestProcessQueue(t *testing.T) {
