@@ -109,7 +109,9 @@ func main() {
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
 	responderLLMCfg, err := cfg.GetLLMConfig(cfg.AI.Responder.LLMConfig)
 	if err != nil {
-		slog.Error("error getting responder LLM config", slog.String("error", err.Error()))
+		slog.Error("error getting responder LLM config", 
+			slog.String("config", cfg.AI.Responder.LLMConfig),
+			slog.String("error", err.Error()))
 		return
 	}
 	llmManager := llm.GetLLMManager(responderLLMCfg, llmMetrics)
