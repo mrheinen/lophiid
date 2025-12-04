@@ -62,7 +62,12 @@ func main() {
 
 	metricsRegistry := prometheus.NewRegistry()
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	primaryManager := llm.GetLLMManager(cfg.AI.Responder.LLMManager, llmMetrics)
+	responderLLMCfg, err := cfg.GetLLMConfig(cfg.AI.Responder.LLMConfig)
+	if err != nil {
+		slog.Error("error getting responder LLM config", slog.String("error", err.Error()))
+		return
+	}
+	primaryManager := llm.GetLLMManager(responderLLMCfg, llmMetrics)
 
 	shc := shell.NewShellClient(primaryManager, dbc)
 
