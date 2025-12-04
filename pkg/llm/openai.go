@@ -268,7 +268,7 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 
 	// We only add this when it's explicitly set. Like with other openrouter
 	// parameters, it might be that some models do not support it.
-	if l.OrReasoningEffort != "none" {
+	if l.OrReasoningEffort != "" && l.OrReasoningEffort != "none" {
 		opts = append(opts, option.WithJSONSet("reasoning", map[string]any{
 			"effort":  l.OrReasoningEffort,
 			"enabled": true,
@@ -372,6 +372,15 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 				"require_parameters": true,
 				"order":              l.OrProviders,
 				"allow_fallbacks":    true,
+			}))
+		}
+
+		// We only add this when it's explicitly set. Like with other openrouter
+		// parameters, it might be that some models do not support it.
+		if l.OrReasoningEffort != "" && l.OrReasoningEffort != "none" {
+			opts = append(opts, option.WithJSONSet("reasoning", map[string]any{
+				"effort":  l.OrReasoningEffort,
+				"enabled": true,
 			}))
 		}
 
