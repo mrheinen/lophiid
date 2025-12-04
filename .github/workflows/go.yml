@@ -1,6 +1,3 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
 name: Testing
 permissions:
   contents: read
@@ -12,17 +9,45 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      # Cache Go modules and build output
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # Set up Go
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25.1'
+
+      # Cache Rust toolchain, Cargo registry, and build output
+      - name: Cache Cargo and Rust build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('yara-x/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
-
       - name: Install libmagic
-        run: |
-          sudo apt-get install -y libmagic-dev
+        run: sudo apt-get install -y libmagic-dev
 
       - name: Install yara-x
         run: |
@@ -33,11 +58,6 @@ jobs:
           cargo cinstall -p yara-x-capi --release --prefix=/tmp/
           sudo mkdir -p /usr/local/lib/x86_64-linux-gnu/
           sudo cp -r /tmp/lib/x86_64-linux-gnu/* /usr/lib/x86_64-linux-gnu/
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.25.1'
 
       - name: Build pkgs
         run: go build lophiid/pkg/...
