@@ -35,12 +35,30 @@ type OpenAILLMClient struct {
 	// single %s at a location where the request prompt needs to go.
 	systemPrompt string
 	// maxContextSize is the maximum number of characters allowed in the context
-	maxContextSize int64
-	temperature    float64
-	topP           float64
-	schema         *openai.ResponseFormatJSONSchemaJSONSchemaParam
-	providers      []string
-	debugEnabled   bool
+	maxContextSize    int64
+	temperature       float64
+	topP              float64
+	schema            *openai.ResponseFormatJSONSchemaJSONSchemaParam
+	OrProviders       []string
+	OrReasoningEffort string
+	debugEnabled      bool
+}
+
+// validateOpenrouterReasoningEffort checks if the given effort is a valid.
+// These are documented here: https://openrouter.ai/docs/guides/best-practices/reasoning-tokens#enable-reasoning-with-default-config
+func validateOpenrouterReasoningEffort(effort string) error {
+	okEfforts := map[string]struct{}{
+		"none":    {},
+		"minimal": {},
+		"low":     {},
+		"medium":  {},
+		"high":    {},
+	}
+
+	if _, ok := okEfforts[effort]; !ok {
+		return fmt.Errorf("invalid effort: %s", effort)
+	}
+	return nil
 }
 
 // NewOpenAILLMClientWithModel creates a new OpenAILLMClient with the given
@@ -51,14 +69,20 @@ func NewOpenAILLMClientWithModel(cfg LLMConfig, systemPrompt string) *OpenAILLMC
 		option.WithBaseURL(cfg.ApiLocation),
 	)
 
+	if err := validateOpenrouterReasoningEffort(cfg.OpenRouterReasoningEffort); err != nil {
+		slog.Error("invalid OpenRouter effort", slog.String("error", err.Error()))
+		return nil
+	}
+
 	ret := &OpenAILLMClient{
-		client:         &client,
-		systemPrompt:   systemPrompt,
-		Model:          cfg.Model,
-		maxContextSize: cfg.MaxContextSize,
-		providers:      cfg.OpenRouterProviders,
-		temperature:    cfg.Temperature,
-		topP:           cfg.TopP,
+		client:            &client,
+		systemPrompt:      systemPrompt,
+		Model:             cfg.Model,
+		maxContextSize:    cfg.MaxContextSize,
+		temperature:       cfg.Temperature,
+		topP:              cfg.TopP,
+		OrProviders:       cfg.OpenRouterProviders,
+		OrReasoningEffort: cfg.OpenRouterReasoningEffort,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
@@ -88,14 +112,20 @@ func NewOpenAILLMClient(cfg LLMConfig, promptTemplate string) *OpenAILLMClient {
 		option.WithBaseURL(cfg.ApiLocation),
 	)
 
+	if err := validateOpenrouterReasoningEffort(cfg.OpenRouterReasoningEffort); err != nil {
+		slog.Error("invalid OpenRouter effort", slog.String("error", err.Error()))
+		return nil
+	}
+
 	ret := &OpenAILLMClient{
-		client:         &client,
-		systemPrompt:   promptTemplate,
-		maxContextSize: cfg.MaxContextSize,
-		schema:         nil,
-		providers:      cfg.OpenRouterProviders,
-		temperature:    cfg.Temperature,
-		topP:           cfg.TopP,
+		client:            &client,
+		systemPrompt:      promptTemplate,
+		maxContextSize:    cfg.MaxContextSize,
+		schema:            nil,
+		temperature:       cfg.Temperature,
+		topP:              cfg.TopP,
+		OrProviders:       cfg.OpenRouterProviders,
+		OrReasoningEffort: cfg.OpenRouterReasoningEffort,
 	}
 
 	if err := ret.SelectModel(); err != nil {
@@ -228,11 +258,20 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		opts = append(opts, option.WithDebugLog(nil))
 	}
 
-	if len(l.providers) > 0 {
+	if len(l.OrProviders) > 0 {
 		opts = append(opts, option.WithJSONSet("provider", map[string]any{
 			"require_parameters": true,
-			"order":              l.providers,
+			"order":              l.OrProviders,
 			"allow_fallbacks":    true,
+		}))
+	}
+
+	// We only add this when it's explicitly set. Like with other openrouter
+	// parameters, it might be that some models do not support it.
+	if l.OrReasoningEffort != "none" {
+		opts = append(opts, option.WithJSONSet("reasoning", map[string]any{
+			"effort":  l.OrReasoningEffort,
+			"enabled": true,
 		}))
 	}
 
@@ -328,10 +367,10 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 			opts = append(opts, option.WithDebugLog(nil))
 		}
 
-		if len(l.providers) > 0 {
+		if len(l.OrProviders) > 0 {
 			opts = append(opts, option.WithJSONSet("provider", map[string]any{
 				"require_parameters": true,
-				"order":              l.providers,
+				"order":              l.OrProviders,
 				"allow_fallbacks":    true,
 			}))
 		}

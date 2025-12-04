@@ -365,3 +365,17 @@ func TestCompleteWithTools_InvalidLastMessage(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "last message must be user")
 }
+
+func TestValidateOpenrouterReasoningEffort(t *testing.T) {
+	// Valid efforts should not return an error
+	validEfforts := []string{"none", "minimal", "low", "medium", "high"}
+	for _, effort := range validEfforts {
+		err := validateOpenrouterReasoningEffort(effort)
+		assert.NoError(t, err, "expected no error for valid effort %q", effort)
+	}
+
+	// Invalid effort should return an error
+	err := validateOpenrouterReasoningEffort("invalid_effort")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid effort")
+}

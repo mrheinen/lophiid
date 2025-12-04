@@ -22,14 +22,15 @@ import "time"
 // initiate LLM instances.
 type LLMConfig struct {
 	// ApiType can be "openai" or "gemini"
-	ApiType             string   `fig:"api_type" default:"openai"`
-	ApiLocation         string   `fig:"api_location" default:"http://localhost:8000/v1"`
-	ApiKey              string   `fig:"api_key"`
-	Model               string   `fig:"model" default:""`
-	MaxContextSize      int64    `fig:"max_context_size" default:"32000"`
-	Temperature         float64  `fig:"temperature" default:"0.2"`
-	TopP                float64  `fig:"top_p" default:"0.1"`
-	OpenRouterProviders []string `fig:"openrouter_providers" default:""`
+	ApiType                   string   `fig:"api_type" default:"openai"`
+	ApiLocation               string   `fig:"api_location" default:"http://localhost:8000/v1"`
+	ApiKey                    string   `fig:"api_key"`
+	Model                     string   `fig:"model" default:""`
+	MaxContextSize            int64    `fig:"max_context_size" default:"32000"`
+	Temperature               float64  `fig:"temperature" default:"0.2"`
+	TopP                      float64  `fig:"top_p" default:"0.1"`
+	OpenRouterProviders       []string `fig:"openrouter_providers" default:""`
+	OpenRouterReasoningEffort string   `fig:"openrouter_reasoning_effort" default:"none"`
 }
 
 // LLMManagerConfig configures the LLMManager. The CacheExpirationTime is used
