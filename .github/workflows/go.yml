@@ -31,6 +31,14 @@ jobs:
         with:
           go-version: '1.25.1'
 
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install libmagic
+        run: sudo apt-get install -y libmagic-dev
+
+      - name: Clone yara-x
+        run: git clone --depth 1 https://github.com/VirusTotal/yara-x.git
+
       # Cache Rust toolchain, Cargo registry, and build output
       - name: Cache Cargo and Rust build
         uses: actions/cache@v4
@@ -39,19 +47,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
-            target
+            yara-x/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('yara-x/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Install libmagic
-        run: sudo apt-get install -y libmagic-dev
-
-      - name: Install yara-x
+      - name: Build yara-x
         run: |
-          git clone https://github.com/VirusTotal/yara-x.git
           cd yara-x
           cargo install cargo-c
           export PATH="$HOME/.cargo/bin:$PATH"
