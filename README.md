@@ -7,6 +7,11 @@
 ![Lophiid build workflow](https://github.com/mrheinen/lophiid/actions/workflows/go.yml/badge.svg)
 ![CodeQL](https://github.com/mrheinen/lophiid/actions/workflows/github-code-scanning/codeql/badge.svg)
 
+IMPORTANT: Lophiid is currently being transformed into a hybrid AI honeypot. You can try
+our the code in the main branch but keep in mind that a lot of the documentation
+needs updating.  The first release is scheduled for the first week of January!
+
+
 ## Introduction
 
 Lophiid is a distributed honeypot for detecting and interacting with mass web
