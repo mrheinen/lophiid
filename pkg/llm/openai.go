@@ -236,10 +236,6 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		}))
 	}
 
-//	if l.top_k > 0 {
-//		opts = append(opts, option.WithJSONSet("top_k", l.top_k))
-//	}
-
 	resp, err := l.client.Chat.Completions.New(ctx, param, opts...)
 
 	if err != nil {
@@ -339,10 +335,6 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 				"allow_fallbacks":    true,
 			}))
 		}
-
-//		if l.top_k >= 0 {
-//			opts = append(opts, option.WithJSONSet("top_k", l.top_k))
-//		}
 
 		resp, err = l.client.Chat.Completions.New(ctx, param, opts...)
 
