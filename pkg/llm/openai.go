@@ -37,7 +37,7 @@ type OpenAILLMClient struct {
 	// maxContextSize is the maximum number of characters allowed in the context
 	maxContextSize int64
 	temperature    float64
-	top_p          float64
+	topP           float64
 	schema         *openai.ResponseFormatJSONSchemaJSONSchemaParam
 	providers      []string
 	debugEnabled   bool
@@ -58,7 +58,7 @@ func NewOpenAILLMClientWithModel(cfg LLMConfig, systemPrompt string) *OpenAILLMC
 		maxContextSize: cfg.MaxContextSize,
 		providers:      cfg.OpenRouterProviders,
 		temperature:    cfg.Temperature,
-		top_p:          cfg.TopP,
+		topP:           cfg.TopP,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
@@ -95,7 +95,7 @@ func NewOpenAILLMClient(cfg LLMConfig, promptTemplate string) *OpenAILLMClient {
 		schema:         nil,
 		providers:      cfg.OpenRouterProviders,
 		temperature:    cfg.Temperature,
-		top_p:          cfg.TopP,
+		topP:           cfg.TopP,
 	}
 
 	if err := ret.SelectModel(); err != nil {
@@ -187,8 +187,8 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 	if l.temperature >= 0 {
 		param.Temperature = openai.Float(l.temperature)
 	}
-	if l.top_p >= 0 {
-		param.TopP = openai.Float(l.top_p)
+	if l.topP >= 0 {
+		param.TopP = openai.Float(l.topP)
 	}
 
 	if l.systemPrompt != "" && msgs[0].Role != constants.LLMClientMessageSystem {
@@ -264,8 +264,8 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 	if l.temperature >= 0 {
 		param.Temperature = openai.Float(l.temperature)
 	}
-	if l.top_p >= 0 {
-		param.TopP = openai.Float(l.top_p)
+	if l.topP >= 0 {
+		param.TopP = openai.Float(l.topP)
 	}
 
 	if l.systemPrompt != "" && msgs[0].Role != constants.LLMClientMessageSystem {
