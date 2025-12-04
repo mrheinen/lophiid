@@ -27,6 +27,8 @@ type LLMConfig struct {
 	ApiKey              string   `fig:"api_key"`
 	Model               string   `fig:"model" default:""`
 	MaxContextSize      int64    `fig:"max_context_size" default:"32000"`
+	Temperature         float64  `fig:"temperature" default:"0.2"`
+	TopP                float64  `fig:"top_p" default:"0.1"`
 	OpenRouterProviders []string `fig:"openrouter_providers" default:""`
 }
 
