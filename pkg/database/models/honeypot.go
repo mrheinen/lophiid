@@ -34,6 +34,7 @@ type Honeypot struct {
 	RequestsCountLastDay int64                   `json:"request_count_last_day"`
 	Ports                pgtype.FlatArray[int64] `ksql:"ports" json:"ports" doc:"HTTP ports that the honeypot listens on"`
 	SSLPorts             pgtype.FlatArray[int64] `ksql:"ssl_ports" json:"ssl_ports" doc:"HTTPS ports that the honeypot listens on"`
+	RuleGroupID          int64                   `ksql:"rule_group_id" json:"rule_group_id" doc:"The ID of the rule group"`
 }
 
 func (c *Honeypot) ModelID() int64 { return c.ID }

@@ -52,6 +52,7 @@ type ContentRule struct {
 	Block       bool      `ksql:"block" json:"block" doc:"A bool (0 or 1) indicating if requests matching the rule should be blocked"`
 	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
 	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
+	RuleGroupID int64     `ksql:"rule_group_id" json:"rule_group_id" yaml:"rule_group_id" doc:"The ID of the rule group to which this rule belongs"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.
@@ -60,10 +61,10 @@ type ContentRule struct {
 	//   - RECON : the purpose is reconnaissance
 	//   - CRAWL : the request is part of regular crawling
 	//   - ATTACK : the request is an attack (e.g. an RCE)
-	RequestPurpose   string        `ksql:"request_purpose" json:"request_purpose" yaml:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
-	Responder        string        `ksql:"responder" json:"responder" doc:"The responder type for this rule (e.g. COMMAND_INJECTION)"`
-	ResponderRegex   string        `ksql:"responder_regex" json:"responder_regex" yaml:"responder_regex" doc:"The responder regex to grab the relevant bits"`
-	ResponderDecoder string        `ksql:"responder_decoder" json:"responder_decoder" yaml:"responder_decoder" doc:"The responder decoder to use (e.g. NONE, URI, HTML)"`
+	RequestPurpose   string       `ksql:"request_purpose" json:"request_purpose" yaml:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
+	Responder        string       `ksql:"responder" json:"responder" doc:"The responder type for this rule (e.g. COMMAND_INJECTION)"`
+	ResponderRegex   string       `ksql:"responder_regex" json:"responder_regex" yaml:"responder_regex" doc:"The responder regex to grab the relevant bits"`
+	ResponderDecoder string       `ksql:"responder_decoder" json:"responder_decoder" yaml:"responder_decoder" doc:"The responder decoder to use (e.g. NONE, URI, HTML)"`
 	TagsToApply      []TagPerRule `json:"tags_to_apply"`
 }
 
