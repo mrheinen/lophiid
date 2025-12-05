@@ -108,55 +108,49 @@ func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.S
 	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, metrics: metrics}
 }
 
-func RequestHas(req *models.Request, has string) bool {
-	return strings.Contains(req.BodyString(), has) || strings.Contains(req.Uri, has)
+// Case-sensitive patterns to detect potentially malicious payloads.
+var caseSensitivePatterns = []string{
+	"echo", "expr", "cat", "/etc", "/var", ".ini", ".log", ".txt", ".php",
+	".jsp", ".jar", "/bin/", "java.", "<%", "<?php", "<?=", "untime",
+	"org.apache.", "request.", "out.", "ruby", "eval", "exec", "import",
+	"subprocess", "shell", "wget", "require", "curl", "busybox", "--",
+	"\\-\\-", "phpinfo",
 }
 
-func RequestHasCaseInsensitive(req *models.Request, has string) bool {
-	return strings.Contains(strings.ToLower(req.BodyString()), has) || strings.Contains(strings.ToLower(req.Uri), has)
+// Case-insensitive patterns to detect potentially malicious payloads.
+// These are stored lowercase and matched against lowercased request data.
+var caseInsensitivePatterns = []string{
+	"md5", "select", "version()", "@@version", "union", "concat", "from",
+	"where", "sleep", "benchmark", "waitfor", "delay",
+}
+
+// requestContainsAnyPattern checks if the request body or URI contains any of
+// the suspicious patterns. It pre-computes the lowercase versions to avoid
+// repeated allocations.
+func requestContainsAnyPattern(req *models.Request) bool {
+	body := req.BodyString()
+	uri := req.Uri
+	bodyLower := strings.ToLower(body)
+	uriLower := strings.ToLower(uri)
+
+	for _, pattern := range caseSensitivePatterns {
+		if strings.Contains(body, pattern) || strings.Contains(uri, pattern) {
+			return true
+		}
+	}
+
+	for _, pattern := range caseInsensitivePatterns {
+		if strings.Contains(bodyLower, pattern) || strings.Contains(uriLower, pattern) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // MaybeProcess returns true if the request was handled.
 func (p *PreProcess) MaybeProcess(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error) {
-
-	// TODO: this is experimental and needs to be replaced with something better.
-	if !RequestHas(req, "echo") &&
-		!RequestHas(req, "expr") &&
-		!RequestHas(req, "cat") &&
-		!RequestHas(req, "/etc") &&
-		!RequestHas(req, "/var") &&
-		!RequestHas(req, ".ini") &&
-		!RequestHas(req, ".log") &&
-		!RequestHas(req, ".txt") &&
-		!RequestHas(req, ".php") &&
-		!RequestHas(req, ".jsp") &&
-		!RequestHas(req, ".jar") &&
-		!RequestHas(req, "/bin/") &&
-		!RequestHas(req, "java.") &&
-		!RequestHas(req, "<%") &&
-		!RequestHas(req, "<?php") &&
-		!RequestHas(req, "<?=") &&
-		!RequestHas(req, "untime") &&
-		!RequestHas(req, "org.apache.") &&
-		!RequestHas(req, "request.") &&
-		!RequestHas(req, "out.") &&
-		!RequestHas(req, "ruby") &&
-		!RequestHas(req, "eval") &&
-		!RequestHas(req, "--") &&
-		!RequestHas(req, "\\-\\-") &&
-		!RequestHasCaseInsensitive(req, "md5") &&
-		!RequestHasCaseInsensitive(req, "select") &&
-		!RequestHasCaseInsensitive(req, "version()") &&
-		!RequestHasCaseInsensitive(req, "@@version") &&
-		!RequestHasCaseInsensitive(req, "union") &&
-		!RequestHasCaseInsensitive(req, "concat") &&
-		!RequestHasCaseInsensitive(req, "from") &&
-		!RequestHasCaseInsensitive(req, "where") &&
-		!RequestHasCaseInsensitive(req, "sleep") &&
-		!RequestHasCaseInsensitive(req, "benchmark") &&
-		!RequestHasCaseInsensitive(req, "waitfor") &&
-		!RequestHasCaseInsensitive(req, "delay") &&
-		!RequestHas(req, "phpinfo") {
+	if !requestContainsAnyPattern(req) {
 		return nil, nil, ErrNotProcessed
 	}
 
