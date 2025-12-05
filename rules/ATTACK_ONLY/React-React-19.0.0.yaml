@@ -1,0 +1,50 @@
+app:
+    id: 187
+    name: React
+    version: 19.0.0
+    vendor: React
+    os: ""
+    link: https://github.com/Pa2sw0rd/exploit-CVE-2025-55182-poc/blob/main/README.md
+    created_at: 2025-12-04T20:36:54.12329Z
+    updated_at: 2025-12-04T20:36:54.123223Z
+    ext_version: 0
+    ext_uuid: 3ccab7be-088e-4a28-9720-46b04cf39daf
+    cves:
+        - CVE-2025-55182
+rules:
+    - id: 1094
+      uri: ""
+      body: (constructor|vm#runInThisContext|vm#runInNewContext|child_process#execSync|child_process#execFileSync|child_process#spawnSync|module#_load|fs#readFileSync|fs#writeFileSync)
+      method: ANY
+      port: 0
+      ports: []
+      uri_matching: none
+      body_matching: regex
+      content_id: 1085
+      app_id: 187
+      app_uuid: 3ccab7be-088e-4a28-9720-46b04cf39daf
+      content_uuid: 3b55ad47-9bae-42e5-a633-7ebf7f15c7ad
+      created_at: 2025-12-04T20:35:54.846313Z
+      updated_at: 2025-12-05T12:37:32.509348Z
+      alert: false
+      enabled: true
+      block: false
+      ext_version: 0
+      ext_uuid: f29d8d88-3674-4dc9-ac27-7da8903e5500
+      request_purpose: ATTACK
+      responder: AUTO
+      responder_regex: ""
+      responder_decoder: NONE
+      tagstoapply: []
+contents:
+    - id: 1085
+      data: ewogInN1Y2Nlc3MiOiB0cnVlLAogInJlc3VsdCI6ICIlJSVMT1BISUlEX1BBWUxPQURfUkVTUE9OU0UlJSUiCn0=
+      name: React - RCE response
+      description: ""
+      content_type: application/json
+      server: React
+      status_code: "200"
+      created_at: 2025-12-04T20:32:07.317651Z
+      updated_at: 2025-12-04T20:32:40.857505Z
+      ext_version: 0
+      ext_uuid: 3b55ad47-9bae-42e5-a633-7ebf7f15c7ad
