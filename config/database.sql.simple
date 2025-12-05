@@ -407,6 +407,22 @@ CREATE TABLE whois (
   updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
 );
 
+CREATE TABLE rule_group (
+  id                   SERIAL PRIMARY KEY,
+  name                 VARCHAR(256),
+  created_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now()))
+);
+
+CREATE TABLE rule_per_group (
+  id                   SERIAL PRIMARY KEY,
+  rule_id              INT NOT NULL,
+  group_id             INT NOT NULL,
+  created_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  updated_at           TIMESTAMP NOT NULL DEFAULT (timezone('utc', now())),
+  CONSTRAINT fk_rule_id_per_rule FOREIGN KEY (rule_id) REFERENCES content_rule(id),
+  CONSTRAINT fk_group_id_per_group FOREIGN KEY (group_id) REFERENCES rule_group(id)
+);
 
 -- These need to be kept in sync with pkg/util/constants/shared_constants.go
 CREATE TYPE IP_EVENT_TYPE AS ENUM ('UNKNOWN', 'PING', 'TRAFFIC_CLASS', 'HOSTED_MALWARE', 'SENT_MALWARE', 'RATELIMITED', 'HOST_C2');
@@ -476,6 +492,12 @@ GRANT ALL PRIVILEGES ON tag_per_rule TO lo;
 GRANT ALL PRIVILEGES ON tag_per_rule_id_seq TO lo;
 GRANT ALL PRIVILEGES ON rule_tag_per_request TO lo;
 GRANT ALL PRIVILEGES ON rule_tag_per_request_id_seq TO lo;
+GRANT ALL PRIVILEGES ON rule_group TO lo;
+GRANT ALL PRIVILEGES ON rule_group_id_seq TO lo;
+GRANT ALL PRIVILEGES ON rule_per_group TO lo;
+GRANT ALL PRIVILEGES ON rule_per_group_id_seq TO lo;
+
+
 
 -- Index for port filtering (e.g., WHERE source_port = 443)
 CREATE INDEX idx_request_source_port ON request (source_port);
