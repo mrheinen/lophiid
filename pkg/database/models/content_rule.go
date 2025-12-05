@@ -52,7 +52,6 @@ type ContentRule struct {
 	Block       bool      `ksql:"block" json:"block" doc:"A bool (0 or 1) indicating if requests matching the rule should be blocked"`
 	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
 	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
-	RuleGroupID int64     `ksql:"rule_group_id" json:"rule_group_id" yaml:"rule_group_id" doc:"The ID of the rule group to which this rule belongs"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.
