@@ -184,8 +184,12 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 // isDebugIP checks if the given IP is in the list of debug IPs configured
 // in the backend. When true, responses should include debug headers.
 func (s *BackendServer) isDebugIP(ip string) bool {
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return false
+	}
 	for _, debugIP := range s.config.Backend.Advanced.DebugIPs {
-		if debugIP == ip {
+		if parsedIP.Equal(net.ParseIP(debugIP)) {
 			return true
 		}
 	}
