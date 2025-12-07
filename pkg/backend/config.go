@@ -67,6 +67,12 @@ type Config struct {
 			// The default content that honeypots are configured with upon first
 			// seeing them.
 			HoneypotDefaultContentID int `fig:"honeypot_default_content_id" default:"1"`
+			// DebugIPs is a list of IP networks (in CIDR notation) that will receive
+			// debug headers in responses. When a request comes from an IP within one
+			// of these networks, the response will include X-Lophiid-Request-ID and
+			// X-Lophiid-Session-ID headers. Use /32 for single IPs (e.g., "10.0.0.1/32")
+			// or network ranges (e.g., "192.168.1.0/24").
+			DebugIPs []string `fig:"debug_ips"`
 		} `fig:"advanced"`
 	} `fig:"backend"`
 	Analysis struct {
