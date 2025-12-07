@@ -269,7 +269,14 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	if rb.ID == 0 {
 		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
-			errMsg := fmt.Sprintf("unable to update %d: %s", dm.ModelID(), err.Error())
+			errMsg := fmt.Sprintf("unable to update rule: %s", err.Error())
+			a.sendStatus(w, errMsg, ResultError, nil)
+			return
+		}
+
+		// Add the rule to the default rule group.
+		if _, err := a.dbc.Insert(&models.RulePerGroup{RuleID: rb.ID, GroupID: constants.DefaultRuleGroupID}); err != nil {
+			errMsg := fmt.Sprintf("unable to update rule group for rule %d: %s", dm.ModelID(), err.Error())
 			a.sendStatus(w, errMsg, ResultError, nil)
 			return
 		}

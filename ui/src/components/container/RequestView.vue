@@ -140,15 +140,15 @@
               <div v-if="request.triage_payload">
                 <label class="label">Request payload</label>
                 <RawHttpCard
-                label="Payload"
+                label="Triage Payload"
                 :data="request.triage_payload"
                 ></RawHttpCard>
               </div>
 
-              <table v-if="request.triage_has_payload">
+              <table v-if="request.triage_payload_type">
                 <tbody>
                   <tr>
-                    <th>Payload type</th>
+                    <th>Triage Payload type</th>
                     <td>{{ request.triage_payload_type }}</td>
                   </tr>
                 </tbody>

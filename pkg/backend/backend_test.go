@@ -688,6 +688,7 @@ func TestHandleProbe(t *testing.T) {
 
 	fdbc := &database.FakeDatabaseClient{
 		RequestsToReturn: []models.Request{},
+		HoneypotToReturn: models.Honeypot{RuleGroupID: 1, DefaultContentID: 66},
 		ContentsToReturn: map[int64]models.Content{
 			42: {
 				ID:   42,
@@ -708,11 +709,11 @@ func TestHandleProbe(t *testing.T) {
 				Headers: pgtype.FlatArray[string]{"X-IP: 1.1.1.1"},
 			},
 		},
-		ContentRulesToReturn: []models.ContentRule{
-			{ID: 1, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-			{ID: 2, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-			{ID: 3, AppID: 1, Block: false, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
-			{ID: 4, AppID: 5, Block: true, Method: "GET", Port: 80, Uri: "/blocked", UriMatching: "exact", ContentID: 42},
+		RulesPerGroupJoinToReturn: []models.RulePerGroupJoin{
+			{Rule: models.ContentRule{ID: 1, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 1, GroupID: 1}},
+			{Rule: models.ContentRule{ID: 2, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 2, GroupID: 1}},
+			{Rule: models.ContentRule{ID: 3, AppID: 1, Block: false, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44}, RulePerGroup: models.RulePerGroup{ID: 3, RuleID: 3, GroupID: 1}},
+			{Rule: models.ContentRule{ID: 4, AppID: 5, Block: true, Method: "GET", Port: 80, Uri: "/blocked", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 4, RuleID: 4, GroupID: 1}},
 		},
 	}
 
@@ -782,8 +783,12 @@ func TestHandleProbe(t *testing.T) {
 		}
 
 		if res == nil {
-			t.Errorf("got nil result")
+			t.Fatalf("got nil result")
 		}
+
+		if res.Response == nil {
+      t.Errorf("got nil Response")
+    }
 
 		if !bytes.Equal(res.Response.Body, fdbc.ContentsToReturn[42].Data) {
 			t.Errorf("got %s, expected %s", res.Response.Body, fdbc.ContentsToReturn[42].Data)
@@ -811,10 +816,7 @@ func TestHandleProbe(t *testing.T) {
 
 	t.Run("Honeypot default", func(t *testing.T) {
 		// Now we test the default content fetching. Set the path to something that
-		// doesn't match any rule.
-		fdbc.HoneypotToReturn = models.Honeypot{
-			DefaultContentID: 66,
-		}
+		// doesn't match any rule. The honeypot's DefaultContentID (66) is used.
 		probeReq.RequestUri = "/dffsd"
 		res, err := b.HandleProbe(ctx, &probeReq)
 		if err != nil {
@@ -845,8 +847,9 @@ func TestHandleProbe(t *testing.T) {
 			Server:      "TestServer",
 			Headers:     pgtype.FlatArray[string]{"X-Custom-Header: custom-value", "X-Another: another-value"},
 		}
-		fdbc.ContentRulesToReturn = append(fdbc.ContentRulesToReturn, models.ContentRule{
-			ID: 99, AppID: 42, Method: "GET", Port: 80, Uri: "/headers-test", UriMatching: "exact", ContentID: 99,
+		fdbc.RulesPerGroupJoinToReturn = append(fdbc.RulesPerGroupJoinToReturn, models.RulePerGroupJoin{
+			Rule:         models.ContentRule{ID: 99, AppID: 42, Method: "GET", Port: 80, Uri: "/headers-test", UriMatching: "exact", ContentID: 99},
+			RulePerGroup: models.RulePerGroup{ID: 99, RuleID: 99, GroupID: 1},
 		})
 		b.LoadRules()
 
@@ -959,14 +962,15 @@ func TestHandleProbe(t *testing.T) {
 // preprocessor are properly added to the final HTTP response.
 func TestHandleProbePreprocessHeaders(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{
+		HoneypotToReturn: models.Honeypot{RuleGroupID: 1},
 		ContentsToReturn: map[int64]models.Content{
 			100: {
 				ID:   100,
 				Data: []byte("preprocess content"),
 			},
 		},
-		ContentRulesToReturn: []models.ContentRule{
-			{ID: 100, AppID: 42, Method: "GET", Port: 80, Uri: "/preprocess-headers", UriMatching: "exact", ContentID: 100, Responder: constants.ResponderTypeAuto},
+		RulesPerGroupJoinToReturn: []models.RulePerGroupJoin{
+			{Rule: models.ContentRule{ID: 100, AppID: 42, Method: "GET", Port: 80, Uri: "/preprocess-headers", UriMatching: "exact", ContentID: 100, Responder: constants.ResponderTypeAuto}, RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 1}},
 		},
 	}
 
@@ -1829,24 +1833,28 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 	} {
 		t.Run(test.description, func(t *testing.T) {
 			fdbc := &database.FakeDatabaseClient{
+				HoneypotToReturn: models.Honeypot{RuleGroupID: 1},
 				ContentsToReturn: map[int64]models.Content{
 					42: {
 						ID:   42,
 						Data: test.contentData,
 					},
 				},
-				ContentRulesToReturn: []models.ContentRule{
+				RulesPerGroupJoinToReturn: []models.RulePerGroupJoin{
 					{
-						ID:               1,
-						AppID:            1,
-						Method:           "GET",
-						Port:             80,
-						Uri:              "/test",
-						UriMatching:      "exact",
-						ContentID:        42,
-						Responder:        test.responderType,
-						ResponderRegex:   test.responderRegex,
-						ResponderDecoder: test.responderDecoder,
+						Rule: models.ContentRule{
+							ID:               1,
+							AppID:            1,
+							Method:           "GET",
+							Port:             80,
+							Uri:              "/test",
+							UriMatching:      "exact",
+							ContentID:        42,
+							Responder:        test.responderType,
+							ResponderRegex:   test.responderRegex,
+							ResponderDecoder: test.responderDecoder,
+						},
+						RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 1, GroupID: 1},
 					},
 				},
 			}
@@ -2283,6 +2291,110 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 				if evt.Subtype != constants.IpEventSubTypeSuccessivePayload {
 					t.Errorf("expected event subtype %s, got %s", constants.IpEventSubTypeSuccessivePayload, evt.Subtype)
 				}
+			}
+		})
+	}
+}
+
+func TestLoadRules(t *testing.T) {
+	for _, test := range []struct {
+		description       string
+		rulesPerGroupJoin []models.RulePerGroupJoin
+		dbError           error
+		expectError       bool
+		expectedGroups    map[int64][]int64 // groupID -> list of rule IDs
+	}{
+		{
+			description:       "empty rules",
+			rulesPerGroupJoin: []models.RulePerGroupJoin{},
+			expectError:       false,
+			expectedGroups:    map[int64][]int64{},
+		},
+		{
+			description: "single rule in single group",
+			rulesPerGroupJoin: []models.RulePerGroupJoin{
+				{
+					Rule:         models.ContentRule{ID: 100},
+					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
+				},
+			},
+			expectError:    false,
+			expectedGroups: map[int64][]int64{10: {100}},
+		},
+		{
+			description: "multiple rules in single group",
+			rulesPerGroupJoin: []models.RulePerGroupJoin{
+				{
+					Rule:         models.ContentRule{ID: 100},
+					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
+				},
+				{
+					Rule:         models.ContentRule{ID: 101},
+					RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 101, GroupID: 10},
+				},
+			},
+			expectError:    false,
+			expectedGroups: map[int64][]int64{10: {100, 101}},
+		},
+		{
+			description: "rules in multiple groups",
+			rulesPerGroupJoin: []models.RulePerGroupJoin{
+				{
+					Rule:         models.ContentRule{ID: 100},
+					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
+				},
+				{
+					Rule:         models.ContentRule{ID: 101},
+					RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 101, GroupID: 20},
+				},
+				{
+					Rule:         models.ContentRule{ID: 102},
+					RulePerGroup: models.RulePerGroup{ID: 3, RuleID: 102, GroupID: 10},
+				},
+			},
+			expectError:    false,
+			expectedGroups: map[int64][]int64{10: {100, 102}, 20: {101}},
+		},
+		{
+			description:       "database error",
+			rulesPerGroupJoin: nil,
+			dbError:           errors.New("db error"),
+			expectError:       true,
+			expectedGroups:    nil,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fakeDB := &database.FakeDatabaseClient{
+				RulesPerGroupJoinToReturn: test.rulesPerGroupJoin,
+				ErrorToReturn:             test.dbError,
+			}
+
+			b := &BackendServer{
+				dbClient:  fakeDB,
+				safeRules: &SafeRules{},
+			}
+
+			err := b.LoadRules()
+			if test.expectError {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+
+			// Verify the rules are correctly grouped by GroupID.
+			rules := b.safeRules.Get()
+			assert.Equal(t, len(test.expectedGroups), len(rules))
+
+			for groupID, expectedRuleIDs := range test.expectedGroups {
+				groupRules := b.safeRules.GetGroup(groupID)
+				assert.Equal(t, len(expectedRuleIDs), len(groupRules), "group %d rule count mismatch", groupID)
+
+				actualRuleIDs := make([]int64, len(groupRules))
+				for i, r := range groupRules {
+					actualRuleIDs[i] = r.ID
+				}
+				assert.Equal(t, expectedRuleIDs, actualRuleIDs, "group %d rule IDs mismatch", groupID)
 			}
 		})
 	}

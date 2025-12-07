@@ -52,6 +52,8 @@ var SessionContextTable = ksql.NewTable("session_execution_context")
 var YaraTable = ksql.NewTable("yara")
 var CodeEmuTable = ksql.NewTable("llm_code_execution")
 var TagPerRuleTable = ksql.NewTable("tag_per_rule")
+var RulePerGroupTable = ksql.NewTable("rule_per_group")
+var RuleGroupTable = ksql.NewTable("rule_group")
 
 type DatabaseClient interface {
 	Close()
@@ -82,8 +84,11 @@ type DatabaseClient interface {
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
 	SearchTagPerRule(offset int64, limit int64, query string) ([]models.TagPerRule, error)
 	SearchTagPerRequest(offset int64, limit int64, query string) ([]models.TagPerRequest, error)
+	SearchRulePerGroup(offset int64, limit int64, query string) ([]models.RulePerGroup, error)
+	SearchRuleGroup(offset int64, limit int64, query string) ([]models.RuleGroup, error)
 	GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error)
+	GetRulePerGroupJoin() ([]models.RulePerGroupJoin, error)
 	GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error)
 	SimpleQuery(query string, result any) (any, error)
 }
@@ -188,6 +193,8 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["SessionExecutionContext"] = &SessionContextTable
 	sqlTable["LLMCodeExecution"] = &CodeEmuTable
 	sqlTable["TagPerRule"] = &TagPerRuleTable
+	sqlTable["RulePerGroup"] = &RulePerGroupTable
+	sqlTable["RuleGroup"] = &RuleGroupTable
 
 	table, ok := sqlTable[name]
 	if !ok {
@@ -508,9 +515,29 @@ func (d *KSQLClient) SearchTagPerRequest(offset int64, limit int64, query string
 	return result, err
 }
 
+// SearchRulePerGroup searches for rule-per-group associations based on the query.
+func (d *KSQLClient) SearchRulePerGroup(offset int64, limit int64, query string) ([]models.RulePerGroup, error) {
+	var result []models.RulePerGroup
+	err := d.Search(offset, limit, query, rulePerGroupConfig, &result)
+	return result, err
+}
+
+// SearchRuleGroup searches for rule groups based on the query.
+func (d *KSQLClient) SearchRuleGroup(offset int64, limit int64, query string) ([]models.RuleGroup, error) {
+	var result []models.RuleGroup
+	err := d.Search(offset, limit, query, ruleGroupConfig, &result)
+	return result, err
+}
+
 func (d *KSQLClient) GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error) {
 	var md []models.TagPerRequestFull
 	err := d.db.Query(d.ctx, &md, "FROM tag_per_request JOIN tag ON tag.id = tag_per_request.tag_id AND tag_per_request.request_id = $1", id)
+	return md, err
+}
+
+func (d *KSQLClient) GetRulePerGroupJoin() ([]models.RulePerGroupJoin, error) {
+	var md []models.RulePerGroupJoin
+	err := d.db.Query(d.ctx, &md, "FROM rule_per_group JOIN content_rule ON content_rule.id = rule_per_group.rule_id")
 	return md, err
 }
 
