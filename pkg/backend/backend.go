@@ -181,15 +181,21 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	}
 }
 
-// isDebugIP checks if the given IP is in the list of debug IPs configured
+// isDebugIP checks if the given IP is in the list of debug networks configured
 // in the backend. When true, responses should include debug headers.
+// Debug IPs should be specified in CIDR notation (e.g., "192.168.1.0/24" for a
+// network or "10.0.0.1/32" for a single IP).
 func (s *BackendServer) isDebugIP(ip string) bool {
-	parsedIP := net.ParseIP(ip)
-	if parsedIP == nil {
+	requestIP := net.ParseIP(ip)
+	if requestIP == nil {
 		return false
 	}
-	for _, debugIP := range s.config.Backend.Advanced.DebugIPs {
-		if parsedIP.Equal(net.ParseIP(debugIP)) {
+	for _, debugCIDR := range s.config.Backend.Advanced.DebugIPs {
+		_, ipNet, err := net.ParseCIDR(debugCIDR)
+		if err != nil {
+			continue
+		}
+		if ipNet.Contains(requestIP) {
 			return true
 		}
 	}
