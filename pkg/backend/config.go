@@ -67,6 +67,10 @@ type Config struct {
 			// The default content that honeypots are configured with upon first
 			// seeing them.
 			HoneypotDefaultContentID int `fig:"honeypot_default_content_id" default:"1"`
+			// DebugIPs is a list of IPs that will receive debug headers in responses.
+			// When a request comes from one of these IPs, the response will include
+			// X-Lophiid-Request-ID and X-Lophiid-Session-ID headers.
+			DebugIPs []string `fig:"debug_ips"`
 		} `fig:"advanced"`
 	} `fig:"backend"`
 	Analysis struct {

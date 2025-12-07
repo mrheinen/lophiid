@@ -66,6 +66,55 @@ func GetDefaultBackendConfig() Config {
 	return cfg
 }
 
+func TestIsDebugIP(t *testing.T) {
+	for _, test := range []struct {
+		description string
+		debugIPs    []string
+		testIP      string
+		expected    bool
+	}{
+		{
+			description: "empty debug IPs list returns false",
+			debugIPs:    []string{},
+			testIP:      "192.168.1.1",
+			expected:    false,
+		},
+		{
+			description: "IP in debug list returns true",
+			debugIPs:    []string{"10.0.0.1", "192.168.1.1", "172.16.0.1"},
+			testIP:      "192.168.1.1",
+			expected:    true,
+		},
+		{
+			description: "IP not in debug list returns false",
+			debugIPs:    []string{"10.0.0.1", "172.16.0.1"},
+			testIP:      "192.168.1.1",
+			expected:    false,
+		},
+		{
+			description: "first IP in list matches",
+			debugIPs:    []string{"192.168.1.1", "10.0.0.1"},
+			testIP:      "192.168.1.1",
+			expected:    true,
+		},
+		{
+			description: "last IP in list matches",
+			debugIPs:    []string{"10.0.0.1", "192.168.1.1"},
+			testIP:      "192.168.1.1",
+			expected:    true,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			cfg := GetDefaultBackendConfig()
+			cfg.Backend.Advanced.DebugIPs = test.debugIPs
+
+			bs := &BackendServer{config: cfg}
+			result := bs.isDebugIP(test.testIP)
+			assert.Equal(t, test.expected, result)
+		})
+	}
+}
+
 func TestGetMatchedRuleBasic(t *testing.T) {
 	bunchOfRules := []models.ContentRule{
 		{ID: 1, AppID: 1, Method: "ANY", Ports: []int{80}, Uri: "/42", UriMatching: "exact", ContentID: 42},
