@@ -274,7 +274,8 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 			return
 		}
 
-		if _, err := a.dbc.Insert(&models.RulePerGroup{RuleID: rb.ID, GroupID: 0}); err != nil {
+		// Add the rule to the default rule group.
+		if _, err := a.dbc.Insert(&models.RulePerGroup{RuleID: rb.ID, GroupID: constants.DefaultRuleGroupID}); err != nil {
 			errMsg := fmt.Sprintf("unable to update rule group for rule %d: %s", dm.ModelID(), err.Error())
 			a.sendStatus(w, errMsg, ResultError, nil)
 			return
