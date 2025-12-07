@@ -567,6 +567,7 @@ CREATE TABLE public.content_rule (
     responder_decoder public.responder_decoder_type DEFAULT 'NONE'::public.responder_decoder_type,
     enabled boolean DEFAULT true,
     ports integer[] DEFAULT '{}'::integer[],
+    rule_group_id integer,
     block boolean DEFAULT false
 );
 

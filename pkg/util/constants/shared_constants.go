@@ -150,3 +150,8 @@ const (
 	// The replacement tag for LLM responses. Used in the backend and preprocessor
 	LLMReplacementTag = "%%%LOPHIID_PAYLOAD_RESPONSE%%%"
 )
+
+const (
+	// The default rule group ID that all rules need to be added to.
+	DefaultRuleGroupID = 0
+)

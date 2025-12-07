@@ -23,19 +23,30 @@ import (
 )
 
 type SafeRules struct {
-	mu    sync.Mutex
-	rules []models.ContentRule
+	mu            sync.Mutex
+	rulesPerGroup map[int64][]models.ContentRule
 }
 
 // GetRules returns a copy of the content rules.
-func (s *SafeRules) Get() []models.ContentRule {
+func (s *SafeRules) Get() map[int64][]models.ContentRule {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return append([]models.ContentRule{}, s.rules...)
+
+	result := make(map[int64][]models.ContentRule, len(s.rulesPerGroup))
+	for k, v := range s.rulesPerGroup {
+		result[k] = append([]models.ContentRule{}, v...)
+	}
+	return result
 }
 
-func (s *SafeRules) Set(rules []models.ContentRule) {
+func (s *SafeRules) GetGroup(groupID int64) []models.ContentRule {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    return append([]models.ContentRule{}, s.rulesPerGroup[groupID]...)
+}
+
+func (s *SafeRules) Set(rules map[int64][]models.ContentRule) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.rules = rules
+	s.rulesPerGroup = rules
 }

@@ -133,3 +133,17 @@ var tagPerRequestConfig = SearchConfig{
 	AllowedFields: getDatamodelDatabaseFields(models.TagPerRequest{}),
 	OrderBy:       "",
 }
+
+var rulePerGroupConfig = SearchConfig{
+	Table:         &RulePerGroupTable,
+	TableName:     "rule_per_group",
+	AllowedFields: getDatamodelDatabaseFields(models.RulePerGroup{}),
+	OrderBy:       "id DESC",
+}
+
+var ruleGroupConfig = SearchConfig{
+	Table:         &RuleGroupTable,
+	TableName:     "rule_group",
+	AllowedFields: getDatamodelDatabaseFields(models.RuleGroup{}),
+	OrderBy:       "id ASC",
+}

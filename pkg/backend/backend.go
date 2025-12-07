@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -645,23 +645,24 @@ func HasParseableContent(fileUrl string, mime string) bool {
 func (s *BackendServer) getCachedHoneypot(hpIP string) (*models.Honeypot, error) {
 	// Check the cache.
 	hp, err := s.hCache.Get(hpIP)
-	if err != nil {
-		// Not in cache so fetch from the database
-		hps, err := s.dbClient.SearchHoneypots(0, 1, fmt.Sprintf("ip:%s", hpIP))
-		if err != nil {
-			return nil, fmt.Errorf("error finding honeypot: %w", err)
-		}
-
-		if len(hps) == 1 {
-			// Update the cache.
-			s.hCache.Store(hpIP, hps[0])
-			hp = &hps[0]
-		} else {
-			slog.Error("could not find honeypot", slog.String("ip", hpIP))
-			return nil, nil
-		}
+	if err == nil {
+		return hp, nil
 	}
-	return hp, nil
+
+	// Not in cache so fetch from the database
+	hps, err := s.dbClient.SearchHoneypots(0, 1, fmt.Sprintf("ip:%s", hpIP))
+	if err != nil {
+		return nil, fmt.Errorf("error finding honeypot: %w", err)
+	}
+
+	if len(hps) == 1 {
+		// Update the cache.
+		s.hCache.Store(hpIP, hps[0])
+		return &hps[0], nil
+	}
+
+	slog.Error("could not find honeypot", slog.String("ip", hpIP))
+	return nil, nil
 }
 
 func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo models.Download) bool {
@@ -1025,7 +1026,7 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		if !errors.Is(err, preprocess.ErrNotProcessed) {
 			slog.Error("error pre-processing", slog.String("error", err.Error()))
 		}
-		slog.Error("pre-processing failed", slog.String("cmp_hash", sReq.CmpHash), slog.String("uri", sReq.Uri))
+		slog.Error("pre-processing failed", slog.String("error", err.Error()), slog.String("cmp_hash", sReq.CmpHash), slog.String("uri", sReq.Uri))
 		res.Body = content.Data
 		return
 	}
@@ -1122,27 +1123,27 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	s.metrics.honeypotRequests.WithLabelValues(sReq.HoneypotIP).Add(1)
 	s.metrics.reqsQueueGauge.Set(float64(len(s.reqsQueue)))
 
-	matchedRule, err := s.GetMatchedRule(s.safeRules.Get(), sReq, session)
+	hp, hpErr := s.getCachedHoneypot(sReq.HoneypotIP)
+	if hpErr != nil {
+		slog.Error("error finding honeypot", slog.String("error", hpErr.Error()), slog.String("honeypot", sReq.HoneypotIP))
+		return nil, status.Errorf(codes.Internal, "honeypot error: %s", hpErr.Error())
+	}
+
+	if hp == nil {
+		slog.Error("could not find honeypot", slog.String("ip", sReq.HoneypotIP))
+		return nil, status.Errorf(codes.NotFound, "could not find honeypot")
+	}
+
+	matchedRule, ruleErr := s.GetMatchedRule(s.safeRules.GetGroup(hp.RuleGroupID), sReq, session)
 	matchedRuleIsDefault := false
 
-	// If there was no matched rule then serve the default rule of the honeypot.
-	if err != nil {
-		hp, err := s.getCachedHoneypot(sReq.HoneypotIP)
-
-		if hp == nil {
-			if err != nil {
-				slog.Error("error finding honeypot", slog.String("error", err.Error()), slog.String("honeypot", sReq.HoneypotIP))
-			} else {
-				slog.Error("honeypot does not exist ?", slog.String("honeypot", sReq.HoneypotIP))
-			}
-			matchedRule = s.safeRules.Get()[0]
-		} else {
-			// Fallback to an empty rule.
-			matchedRuleIsDefault = true
-			matchedRule.ContentID = hp.DefaultContentID
-			matchedRule.AppID = 0
-			matchedRule.ID = 0
-		}
+	// If there was no matched rule then serve the default content of the honeypot.
+	if ruleErr != nil {
+		// Fallback to an empty rule.
+		matchedRuleIsDefault = true
+		matchedRule.ContentID = hp.DefaultContentID
+		matchedRule.AppID = 0
+		matchedRule.ID = 0
 	}
 
 	// Alert if necessary
@@ -1290,32 +1291,20 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 // LoadRules loads the content rules from the database.
 func (s *BackendServer) LoadRules() error {
-
-	const (
-		rulesBatchSize   = 1000
-		maxBatchesToLoad = 10
-	)
-
-	rulesOffset := 0
-	var allRules []models.ContentRule
-
-	for i := 0; i < maxBatchesToLoad; i += 1 {
-		rules, err := s.dbClient.SearchContentRules(int64(rulesOffset), int64(rulesBatchSize), "enabled:true")
-		if err != nil {
-			return err
-		}
-
-		allRules = append(allRules, rules...)
-
-		// If there are fewer rules than in a batch, we are done.
-		if len(rules) < rulesBatchSize {
-			break
-		}
-
-		rulesOffset += rulesBatchSize
+	rulePerGroup, err := s.dbClient.GetRulePerGroupJoin()
+	if err != nil {
+		return err
 	}
 
-	s.safeRules.Set(allRules)
+	ruleCount := 0
+	finalRules := map[int64][]models.ContentRule{}
+	for _, rpg := range rulePerGroup {
+		finalRules[rpg.RulePerGroup.GroupID] = append(finalRules[rpg.RulePerGroup.GroupID], rpg.Rule)
+		ruleCount++
+	}
+
+	slog.Info("loaded rules", slog.Int("rules_count", ruleCount), slog.Int("amount_of_groups", len(finalRules)))
+	s.safeRules.Set(finalRules)
 	return nil
 }
 
