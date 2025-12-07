@@ -17,6 +17,7 @@
 package backend
 
 import (
+	"slices"
 	"sync"
 
 	"lophiid/pkg/database/models"
@@ -34,15 +35,20 @@ func (s *SafeRules) Get() map[int64][]models.ContentRule {
 
 	result := make(map[int64][]models.ContentRule, len(s.rulesPerGroup))
 	for k, v := range s.rulesPerGroup {
-		result[k] = append([]models.ContentRule{}, v...)
+		result[k] = slices.Clone(v)
 	}
 	return result
 }
 
 func (s *SafeRules) GetGroup(groupID int64) []models.ContentRule {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    return append([]models.ContentRule{}, s.rulesPerGroup[groupID]...)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.rulesPerGroup[groupID]; !ok {
+		return []models.ContentRule{}
+	}
+
+	return slices.Clone(s.rulesPerGroup[groupID])
 }
 
 func (s *SafeRules) Set(rules map[int64][]models.ContentRule) {
