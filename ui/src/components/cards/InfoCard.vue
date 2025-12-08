@@ -14,19 +14,24 @@
           </p>
         </slot>
       </div>
-      <slot></slot>
+      <slot />
     </div>
   </div>
 </template>
 
 <script>
 export default {
-  props: ["mylabel"],
+  props: {
+    "mylabel": {
+      type: Object,
+      required: true
+    }
+  },
   data() {
     return {};
   },
-  methods: {},
   watch: {},
+  methods: {},
 };
 </script>
 

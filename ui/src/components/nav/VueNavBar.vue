@@ -1,11 +1,24 @@
 <template>
-  <div class="card" style="">
-    <MenuBar :model="items" :pt="{ root: 'shadow-md shadow-stone-500/50' }">
+  <div
+    class="card"
+    style=""
+  >
+    <MenuBar
+      :model="items"
+      :pt="{ root: 'shadow-md shadow-stone-500/50' }"
+    >
       <template #start>
-        <img src="@/assets/logo.png" width="112" height="28" />
+        <img
+          src="@/assets/logo.png"
+          width="112"
+          height="28"
+        >
       </template>
       <template #item="{ item, props, hasSubmenu, root }">
-        <a class="flex align-items-center" v-bind="props.action">
+        <a
+          class="flex align-items-center"
+          v-bind="props.action"
+        >
           <span :class="item.icon" />
           <span class="ml-2">{{ item.label }}</span>
           <PrimeBadge
@@ -16,20 +29,19 @@
           <span
             v-if="item.shortcut"
             class="ml-auto border-1 surface-border border-round surface-100 text-xs p-1"
-            >{{ item.shortcut }}</span
-          >
+          >{{ item.shortcut }}</span>
           <i
             v-if="hasSubmenu"
             :class="[
               'pi pi-angle-down text-primary',
               { 'pi-angle-down ml-2': root, 'pi-angle-right ml-auto': !root },
             ]"
-          ></i>
+          />
         </a>
       </template>
 
       <template #end>
-        <div class="flex align-items-center gap-2"></div>
+        <div class="flex align-items-center gap-2" />
       </template>
     </MenuBar>
   </div>
@@ -38,7 +50,6 @@
 <script>
 export default {
   inject: ["config"],
-  methods: {},
   data() {
     return {
       items: [
@@ -148,6 +159,7 @@ export default {
       ],
     };
   },
+  methods: {},
 };
 </script>
 

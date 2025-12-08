@@ -1,87 +1,119 @@
 <template>
-
   <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div class="col-span-3" style="mleft">
+    <div
+      class="col-span-3"
+      style="mleft"
+    >
       <div class="rounded overflow-hidden shadow-lg">
         <DataTable
-          :value="honeypots"
-          tableStyle="min-width: 50rem"
-          :metaKeySelection="true"
-          dataKey="id"
-          showGridlines
-          compareSelectionBy="equals"
           v-model:selection="selectedHoneypot"
-          selectionMode="single"
+          :value="honeypots"
+          table-style="min-width: 50rem"
+          :meta-key-selection="true"
+          data-key="id"
+          show-gridlines
+          compare-selection-by="equals"
+          selection-mode="single"
         >
           <template #header>
             <DataSearchBar
               ref="searchBar"
               :isloading="isLoading"
-              @search="performNewSearch"
               modelname="honeypot"
-            ></DataSearchBar>
+              @search="performNewSearch"
+            />
           </template>
-          <template #empty>No data matched. </template>
-          <template #loading>Loading request data. Please wait. </template>
+          <template #empty>
+            No data matched.
+          </template>
+          <template #loading>
+            Loading request data. Please wait.
+          </template>
 
-          <DataColumn field="id" header="ID" style="width: 4%">
-          </DataColumn>
+          <DataColumn
+            field="id"
+            header="ID"
+            style="width: 4%"
+          />
 
-          <DataColumn header="IP" style="width: 5%">
+          <DataColumn
+            header="IP"
+            style="width: 5%"
+          >
             <template #body="slotProps">
               <a :href="'/requests?q=honeypot_ip:' + slotProps.data.ip">{{ slotProps.data.ip }}</a>
             </template>
           </DataColumn>
-          <DataColumn field="version" header="Version" style="width: 10%">
-          </DataColumn>
-          <DataColumn field="parsed.created_at" header="First seen" style="width: 14%">
-          </DataColumn>
-          <DataColumn field="parsed.last_checkin" header="Last seen" style="width: 14%">
-          </DataColumn>
-          <DataColumn field="default_content_id" header="Default content"
-          style="width: 8%">
-          </DataColumn>
-          <DataColumn field="request_count_last_day" header="# 24h"
-          style="width: 8%">
-          </DataColumn>
+          <DataColumn
+            field="version"
+            header="Version"
+            style="width: 10%"
+          />
+          <DataColumn
+            field="parsed.created_at"
+            header="First seen"
+            style="width: 14%"
+          />
+          <DataColumn
+            field="parsed.last_checkin"
+            header="Last seen"
+            style="width: 14%"
+          />
+          <DataColumn
+            field="default_content_id"
+            header="Default content"
+            style="width: 8%"
+          />
+          <DataColumn
+            field="request_count_last_day"
+            header="# 24h"
+            style="width: 8%"
+          />
 
           <template #footer>
             <div class="flex justify-between items-center">
-            <div>
-            <i
-              v-if="offset > 0"
-              @click="loadPrev()"
-              class="pi pi-arrow-left pi-style"
-            ></i>
-            <i
-              v-if="offset == 0"
-              class="pi pi-arrow-left pi-style-disabled"
-            ></i>
-            </div>
-            <div>
-
-            <FormSelect v-model="selectedLimit" @change="onChangeLimit" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
-            </div>
-            <div>
-            <i
-              v-if="honeypots.length == limit"
-              @click="loadNext()"
-              class="pi pi-arrow-right pi-style pi-style-right"
-            ></i>
-            </div>
+              <div>
+                <i
+                  v-if="offset > 0"
+                  class="pi pi-arrow-left pi-style"
+                  @click="loadPrev()"
+                />
+                <i
+                  v-if="offset == 0"
+                  class="pi pi-arrow-left pi-style-disabled"
+                />
+              </div>
+              <div>
+                <FormSelect
+                  v-model="selectedLimit"
+                  :options="limitOptions"
+                  placeholder="Limit"
+                  editable
+                  checkmark
+                  :highlight-on-select="false"
+                  class="w-full md:w-56"
+                  @change="onChangeLimit"
+                />
+              </div>
+              <div>
+                <i
+                  v-if="honeypots.length == limit"
+                  class="pi pi-arrow-right pi-style pi-style-right"
+                  @click="loadNext()"
+                />
+              </div>
             </div>
           </template>
-
         </DataTable>
       </div>
     </div>
     <div class="col-span-2">
       <honey-form
+        :honeypot="selectedHoneypot"
         @update-honeypot="onUpdateHoneypot"
         @delete-honeypot="onDeleteHoneypot"
         @require-auth="$emit('require-auth')"
-        :honeypot="selectedHoneypot"
-      ></honey-form>
+      />
     </div>
   </div>
 </template>
@@ -95,8 +127,8 @@ export default {
     HoneyForm,
     DataSearchBar,
   },
-  emits: ["require-auth"],
   inject: ["config"],
+  emits: ["require-auth"],
   data() {
     return {
       honeypots: [],
@@ -117,6 +149,27 @@ export default {
         },
       },
     };
+  },
+  beforeCreate() {
+    this.selectedHoneypot = this.baseHoneypot;
+  },
+  created() {
+    if (this.$route.params.limit) {
+      this.limit = parseInt(this.$route.params.limit);
+    }
+
+    if (this.$route.params.offset) {
+      this.offset = parseInt(this.$route.params.offset);
+    }
+
+    this.selectedLimit = this.limit;
+  },
+  mounted() {
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.loadHoneypots(true, function(){});
+    }
   },
   methods: {
     onChangeLimit() {
@@ -234,27 +287,6 @@ export default {
           this.isLoading = false;
         });
     },
-  },
-  beforeCreate() {
-    this.selectedHoneypot = this.baseHoneypot;
-  },
-  created() {
-    if (this.$route.params.limit) {
-      this.limit = parseInt(this.$route.params.limit);
-    }
-
-    if (this.$route.params.offset) {
-      this.offset = parseInt(this.$route.params.offset);
-    }
-
-    this.selectedLimit = this.limit;
-  },
-  mounted() {
-    if (this.$route.query.q) {
-      this.$refs.searchBar.setQuery(this.$route.query.q);
-    } else {
-      this.loadHoneypots(true, function(){});
-    }
   },
 };
 </script>

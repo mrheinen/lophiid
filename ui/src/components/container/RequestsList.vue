@@ -1,77 +1,98 @@
 <template>
   <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div class="col-span-3" style="mleft">
+    <div
+      class="col-span-3"
+      style="mleft"
+    >
       <div class="rounded overflow-hidden shadow-lg">
         <DataTable
-          :value="requests"
-          tableStyle="min-width: 50rem"
-          :metaKeySelection="true"
-          dataKey="id"
-          showGridlines
-          compareSelectionBy="equals"
           v-model:selection="selectedRequest"
-          selectionMode="single"
+          :value="requests"
+          table-style="min-width: 50rem"
+          :meta-key-selection="true"
+          data-key="id"
+          show-gridlines
+          compare-selection-by="equals"
+          selection-mode="single"
         >
           <template #header>
             <DataSearchBar
               ref="searchBar"
               :isloading="isLoading"
-              @search="performNewSearch"
               modelname="request"
               showage="1"
               defaultage="3"
-            ></DataSearchBar>
+              @search="performNewSearch"
+            />
           </template>
-          <template #empty>No data matched. </template>
-          <template #loading>Loading request data. Please wait. </template>
+          <template #empty>
+            No data matched.
+          </template>
+          <template #loading>
+            Loading request data. Please wait.
+          </template>
           <DataColumn
             field="parsed.received_at"
             header="Date"
             style="width: 14%"
-          >
-          </DataColumn>
+          />
 
-          <DataColumn field="honeypot_ip" header="Honeypot" style="width: 10%">
-          </DataColumn>
-          <DataColumn field="method" header="Method" style="width: 5%">
-          </DataColumn>
-          <DataColumn field="parsed.uri" header="URI"> </DataColumn>
-          <DataColumn field="source_ip" header="Source" style="width: 10%">
+          <DataColumn
+            field="honeypot_ip"
+            header="Honeypot"
+            style="width: 10%"
+          />
+          <DataColumn
+            field="method"
+            header="Method"
+            style="width: 5%"
+          />
+          <DataColumn
+            field="parsed.uri"
+            header="URI"
+          />
+          <DataColumn
+            field="source_ip"
+            header="Source"
+            style="width: 10%"
+          >
             <template #body="slotProps">
               <a
                 :href="
                   getFreshRequestLink() +
-                  '?q=source_ip:' +
-                  slotProps.data.source_ip
+                    '?q=source_ip:' +
+                    slotProps.data.source_ip
                 "
               >
-                {{ slotProps.data.source_ip }}</a
-              >
+                {{ slotProps.data.source_ip }}</a>
             </template>
           </DataColumn>
-          <DataColumn header="Actions" style="width: 5%">
+          <DataColumn
+            header="Actions"
+            style="width: 5%"
+          >
             <template #body="slotProps">
               <a
                 :href="
                   config.rulesLink +
-                  '?uri=' +
-                  encodeURIComponent(slotProps.data.uri) +
-                  '&method=' +
-                  slotProps.data.method
+                    '?uri=' +
+                    encodeURIComponent(slotProps.data.uri) +
+                    '&method=' +
+                    slotProps.data.method
                 "
               >
                 <i
                   title="create a rule for this"
                   class="pi pi-arrow-circle-right"
-                ></i>
+                />
               </a>
               &nbsp;
               <i
-                @click="toggleStarred(slotProps.data.id)"
                 :class="slotProps.data.starred ? 'starred' : ''"
                 title="Star this request"
                 class="pi pi-star pointer"
-              ></i>
+                @click="toggleStarred(slotProps.data.id)"
+              />
             </template>
           </DataColumn>
           <template #footer>
@@ -79,32 +100,32 @@
               <div>
                 <i
                   v-if="offset > 0"
-                  @click="loadPrevRequests()"
                   class="pi pi-arrow-left pi-style"
-                ></i>
+                  @click="loadPrevRequests()"
+                />
                 <i
                   v-if="offset == 0"
                   class="pi pi-arrow-left pi-style-disabled"
-                ></i>
+                />
               </div>
               <div>
                 <FormSelect
                   v-model="selectedLimit"
-                  @change="onChangeLimit"
                   :options="limitOptions"
                   placeholder="Limit"
                   editable
                   checkmark
-                  :highlightOnSelect="false"
+                  :highlight-on-select="false"
                   class="w-full md:w-56"
+                  @change="onChangeLimit"
                 />
               </div>
               <div>
                 <i
                   v-if="requests.length == limit"
-                  @click="loadNextRequests()"
                   class="pi pi-arrow-right pi-style pi-style-right"
-                ></i>
+                  @click="loadNextRequests()"
+                />
               </div>
             </div>
           </template>
@@ -118,7 +139,7 @@
         :metadata="selectedMetadata"
         :whois="selectedWhois"
         :description="selectedDescription"
-      ></request-view>
+      />
     </div>
   </div>
 </template>
@@ -133,9 +154,9 @@ export default {
     RequestView,
     DataSearchBar,
   },
-  emits: ["require-auth"],
-  inject: ["config"],
   mixins: [sharedMixin],
+  inject: ["config"],
+  emits: ["require-auth"],
   data() {
     return {
       searchIsFocused: false,
@@ -154,6 +175,33 @@ export default {
       isLoading: false,
       offset: 0,
     };
+  },
+  watch: {
+    selectedRequest() {
+      if (this.selectedRequest) {
+        this.loadMetadata(this.selectedRequest.id);
+        this.loadDescription(this.selectedRequest.cmp_hash);
+        this.loadWhois(this.selectedRequest.source_ip);
+      }
+    },
+  },
+  created() {
+    if (this.$route.params.limit) {
+      this.limit = parseInt(this.$route.params.limit);
+    }
+
+    if (this.$route.params.offset) {
+      this.offset = parseInt(this.$route.params.offset);
+    }
+
+    this.selectedLimit = this.limit;
+  },
+  mounted() {
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    }
+    this.loadRequests(true);
   },
   methods: {
     onChangeLimit() {
@@ -395,33 +443,6 @@ export default {
           this.isLoading = false;
         });
     },
-  },
-  watch: {
-    selectedRequest() {
-      if (this.selectedRequest) {
-        this.loadMetadata(this.selectedRequest.id);
-        this.loadDescription(this.selectedRequest.cmp_hash);
-        this.loadWhois(this.selectedRequest.source_ip);
-      }
-    },
-  },
-  created() {
-    if (this.$route.params.limit) {
-      this.limit = parseInt(this.$route.params.limit);
-    }
-
-    if (this.$route.params.offset) {
-      this.offset = parseInt(this.$route.params.offset);
-    }
-
-    this.selectedLimit = this.limit;
-  },
-  mounted() {
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-      this.$refs.searchBar.setQuery(this.$route.query.q);
-    }
-    this.loadRequests(true);
   },
 };
 </script>

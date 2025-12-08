@@ -53,7 +53,10 @@
         <td>
           {{ request.base_hash }}
           <a :href="'/requests?q=base_hash:' + request.base_hash">
-            <i class="pi pi-search" title="find similar requests"></i>
+            <i
+              class="pi pi-search"
+              title="find similar requests"
+            />
           </a>
         </td>
       </tr>
@@ -65,7 +68,7 @@
             <i
               class="pi pi-search"
               title="find the same requests across hosts"
-            ></i>
+            />
           </a>
         </td>
       </tr>
@@ -106,7 +109,7 @@
       <tr
         v-if="
           request.p0f_result &&
-          (this.calculatedUptimeDays > 0 || this.calculatedUptimeAndHours > 0)
+            (calculatedUptimeDays > 0 || calculatedUptimeAndHours > 0)
         "
       >
         <th>Uptime</th>
@@ -121,7 +124,12 @@
 
 <script>
 export default {
-  props: ["request"],
+  props: {
+    "request": {
+      type: Object,
+      required: true
+    }
+  },
   data() {
     return {
       calculatedUptimeDays: 0,

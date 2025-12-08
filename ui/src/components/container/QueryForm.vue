@@ -1,58 +1,60 @@
 <template>
   <div>
-    <input type="hidden" name="id" v-model="localQuery.id" />
-    <div>
-
-    <InfoCard mylabel="Settings">
-    <template #default>
-      <div>
-        <label class="label">Query</label>
-        <InputText
-          id="title"
-          type="text"
-          placeholder=""
-          v-model="localQuery.query"
-        />
-      </div>
-
-      <div>
-        <label class="label">Description</label>
-        <TextArea
-          v-model="localQuery.description"
-          rows="4"
-          cols="40"
-        />
-      </div>
-      <div>
-        <label class="label">Labels</label>
-        <MultiSelect
-          v-model="localQuery.parsed.tags_to_apply"
-          placeholder="Select labels"
-          optionLabel="name"
-          :options="tags"
-        ></MultiSelect>
-      </div>
-
-    <br/>
-    <PrimeButton
-      :label="localQuery.id > 0 ? 'Submit' : 'Add'"
-      @click="submitForm()"
+    <input
+      v-model="localQuery.id"
+      type="hidden"
+      name="id"
     >
-    </PrimeButton>
+    <div>
+      <InfoCard mylabel="Settings">
+        <template #default>
+          <div>
+            <label class="label">Query</label>
+            <InputText
+              id="title"
+              v-model="localQuery.query"
+              type="text"
+              placeholder=""
+            />
+          </div>
+
+          <div>
+            <label class="label">Description</label>
+            <TextArea
+              v-model="localQuery.description"
+              rows="4"
+              cols="40"
+            />
+          </div>
+          <div>
+            <label class="label">Labels</label>
+            <MultiSelect
+              v-model="localQuery.parsed.tags_to_apply"
+              placeholder="Select labels"
+              option-label="name"
+              :options="tags"
+            />
+          </div>
+
+          <br>
+          <PrimeButton
+            :label="localQuery.id > 0 ? 'Submit' : 'Add'"
+            @click="submitForm()"
+          />
     &nbsp;
-    <PrimeButton
-      severity="secondary"
-      label="New"
-      @click="resetForm()"
-    ></PrimeButton>
+          <PrimeButton
+            severity="secondary"
+            label="New"
+            @click="resetForm()"
+          />
     &nbsp;
-    <PrimeButton
-      severity="danger"
-      @click="requireConfirmation($event)"
-      label="Delete"
-    ></PrimeButton>
-    </template>
-    </InfoCard>
+          <PrimeButton
+            severity="danger"
+            label="Delete"
+            @click="requireConfirmation($event)"
+          />
+        </template>
+      </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">
@@ -63,16 +65,16 @@
             <PrimeButton
               icon="pi pi-check"
               label="Save"
-              @click="acceptCallback"
               class="p-button-sm p-button-outlined"
-            ></PrimeButton>
+              @click="acceptCallback"
+            />
             <PrimeButton
               label="Cancel"
               severity="secondary"
               outlined
-              @click="rejectCallback"
               class="p-button-sm p-button-text"
-            ></PrimeButton>
+              @click="rejectCallback"
+            />
           </div>
         </div>
       </template>
@@ -82,9 +84,14 @@
 
 <script>
 export default {
-  props: ["query"],
-  emits: ["update-query", "delete-query", "require-auth"],
   inject: ["config"],
+  props: {
+    "query": {
+      type: Object,
+      required: true
+    }
+  },
+  emits: ["update-query", "delete-query", "require-auth"],
   data() {
     return {
       localQuery: {
@@ -97,6 +104,23 @@ export default {
       tags: [],
       tagPerIdMap: new Map(),
     };
+  },
+  watch: {
+    query() {
+      this.localQuery = Object.assign({}, this.query);
+      this.localQuery.parsed = {};
+      this.localQuery.parsed.tags_to_apply = []
+
+      if (this.localQuery.tags_to_apply) {
+        this.localQuery.tags_to_apply.forEach((qtag) => {
+          this.localQuery.parsed.tags_to_apply.push(this.tagPerIdMap.get(qtag.tag_id));
+        })
+      }
+    },
+  },
+  created() {
+    this.localQuery = Object.assign({}, this.baseQuery);
+    this.getAllTags();
   },
   methods: {
     requireConfirmation(event) {
@@ -218,23 +242,6 @@ export default {
           }
         });
     },
-  },
-  watch: {
-    query() {
-      this.localQuery = Object.assign({}, this.query);
-      this.localQuery.parsed = {};
-      this.localQuery.parsed.tags_to_apply = []
-
-      if (this.localQuery.tags_to_apply) {
-        this.localQuery.tags_to_apply.forEach((qtag) => {
-          this.localQuery.parsed.tags_to_apply.push(this.tagPerIdMap.get(qtag.tag_id));
-        })
-      }
-    },
-  },
-  created() {
-    this.localQuery = Object.assign({}, this.baseQuery);
-    this.getAllTags();
   },
 };
 </script>

@@ -1,7 +1,10 @@
 <template>
   <div class="flex flex-row">
-    <div class="basis-1/5"></div>
-    <div class="basis-3/5" style="margin-left: 15px">
+    <div class="basis-1/5" />
+    <div
+      class="basis-3/5"
+      style="margin-left: 15px"
+    >
       <div class="grid grid-cols-2 gap-4">
         <div class="rounded overflow-hidden shadow-lg">
           <PrimeChart
@@ -55,15 +58,15 @@
         </div>
       </div>
     </div>
-    <div class="basis-1/5"></div>
+    <div class="basis-1/5" />
   </div>
 </template>
 
 <script>
 export default {
   components: {},
-  emits: ["require-auth"],
   inject: ["config"],
+  emits: ["require-auth"],
   data() {
     return {
       isLoading: false,
@@ -89,6 +92,23 @@ export default {
         ],
       },
     };
+  },
+  watch: {
+    stats() {
+      this.setRPDChartData();
+      this.setRPMChartData();
+      this.setDPDChartData();
+      this.setMethodPieChartData();
+      this.setMalwarePieChartData()
+    },
+  },
+  beforeCreate() {},
+  created() {},
+  mounted() {
+    this.loadStats();
+    this.chartOptions = this.setChartOptions();
+    this.chartOptions2 = this.setChartOptions();
+    this.pieChartOptions = this.setPieChartOptions();
   },
   methods: {
     loadStats() {
@@ -335,23 +355,6 @@ export default {
         },
       };
     },
-  },
-  beforeCreate() {},
-  created() {},
-  watch: {
-    stats() {
-      this.setRPDChartData();
-      this.setRPMChartData();
-      this.setDPDChartData();
-      this.setMethodPieChartData();
-      this.setMalwarePieChartData()
-    },
-  },
-  mounted() {
-    this.loadStats();
-    this.chartOptions = this.setChartOptions();
-    this.chartOptions2 = this.setChartOptions();
-    this.pieChartOptions = this.setPieChartOptions();
   },
 };
 </script>

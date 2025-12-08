@@ -1,153 +1,164 @@
 <template>
   <div>
-    <input type="hidden" name="id" v-model="localContent.id" />
+    <input
+      v-model="localContent.id"
+      type="hidden"
+      name="id"
+    >
     <InfoCard mylabel="Required fields">
-    <template #default>
-      <div>
-        <label class="label">Title</label>
-        <InputText
-        id="title"
-        type="text"
-        placeholder="Small summary"
-        v-model="localContent.name"
-        />
-      </div>
-
-      <div>
-        <label class="label">Description</label>
-        <TextArea
-          v-model="localContent.description"
-          rows="4"
-          cols="40"
+      <template #default>
+        <div>
+          <label class="label">Title</label>
+          <InputText
+            id="title"
+            v-model="localContent.name"
+            type="text"
+            placeholder="Small summary"
           />
-      </div>
+        </div>
 
-      <div>
-        <label class="label">UUID</label>
-        <InputText
-        id="uuid"
-        type="text"
-        disabled
-        placeholder="The UUID of the content"
-        v-model="localContent.ext_uuid"
+        <div>
+          <label class="label">Description</label>
+          <TextArea
+            v-model="localContent.description"
+            rows="4"
+            cols="40"
+          />
+        </div>
+
+        <div>
+          <label class="label">UUID</label>
+          <InputText
+            id="uuid"
+            v-model="localContent.ext_uuid"
+            type="text"
+            disabled
+            placeholder="The UUID of the content"
+          />
+        </div>
+
+        <br>
+
+        <input
+          v-if="!scriptMode"
+          type="file"
+          @change="handleFileUpload"
+        >
+        <div v-if="scriptMode">
+          <label class="label">Content Script</label>
+          <codemirror
+            v-model="localContent.script"
+            :style="{ height: '400px' }"
+            :extensions="extensions"
+          />
+        </div>
+
+        <br>
+        <br>
+        <PrimeButton
+          severity="secondary"
+          :label="scriptMode ? 'Exit script Mode' : 'Enter script mode'"
+          @click="scriptMode = !scriptMode"
         />
-      </div>
-
-      <br/>
-
-      <input v-if="!scriptMode" type="file" @change="handleFileUpload" />
-      <div v-if="scriptMode">
-        <label class="label">Content Script</label>
-        <codemirror
-        v-model="localContent.script"
-        :style="{ height: '400px' }"
-        :extensions="extensions"
-        ></codemirror>
-      </div>
-
-      <br />
-      <br />
-      <PrimeButton
-      severity="secondary"
-      :label="scriptMode ? 'Exit script Mode' : 'Enter script mode'"
-      @click="scriptMode = !scriptMode"
-      ></PrimeButton>
-    </template>
+      </template>
     </InfoCard>
 
     <InfoCard mylabel="Extra options">
-    <template #default>
-      <div>
-        <label class="label">HTTP status code</label>
-        <FormSelect
-        v-model="localContent.status_code"
-        :options="config.statusCodeValues"
-        optionLabel="label"
-        optionValue="value"
-        />
-      </div>
-
-      <div>
-        <label class="label">Content type</label>
-        <div class="flex justify-content-center">
-          <AutoComplete
-          v-model="localContent.content_type"
-          :suggestions="contentTypeItems"
-          @complete="contentTypeSearch"
+      <template #default>
+        <div>
+          <label class="label">HTTP status code</label>
+          <FormSelect
+            v-model="localContent.status_code"
+            :options="config.statusCodeValues"
+            option-label="label"
+            option-value="value"
           />
         </div>
-      </div>
 
-      <div>
-        <label class="label">Web server</label>
-        <div class="flex justify-content-center">
-          <AutoComplete
-          v-model="localContent.server"
-          :suggestions="serverItems"
-          @complete="serverSearch"
+        <div>
+          <label class="label">Content type</label>
+          <div class="flex justify-content-center">
+            <AutoComplete
+              v-model="localContent.content_type"
+              :suggestions="contentTypeItems"
+              @complete="contentTypeSearch"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="label">Web server</label>
+          <div class="flex justify-content-center">
+            <AutoComplete
+              v-model="localContent.server"
+              :suggestions="serverItems"
+              @complete="serverSearch"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="label">Custom headers</label>
+          <TextArea
+            v-model="customHeaders"
+            rows="4"
+            cols="40"
           />
         </div>
-      </div>
 
-      <div>
-        <label class="label">Custom headers</label>
-        <TextArea
-          v-model="customHeaders"
-          rows="4"
-          cols="40"
+        <div v-if="!scriptMode">
+          <label class="label">Data</label>
+          <TextArea
+            v-model="localContent.data"
+            rows="20"
+            cols="70"
           />
-      </div>
-
-      <div v-if="!scriptMode">
-        <label class="label">Data</label>
-        <TextArea v-model="localContent.data" rows="20" cols="70" />
-      </div>
-    </template>
+        </div>
+      </template>
     </InfoCard>
-    <br />
+    <br>
 
     <div class="button-group">
       <PrimeButton
-      :label="localContent.id > 0 ? 'Submit' : 'Add'"
-      @click.prevent="submitForm()
-      "
-      >
-      </PrimeButton>
+        :label="localContent.id > 0 ? 'Submit' : 'Add'"
+        @click.prevent="submitForm()
+        "
+      />
       &nbsp;
       <PrimeButton
-      severity="secondary"
-      label="New"
-      @click="resetForm()"
-      ></PrimeButton>
+        severity="secondary"
+        label="New"
+        @click="resetForm()"
+      />
       &nbsp;
       <PrimeButton
-      severity="danger"
-      @click="requireConfirmation($event)"
-      label="Delete"
-      ></PrimeButton>
+        severity="danger"
+        label="Delete"
+        @click="requireConfirmation($event)"
+      />
     </div>
   </div>
   <ConfirmPopup group="headless">
-  <template #container="{ message, acceptCallback, rejectCallback }">
-    <div class="bg-gray-900 text-white border-round p-3">
-      <span>{{ message.message }}</span>
-      <div class="flex align-items-center gap-2 mt-3">
-        <PrimeButton
-        icon="pi pi-check"
-        label="Save"
-        @click="acceptCallback"
-        class="p-button-sm p-button-outlined"
-        ></PrimeButton>
-        <PrimeButton
-        label="Cancel"
-        severity="secondary"
-        outlined
-        @click="rejectCallback"
-        class="p-button-sm p-button-text"
-        ></PrimeButton>
+    <template #container="{ message, acceptCallback, rejectCallback }">
+      <div class="bg-gray-900 text-white border-round p-3">
+        <span>{{ message.message }}</span>
+        <div class="flex align-items-center gap-2 mt-3">
+          <PrimeButton
+            icon="pi pi-check"
+            label="Save"
+            class="p-button-sm p-button-outlined"
+            @click="acceptCallback"
+          />
+          <PrimeButton
+            label="Cancel"
+            severity="secondary"
+            outlined
+            class="p-button-sm p-button-text"
+            @click="rejectCallback"
+          />
+        </div>
       </div>
-    </div>
-  </template>
+    </template>
   </ConfirmPopup>
 </template>
 
@@ -191,9 +202,14 @@ import { lintKeymap } from "../../../node_modules/@codemirror/lint";
 import { solarizedLight } from "../../../node_modules/thememirror/dist";
 
 export default {
-  props: ["content"],
-  emits: ["update-content", "deleted-content", "require-auth"],
   inject: ["config"],
+  props: {
+    "content": {
+      type: Object,
+      required: true
+    },
+  },
+  emits: ["update-content", "deleted-content", "require-auth"],
   data() {
     return {
       localContent: {
@@ -234,6 +250,25 @@ export default {
         ]),
       ],
     };
+  },
+  watch: {
+    content() {
+      this.localContent = Object.assign({}, this.content);
+      if (this.localContent.script && this.localContent.script.length > 0) {
+        this.scriptMode = true;
+      }
+
+      var customHeaderTmp = "";
+      if (this.localContent.headers) {
+        var prefix = "";
+        this.localContent.headers.forEach((header) => {
+          customHeaderTmp += prefix + header;
+          prefix = "\n";
+        });
+        this.customHeaders = customHeaderTmp;
+      }
+
+    },
   },
   methods: {
     requireConfirmation(event) {
@@ -386,25 +421,6 @@ export default {
             this.$emit("deleted-content");
           }
         });
-    },
-  },
-  watch: {
-    content() {
-      this.localContent = Object.assign({}, this.content);
-      if (this.localContent.script && this.localContent.script.length > 0) {
-        this.scriptMode = true;
-      }
-
-      var customHeaderTmp = "";
-      if (this.localContent.headers) {
-        var prefix = "";
-        this.localContent.headers.forEach((header) => {
-          customHeaderTmp += prefix + header;
-          prefix = "\n";
-        });
-        this.customHeaders = customHeaderTmp;
-      }
-
     },
   },
 };

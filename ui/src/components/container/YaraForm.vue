@@ -1,16 +1,19 @@
 <template>
   <div>
-    <input type="hidden" name="id" v-model="localYara.id" />
+    <input
+      v-model="localYara.id"
+      type="hidden"
+      name="id"
+    >
     <div>
-
-    <InfoCard mylabel="Information">
-    <template #default>
-        <div>
-          <label class="label">Yara Result</label>
-          <YaraCard :data="localYaraArray"> </YaraCard>
-        </div>
-    </template>
-    </InfoCard>
+      <InfoCard mylabel="Information">
+        <template #default>
+          <div>
+            <label class="label">Yara Result</label>
+            <YaraCard :data="localYaraArray" />
+          </div>
+        </template>
+      </InfoCard>
     </div>
   </div>
 </template>
@@ -22,9 +25,14 @@ export default {
   components: {
     YaraCard,
   },
-  props: ["yara"],
-  emits: [],
   inject: ["config"],
+  props: {
+    "yara": {
+      type: Object,
+      required: true
+    }
+  },
+  emits: [],
   data() {
     return {
       localYara: {},
@@ -32,7 +40,6 @@ export default {
       baseYara: {},
     };
   },
-  methods: {},
   watch: {
     yara() {
       this.localYara = Object.assign({}, this.yara);
@@ -43,6 +50,7 @@ export default {
   created() {
     //this.localYara = Object.assign({}, this.baseYara);
   },
+  methods: {},
 };
 </script>
 

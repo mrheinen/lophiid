@@ -8,55 +8,42 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
-    "@codemirror/autocomplete": "^6.12.0",
-    "@codemirror/lang-javascript": "^6.2.1",
+    "@codemirror/autocomplete": "^6.20.0",
+    "@codemirror/lang-javascript": "^6.2.4",
     "@fontsource/roboto": "^5.1.1",
     "@fontsource/source-sans-pro": "^5.1.0",
     "@highlightjs/vue-plugin": "^2.1.0",
-    "@primevue/themes": "^4.2.1",
-    "@tailwindcss/postcss": "^4.0.0",
-    "@vue/compiler-sfc": "^3.3.9",
-    "autoprefixer": "^10.4.20",
-    "bulma": "^0.9.4",
-    "chart.js": "^4.4.7",
-    "codemirror": "^6.0.1",
-    "core-js": "^3.8.3",
-    "highlight.js": "^11.9.0",
-    "patch-package": "^6.4.0",
-    "postcss": "^8.5.1",
-    "primeicons": "^6.0.1",
-    "primevue": "^4.2.1",
+    "@primevue/themes": "^4.5.2",
+    "@tailwindcss/postcss": "^4.1.17",
+    "@vue/compiler-sfc": "^3.5.25",
+    "autoprefixer": "^10.4.22",
+    "bulma": "^1.0.4",
+    "chart.js": "^4.5.1",
+    "codemirror": "^6.0.2",
+    "core-js": "^3.47.0",
+    "highlight.js": "^11.11.1",
+    "html-webpack-plugin": "^5.6.5",
+    "patch-package": "^8.0.1",
+    "postcss": "^8.5.6",
+    "primeicons": "^7.0.0",
+    "primevue": "^4.5.2",
     "tailwindcss": "^4.0.0",
     "thememirror": "^2.0.1",
     "vue": "^3.2.26",
     "vue-codemirror": "^6.1.1",
     "vue-router": "^4.2.5",
     "vue-toast-notification": "^3.1.2",
-    "vuex": "^4.0.2"
+    "vuex": "^4.1.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.12.16",
-    "@babel/eslint-parser": "^7.12.16",
-    "@vue/cli-plugin-babel": "~5.0.0",
-    "@vue/cli-plugin-eslint": "~5.0.0",
-    "@vue/cli-service": "~5.0.0",
-    "eslint": "^7.32.0",
-    "eslint-plugin-vue": "^8.0.3"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/vue3-essential",
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "parser": "@babel/eslint-parser",
-      "requireConfigFile": false
-    },
-    "rules": {}
+    "@babel/core": "^7.28.5",
+    "@babel/eslint-parser": "^7.28.5",
+    "@vue/cli-plugin-babel": "~5.0.9",
+    "@vue/cli-plugin-eslint": "~5.0.9",
+    "@vue/cli-service": "~5.0.9",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^10.6.2",
+    "eslint-webpack-plugin": "^5.0.2"
   },
   "browserslist": [
     "> 1%",

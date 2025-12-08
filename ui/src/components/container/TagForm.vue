@@ -1,56 +1,58 @@
 <template>
   <div>
-    <input type="hidden" name="id" v-model="localTag.id" />
-    <div>
-
-    <InfoCard mylabel="Settings">
-    <template #default>
-      <div>
-        <label class="label">Name</label>
-        <InputText
-        id="title"
-        type="text"
-        placeholder=""
-        v-model="localTag.name"
-        />
-      </div>
-      <div>
-        <label class="label">HTML Color</label>
-        <ColorPicker
-          v-model="localTag.color_html"
-          format="hex"
-        />
-      </div>
-      <div>
-        <label class="label">Description</label>
-        <InputText
-        id="description"
-        type="text"
-        placeholder=""
-        v-model="localTag.description"
-        />
-      </div>
-
-      <br/>
-    <PrimeButton
-      :label="localTag.id > 0 ? 'Submit' : 'Add'"
-      @click="submitForm()"
+    <input
+      v-model="localTag.id"
+      type="hidden"
+      name="id"
     >
-    </PrimeButton>
+    <div>
+      <InfoCard mylabel="Settings">
+        <template #default>
+          <div>
+            <label class="label">Name</label>
+            <InputText
+              id="title"
+              v-model="localTag.name"
+              type="text"
+              placeholder=""
+            />
+          </div>
+          <div>
+            <label class="label">HTML Color</label>
+            <ColorPicker
+              v-model="localTag.color_html"
+              format="hex"
+            />
+          </div>
+          <div>
+            <label class="label">Description</label>
+            <InputText
+              id="description"
+              v-model="localTag.description"
+              type="text"
+              placeholder=""
+            />
+          </div>
+
+          <br>
+          <PrimeButton
+            :label="localTag.id > 0 ? 'Submit' : 'Add'"
+            @click="submitForm()"
+          />
     &nbsp;
-    <PrimeButton
-      severity="secondary"
-      label="New"
-      @click="resetForm()"
-    ></PrimeButton>
+          <PrimeButton
+            severity="secondary"
+            label="New"
+            @click="resetForm()"
+          />
     &nbsp;
-    <PrimeButton
-      severity="danger"
-      @click="requireConfirmation($event)"
-      label="Delete"
-    ></PrimeButton>
-    </template>
-    </InfoCard>
+          <PrimeButton
+            severity="danger"
+            label="Delete"
+            @click="requireConfirmation($event)"
+          />
+        </template>
+      </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">
@@ -61,16 +63,16 @@
             <PrimeButton
               icon="pi pi-check"
               label="Save"
-              @click="acceptCallback"
               class="p-button-sm p-button-outlined"
-            ></PrimeButton>
+              @click="acceptCallback"
+            />
             <PrimeButton
               label="Cancel"
               severity="secondary"
               outlined
-              @click="rejectCallback"
               class="p-button-sm p-button-text"
-            ></PrimeButton>
+              @click="rejectCallback"
+            />
           </div>
         </div>
       </template>
@@ -80,13 +82,26 @@
 
 <script>
 export default {
-  props: ["tag"],
-  emits: ["update-tag", "delete-tag", "require-auth"],
   inject: ["config"],
+  props: {
+    "tag": {
+      type: Object,
+      required: true
+    },
+  },
+  emits: ["update-tag", "delete-tag", "require-auth"],
   data() {
     return {
       localTag: {},
     };
+  },
+  watch: {
+    tag() {
+      this.localTag = Object.assign({}, this.tag);
+    },
+  },
+  created() {
+    // this.app = this.modelValue;
   },
   methods: {
     requireConfirmation(event) {
@@ -166,14 +181,6 @@ export default {
           }
         });
     },
-  },
-  watch: {
-    tag() {
-      this.localTag = Object.assign({}, this.tag);
-    },
-  },
-  created() {
-    // this.app = this.modelValue;
   },
 };
 </script>

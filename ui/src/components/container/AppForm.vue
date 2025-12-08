@@ -1,123 +1,127 @@
 <template>
-
-  <PrimeDialog v-model:visible="importFormVisible" modal header="Export app tree">
-    <ImportAppForm @form-done="onImportDone()"></ImportAppForm>
+  <PrimeDialog
+    v-model:visible="importFormVisible"
+    modal
+    header="Export app tree"
+  >
+    <ImportAppForm @form-done="onImportDone()" />
   </PrimeDialog>
 
 
   <div v-if="localApp">
-    <input type="hidden" name="id" v-model="localApp.id" />
-    <div>
-
-    <InfoCard mylabel="Settings">
-    <template #default>
-
-      <div>
-        <label class="label">Name</label>
-        <InputText
-          id="title"
-          type="text"
-          placeholder=""
-          v-model="localApp.name"
-        />
-      </div>
-
-      <div class="field">
-        <label class="label">Version</label>
-        <InputText
-          id="version"
-          type="text"
-          placeholder="v1.1.x"
-          v-model="localApp.version"
-        />
-      </div>
-
-      <div class="field">
-        <label class="label">Vendor</label>
-
-        <InputText
-          id="vendor"
-          type="text"
-          placeholder="Microfast"
-          v-model="localApp.vendor"
-        />
-      </div>
-
-      <div class="field">
-        <label class="label">Operating system</label>
-
-        <InputText
-          id="os"
-          type="text"
-          placeholder="Linux"
-          v-model="localApp.os"
-        />
-      </div>
-
-      <div class="field">
-        <label class="label">Reference link </label>
-        <InputText
-          id="reference"
-          type="text"
-          placeholder="http://..."
-          v-model="localApp.link"
-        />
-      </div>
-
-      <div>
-        <label class="label">CVEs</label>
-        <TextArea
-          v-model="cves"
-          rows="4"
-          cols="25"
-        />
-      </div>
-
-      <div class="field">
-        <label class="label">UUID</label>
-        <InputText
-        id="uuid"
-        type="text"
-        disabled
-        placeholder="The UUID of the app"
-        v-model="localApp.ext_uuid"
-        />
-      </div>
-
-      <br/>
-
-    <PrimeButton
-      :label="localApp.id > 0 ? 'Submit' : 'Add'"
-      @click="submitForm()"
+    <input
+      v-model="localApp.id"
+      type="hidden"
+      name="id"
     >
-    </PrimeButton>
+    <div>
+      <InfoCard mylabel="Settings">
+        <template #default>
+          <div>
+            <label class="label">Name</label>
+            <InputText
+              id="title"
+              v-model="localApp.name"
+              type="text"
+              placeholder=""
+            />
+          </div>
+
+          <div class="field">
+            <label class="label">Version</label>
+            <InputText
+              id="version"
+              v-model="localApp.version"
+              type="text"
+              placeholder="v1.1.x"
+            />
+          </div>
+
+          <div class="field">
+            <label class="label">Vendor</label>
+
+            <InputText
+              id="vendor"
+              v-model="localApp.vendor"
+              type="text"
+              placeholder="Microfast"
+            />
+          </div>
+
+          <div class="field">
+            <label class="label">Operating system</label>
+
+            <InputText
+              id="os"
+              v-model="localApp.os"
+              type="text"
+              placeholder="Linux"
+            />
+          </div>
+
+          <div class="field">
+            <label class="label">Reference link </label>
+            <InputText
+              id="reference"
+              v-model="localApp.link"
+              type="text"
+              placeholder="http://..."
+            />
+          </div>
+
+          <div>
+            <label class="label">CVEs</label>
+            <TextArea
+              v-model="cves"
+              rows="4"
+              cols="25"
+            />
+          </div>
+
+          <div class="field">
+            <label class="label">UUID</label>
+            <InputText
+              id="uuid"
+              v-model="localApp.ext_uuid"
+              type="text"
+              disabled
+              placeholder="The UUID of the app"
+            />
+          </div>
+
+          <br>
+
+          <PrimeButton
+            :label="localApp.id > 0 ? 'Submit' : 'Add'"
+            @click="submitForm()"
+          />
     &nbsp;
-    <PrimeButton
-      severity="secondary"
-      label="New"
-      @click="resetForm()"
-    ></PrimeButton>
+          <PrimeButton
+            severity="secondary"
+            label="New"
+            @click="resetForm()"
+          />
     &nbsp;
-    <PrimeButton
-      severity="danger"
-      @click="requireConfirmation($event)"
-      label="Delete"
-    ></PrimeButton>
+          <PrimeButton
+            severity="danger"
+            label="Delete"
+            @click="requireConfirmation($event)"
+          />
     &nbsp;
-    <PrimeButton
-      severity="secondary"
-      @click="exportApp(localApp.id)"
-      label="Export"
-    ></PrimeButton>
+          <PrimeButton
+            severity="secondary"
+            label="Export"
+            @click="exportApp(localApp.id)"
+          />
 
     &nbsp;
-    <PrimeButton
-      severity="secondary"
-      @click="showImportForm()"
-      label="Import"
-    ></PrimeButton>
-    </template>
-    </InfoCard>
+          <PrimeButton
+            severity="secondary"
+            label="Import"
+            @click="showImportForm()"
+          />
+        </template>
+      </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">
@@ -128,16 +132,16 @@
             <PrimeButton
               icon="pi pi-check"
               label="Save"
-              @click="acceptCallback"
               class="p-button-sm p-button-outlined"
-            ></PrimeButton>
+              @click="acceptCallback"
+            />
             <PrimeButton
               label="Cancel"
               severity="secondary"
               outlined
-              @click="rejectCallback"
               class="p-button-sm p-button-text"
-            ></PrimeButton>
+              @click="rejectCallback"
+            />
           </div>
         </div>
       </template>
@@ -158,15 +162,38 @@ export default {
   components: {
     ImportAppForm,
   },
-  props: ["app"],
-  emits: ["update-app", "delete-app", "require-auth"],
   inject: ["config"],
+  props: {
+    "app": {
+      type: Object,
+      required: true
+    },
+  },
+  emits: ["update-app", "delete-app", "require-auth"],
   data() {
     return {
       cves: "",
       localApp: {},
       importFormVisible: false,
     };
+  },
+  watch: {
+    app() {
+      this.localApp = Object.assign({}, this.app);
+
+      var tmpCves = "";
+      this.cves = "";
+      if (this.localApp.cves) {
+        var prefix = "";
+        this.localApp.cves.forEach((cve) => {
+          tmpCves += prefix + cve;
+          prefix = "\n";
+        });
+        this.cves = tmpCves;
+      }
+    },
+  },
+  created() {
   },
   methods: {
     requireConfirmation(event) {
@@ -192,9 +219,6 @@ export default {
     },
     showImportForm() {
       this.importFormVisible = true;
-    },
-    onContentFormClicked() {
-      this.$emit("open-content-form");
     },
     submitForm() {
       const appToSubmit = Object.assign({}, this.localApp);
@@ -314,24 +338,6 @@ export default {
           }
         });
     },
-  },
-  watch: {
-    app() {
-      this.localApp = Object.assign({}, this.app);
-
-      var tmpCves = "";
-      this.cves = "";
-      if (this.localApp.cves) {
-        var prefix = "";
-        this.localApp.cves.forEach((cve) => {
-          tmpCves += prefix + cve;
-          prefix = "\n";
-        });
-        this.cves = tmpCves;
-      }
-    },
-  },
-  created() {
   },
 };
 </script>

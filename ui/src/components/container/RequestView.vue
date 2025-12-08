@@ -3,7 +3,7 @@
     <div>
       <InfoCard mylabel="Request details">
         <template #default>
-          <RequestTable :request="request"></RequestTable>
+          <RequestTable :request="request" />
         </template>
       </InfoCard>
     </div>
@@ -14,7 +14,7 @@
             <p>
               {{ localDescription.ai_description }}
             </p>
-            <br />
+            <br>
             <p>
               {{ localConclusion }}
             </p>
@@ -22,23 +22,23 @@
               v-if="localDescription.review_status == config.reviewStatusOk"
               class="pi pi-thumbs-up-fill"
               @click="toggleReviewOk(localDescription.cmp_hash)"
-            ></i>
+            />
             <i
               v-else
               class="pi pi-thumbs-up"
               @click="toggleReviewOk(localDescription.cmp_hash)"
-            ></i>
+            />
             &nbsp;
             <i
               v-if="localDescription.review_status == config.reviewStatusNok"
               class="pi pi-thumbs-down-fill"
               @click="toggleReviewNok(localDescription.cmp_hash)"
-            ></i>
+            />
             <i
               v-else
               class="pi pi-thumbs-down"
               @click="toggleReviewNok(localDescription.cmp_hash)"
-            ></i>
+            />
           </div>
         </template>
       </InfoCard>
@@ -48,11 +48,30 @@
         <template #default>
           <PrimeTabs value="0">
             <TabList>
-              <PrimeTab value="0">HTTP Request</PrimeTab>
-              <PrimeTab value="1" v-if="request.raw_response">HTTP Response</PrimeTab>
-              <PrimeTab value="2" v-if="metadata.length">Metadata</PrimeTab>
-              <PrimeTab value="3" v-if="localWhois">Whois</PrimeTab>
-              <PrimeTab value="4">Debug</PrimeTab>
+              <PrimeTab value="0">
+                HTTP Request
+              </PrimeTab>
+              <PrimeTab
+                v-if="request.raw_response"
+                value="1"
+              >
+                HTTP Response
+              </PrimeTab>
+              <PrimeTab
+                v-if="metadata.length"
+                value="2"
+              >
+                Metadata
+              </PrimeTab>
+              <PrimeTab
+                v-if="localWhois"
+                value="3"
+              >
+                Whois
+              </PrimeTab>
+              <PrimeTab value="4">
+                Debug
+              </PrimeTab>
             </TabList>
 
             <TabPanels>
@@ -61,62 +80,95 @@
                   v-if="request.parsed.raw"
                   label="HTTP request"
                   :data="request.parsed.raw"
-                ></RawHttpCard>
+                />
               </TabPanel>
-              <TabPanel value="1" v-if="request.raw_response">
+              <TabPanel
+                v-if="request.raw_response"
+                value="1"
+              >
                 <RawHttpCard
                   v-if="request.raw_response"
                   label="Raw response"
                   :data="request.raw_response"
-                ></RawHttpCard>
+                />
               </TabPanel>
-              <TabPanel v-if="metadata.length" value="2">
+              <TabPanel
+                v-if="metadata.length"
+                value="2"
+              >
                 <div v-if="localUnicodeMetadata.length">
                   <div style="width: 700px">
                     <label class="label">Decoded unicode strings</label>
-                    <div v-for="meta in localUnicodeMetadata" :key="meta.id">
-                      <highlightjs autodetect :code="meta.data" />
+                    <div
+                      v-for="meta in localUnicodeMetadata"
+                      :key="meta.id"
+                    >
+                      <highlightjs
+                        autodetect
+                        :code="meta.data"
+                      />
                     </div>
                   </div>
                 </div>
 
-                <div v-for="meta in localBase64Metadata" :key="meta.id">
+                <div
+                  v-for="meta in localBase64Metadata"
+                  :key="meta.id"
+                >
                   <div style="width: 700px">
                     <label class="label">Decoded base64 string</label>
-                    <highlightjs autodetect :code="meta.data" />
+                    <highlightjs
+                      autodetect
+                      :code="meta.data"
+                    />
                   </div>
                 </div>
 
                 <div v-if="localLinkMetadata.length">
                   <label class="label">Extracted URLs</label>
-                  <div v-for="meta in localLinkMetadata" :key="meta.id">
+                  <div
+                    v-for="meta in localLinkMetadata"
+                    :key="meta.id"
+                  >
                     <p>{{ meta.data }}</p>
                   </div>
                 </div>
 
                 <div v-if="localTCPMetadata.length">
                   <label class="label">Extracted TCP links</label>
-                  <div v-for="meta in localTCPMetadata" :key="meta.id">
+                  <div
+                    v-for="meta in localTCPMetadata"
+                    :key="meta.id"
+                  >
                     <p>{{ meta.data }}</p>
                   </div>
                 </div>
 
                 <div v-if="localPingMetadata.length">
                   <label class="label">Extracted ping requests</label>
-                  <div v-for="meta in localPingMetadata" :key="meta.id">
+                  <div
+                    v-for="meta in localPingMetadata"
+                    :key="meta.id"
+                  >
                     <p>{{ meta.data }}</p>
                   </div>
                 </div>
 
                 <div v-if="localNetcatMetadata.length">
                   <label class="label">Extracted netcat links</label>
-                  <div v-for="meta in localNetcatMetadata" :key="meta.id">
+                  <div
+                    v-for="meta in localNetcatMetadata"
+                    :key="meta.id"
+                  >
                     <p>{{ meta.data }}</p>
                   </div>
                 </div>
               </TabPanel>
 
-              <TabPanel value="3" v-if="localWhois">
+              <TabPanel
+                v-if="localWhois"
+                value="3"
+              >
                 <table v-if="localWhois.country">
                   <tbody>
                     <tr>
@@ -127,34 +179,40 @@
                     </tr>
                   </tbody>
                 </table>
-                <br />
+                <br>
 
-                <pre v-if="localWhois.data" class="whois">{{
+                <pre
+                  v-if="localWhois.data"
+                  class="whois"
+                >{{
                   localWhois.data
                 }}</pre>
-                <pre v-if="localWhois.rdap_string" class="whois">{{
+                <pre
+                  v-if="localWhois.rdap_string"
+                  class="whois"
+                >{{
                   localWhois.rdap_string
                 }}</pre>
               </TabPanel>
               <TabPanel value="4">
-              <div v-if="request.triage_payload">
-                <label class="label">Request payload</label>
-                <RawHttpCard
-                label="Triage Payload"
-                :data="request.triage_payload"
-                ></RawHttpCard>
-              </div>
+                <div v-if="request.triage_payload">
+                  <label class="label">Request payload</label>
+                  <RawHttpCard
+                    label="Triage Payload"
+                    :data="request.triage_payload"
+                  />
+                </div>
 
-              <table v-if="request.triage_payload_type">
-                <tbody>
-                  <tr>
-                    <th>Triage Payload type</th>
-                    <td>{{ request.triage_payload_type }}</td>
-                  </tr>
-                </tbody>
-              </table>
+                <table v-if="request.triage_payload_type">
+                  <tbody>
+                    <tr>
+                      <th>Triage Payload type</th>
+                      <td>{{ request.triage_payload_type }}</td>
+                    </tr>
+                  </tbody>
+                </table>
 
-              <div v-if="localDescription">
+                <div v-if="localDescription">
                   <table>
                     <tbody>
                       <tr>
@@ -219,8 +277,26 @@ import RawHttpCard from "../cards/RawHttpCard.vue";
 import RequestTable from "../cards/RequestDetailsTable.vue";
 export default {
   components: { RawHttpCard, RequestTable },
-  props: ["request", "metadata", "whois", "description"],
   inject: ["config"],
+  props: {
+    "request": {
+      type: Object,
+      required: true
+    },
+    "metadata": {
+      type: Object,
+      required: true
+    },
+    "whois": {
+      type: Object,
+      required: true
+    },
+    "description":{
+      type: Object,
+      required: true
+    }
+  },
+  emits: ["require-auth"],
   data() {
     return {
       localWhois: null,
@@ -234,48 +310,6 @@ export default {
       localNetcatMetadata: [],
       localUnicodeMetadata: [],
     };
-  },
-  methods: {
-    toggleReviewOk(hash) {
-      var newStatus = this.config.reviewStatusOk;
-      if (this.localDescription.review_status == this.config.reviewStatusOk) {
-        newStatus = this.config.reviewStatusNew;
-      }
-      this.updateReview(newStatus, hash);
-      this.localDescription.review_status = newStatus;
-    },
-    toggleReviewNok(hash) {
-      var newStatus = this.config.reviewStatusNok;
-      if (this.localDescription.review_status == this.config.reviewStatusNok) {
-        newStatus = this.config.reviewStatusNew;
-      }
-      this.updateReview(newStatus, hash);
-      this.localDescription.review_status = newStatus;
-    },
-    updateReview(status, hash) {
-      fetch(this.config.backendAddress + "/description/status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "API-Key": this.$store.getters.apiToken,
-        },
-        body: "status=" + status + "&hash=" + hash,
-      })
-        .then((response) => {
-          if (response.status == 403) {
-            this.$emit("require-auth");
-          } else {
-            return response.json();
-          }
-        })
-        .then((response) => {
-          if (response.status == this.config.backendResultNotOk) {
-            this.$toast.error(response.message);
-          } else {
-            this.$toast.success("Updated status");
-          }
-        });
-    },
   },
   watch: {
     whois() {
@@ -340,6 +374,48 @@ export default {
     },
   },
   created() {},
+  methods: {
+    toggleReviewOk(hash) {
+      var newStatus = this.config.reviewStatusOk;
+      if (this.localDescription.review_status == this.config.reviewStatusOk) {
+        newStatus = this.config.reviewStatusNew;
+      }
+      this.updateReview(newStatus, hash);
+      this.localDescription.review_status = newStatus;
+    },
+    toggleReviewNok(hash) {
+      var newStatus = this.config.reviewStatusNok;
+      if (this.localDescription.review_status == this.config.reviewStatusNok) {
+        newStatus = this.config.reviewStatusNew;
+      }
+      this.updateReview(newStatus, hash);
+      this.localDescription.review_status = newStatus;
+    },
+    updateReview(status, hash) {
+      fetch(this.config.backendAddress + "/description/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "API-Key": this.$store.getters.apiToken,
+        },
+        body: "status=" + status + "&hash=" + hash,
+      })
+        .then((response) => {
+          if (response.status == 403) {
+            this.$emit("require-auth");
+          } else {
+            return response.json();
+          }
+        })
+        .then((response) => {
+          if (response.status == this.config.backendResultNotOk) {
+            this.$toast.error(response.message);
+          } else {
+            this.$toast.success("Updated status");
+          }
+        });
+    },
+  },
 };
 </script>
 

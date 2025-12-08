@@ -1,257 +1,259 @@
 <template>
   <div>
-    <input type="hidden" name="id" v-model="localRule.id" />
+    <input
+      v-model="localRule.id"
+      type="hidden"
+      name="id"
+    >
     <div>
-
-    <InfoCard mylabel="Settings">
-    <template #default>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="">
-            <div>
-              <label class="label">URI match string</label>
-              <InputText
-                id="title"
-                type="text"
-                placeholder=""
-                v-model="localRule.uri"
-              />
+      <InfoCard mylabel="Settings">
+        <template #default>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="">
+              <div>
+                <label class="label">URI match string</label>
+                <InputText
+                  id="title"
+                  v-model="localRule.uri"
+                  type="text"
+                  placeholder=""
+                />
+              </div>
             </div>
-          </div>
-          <div class="">
-            <div class="field">
-              <label class="label">URI matching method</label>
-              <FormSelect
-                v-model="localRule.uri_matching"
-                :options="config.backendMatchingMethods"
-                placeholder="Select a
+            <div class="">
+              <div class="field">
+                <label class="label">URI matching method</label>
+                <FormSelect
+                  v-model="localRule.uri_matching"
+                  :options="config.backendMatchingMethods"
+                  placeholder="Select a
               method"
-                checkmark
-                :highlightOnSelect="true"
-              />
+                  checkmark
+                  :highlight-on-select="true"
+                />
+              </div>
             </div>
-          </div>
 
-          <div class="">
-            <div>
-              <label class="label">Request body match string</label>
-              <InputText
-                id="title"
-                type="text"
-                placeholder=""
-                v-model="localRule.body"
-              />
+            <div class="">
+              <div>
+                <label class="label">Request body match string</label>
+                <InputText
+                  id="title"
+                  v-model="localRule.body"
+                  type="text"
+                  placeholder=""
+                />
+              </div>
             </div>
-          </div>
-          <div class="">
-            <div class="field">
-              <label class="label">Body matching method</label>
-              <FormSelect
-                v-model="localRule.body_matching"
-                :options="config.backendMatchingMethods"
-                placeholder="Select a
+            <div class="">
+              <div class="field">
+                <label class="label">Body matching method</label>
+                <FormSelect
+                  v-model="localRule.body_matching"
+                  :options="config.backendMatchingMethods"
+                  placeholder="Select a
               method"
-                checkmark
-                :highlightOnSelect="true"
-              />
+                  checkmark
+                  :highlight-on-select="true"
+                />
+              </div>
             </div>
-          </div>
 
-          <div class="">
-            <div>
-              <label class="label"
-                >Content ID &nbsp;
-                <i
-                  @click="onContentFormOpen()"
-                  class="pi pi-plus-circle pointer"
-                ></i>
+            <div class="">
+              <div>
+                <label class="label">Content ID &nbsp;
+                  <i
+                    class="pi pi-plus-circle pointer"
+                    @click="onContentFormOpen()"
+                  />
                 &nbsp;
-                <a :href="config.contentLink + '?q=id:' + localRule.content_id">
-                  <i class="pi pi-external-link pointer"></i>
-                </a>
-              </label>
-              <InputNumber
-                v-model="localRule.content_id"
-                inputId="minmax"
-                :useGrouping="false"
-                :min="0"
-                :max="65535"
-              />
+                  <a :href="config.contentLink + '?q=id:' + localRule.content_id">
+                    <i class="pi pi-external-link pointer" />
+                  </a>
+                </label>
+                <InputNumber
+                  v-model="localRule.content_id"
+                  input-id="minmax"
+                  :use-grouping="false"
+                  :min="0"
+                  :max="65535"
+                />
+              </div>
             </div>
-          </div>
-          <div class="">
-            <div>
-              <label class="label"
-                >App ID &nbsp;<i
-                  @click="onAppFormOpen()"
+            <div class="">
+              <div>
+                <label class="label">App ID &nbsp;<i
                   class="pi pi-plus-circle pointer"
-                ></i>
-              </label>
-              <FormSelect
-                v-model="localRule.app_id"
-                :options="appValues"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Select app"
-                class="w-full md:w-14rem"
-              />
+                  @click="onAppFormOpen()"
+                />
+                </label>
+                <FormSelect
+                  v-model="localRule.app_id"
+                  :options="appValues"
+                  option-label="label"
+                  option-value="value"
+                  placeholder="Select app"
+                  class="w-full md:w-14rem"
+                />
+              </div>
             </div>
-          </div>
 
-          <div class="">
-            <div>
-              <label class="label">Ports</label>
-              <InputText
-                placeholder="Comma separated"
-                id="ports"
-                type="text"
-                v-model="localRule.parsed.port_field"
-              />
+            <div class="">
+              <div>
+                <label class="label">Ports</label>
+                <InputText
+                  id="ports"
+                  v-model="localRule.parsed.port_field"
+                  placeholder="Comma separated"
+                  type="text"
+                />
+              </div>
             </div>
-          </div>
-          <div class="">
-            <div class="field">
-              <label class="label">Request purpose</label>
-              <FormSelect
-                v-model="localRule.request_purpose"
-                :options="config.contentRuleRequestPurposes"
-                placeholder="Select a
+            <div class="">
+              <div class="field">
+                <label class="label">Request purpose</label>
+                <FormSelect
+                  v-model="localRule.request_purpose"
+                  :options="config.contentRuleRequestPurposes"
+                  placeholder="Select a
               method"
-                checkmark
-                :highlightOnSelect="true"
-              />
+                  checkmark
+                  :highlight-on-select="true"
+                />
+              </div>
             </div>
-          </div>
 
-          <div class="">
-            <div>
-              <label class="label">HTTP method</label>
-              <FormSelect
-                v-model="localRule.method"
-                :options="config.contentRuleHTTPMethods"
-                placeholder="Select HTTP method"
-                checkmark
-                :highlightOnSelect="true"
-              />
+            <div class="">
+              <div>
+                <label class="label">HTTP method</label>
+                <FormSelect
+                  v-model="localRule.method"
+                  :options="config.contentRuleHTTPMethods"
+                  placeholder="Select HTTP method"
+                  checkmark
+                  :highlight-on-select="true"
+                />
+              </div>
             </div>
-          </div>
-          <div class="">
-            <div>
-              <label class="label">UUID</label>
-              <InputText
-                id="uuid"
-                type="text"
-                disabled
-                placeholder="The UUID of the rule"
-                v-model="localRule.ext_uuid"
-              />
+            <div class="">
+              <div>
+                <label class="label">UUID</label>
+                <InputText
+                  id="uuid"
+                  v-model="localRule.ext_uuid"
+                  type="text"
+                  disabled
+                  placeholder="The UUID of the rule"
+                />
+              </div>
             </div>
-          </div>
 
-          <div class="">
-            <div>
-              <label class="label">Responder (optional)</label>
-              <FormSelect
-                v-model="localRule.responder"
-                :options="config.ruleResponderTypes"
-                placeholder="Responder type"
-                checkmark
-                :highlightOnSelect="true"
-              />
+            <div class="">
+              <div>
+                <label class="label">Responder (optional)</label>
+                <FormSelect
+                  v-model="localRule.responder"
+                  :options="config.ruleResponderTypes"
+                  placeholder="Responder type"
+                  checkmark
+                  :highlight-on-select="true"
+                />
+              </div>
             </div>
-          </div>
-          <div class="">
-            <div>
-              <label class="label">Responder regex</label>
-              <InputText
-                id="responder_regex"
-                type="text"
-                placeholder="Responder regex"
-                v-model="localRule.responder_regex"
-              />
+            <div class="">
+              <div>
+                <label class="label">Responder regex</label>
+                <InputText
+                  id="responder_regex"
+                  v-model="localRule.responder_regex"
+                  type="text"
+                  placeholder="Responder regex"
+                />
+              </div>
             </div>
-          </div>
 
-          <div class="">
-            <div>
-              <label class="label">Responder decoder</label>
-              <FormSelect
-                v-model="localRule.responder_decoder"
-                :options="config.ruleResponderDecoders"
-                placeholder="Responder decoder"
-                checkmark
-                :highlightOnSelect="true"
-              />
+            <div class="">
+              <div>
+                <label class="label">Responder decoder</label>
+                <FormSelect
+                  v-model="localRule.responder_decoder"
+                  :options="config.ruleResponderDecoders"
+                  placeholder="Responder decoder"
+                  checkmark
+                  :highlight-on-select="true"
+                />
+              </div>
             </div>
-          </div>
-          <div class="">
-            <div>
-              <label class="label">Tags to apply</label>
-              <MultiSelect
-                v-model="localRule.parsed.tags_to_apply"
-                placeholder="Select labels"
-                optionLabel="name"
-                :options="tags"
-              ></MultiSelect>
+            <div class="">
+              <div>
+                <label class="label">Tags to apply</label>
+                <MultiSelect
+                  v-model="localRule.parsed.tags_to_apply"
+                  placeholder="Select labels"
+                  option-label="name"
+                  :options="tags"
+                />
+              </div>
             </div>
-          </div>
 
 
-          <div>
-            <label class="label">Misc options</label>
-            <table>
-              <tr>
-                <th>Alert</th>
-                <td>
-                  <CheckBox
-                    inputId="alert"
-                    v-model="localRule.alert"
-                    :binary="true"
-                  />
-                </td>
-              </tr>
-              <tr>
-                <th>Enable</th>
-                <td>
-                  <CheckBox
-                    inputId="enabled"
-                    v-model="localRule.enabled"
-                    :binary="true"
-                  />
-                </td>
-              </tr>
-              <tr>
-                <th>Block</th>
-                <td>
-                  <CheckBox
-                    inputId="block"
-                    v-model="localRule.block"
-                    :binary="true"
-                  />
-                </td>
-              </tr>
-            </table>
+            <div>
+              <label class="label">Misc options</label>
+              <table>
+                <tbody>
+                  <tr>
+                    <th>Alert</th>
+                    <td>
+                      <CheckBox
+                        v-model="localRule.alert"
+                        input-id="alert"
+                        :binary="true"
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Enable</th>
+                    <td>
+                      <CheckBox
+                        v-model="localRule.enabled"
+                        input-id="enabled"
+                        :binary="true"
+                      />
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Block</th>
+                    <td>
+                      <CheckBox
+                        v-model="localRule.block"
+                        input-id="block"
+                        :binary="true"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-        <br />
-        <PrimeButton
-          :label="localRule.id > 0 ? 'Submit' : 'Add'"
-          @click="submitForm()"
-        >
-        </PrimeButton>
+          <br>
+          <PrimeButton
+            :label="localRule.id > 0 ? 'Submit' : 'Add'"
+            @click="submitForm()"
+          />
         &nbsp;
-        <PrimeButton
-          severity="secondary"
-          label="New"
-          @click="resetForm()"
-        ></PrimeButton>
+          <PrimeButton
+            severity="secondary"
+            label="New"
+            @click="resetForm()"
+          />
         &nbsp;
-        <PrimeButton
-          severity="danger"
-          @click="requireConfirmation($event)"
-          label="Delete"
-        ></PrimeButton>
-    </template>
-    </InfoCard>
+          <PrimeButton
+            severity="danger"
+            label="Delete"
+            @click="requireConfirmation($event)"
+          />
+        </template>
+      </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">
@@ -262,16 +264,16 @@
             <PrimeButton
               icon="pi pi-check"
               label="Save"
-              @click="acceptCallback"
               class="p-button-sm p-button-outlined"
-            ></PrimeButton>
+              @click="acceptCallback"
+            />
             <PrimeButton
               label="Cancel"
               severity="secondary"
               outlined
-              @click="rejectCallback"
               class="p-button-sm p-button-text"
-            ></PrimeButton>
+              @click="rejectCallback"
+            />
           </div>
         </div>
       </template>
@@ -281,7 +283,21 @@
 
 <script>
 export default {
-  props: ["rule", "contentid", "appid"],
+  inject: ["config"],
+  props: {
+    "rule": {
+      type: Object,
+      required: true
+    },
+    "contentid": {
+      type: Object,
+      required: true
+    },
+    "appid": {
+      type: Object,
+      required: true
+    }
+  },
   emits: [
     "require-auth",
     "update-rule",
@@ -289,7 +305,6 @@ export default {
     "content-form-open",
     "app-form-open",
   ],
-  inject: ["config"],
   data() {
     return {
       tags: [],
@@ -306,6 +321,41 @@ export default {
       },
       appValues: [],
     };
+  },
+  watch: {
+    rule() {
+      this.localRule = Object.assign({}, this.rule);
+      this.localRule.parsed = {};
+      if (this.localRule.ports && this.localRule.ports != "") {
+        this.localRule.parsed.port_field = this.localRule.ports.join(",");
+      }
+
+      this.localRule.parsed.tags_to_apply = []
+
+      if (this.localRule.tags_to_apply) {
+        this.localRule.tags_to_apply.forEach((qtag) => {
+          this.localRule.parsed.tags_to_apply.push(this.tagPerIdMap.get(qtag.tag_id));
+        })
+      }
+
+    },
+    contentid() {
+      if (this.contentid > 0) {
+        this.localRule.content_id = this.contentid;
+      }
+    },
+    appid() {
+      if (this.appid > 0) {
+        const that = this;
+        this.loadApps(function () {
+          that.localRule.app_id = that.appid;
+        });
+      }
+    },
+  },
+  created() {
+    this.loadApps(function () {});
+    this.getAllTags();
   },
   methods: {
     onContentFormOpen() {
@@ -490,41 +540,6 @@ export default {
           callback();
         });
     },
-  },
-  watch: {
-    rule() {
-      this.localRule = Object.assign({}, this.rule);
-      this.localRule.parsed = {};
-      if (this.localRule.ports && this.localRule.ports != "") {
-        this.localRule.parsed.port_field = this.localRule.ports.join(",");
-      }
-
-      this.localRule.parsed.tags_to_apply = []
-
-      if (this.localRule.tags_to_apply) {
-        this.localRule.tags_to_apply.forEach((qtag) => {
-          this.localRule.parsed.tags_to_apply.push(this.tagPerIdMap.get(qtag.tag_id));
-        })
-      }
-
-    },
-    contentid() {
-      if (this.contentid > 0) {
-        this.localRule.content_id = this.contentid;
-      }
-    },
-    appid() {
-      if (this.appid > 0) {
-        const that = this;
-        this.loadApps(function () {
-          that.localRule.app_id = that.appid;
-        });
-      }
-    },
-  },
-  created() {
-    this.loadApps(function () {});
-    this.getAllTags();
   },
 };
 </script>

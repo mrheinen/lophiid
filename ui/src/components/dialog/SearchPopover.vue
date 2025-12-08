@@ -4,10 +4,9 @@
     <a
       href="https://github.com/mrheinen/lophiid/blob/main/SEARCH.md"
       target="_blank"
-      >documentation</a
-    >. <br /><br />
+    >documentation</a>. <br><br>
     Below are the keywords specific for this page:
-    <br /><br />
+    <br><br>
     <table>
       <thead>
         <tr class="tabletr">
@@ -17,7 +16,10 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="[keyword, entry] in options" :key="keyword">
+        <tr
+          v-for="[keyword, entry] in options"
+          :key="keyword"
+        >
           <th>{{ keyword }}</th>
           <td>{{ entry.field_doc }}</td>
           <td>{{ entry.field_type }}</td>
@@ -30,7 +32,12 @@
 <script>
 export default {
   inject: ["config"],
-  props: ["modelname"],
+  props: {
+    "modelname": {
+      type: String,
+      required: true
+    }
+  },
   data() {
     return {
       options: null,

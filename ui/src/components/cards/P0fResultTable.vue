@@ -3,28 +3,30 @@
     <tbody>
       <tr>
         <th>Operating system</th>
-        <td>{{ p0f.os_name }} </td>
+        <td>{{ p0f.os_name }}</td>
       </tr>
       <tr>
         <th>Operating version</th>
-        <td>{{ p0f.os_version }} </td>
+        <td>{{ p0f.os_version }}</td>
       </tr>
       <tr>
         <th>OS matching quality</th>
-        <td>{{ osMatchQuality }} </td>
+        <td>{{ osMatchQuality }}</td>
       </tr>
       <tr>
         <th>Distance</th>
-        <td>{{ p0f.distance }} </td>
+        <td>{{ p0f.distance }}</td>
       </tr>
       <tr>
         <th>Link type</th>
-        <td>{{ p0f.link_type }} </td>
+        <td>{{ p0f.link_type }}</td>
       </tr>
-      <tr v-if="this.calculatedUptimeDays > 0 ||
-        this.calculatedUptimeAndHours > 0">
+      <tr v-if="calculatedUptimeDays > 0 || calculatedUptimeAndHours > 0">
         <th>Uptime</th>
-        <td>{{ calculatedUptimeDays }} days and {{ calculatedUptimeAndHours }} hours</td>
+        <td>
+          {{ calculatedUptimeDays }} days and
+          {{ calculatedUptimeAndHours }} hours
+        </td>
       </tr>
     </tbody>
   </table>
@@ -32,7 +34,16 @@
 
 <script>
 export default {
-  props: ["label", "p0f"],
+  props: {
+    label: {
+      type: String,
+      required: true,
+    },
+    p0f: {
+      type: Object,
+      required: true,
+    },
+  },
   data() {
     return {
       calculatedUptimeDays: 0,
@@ -40,15 +51,16 @@ export default {
       osMatchQuality: "",
     };
   },
-  methods: {
-  },
   watch: {
     p0f() {
-      this.calculatedUptimeDays = Math.round(this.p0f.uptime_minutes / (60 * 24));
-      this.calculatedUptimeAndHours = Math.round((this.p0f.uptime_minutes % (60
-        * 24)) / 60);
+      this.calculatedUptimeDays = Math.round(
+        this.p0f.uptime_minutes / (60 * 24)
+      );
+      this.calculatedUptimeAndHours = Math.round(
+        (this.p0f.uptime_minutes % (60 * 24)) / 60
+      );
 
-      switch(this.p0f.os_match_quality) {
+      switch (this.p0f.os_match_quality) {
         case 0:
           this.osMatchQuality = "good";
           break;
@@ -65,11 +77,11 @@ export default {
           this.osMatchQuality = "unknown: BUG!";
           break;
       }
-    }
+    },
   },
-}
+  methods: {},
+};
 </script>
-
 
 <style scoped>
 table {
