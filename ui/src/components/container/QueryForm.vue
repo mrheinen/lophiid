@@ -107,7 +107,7 @@ export default {
   },
   watch: {
     query() {
-      this.localQuery = Object.assign({}, this.query);
+      this.localQuery = JSON.parse(JSON.stringify(this.query));
       this.localQuery.parsed = {};
       this.localQuery.parsed.tags_to_apply = []
 
