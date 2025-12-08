@@ -130,13 +130,6 @@ export default {
       },
     };
   },
-  watch: {
-    selectedQuery(test){
-      console.log(test);
-    },
-
-
-  },
   beforeCreate() {
     this.selectedQuery = this.baseQuery;
   },
@@ -180,7 +173,6 @@ export default {
     },
     setSelected(id) {
       var selected = null;
-      console.log(id);
       for (var i = 0; i < this.queries.length; i++) {
         if (this.queries[i].id == id) {
           selected = this.queries[i];
