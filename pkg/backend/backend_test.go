@@ -38,20 +38,17 @@ import (
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
-	"reflect"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vingarcia/ksql"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func GetContextWithAuthMetadata() context.Context {
@@ -336,13 +333,13 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput, models.NewSession())
-			if (err != nil) != test.errorExpected {
-				t.Errorf("error expected is: %t, but for err=%s", test.errorExpected, err)
+			if test.errorExpected {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 
-			if matchedRule.ID != test.contentRuleIDExpected {
-				t.Errorf("expected %d but got %d", test.contentRuleIDExpected, matchedRule.ID)
-			}
+			assert.Equal(t, test.contentRuleIDExpected, matchedRule.ID)
 		})
 	}
 }
@@ -387,9 +384,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		SourceIP: myTestIP,
 	}, session)
 
-	if matchedRule.ID != 1 {
-		t.Errorf("expected 1 but got %d", matchedRule.ID)
-	}
+	assert.Equal(t, int64(1), matchedRule.ID)
 
 	// The path of the next request matches two rules. We expect rule 2 to be
 	// served though because it shares the app ID of the rule that was already
@@ -401,9 +396,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		SourceIP: myTestIP,
 	}, session)
 
-	if matchedRule.ID != 2 {
-		t.Errorf("expected 2 but got %d", matchedRule.ID)
-	}
+	assert.Equal(t, int64(2), matchedRule.ID)
 
 	// Again this matches two rules. However one of them is already served once
 	// and this is kept track off. Therefore we expect the rule that was not
@@ -415,9 +408,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 		SourceIP: myTestIP,
 	}, session)
 
-	if matchedRule.ID != 3 {
-		t.Errorf("expected 3 but got %d", matchedRule.ID)
-	}
+	assert.Equal(t, int64(3), matchedRule.ID)
 }
 
 func TestGetMatchedRulePortPrioritization(t *testing.T) {
@@ -478,24 +469,16 @@ func TestGetMatchedRulePortPrioritization(t *testing.T) {
 
 	// Test that rule with ports gets priority
 	matchedRule, err := s.GetMatchedRule(rules, req, sess)
-	if err != nil {
-		t.Fatalf("GetMatchedRule returned error: %v", err)
-	}
-	if matchedRule.ID != 45 {
-		t.Errorf("Expected rule with ports (ID 45) to be matched, got ID %d", matchedRule.ID)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int64(45), matchedRule.ID, "Expected rule with ports (ID 45) to be matched")
 
 	// Mark rule with ports as served
 	sess.ServedRuleWithContent(45, matchedRule.ContentID)
 
 	// Test that rule without ports is selected when rule with ports is served
 	matchedRule, err = s.GetMatchedRule(rules, req, sess)
-	if err != nil {
-		t.Fatalf("GetMatchedRule returned error: %v", err)
-	}
-	if matchedRule.ID != 44 {
-		t.Errorf("Expected rule without ports (ID 44) to be matched, got ID %d", matchedRule.ID)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, int64(44), matchedRule.ID, "Expected rule without ports (ID 44) to be matched")
 }
 
 func TestProbeRequestToDatabaseRequest(t *testing.T) {
@@ -544,13 +527,8 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	}
 
 	req, err := b.ProbeRequestToDatabaseRequest(&probeReq)
-	if err != nil {
-		t.Errorf("unexpected error %s", err)
-	}
-
-	if req.SourceIP != "2.2.2.2" {
-		t.Errorf("expected 2.2.2.2 but got %s", req.SourceIP)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, "2.2.2.2", req.SourceIP)
 }
 
 func TestMaybeExtractLinksFromPayload(t *testing.T) {
@@ -621,14 +599,10 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 			fakePreprocessor := preprocess.FakePreProcessor{}
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
-			if b.MaybeExtractLinksFromPayload(test.content, test.dInfo) != test.expectedReturn {
-				t.Errorf("expected return %t but got %t", test.expectedReturn, !test.expectedReturn)
-			}
+			assert.Equal(t, test.expectedReturn, b.MaybeExtractLinksFromPayload(test.content, test.dInfo))
 
 			gotScheduled := len(b.downloadQueue) > 0
-			if gotScheduled != test.expectedSchedule {
-				t.Errorf("expected schedule %t but got %t", test.expectedSchedule, gotScheduled)
-			}
+			assert.Equal(t, test.expectedSchedule, gotScheduled)
 
 		})
 	}
@@ -668,40 +642,28 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 
 	// Test 1: First download should succeed
 	ret := b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
-	if ret != true {
-		t.Errorf("expected true but got %t", ret)
-	}
+	assert.True(t, ret, "first download should succeed")
 
 	// Test 2: Same URL should be rejected (already in cache)
 	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example.org", "2.2.2.2", "http://4.4.4.4", "example.org", 42)
-	if ret != false {
-		t.Errorf("expected false but got %t", ret)
-	}
+	assert.False(t, ret, "same URL should be rejected")
 
 	// Test 3: Different URL from same IP should succeed (count = 2)
 	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example2.org", "2.2.2.2", "http://4.4.4.4", "example2.org", 43)
-	if ret != true {
-		t.Errorf("expected true but got %t", ret)
-	}
+	assert.True(t, ret, "different URL from same IP should succeed")
 
 	// Test 4: Another URL from same IP should succeed (count = 3)
 	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example3.org", "2.2.2.2", "http://4.4.4.4", "example3.org", 44)
-	if ret != true {
-		t.Errorf("expected true but got %t", ret)
-	}
+	assert.True(t, ret, "another URL from same IP should succeed")
 
 	// Test 5: One more URL from same IP should fail (count = 4, MaxDownloadsPerIP = 3)
 	ret = b.ScheduleDownloadOfPayload(sourceIP, "1.1.1.1", "http://example5.org", "2.2.2.2", "http://4.4.4.4", "example5.org", 46)
-	if ret != false {
-		t.Errorf("expected false (IP over limit) but got %t", ret)
-	}
+	assert.False(t, ret, "IP over limit should fail")
 
 	// Test 6: Different IP should succeed regardless of previous IP's limit
 	differentIP := "5.6.7.8"
 	ret = b.ScheduleDownloadOfPayload(differentIP, "1.1.1.1", "http://example6.org", "2.2.2.2", "http://4.4.4.4", "example6.org", 47)
-	if ret != true {
-		t.Errorf("expected true for different IP but got %t", ret)
-	}
+	assert.True(t, ret, "different IP should succeed")
 }
 
 func TestHasParseableContent(t *testing.T) {
@@ -756,9 +718,7 @@ func TestHasParseableContent(t *testing.T) {
 	} {
 
 		t.Run(test.description, func(t *testing.T) {
-			if HasParseableContent(test.url, test.mime) != test.isParseable {
-				t.Errorf("expected %t but got %t", test.isParseable, !test.isParseable)
-			}
+			assert.Equal(t, test.isParseable, HasParseableContent(test.url, test.mime))
 		})
 	}
 }
@@ -857,40 +817,23 @@ func TestHandleProbe(t *testing.T) {
 	t.Run("Matches ok", func(t *testing.T) {
 		probeReq.RequestUri = "/aa"
 		res, err := b.HandleProbe(ctx, &probeReq)
-		if err != nil {
-			t.Errorf("got error: %s", err)
-		}
-
-		if res == nil {
-			t.Fatalf("got nil result")
-		}
-
-		if res.Response == nil {
-      t.Errorf("got nil Response")
-    }
-
-		if !bytes.Equal(res.Response.Body, fdbc.ContentsToReturn[42].Data) {
-			t.Errorf("got %s, expected %s", res.Response.Body, fdbc.ContentsToReturn[42].Data)
-		}
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.NotNil(t, res.Response)
+		assert.True(t, bytes.Equal(fdbc.ContentsToReturn[42].Data, res.Response.Body))
 
 		regWrap := <-b.reqsQueue
-		if regWrap.req.AppID != 42 {
-			t.Errorf("got %d, expected %d", regWrap.req.AppID, 42)
-		}
+		assert.Equal(t, int64(42), regWrap.req.AppID)
 	})
 
 	t.Run("Script ok", func(t *testing.T) {
 		// Now we simulate a request where the content response is based on a script.
 		probeReq.RequestUri = "/script"
 		_, err := b.HandleProbe(ctx, &probeReq)
-		if err != nil {
-			t.Errorf("got error: %s", err)
-		}
+		require.NoError(t, err)
 
 		regWrap := <-b.reqsQueue
-		if regWrap.req.AppID != 1 {
-			t.Errorf("got %d, expected %d", regWrap.req.AppID, 1)
-		}
+		assert.Equal(t, int64(1), regWrap.req.AppID)
 	})
 
 	t.Run("Honeypot default", func(t *testing.T) {
@@ -898,24 +841,14 @@ func TestHandleProbe(t *testing.T) {
 		// doesn't match any rule. The honeypot's DefaultContentID (66) is used.
 		probeReq.RequestUri = "/dffsd"
 		res, err := b.HandleProbe(ctx, &probeReq)
-		if err != nil {
-			t.Fatalf("got error: %s", err)
-		}
-		if !bytes.Equal(res.Response.Body, []byte("default")) {
-			t.Errorf("got %s, expected %s", res.Response.Body, "default")
-		}
-
-		if len(res.Response.Header) != 3 {
-			t.Errorf("got %d, expected 3", len(res.Response.Header))
-		}
+		require.NoError(t, err)
+		assert.Equal(t, []byte("default"), res.Response.Body)
+		assert.Len(t, res.Response.Header, 3)
 
 		// Here it's 0 because we serve the default content for this honeypot and
 		// therefore do not have a rule to get the application from.
 		regWrap := <-b.reqsQueue
-		if regWrap.req.AppID != 0 {
-			t.Errorf("got %d, expected %d", regWrap.req.AppID, 0)
-		}
-
+		assert.Equal(t, int64(0), regWrap.req.AppID)
 	})
 
 	t.Run("Content headers are added to response", func(t *testing.T) {
@@ -955,16 +888,14 @@ func TestHandleProbe(t *testing.T) {
 		// Now we simulate a database error. Should never occur ;p
 		fdbc.ContentsToReturn = map[int64]models.Content{}
 		res, err := b.HandleProbe(ctx, &probeReq)
-		if res != nil || err == nil {
-			t.Errorf("Expected error but got none: %v %s", res, err)
-		}
+		assert.Nil(t, res)
+		assert.Error(t, err)
 
 		// Call the method one more time but this time with a context that has
 		// no metadata.
 		_, err = b.HandleProbe(context.Background(), &probeReq)
-		if err == nil || !strings.Contains(err.Error(), "auth") {
-			t.Errorf("Expected error but got none")
-		}
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "auth")
 	})
 
 	t.Run("limiter limits", func(t *testing.T) {
@@ -972,25 +903,13 @@ func TestHandleProbe(t *testing.T) {
 		fakeLimiter.ErrorToReturn = errors.New("w00p w00p")
 
 		_, err := b.HandleProbe(ctx, &probeReq)
-		if err == nil || !strings.Contains(err.Error(), "w00p") {
-			t.Errorf("Expected error but got none")
-		}
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "w00p")
 
-		if len(fIpMgr.Events) != 1 {
-			t.Fatalf("expected 1 AddEventTimes call, got %d", len(fIpMgr.Events))
-		}
-
-		if fIpMgr.Events[0].Type != constants.IpEventRateLimited {
-			t.Fatalf("expected rate limited event, got %s", fIpMgr.Events[0].Type)
-		}
-
-		if fIpMgr.Events[0].SourceRefType != constants.IpEventRefTypeSessionId {
-			t.Fatalf("expected session event, got %s", fIpMgr.Events[0].SourceRefType)
-		}
-
-		if fIpMgr.Events[0].SourceRef != fmt.Sprintf("%d", testSessionId) {
-			t.Fatalf("expected %d, got %s", testSessionId, fIpMgr.Events[0].SourceRef)
-		}
+		require.Len(t, fIpMgr.Events, 1)
+		assert.Equal(t, constants.IpEventRateLimited, fIpMgr.Events[0].Type)
+		assert.Equal(t, constants.IpEventRefTypeSessionId, fIpMgr.Events[0].SourceRefType)
+		assert.Equal(t, fmt.Sprintf("%d", testSessionId), fIpMgr.Events[0].SourceRef)
 	})
 
 	t.Run("rule blocks request", func(t *testing.T) {
@@ -1005,33 +924,15 @@ func TestHandleProbe(t *testing.T) {
 		// Call HandleProbe and verify it returns a PermissionDenied error
 		res, err := b.HandleProbe(ctx, &probeReq)
 
-		// Check that we got the expected error
-		if res != nil {
-			t.Errorf("Expected nil response but got: %v", res)
-		}
-
-		if err == nil {
-			t.Errorf("Expected error but got none")
-		}
+		assert.Nil(t, res)
+		require.Error(t, err)
 
 		// Check for the specific error code and message
 		statusErr, ok := status.FromError(err)
-		if !ok {
-			t.Errorf("Expected gRPC status error but got: %v", err)
-		}
-
-		if statusErr.Code() != codes.PermissionDenied {
-			t.Errorf("Expected PermissionDenied error but got: %v", statusErr.Code())
-		}
-
-		metric := testutil.ToFloat64(bMetrics.requestsBlocked)
-		if metric != 1 {
-			t.Errorf("Expected metric to be 1 but got: %f", metric)
-		}
-
-		if statusErr.Message() != "Rule blocks request" {
-			t.Errorf("Expected 'Rule blocks request' in error message but got: %s", statusErr.Message())
-		}
+		require.True(t, ok, "Expected gRPC status error")
+		assert.Equal(t, codes.PermissionDenied, statusErr.Code())
+		assert.Equal(t, float64(1), testutil.ToFloat64(bMetrics.requestsBlocked))
+		assert.Equal(t, "Rule blocks request", statusErr.Message())
 
 		// No request should be added to the queue for blocked requests
 	})
@@ -1216,38 +1117,18 @@ func TestProcessQueue(t *testing.T) {
 				RequestPurpose: test.requestPurpose,
 			}, eCol)
 
-			if err != nil {
-				t.Fatalf("got error: %s", err)
-			}
-
-			if len(fIpMgr.Events) != 1 {
-				t.Fatalf("expected 1 AddEventTimes call, got %d", len(fIpMgr.Events))
-			}
-
-			if fIpMgr.Events[0].Type != test.expectedEventType {
-				t.Errorf("expected %s, got %s", test.expectedEventType, fIpMgr.Events[0].Type)
-			}
-			if fIpMgr.Events[0].Subtype != test.expectedEventSubType {
-				t.Errorf("expected %s, got %s", test.expectedEventSubType, fIpMgr.Events[0].Subtype)
-			}
-
-			if fIpMgr.Events[0].SourceRef != fmt.Sprintf("%d", test.ruleID) {
-				t.Errorf("expected %d in %s", test.ruleID, fIpMgr.Events[0].Details)
-			}
-
-			if fIpMgr.Events[0].Source != constants.IpEventSourceRule {
-				t.Errorf("expected %s, got %s", constants.IpEventSourceRule, fIpMgr.Events[0].Source)
-			}
+			require.NoError(t, err)
+			require.Len(t, fIpMgr.Events, 1)
+			assert.Equal(t, test.expectedEventType, fIpMgr.Events[0].Type)
+			assert.Equal(t, test.expectedEventSubType, fIpMgr.Events[0].Subtype)
+			assert.Equal(t, fmt.Sprintf("%d", test.ruleID), fIpMgr.Events[0].SourceRef)
+			assert.Equal(t, constants.IpEventSourceRule, fIpMgr.Events[0].Source)
 
 			if test.expectedPingCommand != nil {
 				c, ok := b.pingQueue[test.request.HoneypotIP]
-				if !ok || len(c) == 0 {
-					t.Fatalf("Ping command not found in queue")
-				}
-
-				if !reflect.DeepEqual(c[0], *test.expectedPingCommand) {
-					t.Errorf("expected %v, got %v", test.expectedPingCommand, c[0])
-				}
+				require.True(t, ok, "Ping command not found in queue")
+				require.NotEmpty(t, c)
+				assert.Equal(t, *test.expectedPingCommand, c[0])
 			}
 		})
 	}
@@ -1361,32 +1242,19 @@ func TestSendStatus(t *testing.T) {
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 			_, err := b.SendStatus(context.Background(), test.request)
-			if err == nil && test.expectedErrorString != "" {
-				t.Errorf("expected error, got none")
-			}
-
-			if err != nil && !strings.Contains(err.Error(), test.expectedErrorString) {
-				t.Errorf("expected error \"%s\", to contain \"%s\"", err, test.expectedErrorString)
+			if test.expectedErrorString != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), test.expectedErrorString)
+			} else {
+				assert.NoError(t, err)
 			}
 
 			if test.dbErrorToReturn != nil {
 				lastDm := fdbc.LastDataModelSeen.(*models.Honeypot)
-
-				if len(lastDm.SSLPorts) != len(test.request.ListenPortSsl) {
-					t.Errorf("expected %d, got %d", len(test.request.ListenPortSsl), len(lastDm.SSLPorts))
-				}
-
-				if len(lastDm.Ports) != len(test.request.ListenPort) {
-					t.Errorf("expected %d, got %d", len(test.request.ListenPort), len(lastDm.Ports))
-				}
-
-				if lastDm.SSLPorts[0] != test.request.ListenPortSsl[0] {
-					t.Errorf("expected %d, got %d", test.request.ListenPortSsl[0], lastDm.SSLPorts[0])
-				}
-
-				if lastDm.Ports[0] != test.request.ListenPort[0] {
-					t.Errorf("expected %d, got %d", test.request.ListenPort[0], lastDm.Ports[0])
-				}
+				assert.Len(t, lastDm.SSLPorts, len(test.request.ListenPortSsl))
+				assert.Len(t, lastDm.Ports, len(test.request.ListenPort))
+				assert.Equal(t, test.request.ListenPortSsl[0], lastDm.SSLPorts[0])
+				assert.Equal(t, test.request.ListenPort[0], lastDm.Ports[0])
 			}
 		})
 	}
@@ -1441,18 +1309,9 @@ func TestSendStatusSendsCommands(t *testing.T) {
 		}
 
 		resp, err := b.SendStatus(context.Background(), &statusRequest)
-		if err != nil {
-			t.Errorf("unexpected error: %s", err)
-		}
-
-		if len(resp.GetCommand()) != 1 {
-			t.Fatalf("expected 1 command. Got %d", len(resp.GetCommand()))
-		}
-
-		resUrl := resp.GetCommand()[0].GetDownloadCmd().Url
-		if resUrl != testUrl {
-			t.Errorf("expected %s, got %s", testUrl, resUrl)
-		}
+		require.NoError(t, err)
+		require.Len(t, resp.GetCommand(), 1)
+		assert.Equal(t, testUrl, resp.GetCommand()[0].GetDownloadCmd().Url)
 	})
 
 	t.Run("SendStatus ping command", func(t *testing.T) {
@@ -1469,26 +1328,13 @@ func TestSendStatusSendsCommands(t *testing.T) {
 		}
 
 		resp, err := b.SendStatus(context.Background(), &statusRequest)
-		if err != nil {
-			t.Errorf("unexpected error: %s", err)
-		}
+		require.NoError(t, err)
+		require.Len(t, resp.GetCommand(), 1)
 
-		if len(resp.GetCommand()) != 1 {
-			t.Fatalf("expected 1 command. Got %d", len(resp.GetCommand()))
-		}
-
-		resAdd := resp.GetCommand()[0].GetPingCmd().Address
-		if resAdd != testAddress {
-			t.Errorf("expected %s, got %s", testAddress, resAdd)
-		}
-
-		if resp.GetCommand()[0].GetPingCmd().Count != int64(testCount) {
-			t.Errorf("expected %d, got %d", testCount, resp.GetCommand()[0].GetPingCmd().Count)
-		}
-
-		if resp.GetCommand()[0].GetPingCmd().RequestId != int64(testReqId) {
-			t.Errorf("expected %d, got %d", testReqId, resp.GetCommand()[0].GetPingCmd().RequestId)
-		}
+		pingCmd := resp.GetCommand()[0].GetPingCmd()
+		assert.Equal(t, testAddress, pingCmd.Address)
+		assert.Equal(t, int64(testCount), pingCmd.Count)
+		assert.Equal(t, int64(testReqId), pingCmd.RequestId)
 	})
 }
 
@@ -1542,25 +1388,13 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 
 	ctx := GetContextWithAuthMetadata()
 	_, err := b.HandleUploadFile(ctx, &uploadRequest)
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-	}
-	if len(b.downloadQueue) != 1 {
-		t.Errorf("expected len %d, got %d", 1, len(b.downloadQueue))
-	}
+	require.NoError(t, err)
+	assert.Len(t, b.downloadQueue, 1)
 
 	downloadEntry := fdbc.LastDataModelSeen.(*models.Download)
-	if downloadEntry.TimesSeen != 2 {
-		t.Errorf("expected times seen to be %d, got %d", 2, downloadEntry.TimesSeen)
-	}
-
-	if downloadEntry.RawHttpResponse != "this is raw data" {
-		t.Errorf("expected raw response to be %s, got %s", "this is raw data", downloadEntry.RawHttpResponse)
-	}
-
-	if len(fIpMgr.Events) != 2 {
-		t.Errorf("expected 2 events, got %d", len(fIpMgr.Events))
-	}
+	assert.Equal(t, int64(2), downloadEntry.TimesSeen)
+	assert.Equal(t, "this is raw data", downloadEntry.RawHttpResponse)
+	assert.Len(t, fIpMgr.Events, 2)
 }
 
 func TestHandleP0fResult(t *testing.T) {
@@ -1595,13 +1429,8 @@ func TestHandleP0fResult(t *testing.T) {
 	// Insert a generic one. Should succeed
 	fdbc.P0fErrorToReturn = ksql.ErrRecordNotFound
 	hasInserted, err := b.HandleP0fResult("1.1.1.1", &backend_service.P0FResult{})
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-	}
-
-	if hasInserted != true {
-		t.Errorf("p0f result not inserted")
-	}
+	require.NoError(t, err)
+	assert.True(t, hasInserted, "p0f result should be inserted")
 
 	// Insert again but let the database return a fresh
 	// result. Therefore the p0f result is no inserted in the database.
@@ -1611,13 +1440,8 @@ func TestHandleP0fResult(t *testing.T) {
 	fdbc.P0fErrorToReturn = nil
 
 	hasInserted, err = b.HandleP0fResult("1.1.1.1", &backend_service.P0FResult{})
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-	}
-
-	if hasInserted != false {
-		t.Errorf("p0f result was inserted")
-	}
+	require.NoError(t, err)
+	assert.False(t, hasInserted, "p0f result should not be inserted")
 }
 
 func TestGetResponderDataCases(t *testing.T) {
@@ -1743,12 +1567,10 @@ func TestGetResponderDataCases(t *testing.T) {
 			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, test.responder, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 			ret := b.getResponderData(&test.request, &test.rule, &test.content)
 
-			if ret != test.expectedReturn {
-				t.Errorf("unexpected responder data, expected %s got %s", test.expectedReturn, ret)
-			}
+			assert.Equal(t, test.expectedReturn, ret)
 
-			if test.responder != nil && test.lastPromptInput != test.responder.LastPromptInput {
-				t.Errorf("expected last prompt input %s but got %s", test.lastPromptInput, test.responder.LastPromptInput)
+			if test.responder != nil {
+				assert.Equal(t, test.lastPromptInput, test.responder.LastPromptInput)
 			}
 		})
 	}
@@ -1819,17 +1641,9 @@ func TestHandlePingStatus(t *testing.T) {
 			ctx := GetContextWithAuthMetadata()
 
 			_, err := b.SendPingStatus(ctx, test.request)
-			if err != nil {
-				t.Errorf("got error: %s", err)
-			}
-
-			if len(fIpMgr.Events) != 1 {
-				t.Errorf("expected 1, got %d", len(fIpMgr.Events))
-			}
-
-			if fIpMgr.Events[0].Subtype != test.expectedEventSubType {
-				t.Errorf("expected %s, got %s", test.expectedEventSubType, fIpMgr.Events[0].Subtype)
-			}
+			require.NoError(t, err)
+			require.Len(t, fIpMgr.Events, 1)
+			assert.Equal(t, test.expectedEventSubType, fIpMgr.Events[0].Subtype)
 		})
 	}
 }
@@ -1987,17 +1801,9 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 			}
 
 			res, err := b.HandleProbe(ctx, probeReq)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if res == nil {
-				t.Fatal("expected response, got nil")
-			}
-
-			if !bytes.Equal(res.Response.Body, []byte(test.expectedBody)) {
-				t.Errorf("expected body '%s', got '%s'", test.expectedBody, string(res.Response.Body))
-			}
+			require.NoError(t, err)
+			require.NotNil(t, res)
+			assert.Equal(t, []byte(test.expectedBody), res.Response.Body)
 
 			// Drain the queue
 			<-b.reqsQueue
@@ -2130,22 +1936,13 @@ func TestGetPreProcessResponse(t *testing.T) {
 			// Call the method
 			response, err := b.GetPreProcessResponse(req, test.filter)
 
-			// Verify error expectation
-			if (err != nil) != test.expectedError {
-				t.Errorf("expected error=%t, got error=%v", test.expectedError, err)
-			}
-
-			// If we don't expect an error, verify the response
-			if !test.expectedError {
-				if response.Output != test.expectedResponse {
-					t.Errorf("expected response=%s, got=%+v", test.expectedResponse, response)
-				}
-				if req.TriagePayload != test.expectedPayload {
-					t.Errorf("expected payload=%s, got=%s", test.expectedPayload, req.TriagePayload)
-				}
-				if req.TriageHasPayload != test.expectedHasMarked {
-					t.Errorf("expected TriageHasPayload=%t, got=%t", test.expectedHasMarked, req.TriageHasPayload)
-				}
+			if test.expectedError {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, test.expectedResponse, response.Output)
+				assert.Equal(t, test.expectedPayload, req.TriagePayload)
+				assert.Equal(t, test.expectedHasMarked, req.TriageHasPayload)
 			}
 		})
 	}
@@ -2238,16 +2035,10 @@ func TestHandlePreProcess(t *testing.T) {
 			startTime := time.Now()
 			b.handlePreProcess(sReq, content, res, &finalHeaders, startTime, false)
 
-			// Verify body
-			if string(res.Body) != test.expectedBody {
-				t.Errorf("expected body %q, got %q", test.expectedBody, string(res.Body))
-			}
+			assert.Equal(t, test.expectedBody, string(res.Body))
 
-			// Verify headers
 			for _, h := range test.expectedHeaders {
-				if _, ok := finalHeaders[h]; !ok {
-					t.Errorf("expected header %s to be present", h)
-				}
+				assert.Contains(t, finalHeaders, h, "expected header %s to be present", h)
 			}
 		})
 	}
@@ -2357,19 +2148,13 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 				b.CheckForConsecutivePayloads(req, test.preResults[i])
 			}
 
-			if len(fIpMgr.Events) != test.expectedEventCount {
-				t.Errorf("expected %d events, got %d", test.expectedEventCount, len(fIpMgr.Events))
-			}
+			assert.Len(t, fIpMgr.Events, test.expectedEventCount)
 
 			// If we expect an event, verify it has the correct type and subtype.
 			if test.expectedEventCount > 0 {
 				evt := fIpMgr.Events[0]
-				if evt.Type != constants.IpEventSessionInfo {
-					t.Errorf("expected event type %s, got %s", constants.IpEventSessionInfo, evt.Type)
-				}
-				if evt.Subtype != constants.IpEventSubTypeSuccessivePayload {
-					t.Errorf("expected event subtype %s, got %s", constants.IpEventSubTypeSuccessivePayload, evt.Subtype)
-				}
+				assert.Equal(t, constants.IpEventSessionInfo, evt.Type)
+				assert.Equal(t, constants.IpEventSubTypeSuccessivePayload, evt.Subtype)
 			}
 		})
 	}
