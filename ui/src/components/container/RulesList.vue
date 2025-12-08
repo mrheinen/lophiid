@@ -1,116 +1,161 @@
 <template>
-  <PrimeDialog v-model:visible="contentFormVisible" modal header="Add content">
+  <PrimeDialog
+    v-model:visible="contentFormVisible"
+    modal
+    header="Add content"
+  >
     <ContentForm
       @update-content="onAddedContent"
       @require-auth="$emit('require-auth')"
-    ></ContentForm>
+    />
   </PrimeDialog>
 
-  <PrimeDialog v-model:visible="appFormVisible" modal header="Add application">
+  <PrimeDialog
+    v-model:visible="appFormVisible"
+    modal
+    header="Add application"
+  >
     <AppForm
       @update-app="onAddedApp"
       @require-auth="$emit('require-auth')"
-    ></AppForm>
+    />
   </PrimeDialog>
   <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div class="col-span-3" style="mleft">
+    <div
+      class="col-span-3"
+      style="mleft"
+    >
       <div class="rounded overflow-hidden shadow-lg">
         <DataTable
-          :value="appRules"
-          tableStyle="min-width: 50rem"
-          :metaKeySelection="true"
-          dataKey="id"
-          showGridlines
-          compareSelectionBy="equals"
           v-model:selection="selectedRule"
-          selectionMode="single"
+          :value="appRules"
+          table-style="min-width: 50rem"
+          :meta-key-selection="true"
+          data-key="id"
+          show-gridlines
+          compare-selection-by="equals"
+          selection-mode="single"
         >
           <template #header>
             <DataSearchBar
               ref="searchBar"
               :isloading="isLoading"
-              @search="performNewSearch"
               modelname="contentrule"
-            ></DataSearchBar>
+              @search="performNewSearch"
+            />
           </template>
-          <template #empty>No data matched. </template>
-          <template #loading>Loading request data. Please wait. </template>
+          <template #empty>
+            No data matched.
+          </template>
+          <template #loading>
+            Loading request data. Please wait.
+          </template>
 
-          <DataColumn field="id" header="ID" style="width: 4%">
-          </DataColumn>
-          <DataColumn header="App name" style="width: 15%">
+          <DataColumn
+            field="id"
+            header="ID"
+            style="width: 4%"
+          />
+          <DataColumn
+            header="App name"
+            style="width: 15%"
+          >
             <template #body="slotProps">
-             <a :href="config.rulesLink + '?q=app_id:' + slotProps.data.app_id">
-               {{ slotProps.data.app_name }} </a
-                >
+              <a :href="config.rulesLink + '?q=app_id:' + slotProps.data.app_id">
+                {{ slotProps.data.app_name }} </a>
             </template>
           </DataColumn>
-          <DataColumn field="app_version" header="App version" style="width: 15%">
-          </DataColumn>
-          <DataColumn field="app_id" header="App ID" style="width: 7%">
-          </DataColumn>
+          <DataColumn
+            field="app_version"
+            header="App version"
+            style="width: 15%"
+          />
+          <DataColumn
+            field="app_id"
+            header="App ID"
+            style="width: 7%"
+          />
 
 
-          <DataColumn field="method" header="Method" style="width: 6%">
-          </DataColumn>
+          <DataColumn
+            field="method"
+            header="Method"
+            style="width: 6%"
+          />
           <DataColumn header="Uri / Body">
             <template #body="slotProps">
-                {{ slotProps.data.parsed.uri_body }}
-                <i v-if="slotProps.data.block == 1" class="pi pi-lock"></i>
+              {{ slotProps.data.parsed.uri_body }}
+              <i
+                v-if="slotProps.data.block == 1"
+                class="pi pi-lock"
+              />
             </template>
           </DataColumn>
-          <DataColumn header="Content ID" style="width: 8%">
+          <DataColumn
+            header="Content ID"
+            style="width: 8%"
+          >
             <template #body="slotProps">
-                <a :href="config.contentLink + '?q=id:' + slotProps.data.content_id">
-                  {{ slotProps.data.content_id }}</a>
-
+              <a :href="config.contentLink + '?q=id:' + slotProps.data.content_id">
+                {{ slotProps.data.content_id }}</a>
             </template>
           </DataColumn>
-          <DataColumn header="Actions" style="width: 6%">
+          <DataColumn
+            header="Actions"
+            style="width: 6%"
+          >
             <template #body="slotProps">
-                <a :href="config.requestsLink + '?q=rule_uuid:' + slotProps.data.ext_uuid">
-                  <i
-                    title="View requests that matched this rule"
-                    class="pi pi-search"
-                  ></i>
-                </a>
-                &nbsp;
+              <a :href="config.requestsLink + '?q=rule_uuid:' + slotProps.data.ext_uuid">
                 <i
-                  @click="toggleAlert(slotProps.data)"
-                  title="Enable alerting"
-                  :class="
-                    slotProps.data.alert
-                      ? 'pi pi-bell pointer alert'
-                      : 'pi pi-bell pointer'
-                  "
-                ></i>
+                  title="View requests that matched this rule"
+                  class="pi pi-search"
+                />
+              </a>
+                &nbsp;
+              <i
+                title="Enable alerting"
+                :class="
+                  slotProps.data.alert
+                    ? 'pi pi-bell pointer alert'
+                    : 'pi pi-bell pointer'
+                "
+                @click="toggleAlert(slotProps.data)"
+              />
             </template>
           </DataColumn>
 
           <template #footer>
             <div class="flex justify-between items-center">
-            <div>
-            <i
-              v-if="offset > 0"
-              @click="loadPrev()"
-              class="pi pi-arrow-left pi-style"
-            ></i>
-            <i
-              v-if="offset == 0"
-              class="pi pi-arrow-left pi-style-disabled"
-            ></i>
-            </div>
-            <div>
-
-            <FormSelect v-model="selectedLimit" @change="onChangeLimit()" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
-            </div>
-            <div>
-            <i
-              v-if="appRules.length == limit"
-              @click="loadNext()"
-              class="pi pi-arrow-right pi-style pi-style-right"
-            ></i>
-            </div>
+              <div>
+                <i
+                  v-if="offset > 0"
+                  class="pi pi-arrow-left pi-style"
+                  @click="loadPrev()"
+                />
+                <i
+                  v-if="offset == 0"
+                  class="pi pi-arrow-left pi-style-disabled"
+                />
+              </div>
+              <div>
+                <FormSelect
+                  v-model="selectedLimit"
+                  :options="limitOptions"
+                  placeholder="Limit"
+                  editable
+                  checkmark
+                  :highlight-on-select="false"
+                  class="w-full md:w-56"
+                  @change="onChangeLimit()"
+                />
+              </div>
+              <div>
+                <i
+                  v-if="appRules.length == limit"
+                  class="pi pi-arrow-right pi-style pi-style-right"
+                  @click="loadNext()"
+                />
+              </div>
             </div>
           </template>
         </DataTable>
@@ -118,15 +163,15 @@
     </div>
     <div class="col-span-2">
       <rule-form
+        :rule="selectedRule"
+        :contentid="selectedContentId"
+        :appid="selectedAppId"
         @update-rule="onUpdatedRule"
         @delete-rule="reloadRules()"
         @content-form-open="showContentForm()"
         @app-form-open="showAppForm()"
         @require-auth="$emit('require-auth')"
-        :rule="selectedRule"
-        :contentid="selectedContentId"
-        :appid="selectedAppId"
-      ></rule-form>
+      />
     </div>
   </div>
 </template>
@@ -175,6 +220,91 @@ export default {
         alert: false,
       },
     };
+  },
+  computed: {
+    isLoading() {
+      return this.rulesLoading == true || this.appsLoading == true;
+    },
+  },
+  watch: {
+    isLoading(newVal) {
+      if (newVal == true) {
+        return;
+      }
+
+      // In this case apps and/or rules were reloaded.
+
+      this.appRules = [];
+      var appCount = {};
+      for (var i = 0; i < this.rules.length; i++) {
+        var cAppId = this.rules[i].app_id;
+        if (appCount[cAppId]) {
+          appCount[cAppId]++;
+        } else {
+          appCount[cAppId] = 1;
+        }
+        var newRule = Object.assign({}, this.rules[i]);
+        if (this.apps[cAppId]) {
+          newRule.app_version = this.apps[cAppId].version;
+          newRule.app_name = this.apps[cAppId].name;
+        } else {
+          console.log("App not found in map!");
+          console.log(this.apps);
+          newRule.app_version = "Any";
+          newRule.app_name = "Any";
+        }
+
+        this.appRules.push(newRule);
+      }
+    },
+  },
+  beforeCreate() {
+    this.selectedRule = this.baseRule;
+  },
+  mounted() {
+    if (this.$route.params.limit) {
+      this.limit = parseInt(this.$route.params.limit);
+    }
+
+    if (this.$route.params.offset) {
+      this.offset = parseInt(this.$route.params.offset);
+    }
+
+    this.selectedLimit = this.limit;
+
+    if (this.$route.query.q) {
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+      this.query = this.$route.query.q;
+      this.loadRules(true, function () {});
+    } else {
+      // If a uri and method parameter is given, reset the form and use the given
+      // values.
+      var that = this;
+      this.loadRules(true, function () {
+        if (
+          that.$route.query.uri ||
+          that.$route.query.method ||
+          that.$route.query.content_id
+        ) {
+          var newRule = Object.assign({}, that.baseRule);
+
+          if (that.$route.query.uri) {
+            newRule.uri = that.$route.query.uri;
+          }
+
+          if (that.$route.query.method) {
+            newRule.method = that.$route.query.method;
+          }
+
+          if (that.$route.query.content_id) {
+            newRule.content_id = parseInt(that.$route.query.content_id);
+          }
+
+          that.selectedRule = newRule;
+          that.isSelectedId = -1;
+        }
+      });
+    }
   },
   methods: {
     toggleAlert(rule) {
@@ -400,91 +530,6 @@ export default {
           this.rulesLoading = false;
         });
     },
-  },
-  beforeCreate() {
-    this.selectedRule = this.baseRule;
-  },
-  computed: {
-    isLoading() {
-      return this.rulesLoading == true || this.appsLoading == true;
-    },
-  },
-  watch: {
-    isLoading(newVal) {
-      if (newVal == true) {
-        return;
-      }
-
-      // In this case apps and/or rules were reloaded.
-
-      this.appRules = [];
-      var appCount = {};
-      for (var i = 0; i < this.rules.length; i++) {
-        var cAppId = this.rules[i].app_id;
-        if (appCount[cAppId]) {
-          appCount[cAppId]++;
-        } else {
-          appCount[cAppId] = 1;
-        }
-        var newRule = Object.assign({}, this.rules[i]);
-        if (this.apps[cAppId]) {
-          newRule.app_version = this.apps[cAppId].version;
-          newRule.app_name = this.apps[cAppId].name;
-        } else {
-          console.log("App not found in map!");
-          console.log(this.apps);
-          newRule.app_version = "Any";
-          newRule.app_name = "Any";
-        }
-
-        this.appRules.push(newRule);
-      }
-    },
-  },
-  mounted() {
-    if (this.$route.params.limit) {
-      this.limit = parseInt(this.$route.params.limit);
-    }
-
-    if (this.$route.params.offset) {
-      this.offset = parseInt(this.$route.params.offset);
-    }
-
-    this.selectedLimit = this.limit;
-
-    if (this.$route.query.q) {
-      this.$refs.searchBar.setQuery(this.$route.query.q);
-      this.query = this.$route.query.q;
-      this.loadRules(true, function () {});
-    } else {
-      // If a uri and method parameter is given, reset the form and use the given
-      // values.
-      var that = this;
-      this.loadRules(true, function () {
-        if (
-          that.$route.query.uri ||
-          that.$route.query.method ||
-          that.$route.query.content_id
-        ) {
-          var newRule = Object.assign({}, that.baseRule);
-
-          if (that.$route.query.uri) {
-            newRule.uri = that.$route.query.uri;
-          }
-
-          if (that.$route.query.method) {
-            newRule.method = that.$route.query.method;
-          }
-
-          if (that.$route.query.content_id) {
-            newRule.content_id = parseInt(that.$route.query.content_id);
-          }
-
-          that.selectedRule = newRule;
-          that.isSelectedId = -1;
-        }
-      });
-    }
   },
 };
 </script>

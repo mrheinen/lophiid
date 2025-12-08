@@ -1,116 +1,143 @@
 <template>
   <div>
-    <input type="hidden" name="id" v-model="localHoneypot.id" />
+    <input
+      v-model="localHoneypot.id"
+      type="hidden"
+      name="id"
+    >
     <div>
-
       <InfoCard mylabel="Settings">
-      <template #default>
+        <template #default>
+          <div>
+            <label class="label">IP</label>
+            <InputText
+              id="title"
+              v-model="localHoneypot.ip"
+              type="text"
+              placeholder=""
+            />
+          </div>
 
-        <div>
-          <label class="label">IP</label>
-          <InputText
-          id="title"
-          type="text"
-          placeholder=""
-          v-model="localHoneypot.ip"
-          />
-        </div>
-
-        <div>
-          <label class="label">Default Content ID</label>
-          <InputNumber
-          v-model="localHoneypot.default_content_id"
-          inputId="minmax"
-          :useGrouping="false"
-          :min="0"
-          :max="65535"
-          />
+          <div>
+            <label class="label">Default Content ID</label>
+            <InputNumber
+              v-model="localHoneypot.default_content_id"
+              input-id="minmax"
+              :use-grouping="false"
+              :min="0"
+              :max="65535"
+            />
           &nbsp;
-        </div>
+          </div>
 
-        <div class="field">
-          <label class="label">Authentication token</label>
-          <InputText
-          id="auth-token"
-          type="text"
-          placeholder=""
-          v-model="localHoneypot.auth_token"
+          <div class="field">
+            <label class="label">Authentication token</label>
+            <InputText
+              id="auth-token"
+              v-model="localHoneypot.auth_token"
+              type="text"
+              placeholder=""
+            />
+          </div>
+
+
+          <div
+            v-if="localPorts"
+            class="field"
+          >
+            <label class="label">HTTP Ports</label>
+
+            {{ localPorts }}
+          </div>
+
+          <div
+            v-if="localSSLPorts"
+            class="field"
+          >
+            <label class="label">HTTPS Ports</label>
+
+            {{ localSSLPorts }}
+          </div>
+
+
+
+          <br>
+          <PrimeButton
+            :label="localHoneypot.id > 0 ? 'Submit' : 'Add'"
+            @click="submitForm()"
           />
-        </div>
-
-
-        <div v-if="localPorts" class="field">
-          <label class="label">HTTP Ports</label>
-
-          {{ localPorts }}
-        </div>
-
-        <div v-if="localSSLPorts" class="field">
-          <label class="label">HTTPS Ports</label>
-
-          {{ localSSLPorts }}
-        </div>
-
-
-
-        <br/>
-        <PrimeButton
-        :label="localHoneypot.id > 0 ? 'Submit' : 'Add'"
-        @click="submitForm()"
-        >
-        </PrimeButton>
         &nbsp;
-        <PrimeButton
-        severity="secondary"
-        label="New"
-        @click="resetForm()"
-        ></PrimeButton>
+          <PrimeButton
+            severity="secondary"
+            label="New"
+            @click="resetForm()"
+          />
         &nbsp;
-        <PrimeButton
-        severity="danger"
-        @click="requireConfirmation($event)"
-        label="Delete"
-        ></PrimeButton>
-      </template>
+          <PrimeButton
+            severity="danger"
+            label="Delete"
+            @click="requireConfirmation($event)"
+          />
+        </template>
       </InfoCard>
     </div>
 
     <ConfirmPopup group="headless">
-    <template #container="{ message, acceptCallback, rejectCallback }">
-      <div class="bg-gray-900 text-white border-round p-3">
-        <span>{{ message.message }}</span>
-        <div class="flex align-items-center gap-2 mt-3">
-          <PrimeButton
-          icon="pi pi-check"
-          label="Save"
-          @click="acceptCallback"
-          class="p-button-sm p-button-outlined"
-          ></PrimeButton>
-          <PrimeButton
-          label="Cancel"
-          severity="secondary"
-          outlined
-          @click="rejectCallback"
-          class="p-button-sm p-button-text"
-          ></PrimeButton>
+      <template #container="{ message, acceptCallback, rejectCallback }">
+        <div class="bg-gray-900 text-white border-round p-3">
+          <span>{{ message.message }}</span>
+          <div class="flex align-items-center gap-2 mt-3">
+            <PrimeButton
+              icon="pi pi-check"
+              label="Save"
+              class="p-button-sm p-button-outlined"
+              @click="acceptCallback"
+            />
+            <PrimeButton
+              label="Cancel"
+              severity="secondary"
+              outlined
+              class="p-button-sm p-button-text"
+              @click="rejectCallback"
+            />
+          </div>
         </div>
-      </div>
-    </template>
+      </template>
     </ConfirmPopup>
   </div>
 </template>
 
 <script>
 export default {
-  props: ["honeypot"],
-  emits: ["update-honeypot", "delete-honeypot", "require-auth"],
   inject: ["config"],
+  props: {
+    "honeypot": {
+      type: Object,
+      required: true
+    },
+  },
+  emits: ["update-honeypot", "delete-honeypot", "require-auth"],
   data() {
     return {
       localHoneypot: {},
       localPorts: "",
       localSSLPorts: "",
     };
+  },
+  watch: {
+    honeypot() {
+      this.localHoneypot = Object.assign({}, this.honeypot);
+
+      if (this.localHoneypot.ports) {
+        this.localPorts = this.localHoneypot.ports.join(", ");
+      }
+      if (this.localHoneypot.ssl_ports) {
+        this.localSSLPorts = this.localHoneypot.ssl_ports.join(", ");
+      }
+    },
+  },
+  created() {
+    // this.app = this.modelValue;
   },
   methods: {
     requireConfirmation(event) {
@@ -185,21 +212,6 @@ export default {
           }
         });
     },
-  },
-  watch: {
-    honeypot() {
-      this.localHoneypot = Object.assign({}, this.honeypot);
-
-      if (this.localHoneypot.ports) {
-        this.localPorts = this.localHoneypot.ports.join(", ");
-      }
-      if (this.localHoneypot.ssl_ports) {
-        this.localSSLPorts = this.localHoneypot.ssl_ports.join(", ");
-      }
-    },
-  },
-  created() {
-    // this.app = this.modelValue;
   },
 };
 </script>

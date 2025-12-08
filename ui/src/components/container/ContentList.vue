@@ -1,45 +1,73 @@
 <template>
   <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div class="col-span-3" style="mleft">
+    <div
+      class="col-span-3"
+      style="mleft"
+    >
       <div class="rounded overflow-hidden shadow-lg">
         <DataTable
-          :value="contents"
-          tableStyle="min-width: 50rem"
-          :metaKeySelection="true"
-          dataKey="id"
-          showGridlines
-          compareSelectionBy="equals"
           v-model:selection="selectedContent"
-          selectionMode="single"
+          :value="contents"
+          table-style="min-width: 50rem"
+          :meta-key-selection="true"
+          data-key="id"
+          show-gridlines
+          compare-selection-by="equals"
+          selection-mode="single"
         >
           <template #header>
             <DataSearchBar
               ref="searchBar"
               :isloading="isLoading"
-              @search="performNewSearch"
               modelname="content"
-            ></DataSearchBar>
+              @search="performNewSearch"
+            />
           </template>
-          <template #empty>No data matched. </template>
-          <template #loading>Loading request data. Please wait. </template>
+          <template #empty>
+            No data matched.
+          </template>
+          <template #loading>
+            Loading request data. Please wait.
+          </template>
 
-          <DataColumn field="id" header="ID" style="width: 4%">
-          </DataColumn>
-          <DataColumn field="parsed.name" header="Description" style="width: 35%">
+          <DataColumn
+            field="id"
+            header="ID"
+            style="width: 4%"
+          />
+          <DataColumn
+            field="parsed.name"
+            header="Description"
+            style="width: 35%"
+          >
             <template #body="slotProps">
-              <span v-if="slotProps.data.script.length > 0" class="pi=play">
-              </span>
+              <span
+                v-if="slotProps.data.script.length > 0"
+                class="pi=play"
+              />
               {{ slotProps.data.parsed.name }}
             </template>
           </DataColumn>
-          <DataColumn field="content_type" header="Content Type" style="width: 25%">
-          </DataColumn>
-          <DataColumn field="server" header="Server" style="width: 20%">
-          </DataColumn>
-          <DataColumn field="parsed.updated_at" header="Last update" style="width: 25%">
-          </DataColumn>
+          <DataColumn
+            field="content_type"
+            header="Content Type"
+            style="width: 25%"
+          />
+          <DataColumn
+            field="server"
+            header="Server"
+            style="width: 20%"
+          />
+          <DataColumn
+            field="parsed.updated_at"
+            header="Last update"
+            style="width: 25%"
+          />
 
-          <DataColumn header="Actions" style="width: 5%">
+          <DataColumn
+            header="Actions"
+            style="width: 5%"
+          >
             <template #body="slotProps">
               <a
                 :href="config.rulesLink + '?content_id:' + slotProps.data.id"
@@ -47,55 +75,61 @@
                 <i
                   title="Create a rule for this"
                   class="pi pi-arrow-circle-right"
-                ></i>
+                />
               </a>
               &nbsp;
-               <a :href="config.requestsLink + '?q=content_id:' + slotProps.data.id">
-                  <i
-                    title="View requests that got this content"
-                    class="pi pi-search"
-                  ></i>
-                </a>
+              <a :href="config.requestsLink + '?q=content_id:' + slotProps.data.id">
+                <i
+                  title="View requests that got this content"
+                  class="pi pi-search"
+                />
+              </a>
             </template>
           </DataColumn>
           <template #footer>
-
             <div class="flex justify-between items-center">
-            <div>
-            <i
-              v-if="offset > 0"
-              @click="loadPrev()"
-              class="pi pi-arrow-left pi-style"
-            ></i>
-            <i
-              v-if="offset == 0"
-              class="pi pi-arrow-left pi-style-disabled"
-            ></i>
-            </div>
-            <div>
-
-            <FormSelect v-model="selectedLimit" @change="onChangeLimit()" :options="limitOptions" placeholder="Limit" editable checkmark :highlightOnSelect="false" class="w-full md:w-56" />
-            </div>
-            <div>
-            <i
-              v-if="contents.length == limit"
-              @click="loadNext()"
-              class="pi pi-arrow-right pi-style pi-style-right"
-            ></i>
-            </div>
+              <div>
+                <i
+                  v-if="offset > 0"
+                  class="pi pi-arrow-left pi-style"
+                  @click="loadPrev()"
+                />
+                <i
+                  v-if="offset == 0"
+                  class="pi pi-arrow-left pi-style-disabled"
+                />
+              </div>
+              <div>
+                <FormSelect
+                  v-model="selectedLimit"
+                  :options="limitOptions"
+                  placeholder="Limit"
+                  editable
+                  checkmark
+                  :highlight-on-select="false"
+                  class="w-full md:w-56"
+                  @change="onChangeLimit()"
+                />
+              </div>
+              <div>
+                <i
+                  v-if="contents.length == limit"
+                  class="pi pi-arrow-right pi-style pi-style-right"
+                  @click="loadNext()"
+                />
+              </div>
             </div>
           </template>
-
         </DataTable>
       </div>
     </div>
     <div class="col-span-2">
       <content-form
+        :content="selectedContent"
         @update-content="onUpdateContent"
         @deleted-content="onDeleteContent"
         @require-auth="$emit('require-auth')"
-        :content="selectedContent"
-      ></content-form>
+      />
     </div>
   </div>
 </template>
@@ -133,6 +167,26 @@ export default {
         time_updated: "",
       },
     };
+  },
+  created() {
+
+    this.selectedContent = this.baseContent;
+    if (this.$route.params.limit) {
+      this.limit = parseInt(this.$route.params.limit);
+    }
+
+    if (this.$route.params.offset) {
+      this.offset = parseInt(this.$route.params.offset);
+    }
+
+    this.selectedLimit = this.limit;
+  },
+  mounted() {
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    }
+    this.loadContents(true, function(){})
   },
   methods: {
     performNewSearch(query) {
@@ -256,26 +310,6 @@ export default {
           this.isLoading = false;
         });
     },
-  },
-  created() {
-
-    this.selectedContent = this.baseContent;
-    if (this.$route.params.limit) {
-      this.limit = parseInt(this.$route.params.limit);
-    }
-
-    if (this.$route.params.offset) {
-      this.offset = parseInt(this.$route.params.offset);
-    }
-
-    this.selectedLimit = this.limit;
-  },
-  mounted() {
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-      this.$refs.searchBar.setQuery(this.$route.query.q);
-    }
-    this.loadContents(true, function(){})
   },
 };
 </script>

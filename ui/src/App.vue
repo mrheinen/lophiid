@@ -7,28 +7,32 @@
   >
     <div class="flex justify-content-end gap-2">
       <div style="padding-right: 10px">
-        <InputText id="apiKey" type="text" v-model="apiKey" />
+        <InputText
+          id="apiKey"
+          v-model="apiKey"
+          type="text"
+        />
       </div>
       <div>
         <PrimeButton
           type="button"
           label="Close"
           @click="apiTokenDialogVisible = false"
-        ></PrimeButton>
+        />
       </div>
     </div>
   </PrimeDialog>
 
   <div class="grid grid-flow-row auto-rows-auto grow-0">
     <div style="">
-      <vue-nav-bar> </vue-nav-bar>
+      <vue-nav-bar />
     </div>
     <div style="margin-top: 20px; margin-left: 15px">
       <!-- use key below to let the page re-render when the API key changes -->
       <router-view
         :key="apiKey + $route.path"
         @require-auth="requireAuth"
-      ></router-view>
+      />
     </div>
   </div>
 </template>
@@ -42,21 +46,16 @@ export default {
   components: {
     VueNavBar,
   },
-  data() {
-    return {
-      apiKey: "",
-      apiTokenDialogVisible: false,
-    };
-  },
-  methods: {
-    requireAuth() {
-      this.apiTokenDialogVisible = true;
-    },
-  },
   provide() {
     return {
       // Provide the config to all components.
       config: readonly(Config),
+    };
+  },
+  data() {
+    return {
+      apiKey: "",
+      apiTokenDialogVisible: false,
     };
   },
   watch: {
@@ -72,6 +71,11 @@ export default {
           input.focus();
         }, 1000);
       }
+    },
+  },
+  methods: {
+    requireAuth() {
+      this.apiTokenDialogVisible = true;
     },
   },
 };

@@ -1,17 +1,23 @@
 <template>
   <div class="rounded overflow-hidden shadow-lg">
-    <FieldSet legend="Import app with rules" :toggleable="false">
-     <p>Select a yaml file to import an app with all it's rules and contents.</p>
-     <p>You should only import trusted files and verify them manually before importing them.</p>
-     <br/>
-     <input type="file" @change="handleFileUpload" accept=".yaml,.yml"  />
+    <FieldSet
+      legend="Import app with rules"
+      :toggleable="false"
+    >
+      <p>Select a yaml file to import an app with all it's rules and contents.</p>
+      <p>You should only import trusted files and verify them manually before importing them.</p>
+      <br>
+      <input
+        type="file"
+        accept=".yaml,.yml"
+        @change="handleFileUpload"
+      >
     </FieldSet>
 
     <PrimeButton
       label="Import"
       @click="submitForm()"
-    >
-    </PrimeButton>
+    />
   </div>
 </template>
 

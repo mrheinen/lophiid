@@ -1,55 +1,94 @@
 <template>
-
-  <div v-for="yara in data" :key="yara.id">
-
+  <div
+    v-for="yara in data"
+    :key="yara.id"
+  >
     <label class="label">{{ yara.identifier }}</label>
     <table>
       <tbody>
         <tr v-if="yara.description">
-          <th id="yarath">Description</th>
-          <td id="yaratd">{{ yara.description }} </td>
+          <th id="yarath">
+            Description
+          </th>
+          <td id="yaratd">
+            {{ yara.description }}
+          </td>
         </tr>
         <tr v-if="yara.author">
-          <th id="yarath">Author</th>
-          <td id="yaratd">{{ yara.author }} </td>
+          <th id="yarath">
+            Author
+          </th>
+          <td id="yaratd">
+            {{ yara.author }}
+          </td>
         </tr>
         <tr v-if="yara.date">
-          <th id="yarath">Date</th>
-          <td id="yaratd">{{ yara.date }} </td>
+          <th id="yarath">
+            Date
+          </th>
+          <td id="yaratd">
+            {{ yara.date }}
+          </td>
         </tr>
         <tr v-if="yara.reference">
-          <th id="yarath">Reference</th>
-          <td id="yaratd"><a :href="yara.reference" target="_blank">{{ yara.reference }}</a> </td>
+          <th id="yarath">
+            Reference
+          </th>
+          <td id="yaratd">
+            <a
+              :href="yara.reference"
+              target="_blank"
+            >{{ yara.reference }}</a>
+          </td>
         </tr>
         <tr v-if="yara.malpedia_reference">
-          <th id="yarath">Malpedia reference</th>
-          <td id="yaratd"><a :href="yara.malpedia_reference" target="_blank">{{ yara.malpedia_reference }}</a> </td>
+          <th id="yarath">
+            Malpedia reference
+          </th>
+          <td id="yaratd">
+            <a
+              :href="yara.malpedia_reference"
+              target="_blank"
+            >{{ yara.malpedia_reference }}</a>
+          </td>
         </tr>
         <tr v-if="yara.malpedia_license">
-          <th id="yarath">Malpedia license</th>
-          <td id="yaratd">{{ yara.malpedia_license }} </td>
+          <th id="yarath">
+            Malpedia license
+          </th>
+          <td id="yaratd">
+            {{ yara.malpedia_license }}
+          </td>
         </tr>
         <tr v-if="yara.malpedia_sharing">
-          <th id="yarath">Malpedia sharing</th>
-          <td id="yaratd">{{ yara.malpedia_sharing }} </td>
+          <th id="yarath">
+            Malpedia sharing
+          </th>
+          <td id="yaratd">
+            {{ yara.malpedia_sharing }}
+          </td>
         </tr>
       </tbody>
     </table>
-    <hr/>
+    <hr>
   </div>
-
 </template>
 
 <script>
 export default {
-  props: ["data"],
+  props: {
+    "data": {
+      type: Object,
+      required: true
+    }
+  },
   data() {
     return {
     };
   },
-  methods: {
-  },
   watch: {
+  },
+  methods: {
   },
 }
 </script>

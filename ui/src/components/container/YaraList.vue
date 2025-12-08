@@ -1,46 +1,62 @@
 <template>
   <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div class="col-span-3" style="mleft">
+    <div
+      class="col-span-3"
+      style="mleft"
+    >
       <div class="rounded overflow-hidden shadow-lg">
         <DataTable
-          :value="yaras"
-          tableStyle="min-width: 50rem"
-          :metaKeySelection="true"
-          dataKey="id"
-          showGridlines
-          compareSelectionBy="equals"
           v-model:selection="selectedYara"
-          selectionMode="single"
+          :value="yaras"
+          table-style="min-width: 50rem"
+          :meta-key-selection="true"
+          data-key="id"
+          show-gridlines
+          compare-selection-by="equals"
+          selection-mode="single"
         >
           <template #header>
             <DataSearchBar
               ref="searchBar"
               :isloading="isLoading"
-              @search="performNewSearch"
               modelname="yara"
-            ></DataSearchBar>
+              @search="performNewSearch"
+            />
           </template>
-          <template #empty>No data matched. </template>
-          <template #loading>Loading request data. Please wait. </template>
+          <template #empty>
+            No data matched.
+          </template>
+          <template #loading>
+            Loading request data. Please wait.
+          </template>
 
-          <DataColumn field="id" header="ID" style="width: 4%"> </DataColumn>
+          <DataColumn
+            field="id"
+            header="ID"
+            style="width: 4%"
+          />
           <DataColumn
             field="parsed.created_at"
             header="Created at"
             style="width: 12%"
+          />
+          <DataColumn
+            field="identifier"
+            header="Identfier"
+            style="width: 40%"
+          />
+          <DataColumn
+            field="download_id"
+            header="Malware ID"
+            style="width: 5%"
           >
-          </DataColumn>
-          <DataColumn field="identifier" header="Identfier" style="width: 40%">
-          </DataColumn>
-          <DataColumn field="download_id" header="Malware ID" style="width: 5%">
             <template #body="slotProps">
               <a
                 :href="
                   config.downloadsLink + '?q=id:' + slotProps.data.download_id
                 "
               >
-                {{ slotProps.data.download_id }}</a
-              >
+                {{ slotProps.data.download_id }}</a>
             </template>
           </DataColumn>
 
@@ -49,32 +65,32 @@
               <div>
                 <i
                   v-if="offset > 0"
-                  @click="loadPrev()"
                   class="pi pi-arrow-left pi-style"
-                ></i>
+                  @click="loadPrev()"
+                />
                 <i
                   v-if="offset == 0"
                   class="pi pi-arrow-left pi-style-disabled"
-                ></i>
+                />
               </div>
               <div>
                 <FormSelect
                   v-model="selectedLimit"
-                  @change="onChangeLimit"
                   :options="limitOptions"
                   placeholder="Limit"
                   editable
                   checkmark
-                  :highlightOnSelect="false"
+                  :highlight-on-select="false"
                   class="w-full md:w-56"
+                  @change="onChangeLimit"
                 />
               </div>
               <div>
                 <i
                   v-if="yaras.length == limit"
-                  @click="loadNext()"
                   class="pi pi-arrow-right pi-style pi-style-right"
-                ></i>
+                  @click="loadNext()"
+                />
               </div>
             </div>
           </template>
@@ -82,7 +98,7 @@
       </div>
     </div>
     <div class="col-span-2">
-      <YaraForm :yara="selectedYara"></YaraForm>
+      <YaraForm :yara="selectedYara" />
     </div>
   </div>
 </template>
@@ -96,8 +112,8 @@ export default {
     YaraForm,
     DataSearchBar,
   },
-  emits: ["require-auth"],
   inject: ["config"],
+  emits: ["require-auth"],
   data() {
     return {
       yaras: [],
@@ -110,6 +126,33 @@ export default {
       offset: 0,
       isLoading: false,
     };
+  },
+  watch: {
+    selectedLimit() {
+      this.limit = this.selectedLimit;
+      this.loadYaras(true, function () {});
+    },
+  },
+  beforeCreate() {
+    //this.selectedYara = this.baseQuery;
+  },
+  created() {
+    if (this.$route.params.limit) {
+      this.limit = parseInt(this.$route.params.limit);
+    }
+
+    if (this.$route.params.offset) {
+      this.offset = parseInt(this.$route.params.offset);
+    }
+
+    this.selectedLimit = this.limit;
+  },
+  mounted() {
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
+      this.$refs.searchBar.setQuery(this.$route.query.q);
+    }
+    this.loadYaras(true, function () {});
   },
   methods: {
     onChangeLimit() {
@@ -210,33 +253,6 @@ export default {
           this.isLoading = false;
         });
     },
-  },
-  beforeCreate() {
-    //this.selectedYara = this.baseQuery;
-  },
-  created() {
-    if (this.$route.params.limit) {
-      this.limit = parseInt(this.$route.params.limit);
-    }
-
-    if (this.$route.params.offset) {
-      this.offset = parseInt(this.$route.params.offset);
-    }
-
-    this.selectedLimit = this.limit;
-  },
-  watch: {
-    selectedLimit() {
-      this.limit = this.selectedLimit;
-      this.loadYaras(true, function () {});
-    },
-  },
-  mounted() {
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
-      this.$refs.searchBar.setQuery(this.$route.query.q);
-    }
-    this.loadYaras(true, function () {});
   },
 };
 </script>

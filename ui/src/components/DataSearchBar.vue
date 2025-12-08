@@ -1,34 +1,70 @@
 <template>
-      <span style="width: 100%">
-      <form @submit.prevent="performNewSearch()" style="display: flex">
-          <IconField iconPosition="left">
-            <InputIcon
-              ref="icon"
-              :class="iconClass"
-              @click="showPopover"
-            >
-            </InputIcon>
-            <InputText v-model="localQuery" placeholder="Search"/>
-          </IconField>
-          <SearchPopover
-            ref="spop"
-            :options="options"
-            :modelname="modelname"
-          >
-          </SearchPopover>
-          <FormSelect v-if="showage" ref="ageSelector" v-model="selectedAge"
-          :options="ageOptions" optionLabel="name" optionValue="value" placeholder="Months back" />
-      </form>
-      </span>
+  <span style="width: 100%">
+    <form
+      style="display: flex"
+      @submit.prevent="performNewSearch()"
+    >
+      <IconField icon-position="left">
+        <InputIcon
+          ref="icon"
+          :class="iconClass"
+          @click="showPopover"
+        />
+        <InputText
+          v-model="localQuery"
+          placeholder="Search"
+        />
+      </IconField>
+      <SearchPopover
+        ref="spop"
+        :options="options"
+        :modelname="modelname"
+      />
+      <FormSelect
+        v-if="showage"
+        ref="ageSelector"
+        v-model="selectedAge"
+        :options="ageOptions"
+        option-label="name"
+        option-value="value"
+        placeholder="Months back"
+      />
+    </form>
+  </span>
 </template>
 
 <script>
-import SearchPopover from './dialog/SearchPopover.vue';
+import SearchPopover from "./dialog/SearchPopover.vue";
 export default {
   components: {
     SearchPopover,
   },
-  props: ["options", "query", "modelname", "isloading", "showage", "defaultage"],
+  props: {
+    options: {
+      type: Object,
+      required: true,
+    },
+    query: {
+      type: String,
+      required: false,
+    },
+    modelname: {
+      type: String,
+      required: true,
+    },
+    isloading: {
+      type: Boolean,
+      required: true,
+    },
+    showage: {
+      type: Boolean,
+      required: true,
+    },
+    defaultage: {
+      type: [Number, String],
+      required: false,
+    },
+  },
   emits: ["search"],
   data() {
     return {
@@ -44,17 +80,14 @@ export default {
         { name: "24 months", value: 24 },
         { name: "36 months", value: 36 },
       ],
-    }
+    };
   },
-  methods: {
-    setQuery(query) {
-      this.localQuery = query;
-    },
-    showPopover(event) {
-      this.$refs.spop.show(event);
-    },
-    performNewSearch() {
-      this.$emit('search',this.localQuery, this.selectedAge);
+  computed: {
+    iconClass() {
+      return (
+        "pi pi-info-circle search-info-icon pointer" +
+        (this.isloading ? " pi-spin bold" : "")
+      );
     },
   },
   created() {
@@ -66,17 +99,21 @@ export default {
       this.selectedAge = parseInt(this.defaultage, 10);
     }
   },
-  computed: {
-    iconClass() {
-      return  "pi pi-info-circle search-info-icon pointer" + (this.isloading ? " pi-spin bold" : "")
+  methods: {
+    setQuery(query) {
+      this.localQuery = query;
     },
-  }
-}
+    showPopover(event) {
+      this.$refs.spop.show(event);
+    },
+    performNewSearch() {
+      this.$emit("search", this.localQuery, this.selectedAge);
+    },
+  },
+};
 </script>
 
-
 <style scoped>
-
 .p-inputtext {
   width: 100%;
 }
@@ -96,5 +133,4 @@ span.search-info-icon:hover {
   color: black;
   font-weight: bold !important;
 }
-
 </style>

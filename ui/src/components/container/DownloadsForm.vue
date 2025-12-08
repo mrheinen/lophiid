@@ -1,6 +1,10 @@
 <template>
   <div>
-    <input type="hidden" name="id" v-model="localDownload.id" />
+    <input
+      v-model="localDownload.id"
+      type="hidden"
+      name="id"
+    >
     <div>
       <InfoCard mylabel="Malware details">
         <template #default>
@@ -65,17 +69,17 @@
                 <th>SHA 256</th>
                 <td>
                   <input
-                    :value="localDownload.sha256sum"
                     ref="sha256sum"
+                    :value="localDownload.sha256sum"
                     type="hidden"
-                  />
+                  >
 
                   {{ localDownload.parsed.sha256sum }}
                   <i
-                    @click="copyToClipboard()"
                     title="copy to clipboard"
                     class="pi pi-copy pointer"
-                  ></i>
+                    @click="copyToClipboard()"
+                  />
                 </td>
               </tr>
             </tbody>
@@ -91,7 +95,7 @@
           <div class="grid grid-cols-2">
             <div>
               Scan results
-              <br />
+              <br>
               <table class="slightlylow">
                 <tbody>
                   <tr>
@@ -123,7 +127,7 @@
             </div>
             <div v-if="localDownload.vt_file_analysis_result">
               Scanner samples
-              <br />
+              <br>
               <table class="slightlylow">
                 <tbody>
                   <tr
@@ -146,25 +150,46 @@
     <template #default>
       <PrimeTabs v-model:value="activeTab">
         <TabList>
-          <PrimeTab value="0">HTTP Request</PrimeTab>
-          <PrimeTab value="1" v-if="localYara">Yara result</PrimeTab>
-          <PrimeTab value="2" v-if="localWhois">Whois</PrimeTab>
+          <PrimeTab value="0">
+            HTTP Request
+          </PrimeTab>
+          <PrimeTab
+            v-if="localYara"
+            value="1"
+          >
+            Yara result
+          </PrimeTab>
+          <PrimeTab
+            v-if="localWhois"
+            value="2"
+          >
+            Whois
+          </PrimeTab>
         </TabList>
         <TabPanels>
-          <TabPanel value="1" v-if="localYara">
-            <div id="aisummary" v-if="localDownload.yara_description">
+          <TabPanel
+            v-if="localYara"
+            value="1"
+          >
+            <div
+              v-if="localDownload.yara_description"
+              id="aisummary"
+            >
               AI Summary: {{ localDownload.yara_description }}
             </div>
-            <YaraCard :data="localYara"> </YaraCard>
+            <YaraCard :data="localYara" />
           </TabPanel>
           <TabPanel value="0">
             <RawHttpCard
               v-if="localDownload.raw_http_response"
               label="HTTP response headers"
               :data="localDownload.raw_http_response"
-            ></RawHttpCard>
+            />
           </TabPanel>
-          <TabPanel value="2" v-if="localWhois">
+          <TabPanel
+            v-if="localWhois"
+            value="2"
+          >
             <table v-if="localWhois.country">
               <tbody>
                 <tr>
@@ -175,12 +200,18 @@
                 </tr>
               </tbody>
             </table>
-            <br />
+            <br>
 
-            <pre v-if="localWhois.data" class="whois">{{
+            <pre
+              v-if="localWhois.data"
+              class="whois"
+            >{{
               localWhois.data
             }}</pre>
-            <pre v-if="localWhois.rdap_string" class="whois">{{
+            <pre
+              v-if="localWhois.rdap_string"
+              class="whois"
+            >{{
               localWhois.rdap_string
             }}</pre>
           </TabPanel>
@@ -194,10 +225,9 @@
       <PrimeButton
         icon="pi pi-check"
         label="Rescan Yara"
-        @click="requireConfirmation($event)"
         class="p-button-sm p-button-outlined"
-      >
-      </PrimeButton>
+        @click="requireConfirmation($event)"
+      />
     </template>
   </InfoCard>
   <ConfirmPopup group="headless">
@@ -208,16 +238,16 @@
           <PrimeButton
             icon="pi pi-check"
             label="Yes please!"
-            @click="acceptCallback"
             class="p-button-sm p-button-outlined"
-          ></PrimeButton>
+            @click="acceptCallback"
+          />
           <PrimeButton
             label="Cancel"
             severity="secondary"
             outlined
-            @click="rejectCallback"
             class="p-button-sm p-button-text"
-          ></PrimeButton>
+            @click="rejectCallback"
+          />
         </div>
       </div>
     </template>
@@ -234,9 +264,18 @@ export default {
     RawHttpCard,
     YaraCard,
   },
-  props: ["download", "whois"],
-  emits: ["require-auth"],
   inject: ["config"],
+  props: {
+    "download": {
+      type: Object,
+      required: true
+    },
+    "whois": {
+      type: Object,
+      required: true
+    }
+  },
+  emits: ["require-auth"],
   data() {
     return {
       localWhois: null,
@@ -247,6 +286,30 @@ export default {
       },
     };
   },
+  computed: {
+    yaraLastScanDate() {
+      if (this.localDownload) {
+        return dateToString(this.localDownload.yara_last_scan);
+      }
+      return "unknown";
+    },
+  },
+  watch: {
+    download() {
+      this.localDownload = Object.assign({}, this.download);
+      this.activeTab = "0";
+      this.localYara = null;
+      this.loadYaraForDownload(this.download.id);
+    },
+    whois() {
+      if (this.whois == null) {
+        this.localWhois = null;
+      } else {
+        this.localWhois = Object.assign({}, this.whois);
+      }
+    },
+  },
+  created() {},
   methods: {
     requireConfirmation(event) {
       if (!this.localDownload.id) {
@@ -366,30 +429,6 @@ export default {
         });
     },
   },
-  watch: {
-    download() {
-      this.localDownload = Object.assign({}, this.download);
-      this.activeTab = "0";
-      this.localYara = null;
-      this.loadYaraForDownload(this.download.id);
-    },
-    whois() {
-      if (this.whois == null) {
-        this.localWhois = null;
-      } else {
-        this.localWhois = Object.assign({}, this.whois);
-      }
-    },
-  },
-  computed: {
-    yaraLastScanDate() {
-      if (this.localDownload) {
-        return dateToString(this.localDownload.yara_last_scan);
-      }
-      return "unknown";
-    },
-  },
-  created() {},
 };
 </script>
 
