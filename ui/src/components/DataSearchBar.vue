@@ -45,24 +45,24 @@ export default {
       required: true,
     },
     query: {
-      type: Object,
-      required: true,
+      type: String,
+      required: false,
     },
     modelname: {
-      type: Object,
+      type: String,
       required: true,
     },
     isloading: {
-      type: Object,
+      type: Boolean,
       required: true,
     },
     showage: {
-      type: Object,
+      type: Boolean,
       required: true,
     },
     defaultage: {
-      type: Object,
-      required: true,
+      type: [Number, String],
+      required: false,
     },
   },
   emits: ["search"],
