@@ -46,11 +46,29 @@
             field="method"
             header="Method"
             style="width: 5%"
-          />
+          >
+            <template #body="slotProps">
+              <span
+                class="pointer"
+                @click="handleFieldClick($event, 'method', slotProps.data.method)"
+              >
+                {{ slotProps.data.method }}
+              </span>
+            </template>
+          </DataColumn>
           <DataColumn
             field="parsed.uri"
             header="URI"
-          />
+          >
+            <template #body="slotProps">
+              <span
+                class="pointer"
+                @click="handleFieldClick($event, 'uri', slotProps.data.uri)"
+              >
+                {{ slotProps.data.parsed.uri }}
+              </span>
+            </template>
+          </DataColumn>
           <DataColumn
             field="source_ip"
             header="Source"
@@ -63,6 +81,7 @@
                     '?q=source_ip:' +
                     slotProps.data.source_ip
                 "
+                @click="handleFieldClick($event, 'source_ip', slotProps.data.source_ip)"
               >
                 {{ slotProps.data.source_ip }}</a>
             </template>
@@ -266,6 +285,18 @@ export default {
     getFreshRequestLink() {
       return this.config.requestsLink + "/0/" + this.limit;
     },
+    // Handles Alt+click and Alt+Shift+click on a field to add filter to query
+    handleFieldClick(event, fieldName, value) {
+      if (event.altKey) {
+        event.preventDefault();
+        const prefix = event.shiftKey ? "-" + fieldName + ":" : fieldName + ":";
+        const filter = prefix + value;
+        const currentQuery = this.query ? this.query.trim() : "";
+        const newQuery = currentQuery ? currentQuery + " " + filter : filter;
+        this.$refs.searchBar.setQuery(newQuery);
+        this.performNewSearch(newQuery, this.searchAgeMonths);
+      }
+    },
     lazyLoad(event) {
       console.log(event);
 
@@ -377,17 +408,20 @@ export default {
         this.limit;
 
       if (this.query) {
+        var finalQuery = this.query;
         if (this.searchAgeMonths != 0) {
           var searchLimit = getDateMinusMonths(this.searchAgeMonths);
           if (!this.query.includes('created_at:') &&
             !this.query.includes('created_at>') &&
             !this.query.includes('created_at<')) {
 
-            this.query = this.query + " created_at>" + searchLimit;
+              
+
+            finalQuery = this.query + " created_at>" + searchLimit;
           }
         }
 
-        url += "&q=" + encodeURIComponent(this.query);
+        url += "&q=" + encodeURIComponent(finalQuery);
       }
 
       fetch(url, {
