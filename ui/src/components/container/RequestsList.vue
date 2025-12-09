@@ -548,9 +548,8 @@ export default {
 
 .filter-icon {
   position: absolute;
-  right: 2px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: -10px;
+  top: -3px;
   font-size: 0.7rem;
   color: #00d1b2;
 }
