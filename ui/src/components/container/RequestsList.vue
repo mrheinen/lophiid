@@ -45,14 +45,16 @@
           <DataColumn
             field="method"
             header="Method"
-            style="width: 5%"
+            style="width: 6%"
           >
             <template #body="slotProps">
               <span
-                class="pointer"
+                class="pointer filter-cell"
                 @click="handleFieldClick($event, 'method', slotProps.data.method)"
               >
                 {{ slotProps.data.method }}
+                <i v-if="altPressed && !shiftPressed" class="pi pi-search-plus filter-icon" />
+                <i v-if="altPressed && shiftPressed" class="pi pi-search-minus filter-icon filter-icon-exclude" />
               </span>
             </template>
           </DataColumn>
@@ -62,20 +64,23 @@
           >
             <template #body="slotProps">
               <span
-                class="pointer"
+                class="pointer filter-cell"
                 @click="handleFieldClick($event, 'uri', slotProps.data.uri)"
               >
                 {{ slotProps.data.parsed.uri }}
+                <i v-if="altPressed && !shiftPressed" class="pi pi-search-plus filter-icon" />
+                <i v-if="altPressed && shiftPressed" class="pi pi-search-minus filter-icon filter-icon-exclude" />
               </span>
             </template>
           </DataColumn>
           <DataColumn
             field="source_ip"
             header="Source"
-            style="width: 10%"
+            style="width: 12%"
           >
             <template #body="slotProps">
               <a
+                class="filter-cell"
                 :href="
                   getFreshRequestLink() +
                     '?q=source_ip:' +
@@ -83,7 +88,10 @@
                 "
                 @click="handleFieldClick($event, 'source_ip', slotProps.data.source_ip)"
               >
-                {{ slotProps.data.source_ip }}</a>
+                {{ slotProps.data.source_ip }}
+                <i v-if="altPressed && !shiftPressed" class="pi pi-search-plus filter-icon" />
+                <i v-if="altPressed && shiftPressed" class="pi pi-search-minus filter-icon filter-icon-exclude" />
+              </a>
             </template>
           </DataColumn>
           <DataColumn
@@ -193,6 +201,8 @@ export default {
       isSelectedId: 0,
       isLoading: false,
       offset: 0,
+      altPressed: false,
+      shiftPressed: false,
     };
   },
   watch: {
@@ -221,8 +231,30 @@ export default {
       this.$refs.searchBar.setQuery(this.$route.query.q);
     }
     this.loadRequests(true);
+    window.addEventListener('keydown', this.handleKeyDown);
+    window.addEventListener('keyup', this.handleKeyUp);
+  },
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.handleKeyDown);
+    window.removeEventListener('keyup', this.handleKeyUp);
   },
   methods: {
+    handleKeyDown(event) {
+      if (event.key === 'Alt') {
+        this.altPressed = true;
+      }
+      if (event.key === 'Shift') {
+        this.shiftPressed = true;
+      }
+    },
+    handleKeyUp(event) {
+      if (event.key === 'Alt') {
+        this.altPressed = false;
+      }
+      if (event.key === 'Shift') {
+        this.shiftPressed = false;
+      }
+    },
     onChangeLimit() {
       this.limit = this.selectedLimit;
       this.loadRequests(true);
@@ -415,8 +447,6 @@ export default {
             !this.query.includes('created_at>') &&
             !this.query.includes('created_at<')) {
 
-              
-
             finalQuery = this.query + " created_at>" + searchLimit;
           }
         }
@@ -514,6 +544,24 @@ export default {
 
 .pointer {
   cursor: pointer;
+}
+
+.filter-icon {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  color: #00d1b2;
+}
+
+.filter-icon-exclude {
+  color: #e57373;
+}
+
+.filter-cell {
+  position: relative;
+  display: block;
 }
 
 table {
