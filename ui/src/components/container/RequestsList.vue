@@ -228,16 +228,26 @@ export default {
   mounted() {
     if (this.$route.query.q) {
       this.query = this.$route.query.q;
+  mounted() {
+    if (this.$route.query.q) {
+      this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
     }
     this.loadRequests(true);
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('blur', this.handleBlur);
   },
   beforeUnmount() {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
+    window.removeEventListener('blur', this.handleBlur);
   },
+  methods: {
+    handleBlur() {
+      this.altPressed = false;
+      this.shiftPressed = false;
+    },
   methods: {
     handleKeyDown(event) {
       if (event.key === 'Alt') {
