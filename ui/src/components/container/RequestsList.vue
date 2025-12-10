@@ -228,9 +228,6 @@ export default {
   mounted() {
     if (this.$route.query.q) {
       this.query = this.$route.query.q;
-  mounted() {
-    if (this.$route.query.q) {
-      this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
     }
     this.loadRequests(true);
@@ -248,7 +245,6 @@ export default {
       this.altPressed = false;
       this.shiftPressed = false;
     },
-  methods: {
     handleKeyDown(event) {
       if (event.key === 'Alt') {
         this.altPressed = true;
