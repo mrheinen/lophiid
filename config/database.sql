@@ -178,6 +178,7 @@ CREATE TYPE public.ip_event_type AS ENUM (
     'SENT_NEW_MALWARE',
     'TRAFFIC_CLASS',
     'SESSION_INFO',
+    'PAYLOAD',
     'PING'
 );
 
