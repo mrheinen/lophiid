@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict b26dYyrIMRZ1SdWhQqet7cFWR7vpxt3JTY0hcpVouVT9V5gmBgkA8G2821V8zri
+\restrict 8cIB8ZWMJEw0sla6NmppxFkp4GDBuPBrZzhcpfsdAtShZ1e4l4JBn126rkPaG2t
 
 -- Dumped from database version 15.14 (Debian 15.14-0+deb12u1)
 -- Dumped by pg_dump version 15.14 (Debian 15.14-0+deb12u1)
@@ -26,7 +26,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner:
+-- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: 
 --
 
 COMMENT ON EXTENSION pg_stat_statements IS 'track planning and execution statistics of all SQL statements executed';
@@ -40,7 +40,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner:
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: 
 --
 
 COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
@@ -54,7 +54,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner:
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: 
 --
 
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
@@ -151,9 +151,9 @@ CREATE TYPE public.ip_event_sub_type AS ENUM (
     'URI_RATE_WINDOW',
     'URI_RATE_BUCKET',
     'IP_RATE_BUCKET',
-    'SUCCESSIVE_PAYLOAD',
     'SUCCESS',
-    'FAILURE'
+    'FAILURE',
+    'SUCCESSIVE_PAYLOAD'
 );
 
 
@@ -177,8 +177,9 @@ CREATE TYPE public.ip_event_type AS ENUM (
     'SENT_MALWARE',
     'SENT_NEW_MALWARE',
     'TRAFFIC_CLASS',
+    'PING',
     'SESSION_INFO',
-    'PING'
+    'PAYLOAD'
 );
 
 
@@ -567,8 +568,8 @@ CREATE TABLE public.content_rule (
     responder_decoder public.responder_decoder_type DEFAULT 'NONE'::public.responder_decoder_type,
     enabled boolean DEFAULT true,
     ports integer[] DEFAULT '{}'::integer[],
-    rule_group_id integer,
-    block boolean DEFAULT false
+    block boolean DEFAULT false,
+    rule_group_id integer
 );
 
 
@@ -678,7 +679,8 @@ CREATE TABLE public.honeypot (
     auth_token character varying(64) DEFAULT ''::character varying,
     version character varying(64) DEFAULT ''::character varying NOT NULL,
     ports integer[],
-    ssl_ports integer[]
+    ssl_ports integer[],
+    rule_group_id integer DEFAULT 0
 );
 
 
@@ -931,8 +933,9 @@ CREATE TABLE public.request (
     rule_uuid character varying(36) DEFAULT ''::character varying,
     triage_payload text,
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
-    triage_target_parameter character varying(2048),
-    triage_has_payload boolean DEFAULT false
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
 )
 PARTITION BY RANGE (created_at);
 
@@ -1011,8 +1014,51 @@ ALTER SEQUENCE public.request_id_seq OWNED BY public.request.id;
 
 
 --
+-- Name: request_historical; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_historical (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
 
 
+ALTER TABLE public.request_historical OWNER TO postgres;
 
 --
 -- Name: request_metadata; Type: TABLE; Schema: public; Owner: postgres
@@ -1062,6 +1108,972 @@ CREATE TABLE public.request_refs (
 
 
 ALTER TABLE public.request_refs OWNER TO postgres;
+
+--
+-- Name: request_y2023m11_12; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2023m11_12 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2023m11_12 OWNER TO postgres;
+
+--
+-- Name: request_y2024m01_02; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2024m01_02 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2024m01_02 OWNER TO postgres;
+
+--
+-- Name: request_y2024m03_04; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2024m03_04 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2024m03_04 OWNER TO postgres;
+
+--
+-- Name: request_y2024m05_06; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2024m05_06 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2024m05_06 OWNER TO postgres;
+
+--
+-- Name: request_y2024m07_08; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2024m07_08 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2024m07_08 OWNER TO postgres;
+
+--
+-- Name: request_y2024m09_10; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2024m09_10 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2024m09_10 OWNER TO postgres;
+
+--
+-- Name: request_y2024m11_12; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2024m11_12 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2024m11_12 OWNER TO postgres;
+
+--
+-- Name: request_y2025m01_02; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2025m01_02 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2025m01_02 OWNER TO postgres;
+
+--
+-- Name: request_y2025m03_04; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2025m03_04 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2025m03_04 OWNER TO postgres;
+
+--
+-- Name: request_y2025m05_06; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2025m05_06 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2025m05_06 OWNER TO postgres;
+
+--
+-- Name: request_y2025m07_08; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2025m07_08 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2025m07_08 OWNER TO postgres;
+
+--
+-- Name: request_y2025m09_10; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2025m09_10 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2025m09_10 OWNER TO postgres;
+
+--
+-- Name: request_y2025m11_12; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2025m11_12 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2025m11_12 OWNER TO postgres;
+
+--
+-- Name: request_y2026m01_02; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2026m01_02 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2026m01_02 OWNER TO postgres;
+
+--
+-- Name: request_y2026m03_04; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2026m03_04 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2026m03_04 OWNER TO postgres;
+
+--
+-- Name: request_y2026m05_06; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2026m05_06 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2026m05_06 OWNER TO postgres;
+
+--
+-- Name: request_y2026m07_08; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2026m07_08 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2026m07_08 OWNER TO postgres;
+
+--
+-- Name: request_y2026m09_10; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2026m09_10 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2026m09_10 OWNER TO postgres;
+
+--
+-- Name: request_y2026m11_12; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.request_y2026m11_12 (
+    id integer DEFAULT nextval('public.request_id_seq'::regclass) NOT NULL,
+    proto character varying(10),
+    host character varying(2048),
+    port integer,
+    method character varying(10),
+    uri character varying(2048),
+    query character varying(2048),
+    path character varying(2048),
+    referer character varying(2048),
+    content_type character varying(1024),
+    content_length integer,
+    user_agent character varying(2048),
+    body bytea DEFAULT '\x'::bytea NOT NULL,
+    headers character varying(16000)[],
+    source_ip character varying(512),
+    source_port integer,
+    raw bytea,
+    raw_response text,
+    time_received timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    honeypot_ip character varying(40),
+    starred boolean DEFAULT false,
+    content_dynamic boolean DEFAULT false,
+    has_malware boolean DEFAULT false,
+    base_hash character varying(64) DEFAULT ''::character varying,
+    cmp_hash character varying(64) DEFAULT ''::character varying,
+    content_id integer,
+    session_id integer DEFAULT 0 NOT NULL,
+    app_id integer DEFAULT 0 NOT NULL,
+    rule_id integer DEFAULT 0 NOT NULL,
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    triage_payload text,
+    triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
+    triage_has_payload boolean DEFAULT false,
+    triaged boolean DEFAULT false,
+    triage_target_parameter character varying(2048)
+);
+
+
+ALTER TABLE public.request_y2026m11_12 OWNER TO postgres;
+
+--
+-- Name: rule_group; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.rule_group (
+    id integer NOT NULL,
+    name character varying(256),
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+
+ALTER TABLE public.rule_group OWNER TO postgres;
+
+--
+-- Name: rule_group_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.rule_group_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.rule_group_id_seq OWNER TO postgres;
+
+--
+-- Name: rule_group_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.rule_group_id_seq OWNED BY public.rule_group.id;
+
+
+--
+-- Name: rule_per_group; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.rule_per_group (
+    id integer NOT NULL,
+    rule_id integer NOT NULL,
+    group_id integer NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+
+ALTER TABLE public.rule_per_group OWNER TO postgres;
+
+--
+-- Name: rule_per_group_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.rule_per_group_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.rule_per_group_id_seq OWNER TO postgres;
+
+--
+-- Name: rule_per_group_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.rule_per_group_id_seq OWNED BY public.rule_per_group.id;
+
 
 --
 -- Name: rule_tag_per_request; Type: TABLE; Schema: public; Owner: postgres
@@ -1504,6 +2516,146 @@ ALTER SEQUENCE public.yara_id_seq OWNED BY public.yara.id;
 
 
 --
+-- Name: request_historical; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_historical FOR VALUES FROM (MINVALUE) TO ('2023-11-01 00:00:00');
+
+
+--
+-- Name: request_y2023m11_12; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2023m11_12 FOR VALUES FROM ('2023-11-01 00:00:00') TO ('2024-01-01 00:00:00');
+
+
+--
+-- Name: request_y2024m01_02; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2024m01_02 FOR VALUES FROM ('2024-01-01 00:00:00') TO ('2024-03-01 00:00:00');
+
+
+--
+-- Name: request_y2024m03_04; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2024m03_04 FOR VALUES FROM ('2024-03-01 00:00:00') TO ('2024-05-01 00:00:00');
+
+
+--
+-- Name: request_y2024m05_06; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2024m05_06 FOR VALUES FROM ('2024-05-01 00:00:00') TO ('2024-07-01 00:00:00');
+
+
+--
+-- Name: request_y2024m07_08; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2024m07_08 FOR VALUES FROM ('2024-07-01 00:00:00') TO ('2024-09-01 00:00:00');
+
+
+--
+-- Name: request_y2024m09_10; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2024m09_10 FOR VALUES FROM ('2024-09-01 00:00:00') TO ('2024-11-01 00:00:00');
+
+
+--
+-- Name: request_y2024m11_12; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2024m11_12 FOR VALUES FROM ('2024-11-01 00:00:00') TO ('2025-01-01 00:00:00');
+
+
+--
+-- Name: request_y2025m01_02; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2025m01_02 FOR VALUES FROM ('2025-01-01 00:00:00') TO ('2025-03-01 00:00:00');
+
+
+--
+-- Name: request_y2025m03_04; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2025m03_04 FOR VALUES FROM ('2025-03-01 00:00:00') TO ('2025-05-01 00:00:00');
+
+
+--
+-- Name: request_y2025m05_06; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2025m05_06 FOR VALUES FROM ('2025-05-01 00:00:00') TO ('2025-07-01 00:00:00');
+
+
+--
+-- Name: request_y2025m07_08; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2025m07_08 FOR VALUES FROM ('2025-07-01 00:00:00') TO ('2025-09-01 00:00:00');
+
+
+--
+-- Name: request_y2025m09_10; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2025m09_10 FOR VALUES FROM ('2025-09-01 00:00:00') TO ('2025-11-01 00:00:00');
+
+
+--
+-- Name: request_y2025m11_12; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2025m11_12 FOR VALUES FROM ('2025-11-01 00:00:00') TO ('2026-01-01 00:00:00');
+
+
+--
+-- Name: request_y2026m01_02; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2026m01_02 FOR VALUES FROM ('2026-01-01 00:00:00') TO ('2026-03-01 00:00:00');
+
+
+--
+-- Name: request_y2026m03_04; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2026m03_04 FOR VALUES FROM ('2026-03-01 00:00:00') TO ('2026-05-01 00:00:00');
+
+
+--
+-- Name: request_y2026m05_06; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2026m05_06 FOR VALUES FROM ('2026-05-01 00:00:00') TO ('2026-07-01 00:00:00');
+
+
+--
+-- Name: request_y2026m07_08; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2026m07_08 FOR VALUES FROM ('2026-07-01 00:00:00') TO ('2026-09-01 00:00:00');
+
+
+--
+-- Name: request_y2026m09_10; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2026m09_10 FOR VALUES FROM ('2026-09-01 00:00:00') TO ('2026-11-01 00:00:00');
+
+
+--
+-- Name: request_y2026m11_12; Type: TABLE ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request ATTACH PARTITION public.request_y2026m11_12 FOR VALUES FROM ('2026-11-01 00:00:00') TO ('2027-01-01 00:00:00');
+
+
+--
 -- Name: app id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1592,6 +2744,20 @@ ALTER TABLE ONLY public.request_description ALTER COLUMN id SET DEFAULT nextval(
 --
 
 ALTER TABLE ONLY public.request_metadata ALTER COLUMN id SET DEFAULT nextval('public.request_metadata_id_seq'::regclass);
+
+
+--
+-- Name: rule_group id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.rule_group ALTER COLUMN id SET DEFAULT nextval('public.rule_group_id_seq'::regclass);
+
+
+--
+-- Name: rule_per_group id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.rule_per_group ALTER COLUMN id SET DEFAULT nextval('public.rule_per_group_id_seq'::regclass);
 
 
 --
@@ -1768,6 +2934,11 @@ ALTER TABLE ONLY public.request
 
 
 --
+-- Name: request_historical request_historical_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_historical
+    ADD CONSTRAINT request_historical_pkey PRIMARY KEY (id, created_at);
 
 
 --
@@ -1784,6 +2955,174 @@ ALTER TABLE ONLY public.request_metadata
 
 ALTER TABLE ONLY public.request_refs
     ADD CONSTRAINT request_refs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: request_y2023m11_12 request_y2023m11_12_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2023m11_12
+    ADD CONSTRAINT request_y2023m11_12_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2024m01_02 request_y2024m01_02_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2024m01_02
+    ADD CONSTRAINT request_y2024m01_02_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2024m03_04 request_y2024m03_04_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2024m03_04
+    ADD CONSTRAINT request_y2024m03_04_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2024m05_06 request_y2024m05_06_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2024m05_06
+    ADD CONSTRAINT request_y2024m05_06_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2024m07_08 request_y2024m07_08_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2024m07_08
+    ADD CONSTRAINT request_y2024m07_08_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2024m09_10 request_y2024m09_10_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2024m09_10
+    ADD CONSTRAINT request_y2024m09_10_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2024m11_12 request_y2024m11_12_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2024m11_12
+    ADD CONSTRAINT request_y2024m11_12_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2025m01_02 request_y2025m01_02_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2025m01_02
+    ADD CONSTRAINT request_y2025m01_02_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2025m03_04 request_y2025m03_04_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2025m03_04
+    ADD CONSTRAINT request_y2025m03_04_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2025m05_06 request_y2025m05_06_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2025m05_06
+    ADD CONSTRAINT request_y2025m05_06_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2025m07_08 request_y2025m07_08_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2025m07_08
+    ADD CONSTRAINT request_y2025m07_08_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2025m09_10 request_y2025m09_10_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2025m09_10
+    ADD CONSTRAINT request_y2025m09_10_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2025m11_12 request_y2025m11_12_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2025m11_12
+    ADD CONSTRAINT request_y2025m11_12_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2026m01_02 request_y2026m01_02_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2026m01_02
+    ADD CONSTRAINT request_y2026m01_02_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2026m03_04 request_y2026m03_04_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2026m03_04
+    ADD CONSTRAINT request_y2026m03_04_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2026m05_06 request_y2026m05_06_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2026m05_06
+    ADD CONSTRAINT request_y2026m05_06_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2026m07_08 request_y2026m07_08_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2026m07_08
+    ADD CONSTRAINT request_y2026m07_08_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2026m09_10 request_y2026m09_10_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2026m09_10
+    ADD CONSTRAINT request_y2026m09_10_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: request_y2026m11_12 request_y2026m11_12_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.request_y2026m11_12
+    ADD CONSTRAINT request_y2026m11_12_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: rule_group rule_group_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.rule_group
+    ADD CONSTRAINT rule_group_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: rule_per_group rule_per_group_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.rule_per_group
+    ADD CONSTRAINT rule_per_group_pkey PRIMARY KEY (id);
 
 
 --
@@ -1859,6 +3198,27 @@ ALTER TABLE ONLY public.yara
 
 
 --
+-- Name: idx_request_content_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_request_content_type ON ONLY public.request USING btree (content_type);
+
+
+--
+-- Name: idx_request_source_port; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_request_source_port ON ONLY public.request USING btree (source_port);
+
+
+--
+-- Name: idx_request_triage_payload_trgm; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_request_triage_payload_trgm ON ONLY public.request USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
 -- Name: ip_per_p0f_result; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1880,143 +3240,220 @@ CREATE INDEX request_description_status_idx ON public.request_description USING 
 
 
 --
+-- Name: request_historical_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_content_type_idx ON public.request_historical USING btree (content_type);
+
+
+--
 -- Name: requests_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_has_payload_idx ON public.request USING btree (triage_has_payload);
+CREATE INDEX requests_has_payload_idx ON ONLY public.request USING btree (triage_has_payload);
 
 
 --
+-- Name: request_historical_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_has_payload_idx ON public.request_historical USING btree (triage_has_payload);
+
+
+--
+-- Name: request_historical_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_source_port_idx ON public.request_historical USING btree (source_port);
 
 
 --
 -- Name: requests_starred_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_starred_idx ON public.request USING btree (starred);
+CREATE INDEX requests_starred_idx ON ONLY public.request USING btree (starred);
 
 
 --
+-- Name: request_historical_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_starred_idx ON public.request_historical USING btree (starred);
 
 
 --
 -- Name: requests_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_base_hash_idx ON public.request USING btree (time_received DESC, base_hash);
+CREATE INDEX requests_base_hash_idx ON ONLY public.request USING btree (time_received DESC, base_hash);
 
 
 --
+-- Name: request_historical_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_base_hash_idx ON public.request_historical USING btree (time_received DESC, base_hash);
 
 
 --
 -- Name: requests_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_cmp_hash_idx ON public.request USING btree (time_received DESC, cmp_hash);
+CREATE INDEX requests_cmp_hash_idx ON ONLY public.request USING btree (time_received DESC, cmp_hash);
 
 
 --
+-- Name: request_historical_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_cmp_hash_idx ON public.request_historical USING btree (time_received DESC, cmp_hash);
 
 
 --
 -- Name: requests_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_content_length_idx ON public.request USING btree (time_received DESC, content_length);
+CREATE INDEX requests_content_length_idx ON ONLY public.request USING btree (time_received DESC, content_length);
 
 
 --
+-- Name: request_historical_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_content_length_idx ON public.request_historical USING btree (time_received DESC, content_length);
 
 
 --
 -- Name: requests_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_created_at_idx ON public.request USING btree (time_received DESC, created_at DESC);
+CREATE INDEX requests_created_at_idx ON ONLY public.request USING btree (time_received DESC, created_at DESC);
 
 
 --
+-- Name: request_historical_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_created_at_idx ON public.request_historical USING btree (time_received DESC, created_at DESC);
 
 
 --
 -- Name: requests_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_honeypot_ip_idx ON public.request USING btree (time_received DESC, honeypot_ip);
+CREATE INDEX requests_honeypot_ip_idx ON ONLY public.request USING btree (time_received DESC, honeypot_ip);
 
 
 --
+-- Name: request_historical_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_honeypot_ip_idx ON public.request_historical USING btree (time_received DESC, honeypot_ip);
 
 
 --
 -- Name: requests_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_idx ON public.request USING btree (time_received DESC);
+CREATE INDEX requests_idx ON ONLY public.request USING btree (time_received DESC);
 
 
 --
+-- Name: request_historical_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_idx ON public.request_historical USING btree (time_received DESC);
 
 
 --
 -- Name: requests_port_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_port_idx ON public.request USING btree (time_received DESC, port);
+CREATE INDEX requests_port_idx ON ONLY public.request USING btree (time_received DESC, port);
 
 
 --
+-- Name: request_historical_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_port_idx ON public.request_historical USING btree (time_received DESC, port);
 
 
 --
 -- Name: requests_cmp_ruleuuid_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_cmp_ruleuuid_idx ON public.request USING btree (time_received DESC, rule_uuid);
+CREATE INDEX requests_cmp_ruleuuid_idx ON ONLY public.request USING btree (time_received DESC, rule_uuid);
 
 
 --
+-- Name: request_historical_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_rule_uuid_idx ON public.request_historical USING btree (time_received DESC, rule_uuid);
 
 
 --
 -- Name: requests_session_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_session_idx ON public.request USING btree (time_received DESC, session_id DESC);
+CREATE INDEX requests_session_idx ON ONLY public.request USING btree (time_received DESC, session_id DESC);
 
 
 --
+-- Name: request_historical_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_session_id_idx ON public.request_historical USING btree (time_received DESC, session_id DESC);
 
 
 --
 -- Name: requests_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_source_ip_idx ON public.request USING btree (time_received DESC, source_ip DESC);
+CREATE INDEX requests_source_ip_idx ON ONLY public.request USING btree (time_received DESC, source_ip DESC);
 
 
 --
+-- Name: request_historical_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_source_ip_idx ON public.request_historical USING btree (time_received DESC, source_ip DESC);
 
 
 --
 -- Name: requests_uri_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX requests_uri_idx ON public.request USING btree (time_received DESC, uri);
+CREATE INDEX requests_uri_idx ON ONLY public.request USING btree (time_received DESC, uri);
 
 
 --
+-- Name: request_historical_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_time_received_uri_idx ON public.request_historical USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_historical_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_triage_payload_idx ON public.request_historical USING gin (triage_payload public.gin_trgm_ops);
 
 
 --
 -- Name: request_uri_trgm_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX request_uri_trgm_idx ON public.request USING gin (uri public.gin_trgm_ops);
+CREATE INDEX request_uri_trgm_idx ON ONLY public.request USING gin (uri public.gin_trgm_ops);
 
 
 --
+-- Name: request_historical_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_historical_uri_idx ON public.request_historical USING gin (uri public.gin_trgm_ops);
 
 
 --
@@ -2046,11 +3483,4793 @@ CREATE INDEX request_id_tag_per_request_idx ON public.tag_per_request USING btre
 
 CREATE INDEX request_refs_created_at_idx ON public.request_refs USING btree (created_at DESC);
 
+
+--
+-- Name: request_y2023m11_12_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_content_type_idx ON public.request_y2023m11_12 USING btree (content_type);
+
+
+--
+-- Name: request_y2023m11_12_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_has_payload_idx ON public.request_y2023m11_12 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2023m11_12_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_source_port_idx ON public.request_y2023m11_12 USING btree (source_port);
+
+
+--
+-- Name: request_y2023m11_12_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_starred_idx ON public.request_y2023m11_12 USING btree (starred);
+
+
+--
+-- Name: request_y2023m11_12_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_base_hash_idx ON public.request_y2023m11_12 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2023m11_12_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_cmp_hash_idx ON public.request_y2023m11_12 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2023m11_12_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_content_length_idx ON public.request_y2023m11_12 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2023m11_12_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_created_at_idx ON public.request_y2023m11_12 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2023m11_12_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_honeypot_ip_idx ON public.request_y2023m11_12 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2023m11_12_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_idx ON public.request_y2023m11_12 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2023m11_12_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_port_idx ON public.request_y2023m11_12 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2023m11_12_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_rule_uuid_idx ON public.request_y2023m11_12 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2023m11_12_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_session_id_idx ON public.request_y2023m11_12 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2023m11_12_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_source_ip_idx ON public.request_y2023m11_12 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2023m11_12_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_time_received_uri_idx ON public.request_y2023m11_12 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2023m11_12_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_triage_payload_idx ON public.request_y2023m11_12 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2023m11_12_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2023m11_12_uri_idx ON public.request_y2023m11_12 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m01_02_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_content_type_idx ON public.request_y2024m01_02 USING btree (content_type);
+
+
+--
+-- Name: request_y2024m01_02_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_has_payload_idx ON public.request_y2024m01_02 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2024m01_02_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_source_port_idx ON public.request_y2024m01_02 USING btree (source_port);
+
+
+--
+-- Name: request_y2024m01_02_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_starred_idx ON public.request_y2024m01_02 USING btree (starred);
+
+
+--
+-- Name: request_y2024m01_02_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_base_hash_idx ON public.request_y2024m01_02 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2024m01_02_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_cmp_hash_idx ON public.request_y2024m01_02 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2024m01_02_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_content_length_idx ON public.request_y2024m01_02 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2024m01_02_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_created_at_idx ON public.request_y2024m01_02 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2024m01_02_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_honeypot_ip_idx ON public.request_y2024m01_02 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2024m01_02_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_idx ON public.request_y2024m01_02 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2024m01_02_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_port_idx ON public.request_y2024m01_02 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2024m01_02_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_rule_uuid_idx ON public.request_y2024m01_02 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2024m01_02_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_session_id_idx ON public.request_y2024m01_02 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2024m01_02_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_source_ip_idx ON public.request_y2024m01_02 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2024m01_02_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_time_received_uri_idx ON public.request_y2024m01_02 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2024m01_02_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_triage_payload_idx ON public.request_y2024m01_02 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m01_02_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m01_02_uri_idx ON public.request_y2024m01_02 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m03_04_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_content_type_idx ON public.request_y2024m03_04 USING btree (content_type);
+
+
+--
+-- Name: request_y2024m03_04_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_has_payload_idx ON public.request_y2024m03_04 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2024m03_04_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_source_port_idx ON public.request_y2024m03_04 USING btree (source_port);
+
+
+--
+-- Name: request_y2024m03_04_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_starred_idx ON public.request_y2024m03_04 USING btree (starred);
+
+
+--
+-- Name: request_y2024m03_04_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_base_hash_idx ON public.request_y2024m03_04 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2024m03_04_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_cmp_hash_idx ON public.request_y2024m03_04 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2024m03_04_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_content_length_idx ON public.request_y2024m03_04 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2024m03_04_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_created_at_idx ON public.request_y2024m03_04 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2024m03_04_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_honeypot_ip_idx ON public.request_y2024m03_04 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2024m03_04_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_idx ON public.request_y2024m03_04 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2024m03_04_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_port_idx ON public.request_y2024m03_04 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2024m03_04_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_rule_uuid_idx ON public.request_y2024m03_04 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2024m03_04_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_session_id_idx ON public.request_y2024m03_04 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2024m03_04_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_source_ip_idx ON public.request_y2024m03_04 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2024m03_04_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_time_received_uri_idx ON public.request_y2024m03_04 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2024m03_04_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_triage_payload_idx ON public.request_y2024m03_04 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m03_04_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m03_04_uri_idx ON public.request_y2024m03_04 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m05_06_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_content_type_idx ON public.request_y2024m05_06 USING btree (content_type);
+
+
+--
+-- Name: request_y2024m05_06_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_has_payload_idx ON public.request_y2024m05_06 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2024m05_06_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_source_port_idx ON public.request_y2024m05_06 USING btree (source_port);
+
+
+--
+-- Name: request_y2024m05_06_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_starred_idx ON public.request_y2024m05_06 USING btree (starred);
+
+
+--
+-- Name: request_y2024m05_06_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_base_hash_idx ON public.request_y2024m05_06 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2024m05_06_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_cmp_hash_idx ON public.request_y2024m05_06 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2024m05_06_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_content_length_idx ON public.request_y2024m05_06 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2024m05_06_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_created_at_idx ON public.request_y2024m05_06 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2024m05_06_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_honeypot_ip_idx ON public.request_y2024m05_06 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2024m05_06_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_idx ON public.request_y2024m05_06 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2024m05_06_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_port_idx ON public.request_y2024m05_06 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2024m05_06_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_rule_uuid_idx ON public.request_y2024m05_06 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2024m05_06_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_session_id_idx ON public.request_y2024m05_06 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2024m05_06_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_source_ip_idx ON public.request_y2024m05_06 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2024m05_06_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_time_received_uri_idx ON public.request_y2024m05_06 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2024m05_06_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_triage_payload_idx ON public.request_y2024m05_06 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m05_06_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m05_06_uri_idx ON public.request_y2024m05_06 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m07_08_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_content_type_idx ON public.request_y2024m07_08 USING btree (content_type);
+
+
+--
+-- Name: request_y2024m07_08_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_has_payload_idx ON public.request_y2024m07_08 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2024m07_08_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_source_port_idx ON public.request_y2024m07_08 USING btree (source_port);
+
+
+--
+-- Name: request_y2024m07_08_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_starred_idx ON public.request_y2024m07_08 USING btree (starred);
+
+
+--
+-- Name: request_y2024m07_08_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_base_hash_idx ON public.request_y2024m07_08 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2024m07_08_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_cmp_hash_idx ON public.request_y2024m07_08 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2024m07_08_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_content_length_idx ON public.request_y2024m07_08 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2024m07_08_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_created_at_idx ON public.request_y2024m07_08 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2024m07_08_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_honeypot_ip_idx ON public.request_y2024m07_08 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2024m07_08_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_idx ON public.request_y2024m07_08 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2024m07_08_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_port_idx ON public.request_y2024m07_08 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2024m07_08_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_rule_uuid_idx ON public.request_y2024m07_08 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2024m07_08_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_session_id_idx ON public.request_y2024m07_08 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2024m07_08_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_source_ip_idx ON public.request_y2024m07_08 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2024m07_08_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_time_received_uri_idx ON public.request_y2024m07_08 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2024m07_08_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_triage_payload_idx ON public.request_y2024m07_08 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m07_08_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m07_08_uri_idx ON public.request_y2024m07_08 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m09_10_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_content_type_idx ON public.request_y2024m09_10 USING btree (content_type);
+
+
+--
+-- Name: request_y2024m09_10_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_has_payload_idx ON public.request_y2024m09_10 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2024m09_10_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_source_port_idx ON public.request_y2024m09_10 USING btree (source_port);
+
+
+--
+-- Name: request_y2024m09_10_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_starred_idx ON public.request_y2024m09_10 USING btree (starred);
+
+
+--
+-- Name: request_y2024m09_10_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_base_hash_idx ON public.request_y2024m09_10 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2024m09_10_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_cmp_hash_idx ON public.request_y2024m09_10 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2024m09_10_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_content_length_idx ON public.request_y2024m09_10 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2024m09_10_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_created_at_idx ON public.request_y2024m09_10 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2024m09_10_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_honeypot_ip_idx ON public.request_y2024m09_10 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2024m09_10_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_idx ON public.request_y2024m09_10 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2024m09_10_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_port_idx ON public.request_y2024m09_10 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2024m09_10_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_rule_uuid_idx ON public.request_y2024m09_10 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2024m09_10_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_session_id_idx ON public.request_y2024m09_10 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2024m09_10_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_source_ip_idx ON public.request_y2024m09_10 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2024m09_10_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_time_received_uri_idx ON public.request_y2024m09_10 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2024m09_10_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_triage_payload_idx ON public.request_y2024m09_10 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m09_10_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m09_10_uri_idx ON public.request_y2024m09_10 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m11_12_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_content_type_idx ON public.request_y2024m11_12 USING btree (content_type);
+
+
+--
+-- Name: request_y2024m11_12_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_has_payload_idx ON public.request_y2024m11_12 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2024m11_12_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_source_port_idx ON public.request_y2024m11_12 USING btree (source_port);
+
+
+--
+-- Name: request_y2024m11_12_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_starred_idx ON public.request_y2024m11_12 USING btree (starred);
+
+
+--
+-- Name: request_y2024m11_12_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_base_hash_idx ON public.request_y2024m11_12 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2024m11_12_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_cmp_hash_idx ON public.request_y2024m11_12 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2024m11_12_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_content_length_idx ON public.request_y2024m11_12 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2024m11_12_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_created_at_idx ON public.request_y2024m11_12 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2024m11_12_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_honeypot_ip_idx ON public.request_y2024m11_12 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2024m11_12_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_idx ON public.request_y2024m11_12 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2024m11_12_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_port_idx ON public.request_y2024m11_12 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2024m11_12_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_rule_uuid_idx ON public.request_y2024m11_12 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2024m11_12_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_session_id_idx ON public.request_y2024m11_12 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2024m11_12_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_source_ip_idx ON public.request_y2024m11_12 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2024m11_12_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_time_received_uri_idx ON public.request_y2024m11_12 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2024m11_12_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_triage_payload_idx ON public.request_y2024m11_12 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2024m11_12_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2024m11_12_uri_idx ON public.request_y2024m11_12 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m01_02_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_content_type_idx ON public.request_y2025m01_02 USING btree (content_type);
+
+
+--
+-- Name: request_y2025m01_02_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_has_payload_idx ON public.request_y2025m01_02 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2025m01_02_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_source_port_idx ON public.request_y2025m01_02 USING btree (source_port);
+
+
+--
+-- Name: request_y2025m01_02_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_starred_idx ON public.request_y2025m01_02 USING btree (starred);
+
+
+--
+-- Name: request_y2025m01_02_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_base_hash_idx ON public.request_y2025m01_02 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2025m01_02_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_cmp_hash_idx ON public.request_y2025m01_02 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2025m01_02_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_content_length_idx ON public.request_y2025m01_02 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2025m01_02_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_created_at_idx ON public.request_y2025m01_02 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2025m01_02_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_honeypot_ip_idx ON public.request_y2025m01_02 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2025m01_02_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_idx ON public.request_y2025m01_02 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2025m01_02_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_port_idx ON public.request_y2025m01_02 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2025m01_02_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_rule_uuid_idx ON public.request_y2025m01_02 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2025m01_02_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_session_id_idx ON public.request_y2025m01_02 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2025m01_02_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_source_ip_idx ON public.request_y2025m01_02 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2025m01_02_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_time_received_uri_idx ON public.request_y2025m01_02 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2025m01_02_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_triage_payload_idx ON public.request_y2025m01_02 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m01_02_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m01_02_uri_idx ON public.request_y2025m01_02 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m03_04_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_content_type_idx ON public.request_y2025m03_04 USING btree (content_type);
+
+
+--
+-- Name: request_y2025m03_04_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_has_payload_idx ON public.request_y2025m03_04 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2025m03_04_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_source_port_idx ON public.request_y2025m03_04 USING btree (source_port);
+
+
+--
+-- Name: request_y2025m03_04_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_starred_idx ON public.request_y2025m03_04 USING btree (starred);
+
+
+--
+-- Name: request_y2025m03_04_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_base_hash_idx ON public.request_y2025m03_04 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2025m03_04_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_cmp_hash_idx ON public.request_y2025m03_04 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2025m03_04_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_content_length_idx ON public.request_y2025m03_04 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2025m03_04_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_created_at_idx ON public.request_y2025m03_04 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2025m03_04_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_honeypot_ip_idx ON public.request_y2025m03_04 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2025m03_04_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_idx ON public.request_y2025m03_04 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2025m03_04_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_port_idx ON public.request_y2025m03_04 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2025m03_04_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_rule_uuid_idx ON public.request_y2025m03_04 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2025m03_04_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_session_id_idx ON public.request_y2025m03_04 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2025m03_04_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_source_ip_idx ON public.request_y2025m03_04 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2025m03_04_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_time_received_uri_idx ON public.request_y2025m03_04 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2025m03_04_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_triage_payload_idx ON public.request_y2025m03_04 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m03_04_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m03_04_uri_idx ON public.request_y2025m03_04 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m05_06_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_content_type_idx ON public.request_y2025m05_06 USING btree (content_type);
+
+
+--
+-- Name: request_y2025m05_06_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_has_payload_idx ON public.request_y2025m05_06 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2025m05_06_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_source_port_idx ON public.request_y2025m05_06 USING btree (source_port);
+
+
+--
+-- Name: request_y2025m05_06_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_starred_idx ON public.request_y2025m05_06 USING btree (starred);
+
+
+--
+-- Name: request_y2025m05_06_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_base_hash_idx ON public.request_y2025m05_06 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2025m05_06_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_cmp_hash_idx ON public.request_y2025m05_06 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2025m05_06_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_content_length_idx ON public.request_y2025m05_06 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2025m05_06_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_created_at_idx ON public.request_y2025m05_06 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2025m05_06_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_honeypot_ip_idx ON public.request_y2025m05_06 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2025m05_06_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_idx ON public.request_y2025m05_06 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2025m05_06_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_port_idx ON public.request_y2025m05_06 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2025m05_06_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_rule_uuid_idx ON public.request_y2025m05_06 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2025m05_06_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_session_id_idx ON public.request_y2025m05_06 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2025m05_06_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_source_ip_idx ON public.request_y2025m05_06 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2025m05_06_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_time_received_uri_idx ON public.request_y2025m05_06 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2025m05_06_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_triage_payload_idx ON public.request_y2025m05_06 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m05_06_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m05_06_uri_idx ON public.request_y2025m05_06 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m07_08_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_content_type_idx ON public.request_y2025m07_08 USING btree (content_type);
+
+
+--
+-- Name: request_y2025m07_08_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_has_payload_idx ON public.request_y2025m07_08 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2025m07_08_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_source_port_idx ON public.request_y2025m07_08 USING btree (source_port);
+
+
+--
+-- Name: request_y2025m07_08_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_starred_idx ON public.request_y2025m07_08 USING btree (starred);
+
+
+--
+-- Name: request_y2025m07_08_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_base_hash_idx ON public.request_y2025m07_08 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2025m07_08_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_cmp_hash_idx ON public.request_y2025m07_08 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2025m07_08_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_content_length_idx ON public.request_y2025m07_08 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2025m07_08_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_created_at_idx ON public.request_y2025m07_08 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2025m07_08_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_honeypot_ip_idx ON public.request_y2025m07_08 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2025m07_08_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_idx ON public.request_y2025m07_08 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2025m07_08_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_port_idx ON public.request_y2025m07_08 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2025m07_08_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_rule_uuid_idx ON public.request_y2025m07_08 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2025m07_08_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_session_id_idx ON public.request_y2025m07_08 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2025m07_08_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_source_ip_idx ON public.request_y2025m07_08 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2025m07_08_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_time_received_uri_idx ON public.request_y2025m07_08 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2025m07_08_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_triage_payload_idx ON public.request_y2025m07_08 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m07_08_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m07_08_uri_idx ON public.request_y2025m07_08 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m09_10_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_content_type_idx ON public.request_y2025m09_10 USING btree (content_type);
+
+
+--
+-- Name: request_y2025m09_10_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_has_payload_idx ON public.request_y2025m09_10 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2025m09_10_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_source_port_idx ON public.request_y2025m09_10 USING btree (source_port);
+
+
+--
+-- Name: request_y2025m09_10_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_starred_idx ON public.request_y2025m09_10 USING btree (starred);
+
+
+--
+-- Name: request_y2025m09_10_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_base_hash_idx ON public.request_y2025m09_10 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2025m09_10_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_cmp_hash_idx ON public.request_y2025m09_10 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2025m09_10_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_content_length_idx ON public.request_y2025m09_10 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2025m09_10_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_created_at_idx ON public.request_y2025m09_10 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2025m09_10_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_honeypot_ip_idx ON public.request_y2025m09_10 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2025m09_10_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_idx ON public.request_y2025m09_10 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2025m09_10_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_port_idx ON public.request_y2025m09_10 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2025m09_10_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_rule_uuid_idx ON public.request_y2025m09_10 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2025m09_10_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_session_id_idx ON public.request_y2025m09_10 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2025m09_10_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_source_ip_idx ON public.request_y2025m09_10 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2025m09_10_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_time_received_uri_idx ON public.request_y2025m09_10 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2025m09_10_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_triage_payload_idx ON public.request_y2025m09_10 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m09_10_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m09_10_uri_idx ON public.request_y2025m09_10 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m11_12_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_content_type_idx ON public.request_y2025m11_12 USING btree (content_type);
+
+
+--
+-- Name: request_y2025m11_12_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_has_payload_idx ON public.request_y2025m11_12 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2025m11_12_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_source_port_idx ON public.request_y2025m11_12 USING btree (source_port);
+
+
+--
+-- Name: request_y2025m11_12_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_starred_idx ON public.request_y2025m11_12 USING btree (starred);
+
+
+--
+-- Name: request_y2025m11_12_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_base_hash_idx ON public.request_y2025m11_12 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2025m11_12_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_cmp_hash_idx ON public.request_y2025m11_12 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2025m11_12_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_content_length_idx ON public.request_y2025m11_12 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2025m11_12_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_created_at_idx ON public.request_y2025m11_12 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2025m11_12_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_honeypot_ip_idx ON public.request_y2025m11_12 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2025m11_12_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_idx ON public.request_y2025m11_12 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2025m11_12_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_port_idx ON public.request_y2025m11_12 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2025m11_12_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_rule_uuid_idx ON public.request_y2025m11_12 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2025m11_12_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_session_id_idx ON public.request_y2025m11_12 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2025m11_12_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_source_ip_idx ON public.request_y2025m11_12 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2025m11_12_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_time_received_uri_idx ON public.request_y2025m11_12 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2025m11_12_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_triage_payload_idx ON public.request_y2025m11_12 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2025m11_12_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2025m11_12_uri_idx ON public.request_y2025m11_12 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m01_02_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_content_type_idx ON public.request_y2026m01_02 USING btree (content_type);
+
+
+--
+-- Name: request_y2026m01_02_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_has_payload_idx ON public.request_y2026m01_02 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2026m01_02_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_source_port_idx ON public.request_y2026m01_02 USING btree (source_port);
+
+
+--
+-- Name: request_y2026m01_02_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_starred_idx ON public.request_y2026m01_02 USING btree (starred);
+
+
+--
+-- Name: request_y2026m01_02_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_base_hash_idx ON public.request_y2026m01_02 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2026m01_02_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_cmp_hash_idx ON public.request_y2026m01_02 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2026m01_02_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_content_length_idx ON public.request_y2026m01_02 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2026m01_02_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_created_at_idx ON public.request_y2026m01_02 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2026m01_02_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_honeypot_ip_idx ON public.request_y2026m01_02 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2026m01_02_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_idx ON public.request_y2026m01_02 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2026m01_02_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_port_idx ON public.request_y2026m01_02 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2026m01_02_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_rule_uuid_idx ON public.request_y2026m01_02 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2026m01_02_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_session_id_idx ON public.request_y2026m01_02 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2026m01_02_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_source_ip_idx ON public.request_y2026m01_02 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2026m01_02_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_time_received_uri_idx ON public.request_y2026m01_02 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2026m01_02_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_triage_payload_idx ON public.request_y2026m01_02 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m01_02_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m01_02_uri_idx ON public.request_y2026m01_02 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m03_04_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_content_type_idx ON public.request_y2026m03_04 USING btree (content_type);
+
+
+--
+-- Name: request_y2026m03_04_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_has_payload_idx ON public.request_y2026m03_04 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2026m03_04_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_source_port_idx ON public.request_y2026m03_04 USING btree (source_port);
+
+
+--
+-- Name: request_y2026m03_04_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_starred_idx ON public.request_y2026m03_04 USING btree (starred);
+
+
+--
+-- Name: request_y2026m03_04_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_base_hash_idx ON public.request_y2026m03_04 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2026m03_04_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_cmp_hash_idx ON public.request_y2026m03_04 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2026m03_04_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_content_length_idx ON public.request_y2026m03_04 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2026m03_04_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_created_at_idx ON public.request_y2026m03_04 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2026m03_04_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_honeypot_ip_idx ON public.request_y2026m03_04 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2026m03_04_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_idx ON public.request_y2026m03_04 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2026m03_04_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_port_idx ON public.request_y2026m03_04 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2026m03_04_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_rule_uuid_idx ON public.request_y2026m03_04 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2026m03_04_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_session_id_idx ON public.request_y2026m03_04 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2026m03_04_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_source_ip_idx ON public.request_y2026m03_04 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2026m03_04_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_time_received_uri_idx ON public.request_y2026m03_04 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2026m03_04_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_triage_payload_idx ON public.request_y2026m03_04 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m03_04_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m03_04_uri_idx ON public.request_y2026m03_04 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m05_06_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_content_type_idx ON public.request_y2026m05_06 USING btree (content_type);
+
+
+--
+-- Name: request_y2026m05_06_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_has_payload_idx ON public.request_y2026m05_06 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2026m05_06_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_source_port_idx ON public.request_y2026m05_06 USING btree (source_port);
+
+
+--
+-- Name: request_y2026m05_06_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_starred_idx ON public.request_y2026m05_06 USING btree (starred);
+
+
+--
+-- Name: request_y2026m05_06_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_base_hash_idx ON public.request_y2026m05_06 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2026m05_06_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_cmp_hash_idx ON public.request_y2026m05_06 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2026m05_06_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_content_length_idx ON public.request_y2026m05_06 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2026m05_06_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_created_at_idx ON public.request_y2026m05_06 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2026m05_06_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_honeypot_ip_idx ON public.request_y2026m05_06 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2026m05_06_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_idx ON public.request_y2026m05_06 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2026m05_06_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_port_idx ON public.request_y2026m05_06 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2026m05_06_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_rule_uuid_idx ON public.request_y2026m05_06 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2026m05_06_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_session_id_idx ON public.request_y2026m05_06 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2026m05_06_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_source_ip_idx ON public.request_y2026m05_06 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2026m05_06_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_time_received_uri_idx ON public.request_y2026m05_06 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2026m05_06_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_triage_payload_idx ON public.request_y2026m05_06 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m05_06_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m05_06_uri_idx ON public.request_y2026m05_06 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m07_08_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_content_type_idx ON public.request_y2026m07_08 USING btree (content_type);
+
+
+--
+-- Name: request_y2026m07_08_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_has_payload_idx ON public.request_y2026m07_08 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2026m07_08_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_source_port_idx ON public.request_y2026m07_08 USING btree (source_port);
+
+
+--
+-- Name: request_y2026m07_08_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_starred_idx ON public.request_y2026m07_08 USING btree (starred);
+
+
+--
+-- Name: request_y2026m07_08_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_base_hash_idx ON public.request_y2026m07_08 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2026m07_08_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_cmp_hash_idx ON public.request_y2026m07_08 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2026m07_08_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_content_length_idx ON public.request_y2026m07_08 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2026m07_08_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_created_at_idx ON public.request_y2026m07_08 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2026m07_08_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_honeypot_ip_idx ON public.request_y2026m07_08 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2026m07_08_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_idx ON public.request_y2026m07_08 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2026m07_08_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_port_idx ON public.request_y2026m07_08 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2026m07_08_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_rule_uuid_idx ON public.request_y2026m07_08 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2026m07_08_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_session_id_idx ON public.request_y2026m07_08 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2026m07_08_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_source_ip_idx ON public.request_y2026m07_08 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2026m07_08_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_time_received_uri_idx ON public.request_y2026m07_08 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2026m07_08_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_triage_payload_idx ON public.request_y2026m07_08 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m07_08_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m07_08_uri_idx ON public.request_y2026m07_08 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m09_10_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_content_type_idx ON public.request_y2026m09_10 USING btree (content_type);
+
+
+--
+-- Name: request_y2026m09_10_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_has_payload_idx ON public.request_y2026m09_10 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2026m09_10_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_source_port_idx ON public.request_y2026m09_10 USING btree (source_port);
+
+
+--
+-- Name: request_y2026m09_10_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_starred_idx ON public.request_y2026m09_10 USING btree (starred);
+
+
+--
+-- Name: request_y2026m09_10_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_base_hash_idx ON public.request_y2026m09_10 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2026m09_10_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_cmp_hash_idx ON public.request_y2026m09_10 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2026m09_10_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_content_length_idx ON public.request_y2026m09_10 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2026m09_10_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_created_at_idx ON public.request_y2026m09_10 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2026m09_10_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_honeypot_ip_idx ON public.request_y2026m09_10 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2026m09_10_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_idx ON public.request_y2026m09_10 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2026m09_10_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_port_idx ON public.request_y2026m09_10 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2026m09_10_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_rule_uuid_idx ON public.request_y2026m09_10 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2026m09_10_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_session_id_idx ON public.request_y2026m09_10 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2026m09_10_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_source_ip_idx ON public.request_y2026m09_10 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2026m09_10_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_time_received_uri_idx ON public.request_y2026m09_10 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2026m09_10_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_triage_payload_idx ON public.request_y2026m09_10 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m09_10_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m09_10_uri_idx ON public.request_y2026m09_10 USING gin (uri public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m11_12_content_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_content_type_idx ON public.request_y2026m11_12 USING btree (content_type);
+
+
+--
+-- Name: request_y2026m11_12_has_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_has_payload_idx ON public.request_y2026m11_12 USING btree (triage_has_payload);
+
+
+--
+-- Name: request_y2026m11_12_source_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_source_port_idx ON public.request_y2026m11_12 USING btree (source_port);
+
+
+--
+-- Name: request_y2026m11_12_starred_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_starred_idx ON public.request_y2026m11_12 USING btree (starred);
+
+
+--
+-- Name: request_y2026m11_12_time_received_base_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_base_hash_idx ON public.request_y2026m11_12 USING btree (time_received DESC, base_hash);
+
+
+--
+-- Name: request_y2026m11_12_time_received_cmp_hash_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_cmp_hash_idx ON public.request_y2026m11_12 USING btree (time_received DESC, cmp_hash);
+
+
+--
+-- Name: request_y2026m11_12_time_received_content_length_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_content_length_idx ON public.request_y2026m11_12 USING btree (time_received DESC, content_length);
+
+
+--
+-- Name: request_y2026m11_12_time_received_created_at_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_created_at_idx ON public.request_y2026m11_12 USING btree (time_received DESC, created_at DESC);
+
+
+--
+-- Name: request_y2026m11_12_time_received_honeypot_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_honeypot_ip_idx ON public.request_y2026m11_12 USING btree (time_received DESC, honeypot_ip);
+
+
+--
+-- Name: request_y2026m11_12_time_received_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_idx ON public.request_y2026m11_12 USING btree (time_received DESC);
+
+
+--
+-- Name: request_y2026m11_12_time_received_port_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_port_idx ON public.request_y2026m11_12 USING btree (time_received DESC, port);
+
+
+--
+-- Name: request_y2026m11_12_time_received_rule_uuid_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_rule_uuid_idx ON public.request_y2026m11_12 USING btree (time_received DESC, rule_uuid);
+
+
+--
+-- Name: request_y2026m11_12_time_received_session_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_session_id_idx ON public.request_y2026m11_12 USING btree (time_received DESC, session_id DESC);
+
+
+--
+-- Name: request_y2026m11_12_time_received_source_ip_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_source_ip_idx ON public.request_y2026m11_12 USING btree (time_received DESC, source_ip DESC);
+
+
+--
+-- Name: request_y2026m11_12_time_received_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_time_received_uri_idx ON public.request_y2026m11_12 USING btree (time_received DESC, uri);
+
+
+--
+-- Name: request_y2026m11_12_triage_payload_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_triage_payload_idx ON public.request_y2026m11_12 USING gin (triage_payload public.gin_trgm_ops);
+
+
+--
+-- Name: request_y2026m11_12_uri_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX request_y2026m11_12_uri_idx ON public.request_y2026m11_12 USING gin (uri public.gin_trgm_ops);
+
+
 --
 -- Name: session_ip; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX session_ip ON public.session USING btree (started_at DESC, active, ip);
+
+
+--
+-- Name: request_historical_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_historical_content_type_idx;
+
+
+--
+-- Name: request_historical_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_historical_has_payload_idx;
+
+
+--
+-- Name: request_historical_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_historical_pkey;
+
+
+--
+-- Name: request_historical_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_historical_source_port_idx;
+
+
+--
+-- Name: request_historical_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_historical_starred_idx;
+
+
+--
+-- Name: request_historical_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_historical_time_received_base_hash_idx;
+
+
+--
+-- Name: request_historical_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_historical_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_historical_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_historical_time_received_content_length_idx;
+
+
+--
+-- Name: request_historical_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_historical_time_received_created_at_idx;
+
+
+--
+-- Name: request_historical_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_historical_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_historical_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_historical_time_received_idx;
+
+
+--
+-- Name: request_historical_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_historical_time_received_port_idx;
+
+
+--
+-- Name: request_historical_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_historical_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_historical_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_historical_time_received_session_id_idx;
+
+
+--
+-- Name: request_historical_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_historical_time_received_source_ip_idx;
+
+
+--
+-- Name: request_historical_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_historical_time_received_uri_idx;
+
+
+--
+-- Name: request_historical_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_historical_triage_payload_idx;
+
+
+--
+-- Name: request_historical_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_historical_uri_idx;
+
+
+--
+-- Name: request_y2023m11_12_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2023m11_12_content_type_idx;
+
+
+--
+-- Name: request_y2023m11_12_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2023m11_12_has_payload_idx;
+
+
+--
+-- Name: request_y2023m11_12_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2023m11_12_pkey;
+
+
+--
+-- Name: request_y2023m11_12_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2023m11_12_source_port_idx;
+
+
+--
+-- Name: request_y2023m11_12_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2023m11_12_starred_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2023m11_12_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2023m11_12_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2023m11_12_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2023m11_12_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2023m11_12_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2023m11_12_time_received_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2023m11_12_time_received_port_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2023m11_12_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2023m11_12_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2023m11_12_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2023m11_12_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2023m11_12_time_received_uri_idx;
+
+
+--
+-- Name: request_y2023m11_12_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2023m11_12_triage_payload_idx;
+
+
+--
+-- Name: request_y2023m11_12_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2023m11_12_uri_idx;
+
+
+--
+-- Name: request_y2024m01_02_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2024m01_02_content_type_idx;
+
+
+--
+-- Name: request_y2024m01_02_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2024m01_02_has_payload_idx;
+
+
+--
+-- Name: request_y2024m01_02_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2024m01_02_pkey;
+
+
+--
+-- Name: request_y2024m01_02_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2024m01_02_source_port_idx;
+
+
+--
+-- Name: request_y2024m01_02_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2024m01_02_starred_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2024m01_02_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2024m01_02_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2024m01_02_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2024m01_02_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2024m01_02_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2024m01_02_time_received_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2024m01_02_time_received_port_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2024m01_02_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2024m01_02_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2024m01_02_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2024m01_02_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2024m01_02_time_received_uri_idx;
+
+
+--
+-- Name: request_y2024m01_02_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2024m01_02_triage_payload_idx;
+
+
+--
+-- Name: request_y2024m01_02_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2024m01_02_uri_idx;
+
+
+--
+-- Name: request_y2024m03_04_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2024m03_04_content_type_idx;
+
+
+--
+-- Name: request_y2024m03_04_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2024m03_04_has_payload_idx;
+
+
+--
+-- Name: request_y2024m03_04_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2024m03_04_pkey;
+
+
+--
+-- Name: request_y2024m03_04_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2024m03_04_source_port_idx;
+
+
+--
+-- Name: request_y2024m03_04_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2024m03_04_starred_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2024m03_04_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2024m03_04_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2024m03_04_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2024m03_04_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2024m03_04_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2024m03_04_time_received_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2024m03_04_time_received_port_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2024m03_04_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2024m03_04_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2024m03_04_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2024m03_04_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2024m03_04_time_received_uri_idx;
+
+
+--
+-- Name: request_y2024m03_04_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2024m03_04_triage_payload_idx;
+
+
+--
+-- Name: request_y2024m03_04_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2024m03_04_uri_idx;
+
+
+--
+-- Name: request_y2024m05_06_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2024m05_06_content_type_idx;
+
+
+--
+-- Name: request_y2024m05_06_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2024m05_06_has_payload_idx;
+
+
+--
+-- Name: request_y2024m05_06_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2024m05_06_pkey;
+
+
+--
+-- Name: request_y2024m05_06_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2024m05_06_source_port_idx;
+
+
+--
+-- Name: request_y2024m05_06_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2024m05_06_starred_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2024m05_06_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2024m05_06_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2024m05_06_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2024m05_06_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2024m05_06_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2024m05_06_time_received_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2024m05_06_time_received_port_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2024m05_06_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2024m05_06_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2024m05_06_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2024m05_06_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2024m05_06_time_received_uri_idx;
+
+
+--
+-- Name: request_y2024m05_06_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2024m05_06_triage_payload_idx;
+
+
+--
+-- Name: request_y2024m05_06_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2024m05_06_uri_idx;
+
+
+--
+-- Name: request_y2024m07_08_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2024m07_08_content_type_idx;
+
+
+--
+-- Name: request_y2024m07_08_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2024m07_08_has_payload_idx;
+
+
+--
+-- Name: request_y2024m07_08_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2024m07_08_pkey;
+
+
+--
+-- Name: request_y2024m07_08_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2024m07_08_source_port_idx;
+
+
+--
+-- Name: request_y2024m07_08_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2024m07_08_starred_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2024m07_08_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2024m07_08_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2024m07_08_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2024m07_08_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2024m07_08_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2024m07_08_time_received_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2024m07_08_time_received_port_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2024m07_08_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2024m07_08_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2024m07_08_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2024m07_08_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2024m07_08_time_received_uri_idx;
+
+
+--
+-- Name: request_y2024m07_08_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2024m07_08_triage_payload_idx;
+
+
+--
+-- Name: request_y2024m07_08_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2024m07_08_uri_idx;
+
+
+--
+-- Name: request_y2024m09_10_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2024m09_10_content_type_idx;
+
+
+--
+-- Name: request_y2024m09_10_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2024m09_10_has_payload_idx;
+
+
+--
+-- Name: request_y2024m09_10_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2024m09_10_pkey;
+
+
+--
+-- Name: request_y2024m09_10_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2024m09_10_source_port_idx;
+
+
+--
+-- Name: request_y2024m09_10_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2024m09_10_starred_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2024m09_10_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2024m09_10_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2024m09_10_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2024m09_10_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2024m09_10_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2024m09_10_time_received_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2024m09_10_time_received_port_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2024m09_10_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2024m09_10_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2024m09_10_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2024m09_10_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2024m09_10_time_received_uri_idx;
+
+
+--
+-- Name: request_y2024m09_10_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2024m09_10_triage_payload_idx;
+
+
+--
+-- Name: request_y2024m09_10_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2024m09_10_uri_idx;
+
+
+--
+-- Name: request_y2024m11_12_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2024m11_12_content_type_idx;
+
+
+--
+-- Name: request_y2024m11_12_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2024m11_12_has_payload_idx;
+
+
+--
+-- Name: request_y2024m11_12_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2024m11_12_pkey;
+
+
+--
+-- Name: request_y2024m11_12_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2024m11_12_source_port_idx;
+
+
+--
+-- Name: request_y2024m11_12_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2024m11_12_starred_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2024m11_12_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2024m11_12_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2024m11_12_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2024m11_12_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2024m11_12_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2024m11_12_time_received_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2024m11_12_time_received_port_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2024m11_12_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2024m11_12_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2024m11_12_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2024m11_12_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2024m11_12_time_received_uri_idx;
+
+
+--
+-- Name: request_y2024m11_12_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2024m11_12_triage_payload_idx;
+
+
+--
+-- Name: request_y2024m11_12_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2024m11_12_uri_idx;
+
+
+--
+-- Name: request_y2025m01_02_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2025m01_02_content_type_idx;
+
+
+--
+-- Name: request_y2025m01_02_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2025m01_02_has_payload_idx;
+
+
+--
+-- Name: request_y2025m01_02_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2025m01_02_pkey;
+
+
+--
+-- Name: request_y2025m01_02_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2025m01_02_source_port_idx;
+
+
+--
+-- Name: request_y2025m01_02_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2025m01_02_starred_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2025m01_02_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2025m01_02_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2025m01_02_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2025m01_02_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2025m01_02_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2025m01_02_time_received_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2025m01_02_time_received_port_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2025m01_02_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2025m01_02_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2025m01_02_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2025m01_02_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2025m01_02_time_received_uri_idx;
+
+
+--
+-- Name: request_y2025m01_02_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2025m01_02_triage_payload_idx;
+
+
+--
+-- Name: request_y2025m01_02_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2025m01_02_uri_idx;
+
+
+--
+-- Name: request_y2025m03_04_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2025m03_04_content_type_idx;
+
+
+--
+-- Name: request_y2025m03_04_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2025m03_04_has_payload_idx;
+
+
+--
+-- Name: request_y2025m03_04_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2025m03_04_pkey;
+
+
+--
+-- Name: request_y2025m03_04_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2025m03_04_source_port_idx;
+
+
+--
+-- Name: request_y2025m03_04_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2025m03_04_starred_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2025m03_04_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2025m03_04_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2025m03_04_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2025m03_04_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2025m03_04_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2025m03_04_time_received_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2025m03_04_time_received_port_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2025m03_04_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2025m03_04_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2025m03_04_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2025m03_04_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2025m03_04_time_received_uri_idx;
+
+
+--
+-- Name: request_y2025m03_04_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2025m03_04_triage_payload_idx;
+
+
+--
+-- Name: request_y2025m03_04_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2025m03_04_uri_idx;
+
+
+--
+-- Name: request_y2025m05_06_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2025m05_06_content_type_idx;
+
+
+--
+-- Name: request_y2025m05_06_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2025m05_06_has_payload_idx;
+
+
+--
+-- Name: request_y2025m05_06_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2025m05_06_pkey;
+
+
+--
+-- Name: request_y2025m05_06_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2025m05_06_source_port_idx;
+
+
+--
+-- Name: request_y2025m05_06_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2025m05_06_starred_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2025m05_06_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2025m05_06_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2025m05_06_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2025m05_06_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2025m05_06_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2025m05_06_time_received_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2025m05_06_time_received_port_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2025m05_06_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2025m05_06_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2025m05_06_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2025m05_06_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2025m05_06_time_received_uri_idx;
+
+
+--
+-- Name: request_y2025m05_06_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2025m05_06_triage_payload_idx;
+
+
+--
+-- Name: request_y2025m05_06_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2025m05_06_uri_idx;
+
+
+--
+-- Name: request_y2025m07_08_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2025m07_08_content_type_idx;
+
+
+--
+-- Name: request_y2025m07_08_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2025m07_08_has_payload_idx;
+
+
+--
+-- Name: request_y2025m07_08_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2025m07_08_pkey;
+
+
+--
+-- Name: request_y2025m07_08_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2025m07_08_source_port_idx;
+
+
+--
+-- Name: request_y2025m07_08_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2025m07_08_starred_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2025m07_08_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2025m07_08_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2025m07_08_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2025m07_08_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2025m07_08_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2025m07_08_time_received_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2025m07_08_time_received_port_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2025m07_08_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2025m07_08_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2025m07_08_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2025m07_08_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2025m07_08_time_received_uri_idx;
+
+
+--
+-- Name: request_y2025m07_08_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2025m07_08_triage_payload_idx;
+
+
+--
+-- Name: request_y2025m07_08_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2025m07_08_uri_idx;
+
+
+--
+-- Name: request_y2025m09_10_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2025m09_10_content_type_idx;
+
+
+--
+-- Name: request_y2025m09_10_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2025m09_10_has_payload_idx;
+
+
+--
+-- Name: request_y2025m09_10_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2025m09_10_pkey;
+
+
+--
+-- Name: request_y2025m09_10_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2025m09_10_source_port_idx;
+
+
+--
+-- Name: request_y2025m09_10_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2025m09_10_starred_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2025m09_10_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2025m09_10_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2025m09_10_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2025m09_10_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2025m09_10_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2025m09_10_time_received_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2025m09_10_time_received_port_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2025m09_10_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2025m09_10_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2025m09_10_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2025m09_10_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2025m09_10_time_received_uri_idx;
+
+
+--
+-- Name: request_y2025m09_10_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2025m09_10_triage_payload_idx;
+
+
+--
+-- Name: request_y2025m09_10_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2025m09_10_uri_idx;
+
+
+--
+-- Name: request_y2025m11_12_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2025m11_12_content_type_idx;
+
+
+--
+-- Name: request_y2025m11_12_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2025m11_12_has_payload_idx;
+
+
+--
+-- Name: request_y2025m11_12_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2025m11_12_pkey;
+
+
+--
+-- Name: request_y2025m11_12_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2025m11_12_source_port_idx;
+
+
+--
+-- Name: request_y2025m11_12_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2025m11_12_starred_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2025m11_12_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2025m11_12_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2025m11_12_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2025m11_12_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2025m11_12_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2025m11_12_time_received_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2025m11_12_time_received_port_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2025m11_12_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2025m11_12_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2025m11_12_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2025m11_12_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2025m11_12_time_received_uri_idx;
+
+
+--
+-- Name: request_y2025m11_12_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2025m11_12_triage_payload_idx;
+
+
+--
+-- Name: request_y2025m11_12_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2025m11_12_uri_idx;
+
+
+--
+-- Name: request_y2026m01_02_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2026m01_02_content_type_idx;
+
+
+--
+-- Name: request_y2026m01_02_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2026m01_02_has_payload_idx;
+
+
+--
+-- Name: request_y2026m01_02_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2026m01_02_pkey;
+
+
+--
+-- Name: request_y2026m01_02_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2026m01_02_source_port_idx;
+
+
+--
+-- Name: request_y2026m01_02_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2026m01_02_starred_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2026m01_02_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2026m01_02_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2026m01_02_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2026m01_02_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2026m01_02_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2026m01_02_time_received_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2026m01_02_time_received_port_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2026m01_02_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2026m01_02_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2026m01_02_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2026m01_02_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2026m01_02_time_received_uri_idx;
+
+
+--
+-- Name: request_y2026m01_02_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2026m01_02_triage_payload_idx;
+
+
+--
+-- Name: request_y2026m01_02_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2026m01_02_uri_idx;
+
+
+--
+-- Name: request_y2026m03_04_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2026m03_04_content_type_idx;
+
+
+--
+-- Name: request_y2026m03_04_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2026m03_04_has_payload_idx;
+
+
+--
+-- Name: request_y2026m03_04_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2026m03_04_pkey;
+
+
+--
+-- Name: request_y2026m03_04_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2026m03_04_source_port_idx;
+
+
+--
+-- Name: request_y2026m03_04_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2026m03_04_starred_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2026m03_04_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2026m03_04_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2026m03_04_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2026m03_04_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2026m03_04_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2026m03_04_time_received_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2026m03_04_time_received_port_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2026m03_04_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2026m03_04_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2026m03_04_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2026m03_04_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2026m03_04_time_received_uri_idx;
+
+
+--
+-- Name: request_y2026m03_04_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2026m03_04_triage_payload_idx;
+
+
+--
+-- Name: request_y2026m03_04_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2026m03_04_uri_idx;
+
+
+--
+-- Name: request_y2026m05_06_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2026m05_06_content_type_idx;
+
+
+--
+-- Name: request_y2026m05_06_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2026m05_06_has_payload_idx;
+
+
+--
+-- Name: request_y2026m05_06_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2026m05_06_pkey;
+
+
+--
+-- Name: request_y2026m05_06_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2026m05_06_source_port_idx;
+
+
+--
+-- Name: request_y2026m05_06_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2026m05_06_starred_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2026m05_06_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2026m05_06_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2026m05_06_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2026m05_06_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2026m05_06_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2026m05_06_time_received_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2026m05_06_time_received_port_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2026m05_06_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2026m05_06_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2026m05_06_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2026m05_06_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2026m05_06_time_received_uri_idx;
+
+
+--
+-- Name: request_y2026m05_06_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2026m05_06_triage_payload_idx;
+
+
+--
+-- Name: request_y2026m05_06_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2026m05_06_uri_idx;
+
+
+--
+-- Name: request_y2026m07_08_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2026m07_08_content_type_idx;
+
+
+--
+-- Name: request_y2026m07_08_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2026m07_08_has_payload_idx;
+
+
+--
+-- Name: request_y2026m07_08_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2026m07_08_pkey;
+
+
+--
+-- Name: request_y2026m07_08_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2026m07_08_source_port_idx;
+
+
+--
+-- Name: request_y2026m07_08_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2026m07_08_starred_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2026m07_08_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2026m07_08_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2026m07_08_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2026m07_08_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2026m07_08_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2026m07_08_time_received_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2026m07_08_time_received_port_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2026m07_08_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2026m07_08_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2026m07_08_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2026m07_08_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2026m07_08_time_received_uri_idx;
+
+
+--
+-- Name: request_y2026m07_08_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2026m07_08_triage_payload_idx;
+
+
+--
+-- Name: request_y2026m07_08_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2026m07_08_uri_idx;
+
+
+--
+-- Name: request_y2026m09_10_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2026m09_10_content_type_idx;
+
+
+--
+-- Name: request_y2026m09_10_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2026m09_10_has_payload_idx;
+
+
+--
+-- Name: request_y2026m09_10_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2026m09_10_pkey;
+
+
+--
+-- Name: request_y2026m09_10_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2026m09_10_source_port_idx;
+
+
+--
+-- Name: request_y2026m09_10_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2026m09_10_starred_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2026m09_10_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2026m09_10_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2026m09_10_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2026m09_10_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2026m09_10_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2026m09_10_time_received_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2026m09_10_time_received_port_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2026m09_10_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2026m09_10_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2026m09_10_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2026m09_10_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2026m09_10_time_received_uri_idx;
+
+
+--
+-- Name: request_y2026m09_10_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2026m09_10_triage_payload_idx;
+
+
+--
+-- Name: request_y2026m09_10_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2026m09_10_uri_idx;
+
+
+--
+-- Name: request_y2026m11_12_content_type_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_content_type ATTACH PARTITION public.request_y2026m11_12_content_type_idx;
+
+
+--
+-- Name: request_y2026m11_12_has_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_has_payload_idx ATTACH PARTITION public.request_y2026m11_12_has_payload_idx;
+
+
+--
+-- Name: request_y2026m11_12_pkey; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_pkey ATTACH PARTITION public.request_y2026m11_12_pkey;
+
+
+--
+-- Name: request_y2026m11_12_source_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_source_port ATTACH PARTITION public.request_y2026m11_12_source_port_idx;
+
+
+--
+-- Name: request_y2026m11_12_starred_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_starred_idx ATTACH PARTITION public.request_y2026m11_12_starred_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_base_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_base_hash_idx ATTACH PARTITION public.request_y2026m11_12_time_received_base_hash_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_cmp_hash_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_hash_idx ATTACH PARTITION public.request_y2026m11_12_time_received_cmp_hash_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_content_length_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_content_length_idx ATTACH PARTITION public.request_y2026m11_12_time_received_content_length_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_created_at_idx ATTACH PARTITION public.request_y2026m11_12_time_received_created_at_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_honeypot_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_honeypot_ip_idx ATTACH PARTITION public.request_y2026m11_12_time_received_honeypot_ip_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_idx ATTACH PARTITION public.request_y2026m11_12_time_received_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_port_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_port_idx ATTACH PARTITION public.request_y2026m11_12_time_received_port_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_rule_uuid_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_cmp_ruleuuid_idx ATTACH PARTITION public.request_y2026m11_12_time_received_rule_uuid_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_session_id_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_session_idx ATTACH PARTITION public.request_y2026m11_12_time_received_session_id_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_source_ip_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_source_ip_idx ATTACH PARTITION public.request_y2026m11_12_time_received_source_ip_idx;
+
+
+--
+-- Name: request_y2026m11_12_time_received_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.requests_uri_idx ATTACH PARTITION public.request_y2026m11_12_time_received_uri_idx;
+
+
+--
+-- Name: request_y2026m11_12_triage_payload_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.idx_request_triage_payload_trgm ATTACH PARTITION public.request_y2026m11_12_triage_payload_idx;
+
+
+--
+-- Name: request_y2026m11_12_uri_idx; Type: INDEX ATTACH; Schema: public; Owner: postgres
+--
+
+ALTER INDEX public.request_uri_trgm_idx ATTACH PARTITION public.request_y2026m11_12_uri_idx;
 
 
 --
@@ -2090,6 +8309,14 @@ ALTER TABLE ONLY public.yara
 
 ALTER TABLE ONLY public.request_description
     ADD CONSTRAINT fk_example_request_id FOREIGN KEY (example_request_id) REFERENCES public.request_refs(id);
+
+
+--
+-- Name: rule_per_group fk_group_id_per_group; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.rule_per_group
+    ADD CONSTRAINT fk_group_id_per_group FOREIGN KEY (group_id) REFERENCES public.rule_group(id) ON DELETE CASCADE;
 
 
 --
@@ -2165,6 +8392,14 @@ ALTER TABLE ONLY public.request_metadata
 
 
 --
+-- Name: rule_per_group fk_rule_id_per_rule; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.rule_per_group
+    ADD CONSTRAINT fk_rule_id_per_rule FOREIGN KEY (rule_id) REFERENCES public.content_rule(id) ON DELETE CASCADE;
+
+
+--
 -- Name: rule_tag_per_request fk_rule_per_request_request_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2213,11 +8448,365 @@ ALTER TABLE ONLY public.tag_per_request
 
 
 --
+-- Name: TABLE app; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.app TO lo;
+
+
+--
+-- Name: SEQUENCE app_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.app_id_seq TO lo;
+
+
+--
+-- Name: TABLE content; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.content TO lo;
+
+
+--
+-- Name: SEQUENCE content_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.content_id_seq TO lo;
+
+
+--
+-- Name: TABLE content_location; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.content_location TO lo;
+
+
+--
+-- Name: SEQUENCE content_location_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.content_location_id_seq TO lo;
+
+
+--
+-- Name: TABLE content_rule; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.content_rule TO lo;
+
+
+--
+-- Name: SEQUENCE content_rule_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.content_rule_id_seq TO lo;
+
+
+--
+-- Name: TABLE downloads; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.downloads TO lo;
+
+
+--
+-- Name: SEQUENCE downloads_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.downloads_id_seq TO lo;
+
+
+--
+-- Name: TABLE honeypot; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.honeypot TO lo;
+
+
+--
+-- Name: SEQUENCE honeypot_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.honeypot_id_seq TO lo;
+
+
+--
+-- Name: TABLE ip_event; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.ip_event TO lo;
+
+
+--
+-- Name: SEQUENCE ip_event_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.ip_event_id_seq TO lo;
+
+
+--
+-- Name: TABLE llm_code_execution; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.llm_code_execution TO lo;
+
+
+--
+-- Name: SEQUENCE llm_code_execution_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.llm_code_execution_id_seq TO lo;
+
+
+--
+-- Name: TABLE p0f_result; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.p0f_result TO lo;
+
+
+--
+-- Name: SEQUENCE p0f_result_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.p0f_result_id_seq TO lo;
+
+
+--
+-- Name: TABLE request; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.request TO lo;
+
+
+--
+-- Name: TABLE request_description; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.request_description TO lo;
+
+
+--
+-- Name: SEQUENCE request_description_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.request_description_id_seq TO lo;
+
+
+--
+-- Name: SEQUENCE request_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.request_id_seq TO lo;
+
+
+--
+-- Name: TABLE request_metadata; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.request_metadata TO lo;
+
+
+--
+-- Name: SEQUENCE request_metadata_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.request_metadata_id_seq TO lo;
+
+
+--
+-- Name: TABLE request_refs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.request_refs TO lo;
+
+
+--
+-- Name: TABLE rule_group; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.rule_group TO lo;
+
+
+--
+-- Name: SEQUENCE rule_group_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.rule_group_id_seq TO lo;
+
+
+--
+-- Name: TABLE rule_per_group; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.rule_per_group TO lo;
+
+
+--
+-- Name: SEQUENCE rule_per_group_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.rule_per_group_id_seq TO lo;
+
+
+--
+-- Name: TABLE rule_tag_per_request; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.rule_tag_per_request TO lo;
+
+
+--
+-- Name: SEQUENCE rule_tag_per_request_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.rule_tag_per_request_id_seq TO lo;
+
+
+--
+-- Name: TABLE session; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.session TO lo;
+
+
+--
+-- Name: TABLE session_execution_context; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.session_execution_context TO lo;
+
+
+--
+-- Name: SEQUENCE session_execution_context_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.session_execution_context_id_seq TO lo;
+
+
+--
+-- Name: SEQUENCE session_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.session_id_seq TO lo;
+
+
+--
+-- Name: TABLE stored_query; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.stored_query TO lo;
+
+
+--
+-- Name: SEQUENCE stored_query_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.stored_query_id_seq TO lo;
+
+
+--
+-- Name: TABLE tag; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.tag TO lo;
+
+
+--
+-- Name: SEQUENCE tag_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.tag_id_seq TO lo;
+
+
+--
+-- Name: TABLE tag_per_query; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.tag_per_query TO lo;
+
+
+--
+-- Name: SEQUENCE tag_per_query_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.tag_per_query_id_seq TO lo;
+
+
+--
+-- Name: TABLE tag_per_request; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.tag_per_request TO lo;
+
+
+--
+-- Name: SEQUENCE tag_per_request_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.tag_per_request_id_seq TO lo;
+
+
+--
+-- Name: TABLE tag_per_rule; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.tag_per_rule TO lo;
+
+
+--
+-- Name: SEQUENCE tag_per_rule_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.tag_per_rule_id_seq TO lo;
+
+
+--
+-- Name: TABLE vt_ipresult; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.vt_ipresult TO lo;
+
+
+--
+-- Name: SEQUENCE vt_ipresult_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.vt_ipresult_id_seq TO lo;
+
+
+--
+-- Name: TABLE whois; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.whois TO lo;
+
+
+--
+-- Name: SEQUENCE whois_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.whois_id_seq TO lo;
+
+
+--
+-- Name: TABLE yara; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.yara TO lo;
+
+
+--
+-- Name: SEQUENCE yara_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.yara_id_seq TO lo;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict b26dYyrIMRZ1SdWhQqet7cFWR7vpxt3JTY0hcpVouVT9V5gmBgkA8G2821V8zri
+\unrestrict 8cIB8ZWMJEw0sla6NmppxFkp4GDBuPBrZzhcpfsdAtShZ1e4l4JBn126rkPaG2t
 
-
--- Default partition for request
-CREATE TABLE public.request_default PARTITION OF public.request DEFAULT;
