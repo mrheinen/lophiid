@@ -71,8 +71,17 @@ func main() {
 	flag.Parse()
 
 	var cfg backend.Config
-	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
-		fmt.Printf("Could not parse config: %s\n", err)
+
+	_, err := os.Stat(*configFile)
+  if err != nil {
+    fmt.Printf("Could not find config file: %s\n", *configFile)
+    return
+  }
+
+	f, d := SplitFilepath(*configFile)
+
+	if err := fig.Load(&cfg, fig.File(f), fig.Dir(d)); err != nil {
+		fmt.Printf("Could not parse config: %s (file: \"%s\")\n", err, *configFile)
 		return
 	}
 

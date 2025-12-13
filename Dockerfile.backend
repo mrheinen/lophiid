@@ -1,0 +1,88 @@
+# Multi-stage build for Lophiid Backend
+FROM golang:1.24.7-bookworm AS builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    protobuf-compiler \
+    protoc-gen-go \
+    libmagic-dev \
+    libssl-dev \
+    strace \
+    pkg-config \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install compatible gRPC plugin version
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+
+# Install Rust for Yara-X
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN cargo install cargo-c
+
+# Install Yara-X
+WORKDIR /tmp
+RUN git clone https://github.com/VirusTotal/yara-x.git \
+    && cd yara-x \
+    && cargo cinstall -p yara-x-capi --release
+
+# Set up workspace
+WORKDIR /workspace
+COPY . .
+
+# Compile protobuf files
+RUN ./compile_proto.sh
+
+# Build backend
+RUN go build ./cmd/backend/backend.go
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Yara-X libraries from builder
+COPY --from=builder /usr/local/lib/x86_64-linux-gnu/libyara_x*.so /usr/local/lib/x86_64-linux-gnu/
+COPY --from=builder /usr/local/include/yara_x.h /usr/local/include/
+
+# Update library cache
+RUN ldconfig
+
+# Create directories with proper permissions for user namespace mapping
+RUN mkdir -p /app/config /app/certs/backend /app/certs/ca /app/malware /app/logs && \
+    chmod 755 /app && \
+    chmod 777 /app/logs /app/malware && \
+    chmod 644 /app/config
+
+# Copy binary (correct Bazel output path)
+COPY --from=builder /workspace/backend /app/backend
+RUN chmod +x /app/backend
+
+# Note: USER will be set via docker-compose user: directive for namespace mapping
+WORKDIR /app
+
+# Expose gRPC port
+EXPOSE 41110
+
+#Expose Yara Metrics
+EXPOSE 8997
+
+# Expose Prometheus Metrics
+EXPOSE 8998
+
+# Expose Triage Metrics
+EXPOSE 8999
+
+# Health check - check if backend process is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD pidof backend >/dev/null || exit 1
+
+#CMD ["./backend", "-c", "/app/config/backend-config.yaml"]
+CMD ["/bin/sh"]
