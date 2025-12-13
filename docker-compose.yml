@@ -30,8 +30,7 @@ services:
       - ./docker/data/malware:/app/malware
       - ./docker/logs/backend:/app/logs
       - ./docker/configs/backend:/app/config:ro
-    #command: ["./backend", "-c", "/app/config/backend-config.yaml"]
-    command: ["/bin/sh", "-c", "echo OOOO; sleep 80000"]
+    command: ["/bin/sh", "-c", "cd /app/config && /app/backend -c backend-config.yaml"]
     ports:
       - "41110:41110"
     restart: unless-stopped
