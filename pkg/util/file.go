@@ -20,11 +20,5 @@ package util
 import "path/filepath"
 
 func SplitFilepath(path string) (string, string) {
-	// filepath.Dir returns all but the last element (the directory)
-	dir := filepath.Dir(path)
-
-	// filepath.Base returns the last element (the filename)
-	filename := filepath.Base(path)
-
-	return dir, filename
+	return filepath.Dir(path), filepath.Base(path)
 }
