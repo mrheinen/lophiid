@@ -1,0 +1,74 @@
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: lophiid-agent
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./docker/certs/agent:/app/certs:ro
+      - ./docker/logs/agent:/app/logs
+      - ./docker/configs/agent:/app/config
+    ports:
+      - "80:80"
+      - "81:81"
+      - "88:88"
+      - "443:443"
+      - "981:981"
+      - "1311:1311"
+      - "2083:2083"
+      - "4000:4000"
+      - "4001:4001"
+      - "4002:4002"
+      - "4433:4433"
+      - "4443:4443"
+      - "5000:5000"
+      - "5172:5172"
+      - "5984:5984"
+      - "7001:7001"
+      - "7002:7002"
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+      - "8003:8003"
+      - "8004:8004"
+      - "8005:8005"
+      - "8006:8006"
+      - "8007:8007"
+      - "8008:8008"
+      - "8080:8080"
+      - "8088:8088"
+      - "8111:8111"
+      - "8243:8243"
+      - "8333:8333"
+      - "8443:8443"
+      - "8448:8448"
+      - "8500:8500"
+      - "8843:8843"
+      - "8920:8920"
+      - "9080:9080"
+      - "9200:9200"
+      - "9443:9443"
+      - "11434:11434"
+      - "18091:18091"
+      - "18092:18092"
+    restart: unless-stopped
+    # Enable ICMP capabilities for ping functionality
+    cap_add:
+      - NET_RAW
+    sysctls:
+      - net.ipv4.ping_group_range=0 2147483647
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+
+# Note: Using bind mounts for logs instead of named volumes for proper permissions
+
+# Agent network (standalone deployment)
+networks:
+  default:
+    name: lophiid-agent-network
+    driver: bridge

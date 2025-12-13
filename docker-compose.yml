@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: changeme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/database.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lophiid"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./docker/certs/backend:/app/certs/backend:ro
+      - ./docker/certs/ca:/app/certs/ca:ro
+      - ./docker/data/malware:/app/malware
+      - ./docker/logs/backend:/app/logs
+      - ./docker/configs/backend:/app/config:ro
+    #command: ["./backend", "-c", "/app/config/backend-config.yaml"]
+    command: ["/bin/sh", "-c", "echo OOOO; sleep 80000"]
+    ports:
+      - "41110:41110"
+    restart: unless-stopped
+
+#  api:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.api
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    env_file:
+#      - .env.backend
+#    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+#    volumes:
+#      - ./data/logs/api:/app/logs
+#    ports:
+#      - "9999:9999"
+#    restart: unless-stopped
+#
+#  ui:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.ui
+#    env_file:
+#      - .env.backend
+#    depends_on:
+#      - api
+#    ports:
+#      - "9888:9888"
+#    restart: unless-stopped
+#
+#  # Optional: Triage service for AI analysis
+#  triage:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile.triage
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#    env_file:
+#      - .env.backend
+#    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+#    volumes:
+#      - ./data/logs/triage:/app/logs
+#    restart: unless-stopped
+#    profiles:
+#      - full
+#
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: lophiid-backend-network
+    driver: bridge
+    # Backend infrastructure network
+    # Remote agents connect via published port 8080
