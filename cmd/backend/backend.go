@@ -73,14 +73,14 @@ func main() {
 	var cfg backend.Config
 
 	_, err := os.Stat(*configFile)
-  if err != nil {
-    fmt.Printf("Could not find config file: %s\n", *configFile)
-    return
-  }
+	if err != nil {
+		fmt.Printf("Could not find config file: %s\n", *configFile)
+		return
+	}
 
-	f, d := SplitFilepath(*configFile)
+	f, d := util.SplitFilepath(*configFile)
 
-	if err := fig.Load(&cfg, fig.File(f), fig.Dir(d)); err != nil {
+	if err := fig.Load(&cfg, fig.File(f), fig.Dirs(d)); err != nil {
 		fmt.Printf("Could not parse config: %s (file: \"%s\")\n", err, *configFile)
 		return
 	}

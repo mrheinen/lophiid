@@ -17,7 +17,7 @@
 
 package util
 
-import "filepath"
+import "path/filepath"
 
 func SplitFilepath(path string) (string, string) {
 	// filepath.Dir returns all but the last element (the directory)
