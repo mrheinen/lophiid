@@ -1,8 +1,6 @@
 insert into rule_group (id, name) values (0, 'default');
 insert into content (id, status_code, description, server, name) values (1, '200',  'Default content', 'Apache', 'Default content (do not remove)');
 
-CREATE USER lo WITH PASSWORD 'changeme';
-
 GRANT ALL PRIVILEGES ON content TO lo;
 GRANT ALL PRIVILEGES ON content_id_seq TO lo;
 GRANT ALL PRIVILEGES ON session_execution_context TO lo;

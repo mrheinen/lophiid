@@ -1,0 +1,1 @@
+CREATE USER lo WITH PASSWORD 'changeme';
