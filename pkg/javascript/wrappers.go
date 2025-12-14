@@ -1,3 +1,19 @@
+// Lophiid distributed honeypot
+// Copyright (C) 2025 Niels Heinen
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation; either version 2 of the License, or (at your
+// option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+// or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+// for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package javascript
 
 import (
@@ -11,17 +27,35 @@ import (
 )
 
 type CacheWrapper struct {
-	keyPrefix string
-	strCache  *util.StringMapCache[string]
+	sourceIP   string
+	honeypotIP string
+	strCache   *util.StringMapCache[string]
 }
 
+// Set will set the cache value with the default key prefix. This limits the
+// cache to the IP/honyport combination
 func (c *CacheWrapper) Set(key string, value string) {
-	fkey := fmt.Sprintf("%s-%s", c.keyPrefix, key)
+	fkey := fmt.Sprintf("%s-%s-%s", c.honeypotIP, c.sourceIP, key)
 	c.strCache.Store(fkey, value)
 }
 
 func (c *CacheWrapper) Get(key string) string {
-	fkey := fmt.Sprintf("%s-%s", c.keyPrefix, key)
+	fkey := fmt.Sprintf("%s-%s-%s", c.honeypotIP, c.sourceIP, key)
+	val, err := c.strCache.Get(fkey)
+	if err != nil {
+		return ""
+	}
+	return *val
+}
+
+// SetOnSourceIP will set the cache value on the source IP.
+func (c *CacheWrapper) SetOnSourceIP(key string, value string) {
+	fkey := fmt.Sprintf("%s-%s", c.sourceIP, key)
+	c.strCache.Store(fkey, value)
+}
+
+func (c *CacheWrapper) GetFromSourceIP(key string) string {
+	fkey := fmt.Sprintf("%s-%s", c.sourceIP, key)
 	val, err := c.strCache.Get(fkey)
 	if err != nil {
 		return ""
@@ -47,9 +81,9 @@ func (r *ResponseWrapper) GetHeader(key string) string {
 	for _, hdr := range r.response.Header {
 		if hdr.Key == key {
 			return hdr.Value
-    }
+		}
 	}
-	return "";
+	return ""
 }
 
 func (r *ResponseWrapper) SetBody(body string) {

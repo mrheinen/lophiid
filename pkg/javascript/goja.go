@@ -98,8 +98,9 @@ func (j *GojaJavascriptRunner) RunScript(script string, req models.Request, res 
 		Time:   Time{},
 		Random: Random{},
 		Cache: CacheWrapper{
-			keyPrefix: fmt.Sprintf("%s%s", req.SourceIP, req.HoneypotIP),
-			strCache:  j.strCache,
+			sourceIP:   req.SourceIP,
+			honeypotIP: req.HoneypotIP,
+			strCache:   j.strCache,
 		},
 		Database: DatabaseClientWrapper{
 			dbClient: j.dbClient,
