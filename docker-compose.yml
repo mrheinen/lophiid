@@ -90,4 +90,3 @@ networks:
     name: lophiid-backend-network
     driver: bridge
     # Backend infrastructure network
-    # Remote agents connect via published port 8080
