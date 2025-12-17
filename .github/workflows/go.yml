@@ -55,7 +55,6 @@ jobs:
       - name: Build yara-x
         run: |
           cd yara-x
-          cargo install cargo-c
           export PATH="$HOME/.cargo/bin:$PATH"
           cargo cinstall -p yara-x-capi --release --prefix=/tmp/
           sudo mkdir -p /usr/local/lib/x86_64-linux-gnu/

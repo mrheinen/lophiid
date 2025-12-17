@@ -1,1 +1,43 @@
 ui/node_modules/
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# Go build cache
+.cache/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation and images (not needed in containers)
+*.md
+images/
+screenshots/
+
+# Development configs (use mounted configs instead)
+config/*.yaml
+config/*.yml
+
+# Test files
+*_test.go
+**/*_test.go
+
+
+# Node modules (UI is built separately)
+ui/node_modules/
