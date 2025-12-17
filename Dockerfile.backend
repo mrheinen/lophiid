@@ -83,5 +83,4 @@ EXPOSE 8999
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD pidof backend >/dev/null || exit 1
 
-#CMD ["./backend", "-c", "/app/config/backend-config.yaml"]
-CMD ["/bin/sh"]
+CMD ["./backend", "-c", "/app/config/backend-config.yaml"]
