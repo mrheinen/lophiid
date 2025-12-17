@@ -37,21 +37,21 @@ services:
       - "41110:41110"
     restart: unless-stopped
 
-#  api:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile.api
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#    env_file:
-#      - .env.backend
-#    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
-#    volumes:
-#      - ./data/logs/api:/app/logs
-#    ports:
-#      - "9999:9999"
-#    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./docker/logs/api:/app/logs
+      - ./docker/configs/api:/app/config:ro
+    command: ["/app/api_server", "-c", "api-config.yaml"]
+    ports:
+      - "62212:62212"
+    restart: unless-stopped
 
 #  ui:
 #    build:
