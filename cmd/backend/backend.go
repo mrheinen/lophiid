@@ -78,7 +78,7 @@ func main() {
 		return
 	}
 
-	f, d := util.SplitFilepath(*configFile)
+	d, f := util.SplitFilepath(*configFile)
 
 	if err := fig.Load(&cfg, fig.File(f), fig.Dirs(d)); err != nil {
 		fmt.Printf("Could not parse config: %s (file: \"%s\")\n", err, *configFile)
