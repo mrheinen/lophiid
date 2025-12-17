@@ -72,9 +72,12 @@ func main() {
 
 	var cfg backend.Config
 
-	_, err := os.Stat(*configFile)
-	if err != nil {
-		fmt.Printf("Could not find config file: %s\n", *configFile)
+	if _, err := os.Stat(*configFile); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("Could not find config file: %s\n", *configFile)
+		} else {
+			fmt.Printf("Error accessing config file %s: %v\n", *configFile, err)
+		}
 		return
 	}
 
