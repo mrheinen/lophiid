@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /workspace
 
 # Build p0f
-RUN git clone https://github.com/mrheinen/p0f.git
-RUN cd p0f && make
+RUN git clone https://github.com/mrheinen/p0f.git && \
+    cd p0f && make
 
 
 # Runtime stage
