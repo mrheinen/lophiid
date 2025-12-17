@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     libmagic1 \
     strace \
     libpcap0.8-dev \
+    libcap2-bin \
     iputils-ping \
     curl \
     && rm -rf /var/lib/apt/lists/*
