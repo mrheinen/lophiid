@@ -6,9 +6,9 @@ services:
     container_name: lophiid-agent
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     volumes:
-      - ./docker/certs/agent:/app/certs:ro
-      - ./docker/logs/agent:/app/logs
-      - ./docker/configs/agent:/app/config
+      - ./certs:/app/certs:ro
+      - ./logs:/app/logs
+      - ./config:/app/config
     ports:
       - "80:80"
       - "81:81"

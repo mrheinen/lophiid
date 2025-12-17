@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import argparse
 import os
+import shutil
+import secrets
+import string
 import subprocess
 import sys
 from pathlib import Path
@@ -33,6 +36,11 @@ def confirm(message):
     """Ask user for confirmation."""
     response = input(f"{message} [y/N]: ").strip().lower()
     return response == 'y'
+
+def generate_random_token(length=64):
+    """Generate a random alphanumeric token."""
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 def create_ca(args):
     ca_dir = Path("./docker/certs/ca")
@@ -153,6 +161,138 @@ def create_agent_certs(args):
 
     print(f"Agent certificates created: {key_path}, {cert_path}")
 
+def prepare_agent_deploy(args):
+    """Prepare the agent deployment directory."""
+    if not args.agent_ip or not args.backend_ip:
+        print("Error: --agent-ip <IP> and --backend-ip <IP> are required for agent deploy.")
+        sys.exit(1)
+
+    agent_ip = args.agent_ip
+    backend_ip = args.backend_ip
+    deploy_dir = Path(f"./docker/agents/{agent_ip}")
+    
+    certs_dir = deploy_dir / "certs"
+    logs_dir = deploy_dir / "logs"
+    config_dir = deploy_dir / "config"
+
+    print(f"Preparing agent deployment in {deploy_dir}...")
+
+    # 1. Create directories
+    for d in [certs_dir, logs_dir, config_dir]:
+        d.mkdir(parents=True, exist_ok=True)
+
+    # CA check
+    ca_dir = Path("./docker/certs/ca")
+    ca_key = ca_dir / "ca-key.pem"
+    ca_cert = ca_dir / "ca-cert.pem"
+
+    if not ca_key.exists() or not ca_cert.exists():
+        print("Error: CA files not found. Please run with --create-ca first.")
+        sys.exit(1)
+
+    # 2. Generate Certs
+    # Copy CA public cert
+    shutil.copy(ca_cert, certs_dir / "ca-cert.pem")
+
+    subj = get_cert_subj(args, cn_override=agent_ip)
+
+    # Client Certs
+    print(f"Generating Client Certs for {agent_ip}...")
+    client_key = certs_dir / f"{agent_ip}-key.pem"
+    client_csr = certs_dir / f"{agent_ip}.csr"
+    client_cert = certs_dir / f"{agent_ip}-cert.pem"
+    
+    cmd_csr_client = (
+        f"openssl req -new -newkey rsa:4096 -nodes "
+        f"-keyout {client_key} -out {client_csr} -subj \"{subj}\""
+    )
+    run_command(cmd_csr_client)
+    
+    cmd_sign_client = (
+        f"openssl x509 -req -days 365 -in {client_csr} "
+        f"-CA {ca_cert} -CAkey {ca_key} -CAcreateserial "
+        f"-out {client_cert}"
+    )
+    run_command(cmd_sign_client)
+    
+    if client_csr.exists():
+        os.remove(client_csr)
+
+    # Server Certs
+    print(f"Generating Server Certs for {agent_ip}...")
+    server_key = certs_dir / f"{agent_ip}-www-key.pem"
+    server_csr = certs_dir / f"{agent_ip}-www.csr"
+    server_cert = certs_dir / f"{agent_ip}-www-cert.pem"
+    
+    cmd_csr_server = (
+        f"openssl req -new -newkey rsa:4096 -nodes "
+        f"-keyout {server_key} -out {server_csr} -subj \"{subj}\" "
+        f"-addext \"subjectAltName = IP:{agent_ip}\""
+    )
+    run_command(cmd_csr_server)
+    
+    cmd_sign_server = (
+        f"openssl x509 -req -days 365 -in {server_csr} "
+        f"-CA {ca_cert} -CAkey {ca_key} -CAcreateserial "
+        f"-out {server_cert} -copy_extensions copy"
+    )
+    run_command(cmd_sign_server)
+    
+    if server_csr.exists():
+        os.remove(server_csr)
+
+    # 3. Config File
+    src_config = Path("docker/configs/agent/agent_config.yaml")
+    dst_config = config_dir / "agent_config.yaml"
+
+    if src_config.exists():
+        print("Configuring agent_config.yaml...")
+        with open(src_config, 'r') as f:
+            content = f.read()
+
+        token = generate_random_token(64)
+        
+        content = content.replace("MYIP", agent_ip)
+        content = content.replace("BACKENDIP", backend_ip)
+        content = content.replace("AUTHTOKEN", token)
+
+        with open(dst_config, 'w') as f:
+            f.write(content)
+
+        print("\n" + "="*60)
+        print(f"Generated Auth Token: {token}")
+        print("IMPORTANT: Configure this token in the backend via the Web UI!")
+        print("="*60 + "\n")
+    else:
+        print(f"Warning: Source config {src_config} not found!")
+
+    # 4. Copy Docker files
+    files_map = {
+        "Dockerfile.agent": "Dockerfile.agent",
+        "docker-compose.agent.yml": "docker-compose.yml"
+    }
+
+    for src, dst in files_map.items():
+        if Path(src).exists():
+            shutil.copy(Path(src), deploy_dir / dst)
+        else:
+            print(f"Warning: {src} not found!")
+
+    # 5. Build and Copy Agent CLI
+    print("Building agent_cli...")
+    agent_cli_src = "cmd/agent/agent_cli.go"
+    agent_cli_dst = deploy_dir / "agent_cli"
+    
+    if Path(agent_cli_src).exists():
+        # Build directly to the destination
+        cmd_build = f"go build -o {agent_cli_dst} {agent_cli_src}"
+        run_command(cmd_build)
+        print(f"Built agent_cli to {agent_cli_dst}")
+    else:
+        print(f"Warning: {agent_cli_src} not found, skipping build.")
+
+    print(f"Agent deployment prepared successfully at {deploy_dir}")
+
 def main():
     parser = argparse.ArgumentParser(description="Swissknife setup script for Lophiid")
 
@@ -160,10 +300,11 @@ def main():
     parser.add_argument("--create-ca", action="store_true", help="Create Certificate Authority")
     parser.add_argument("--create-backend-certs", action="store_true", help="Create Backend Certificates")
     parser.add_argument("--create-agent-certs", action="store_true", help="Create Agent Certificates")
+    parser.add_argument("--agent-prepare-deploy", action="store_true", help="Prepare Agent Deployment")
 
     # Parameters
-    parser.add_argument("--agent-ip", help="IP address for the agent certificate")
-    parser.add_argument("--backend-ip", help="IP address for the backend certificate SAN")
+    parser.add_argument("--agent-ip", help="IP address for the agent")
+    parser.add_argument("--backend-ip", help="IP address for the backend")
 
     # Cert fields
     parser.add_argument("--cert-country", help="Certificate Country (C)")
@@ -174,7 +315,7 @@ def main():
 
     args = parser.parse_args()
 
-    if not any([args.create_ca, args.create_backend_certs, args.create_agent_certs]):
+    if not any([args.create_ca, args.create_backend_certs, args.create_agent_certs, args.agent_prepare_deploy]):
         parser.print_help()
         sys.exit(0)
 
@@ -186,6 +327,9 @@ def main():
 
     if args.create_agent_certs:
         create_agent_certs(args)
+        
+    if args.agent_prepare_deploy:
+        prepare_agent_deploy(args)
 
 if __name__ == "__main__":
     main()

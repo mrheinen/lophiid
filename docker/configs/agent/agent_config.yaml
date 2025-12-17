@@ -3,56 +3,56 @@ general:
   log_file: /app/logs/MYIP.log
 
 http_listener:
-  ip: MYIP
+  ip: 0.0.0.0
   port:
-     80
-     81
-     88
-     2083
-     4000
-     4001
-     4002
-     5000
-     5172
-     5984
-     7001
-     7002
-     8000
-     8001
-     8002
-     8003
-     8004
-     8005
-     8006
-     8007
-     8008
-     8111
-     8080
-     8088
-     8500
-     9080
-     9200
-     11434
+    - 80
+    - 81
+    - 88
+    - 2083
+    - 4000
+    - 4001
+    - 4002
+    - 5000
+    - 5172
+    - 5984
+    - 7001
+    - 7002
+    - 8000
+    - 8001
+    - 8002
+    - 8003
+    - 8004
+    - 8005
+    - 8006
+    - 8007
+    - 8008
+    - 8111
+    - 8080
+    - 8088
+    - 8500
+    - 9080
+    - 9200
+    - 11434
 
 https_listener:
-  ip: MYIP
-  ssl_key: /app/certs/MYIP-key.pem
-  ssl_cert: /app/certs/MYIP-cert.pem
+  ip: 0.0.0.0
+  ssl_key: /app/certs/MYIP-www-key.pem
+  ssl_cert: /app/certs/MYIP-www-cert.pem
   port:
-     443
-     981
-     1311
-     4433
-     4443
-     8243
-     8333
-     8443
-     8448
-     8843
-     8920
-     9443
-     18091
-     18092
+    - 443
+    - 981
+    - 1311
+    - 4433
+    - 4443
+    - 8243
+    - 8333
+    - 8443
+    - 8448
+    - 8843
+    - 8920
+    - 9443
+    - 18091
+    - 18092
 
 
 backend_client:
@@ -60,15 +60,15 @@ backend_client:
   port: 41110
   status_interval: 1m
   auth_token: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  grpc_ca_cert: "/app/certs/cacert.pem"
-  grpc_ssl_cert: "/app/certs/MYIPclientcert.pem"
-  grpc_ssl_key: "/app/certs/MYIPclientkey.pem"
+  grpc_ca_cert: "/app/certs/ca-cert.pem"
+  grpc_ssl_cert: "/app/certs/MYIP-cert.pem"
+  grpc_ssl_key: "/app/certs/MYIP-key.pem"
 
 downloader:
   http_client_timeout: 10m
 
 p0f:
-  socket_location: /var/empty/lophiid/p0f.sock
+  socket_location: /tmp/p0f.sock
   send_interval: 1m
 
 pinger:

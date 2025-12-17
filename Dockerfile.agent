@@ -6,8 +6,6 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
-    protobuf-compiler \
-    protoc-gen-go \
     libmagic-dev \
     libpcap0.8-dev \
     libssl-dev \
@@ -15,22 +13,12 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install compatible gRPC plugin version
-RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
-
 # Set up workspace
 WORKDIR /workspace
-COPY . .
 
 # Build p0f
 RUN git clone https://github.com/mrheinen/p0f.git
-
 RUN cd p0f && make
-
-# Build agent
-RUN ./compile_proto.sh
-RUN go build ./cmd/agent/agent_cli.go
-
 
 
 # Runtime stage
@@ -40,6 +28,8 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libmagic1 \
+    strace \
+    libpcap0.8-dev \
     iputils-ping \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -47,16 +37,20 @@ RUN apt-get update && apt-get install -y \
 # Create directories with proper permissions for user namespace mapping
 # Note: /var/empty/lophiid is for privilege dropping at runtime
 RUN mkdir -p -m 755 /var/empty/lophiid && \
-    mkdir -p /app/config /app/certs /app/logs /app/p0f && \
+    mkdir -p /app/config /app/certs /app/logs /app/p0f /var/empty/lophiid/ && \
     chmod 755 /app && \
     chmod 777 /app/logs
 
+
 # Copy binary (correct Bazel output path)
-COPY --from=builder /workspace/agent_cli /app/agent_cli
 COPY --from=builder /workspace/p0f/p0f /app/p0f/p0f
 COPY --from=builder /workspace/p0f/p0f.fp /app/p0f/p0f.fp
+COPY ./agent_cli /app/agent_cli
 RUN chmod +x /app/agent_cli
-RUN chmod +x /app/p0f/p0f
+RUN chmod +x /app/p0f /app/p0f/p0f
+
+RUN setcap cap_sys_chroot,cap_net_bind_service,cap_setgid,cap_net_raw=+ep /app/p0f/p0f
+RUN setcap cap_sys_chroot,cap_net_bind_service,cap_setgid,cap_net_raw=+ep /app/agent_cli
 
 # Note: USER will be set via docker-compose user: directive for namespace mapping
 
@@ -74,4 +68,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/ | grep -E "^[1-5][0-9][0-9]$" >/dev/null || exit 1
 
-CMD ["./agent_cli"]
+CMD ["/bin/sh", "-c", "cd /app/p0f && ./p0f -s /tmp/p0f.sock > /dev/null 2>&1 & sleep 1; cd /app/config && /app/agent_cli -c agent_config.yaml"]
