@@ -7,9 +7,9 @@ services:
       POSTGRES_PASSWORD: changeme
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./config/01-database.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./config/02-database.sql:/docker-entrypoint-initdb.d/02-schema.sql:ro
-      - ./config/03-database.sql:/docker-entrypoint-initdb.d/03-schema.sql:ro
+      - ./docker/configs/sql/01-database.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/configs/sql/02-database.sql:/docker-entrypoint-initdb.d/02-schema.sql:ro
+      - ./docker/configs/sql/03-database.sql:/docker-entrypoint-initdb.d/03-schema.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
