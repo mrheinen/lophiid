@@ -52,6 +52,6 @@ EXPOSE 62212
 
 # Health check - check if API port is accepting connections
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -s http://localhost:9999/ >/dev/null || exit 1
+    CMD curl -s http://localhost:62212/ >/dev/null || exit 1
 
 CMD ["/app/api_server", "-c", "api-config.yaml"]

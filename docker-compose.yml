@@ -53,17 +53,15 @@ services:
       - "62212:62212"
     restart: unless-stopped
 
-#  ui:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile.ui
-#    env_file:
-#      - .env.backend
-#    depends_on:
-#      - api
-#    ports:
-#      - "9888:9888"
-#    restart: unless-stopped
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    depends_on:
+      - api
+    ports:
+      - "62211:62211"
+    restart: unless-stopped
 #
 #  # Optional: Triage service for AI analysis
 #  triage:
