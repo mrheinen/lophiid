@@ -4,15 +4,11 @@ COPY ui/package*.json ./
 RUN npm install
 COPY ui/ .
 
-# Accept build args for Vue configuration
-ARG LOPHIID_API_BACKEND_ADDRESS=http://localhost:9999
-ENV LOPHIID_API_BACKEND_ADDRESS=$LOPHIID_API_BACKEND_ADDRESS
-
 RUN npm run build
 
 FROM nginx as production-stage
 RUN mkdir /app
 COPY --from=build-stage /app/dist /app
-COPY config/nginx.ui.conf /etc/nginx/nginx.conf
+COPY docker/configs/ui/nginx.ui.conf /etc/nginx/nginx.conf
 
-EXPOSE 9888
+EXPOSE 62211

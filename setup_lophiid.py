@@ -293,6 +293,56 @@ def prepare_agent_deploy(args):
 
     print(f"Agent deployment prepared successfully at {deploy_dir}")
 
+def prepare_backend_deployment(args):
+    """Prepare the backend deployment by copying templates and replacing placeholders."""
+    if not args.db_password or not args.openrouter_api_key or not args.virustotal_api_key:
+        print("Error: --db-password, --openrouter-api-key, and --virustotal-api-key are required for backend deployment preparation.")
+        sys.exit(1)
+
+    replacements = {
+        "%%DB_PASSWORD%%": args.db_password,
+        "%%OPENROUTER_API_KEY%%": args.openrouter_api_key,
+        "%%VIRUSTOTAL_API_KEY%%": args.virustotal_api_key
+    }
+
+    files_map = {
+        "docker/configs/api/api-config.yaml.template": "docker/configs/api/api-config.yaml",
+        "docker/configs/backend/backend-config.yaml.template": "docker/configs/backend/backend-config.yaml",
+        "docker/configs/sql/01-database.sql.template": "docker/configs/sql/01-database.sql",
+        "docker/configs/sql/02-database.sql.template": "docker/configs/sql/02-database.sql",
+        "docker/configs/sql/03-database.sql.template": "docker/configs/sql/03-database.sql"
+    }
+
+    print("Preparing backend deployment configuration...")
+
+    for src_path_str, dst_path_str in files_map.items():
+        src_path = Path(src_path_str)
+        dst_path = Path(dst_path_str)
+
+        if not src_path.exists():
+            print(f"Warning: Template file {src_path} not found. Skipping.")
+            continue
+
+        try:
+            with open(src_path, 'r') as f:
+                content = f.read()
+
+            for placeholder, value in replacements.items():
+                content = content.replace(placeholder, value)
+
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(dst_path, 'w') as f:
+                f.write(content)
+            
+            print(f"Generated {dst_path} from {src_path}")
+            
+        except Exception as e:
+            print(f"Error processing {src_path}: {e}")
+            sys.exit(1)
+
+    print("Backend deployment preparation completed.")
+
 def main():
     parser = argparse.ArgumentParser(description="Swissknife setup script for Lophiid")
 
@@ -300,11 +350,17 @@ def main():
     parser.add_argument("--create-ca", action="store_true", help="Create Certificate Authority")
     parser.add_argument("--create-backend-certs", action="store_true", help="Create Backend Certificates")
     parser.add_argument("--create-agent-certs", action="store_true", help="Create Agent Certificates")
-    parser.add_argument("--agent-prepare-deploy", action="store_true", help="Prepare Agent Deployment")
+    parser.add_argument("--prepare-agent-deployment", action="store_true", help="Prepare Agent Deployment")
+    parser.add_argument("--prepare-backend-deployment", action="store_true", help="Prepare Backend Deployment (copy configs and replace secrets)")
 
     # Parameters
     parser.add_argument("--agent-ip", help="IP address for the agent")
     parser.add_argument("--backend-ip", help="IP address for the backend")
+    
+    # Secrets for backend deployment
+    parser.add_argument("--db-password", help="Database password for backend deployment")
+    parser.add_argument("--openrouter-api-key", help="OpenRouter API Key for backend deployment")
+    parser.add_argument("--virustotal-api-key", help="VirusTotal API Key for backend deployment")
 
     # Cert fields
     parser.add_argument("--cert-country", help="Certificate Country (C)")
@@ -315,7 +371,7 @@ def main():
 
     args = parser.parse_args()
 
-    if not any([args.create_ca, args.create_backend_certs, args.create_agent_certs, args.agent_prepare_deploy]):
+    if not any([args.create_ca, args.create_backend_certs, args.create_agent_certs, args.prepare_agent_deployment, args.prepare_backend_deployment]):
         parser.print_help()
         sys.exit(0)
 
@@ -328,8 +384,11 @@ def main():
     if args.create_agent_certs:
         create_agent_certs(args)
         
-    if args.agent_prepare_deploy:
+    if args.prepare_agent_deployment:
         prepare_agent_deploy(args)
+
+    if args.prepare_backend_deployment:
+        prepare_backend_deployment(args)
 
 if __name__ == "__main__":
     main()
