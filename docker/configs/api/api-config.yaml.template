@@ -11,7 +11,7 @@ general:
   api_key: %%API_API_KEY%%
 
 database:
-  url: 'postgres://lo:%%DB_PASSWORD%%@localhost:5432/postgres'
+  url: 'postgres://lo:%%DB_PASSWORD%%@postgres:5432/postgres'
   max_open_connections: 10
 
 scripting:
