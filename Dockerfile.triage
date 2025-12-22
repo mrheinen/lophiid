@@ -45,6 +45,6 @@ WORKDIR /app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD pgrep -f "triage_cli" || exit 1
+    CMD curl -f http://localhost:8999/metrics || exit 1
 
 CMD ["/bin/sh", "-c", "cd /app/config && /app/triage_cli"]
