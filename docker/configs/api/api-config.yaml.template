@@ -8,9 +8,10 @@ general:
   # The port and IP to listen on.
   listen_port: 62212
   listen_ip: 0.0.0.0
+  api_key: %%API_API_KEY%%
 
 database:
-  url: 'postgres://lo:%%DB_PASSWORD%%@localhost:5432/postgres'
+  url: 'postgres://lo:%%DB_PASSWORD%%@postgres:5432/postgres'
   max_open_connections: 10
 
 scripting:

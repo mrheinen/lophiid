@@ -159,8 +159,11 @@ ai:
     describer:
       enable: 1
       llm_config: gemini_flash
-      log_file: /tmp/describer.log
+      log_file: /app/logs/triage.log
       log_level: debug
+      # Note that the metrics_listen_address is also configured in the health
+      # command in docker-compose.yml. If you change the port here then also
+      # change the port there.
       metrics_listen_address: 0.0.0.0:8999
       cache_expiration_time: 8h
 

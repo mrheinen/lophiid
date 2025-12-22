@@ -1,0 +1,50 @@
+# Multi-stage build for Lophiid Triage Service
+FROM golang:1.24.7-bookworm AS builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    protobuf-compiler \
+    protoc-gen-go \
+    libmagic-dev \
+    libssl-dev \
+    pkg-config \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install compatible gRPC plugin version
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+
+# Set up workspace
+WORKDIR /workspace
+COPY . .
+
+RUN ./compile_proto.sh
+RUN go build ./cmd/triage/triage_cli.go
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directories with proper permissions for user namespace mapping
+RUN mkdir -p /app/config /app/logs && \
+    chmod 755 /app && \
+    chmod 777 /app/logs
+
+COPY --from=builder /workspace/triage_cli /app/triage_cli
+RUN chmod +x /app/triage_cli
+
+# Note: USER will be set via docker-compose user: directive for namespace mapping
+WORKDIR /app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8999/metrics || exit 1
+
+CMD ["/bin/sh", "-c", "cd /app/config && /app/triage_cli"]

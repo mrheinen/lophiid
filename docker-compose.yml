@@ -62,24 +62,25 @@ services:
     ports:
       - "62211:62211"
     restart: unless-stopped
-#
-#  # Optional: Triage service for AI analysis
-#  triage:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile.triage
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#    env_file:
-#      - .env.backend
-#    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
-#    volumes:
-#      - ./data/logs/triage:/app/logs
-#    restart: unless-stopped
-#    profiles:
-#      - full
-#
+
+  triage:
+    build:
+      context: .
+      dockerfile: Dockerfile.triage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./docker/logs/triage:/app/logs
+      - ./docker/configs/backend:/app/config:ro
+    restart: unless-stopped
+    command: ["/bin/sh", "-c", "cd /app/config && /app/triage_cli -c backend-config.yaml"]
+    #    profiles:
+    #  - full
+
 volumes:
   postgres_data:
 

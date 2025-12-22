@@ -56,6 +56,7 @@ type Config struct {
 		LogLevel   string `fig:"log_level" default:"debug"`
 		ListenIP   string `fig:"listen_ip" validate:"required"`
 		ListenPort string `fig:"listen_port" validate:"required"`
+		ApiKey     string `fig:"api_key" default:"" `
 	} `fig:"general"`
 	Cors struct {
 		// Comma separated list of allowed origins.
@@ -75,7 +76,6 @@ type Config struct {
 func main() {
 
 	flag.Parse()
-
 
 	if _, err := os.Stat(*configFile); err != nil {
 		if os.IsNotExist(err) {
@@ -131,10 +131,14 @@ func main() {
 		return
 	}
 
-	*apiKey = strings.TrimSpace(*apiKey)
-	if *apiKey == "" {
-		id := uuid.New()
-		*apiKey = id.String()
+	if cfg.General.ApiKey != "" {
+		*apiKey = cfg.General.ApiKey
+	} else {
+		*apiKey = strings.TrimSpace(*apiKey)
+		if *apiKey == "" {
+			id := uuid.New()
+			*apiKey = id.String()
+		}
 	}
 
 	fmt.Printf("Starting with API key: %s\n", *apiKey)
