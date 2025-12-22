@@ -76,9 +76,21 @@ func main() {
 
 	flag.Parse()
 
+
+	if _, err := os.Stat(*configFile); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("Could not find config file: %s\n", *configFile)
+		} else {
+			fmt.Printf("Error accessing config file %s: %v\n", *configFile, err)
+		}
+		return
+	}
+
+	d, f := util.SplitFilepath(*configFile)
+
 	var cfg Config
-	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
-		fmt.Printf("Could not parse config: %s\n", err)
+	if err := fig.Load(&cfg, fig.File(f), fig.Dirs(d)); err != nil {
+		fmt.Printf("Could not parse config: %s (file: \"%s\")\n", err, *configFile)
 		return
 	}
 

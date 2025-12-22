@@ -22,7 +22,7 @@ export default {
   tagsSegmentLink: '/tag/:offset/:limit',
   requestsSegmentLink: '/requests/:offset/:limit',
   requestsSegmentLinkName: 'reqSegmentLink',
-  backendAddress: 'http://127.0.0.1:8088',
+  backendAddress: 'api/',
   backendResultOk: 'OK',
   backendResultNotOk: 'ERR',
   reviewStatusOk: "REVIEWED_OK",
