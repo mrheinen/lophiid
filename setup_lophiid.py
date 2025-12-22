@@ -6,6 +6,7 @@ import secrets
 import string
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 # Defaults for certificate fields
@@ -299,10 +300,13 @@ def prepare_backend_deployment(args):
         print("Error: --db-password, --openrouter-api-key, and --virustotal-api-key are required for backend deployment preparation.")
         sys.exit(1)
 
+    api_api_key = args.api_api_key if args.api_api_key else str(uuid.uuid4())
+
     replacements = {
         "%%DB_PASSWORD%%": args.db_password,
         "%%OPENROUTER_API_KEY%%": args.openrouter_api_key,
-        "%%VIRUSTOTAL_API_KEY%%": args.virustotal_api_key
+        "%%VIRUSTOTAL_API_KEY%%": args.virustotal_api_key,
+        "%%API_API_KEY%%": api_api_key,
     }
 
     files_map = {
@@ -361,6 +365,7 @@ def main():
     parser.add_argument("--db-password", help="Database password for backend deployment")
     parser.add_argument("--openrouter-api-key", help="OpenRouter API Key for backend deployment")
     parser.add_argument("--virustotal-api-key", help="VirusTotal API Key for backend deployment")
+    parser.add_argument("--api-api-key", help="API API key used by the API service (defaults to a generated UUID)")
 
     # Cert fields
     parser.add_argument("--cert-country", help="Certificate Country (C)")
