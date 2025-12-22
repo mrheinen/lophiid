@@ -48,7 +48,7 @@ services:
     volumes:
       - ./docker/logs/api:/app/logs
       - ./docker/configs/api:/app/config:ro
-    command: ["/app/api_server", "-c", "api-config.yaml"]
+    command: ["/bin/sh", "-c", "cd /app/config && /app/api_server -c api-config.yaml"]
     ports:
       - "62212:62212"
     restart: unless-stopped
