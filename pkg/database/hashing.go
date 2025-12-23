@@ -161,6 +161,7 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		"new_passwd":    true,
 		"passwd":        true,
 		"secret":        true,
+		"secretkey":     true,
 	}
 
 	// Form fields.
@@ -172,8 +173,9 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		// a mess and don't always parse well. If an error occurs; we don't return.
 		if err == nil {
 			for paramName, value := range parsedQuery {
-				formFields = append(formFields, paramName)
-				if _, ok := parameterValsToIgnore[paramName]; !ok {
+				lowerParamname := strings.ToLower(paramName)
+				formFields = append(formFields, lowerParamname)
+				if _, ok := parameterValsToIgnore[lowerParamname]; !ok {
 					formFields = append(formFields, value...)
 				}
 			}
@@ -195,8 +197,9 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 
 	var queryFields []string
 	for paramName, paramValue := range parsedQuery {
-		queryFields = append(queryFields, paramName)
-		if _, ok := parameterValsToIgnore[paramName]; !ok {
+		lowerParamName := strings.ToLower(paramName)
+		queryFields = append(queryFields, lowerParamName)
+		if _, ok := parameterValsToIgnore[lowerParamName]; !ok {
 			queryFields = append(queryFields, paramValue...)
 		}
 	}
