@@ -25,7 +25,7 @@ import (
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
 )
 
-var configFile = flag.String("c", "backend-config.json", "Location of the config")
+var configFile = flag.String("c", "backend-config.yaml", "Location of the config")
 var batchSize = flag.Int64("b", 30, "Amount of descriptions to process at once")
 var keepRunning = flag.Bool("r", true, "Whether to keep running continuously")
 

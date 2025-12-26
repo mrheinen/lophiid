@@ -1,0 +1,91 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: changeme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/configs/sql/01-database.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/configs/sql/02-database.sql:/docker-entrypoint-initdb.d/02-schema.sql:ro
+      - ./docker/configs/sql/03-database.sql:/docker-entrypoint-initdb.d/03-schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./docker/certs/backend:/app/certs/backend:ro
+      - ./docker/certs/ca:/app/certs/ca:ro
+      - ./docker/data/malware:/app/malware
+      - ./docker/logs/backend:/app/logs
+      - ./docker/configs/backend:/app/config:ro
+    command: ["/bin/sh", "-c", "cd /app/config && /app/backend -c backend-config.yaml"]
+    ports:
+      - "41110:41110"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./docker/logs/api:/app/logs
+      - ./docker/configs/api:/app/config:ro
+    command: ["/bin/sh", "-c", "cd /app/config && /app/api_server -c api-config.yaml"]
+    ports:
+      - "62212:62212"
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    depends_on:
+      - api
+    ports:
+      - "62211:62211"
+    restart: unless-stopped
+
+  triage:
+    build:
+      context: .
+      dockerfile: Dockerfile.triage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    volumes:
+      - ./docker/logs/triage:/app/logs
+      - ./docker/configs/backend:/app/config:ro
+    restart: unless-stopped
+    command: ["/bin/sh", "-c", "cd /app/config && /app/triage_cli -c backend-config.yaml"]
+    #    profiles:
+    #  - full
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: lophiid-backend-network
+    driver: bridge
+    # Backend infrastructure network

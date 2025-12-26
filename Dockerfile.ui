@@ -1,0 +1,14 @@
+FROM node:latest as build-stage
+WORKDIR /app
+COPY ui/package*.json ./
+RUN npm install
+COPY ui/ .
+
+RUN npm run build
+
+FROM nginx as production-stage
+RUN mkdir /app
+COPY --from=build-stage /app/dist /app
+COPY docker/configs/ui/nginx.ui.conf /etc/nginx/nginx.conf
+
+EXPOSE 62211
