@@ -122,45 +122,57 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 	}
 
 	parameterValsToIgnore := map[string]bool{
-		"csrf":          true,
-		"csrf-token":    true,
-		"csrftoken":     true,
-		"xsrf":          true,
-		"xsrf-token":    true,
-		"xsrftoken":     true,
+		"checksum":      true,
 		"credential":    true,
 		"credentials":   true,
 		"creds":         true,
+		"csrf":          true,
+		"csrf-token":    true,
+		"csrftoken":     true,
 		"digest":        true,
-		"hash":          true,
-		"checksum":      true,
-		"user":          true,
-		"new-user":      true,
-		"new_user":      true,
-		"newuser":       true,
-		"new-username":  true,
-		"newusername":   true,
-		"login":         true,
-		"newlogin":      true,
-		"new-login":     true,
-		"new_login":     true,
-		"username":      true,
-		"user_name":     true,
-		"email":         true,
-		"email-address": true,
 		"e-mail":        true,
 		"e_mail":        true,
+		"email":         true,
+		"email-address": true,
+		"hash":          true,
+		"id":            true,
+		"identity":      true,
+		"key":           true,
+		"log":           true,
+		"login":         true,
 		"mail":          true,
-		"pass":          true,
-		"password":      true,
-		"new-passwd":    true,
+		"new-login":     true,
 		"new-pass":      true,
+		"new-passwd":    true,
 		"new-password":  true,
+		"new-user":      true,
+		"new-username":  true,
+		"new_login":     true,
 		"new_pass":      true,
-		"new_password":  true,
 		"new_passwd":    true,
+		"new_password":  true,
+		"new_user":      true,
+		"newlogin":      true,
+		"newuser":       true,
+		"newusername":   true,
+		"pass":          true,
 		"passwd":        true,
+		"password":      true,
+		"pwd":           true,
+		"redirect":      true,
+		"redirect-to":   true,
 		"secret":        true,
+		"secretkey":     true,
+		"sess":          true,
+		"session":       true,
+		"session-id":    true,
+		"user":          true,
+		"uname":         true,
+		"user_name":     true,
+		"username":      true,
+		"xsrf":          true,
+		"xsrf-token":    true,
+		"xsrftoken":     true,
 	}
 
 	// Form fields.
@@ -172,8 +184,9 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 		// a mess and don't always parse well. If an error occurs; we don't return.
 		if err == nil {
 			for paramName, value := range parsedQuery {
-				formFields = append(formFields, paramName)
-				if _, ok := parameterValsToIgnore[paramName]; !ok {
+				lowerParamname := strings.ToLower(paramName)
+				formFields = append(formFields, lowerParamname)
+				if _, ok := parameterValsToIgnore[lowerParamname]; !ok {
 					formFields = append(formFields, value...)
 				}
 			}
@@ -195,8 +208,9 @@ func GetSameRequestHash(req *models.Request) (string, error) {
 
 	var queryFields []string
 	for paramName, paramValue := range parsedQuery {
-		queryFields = append(queryFields, paramName)
-		if _, ok := parameterValsToIgnore[paramName]; !ok {
+		lowerParamName := strings.ToLower(paramName)
+		queryFields = append(queryFields, lowerParamName)
+		if _, ok := parameterValsToIgnore[lowerParamName]; !ok {
 			queryFields = append(queryFields, paramValue...)
 		}
 	}

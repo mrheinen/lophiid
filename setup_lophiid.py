@@ -80,8 +80,7 @@ def create_backend_certs(args):
         sys.exit(1)
 
     if not args.cert_cn:
-        print("Error: --cert-cn <CN> is required for backend certs.")
-        sys.exit(1)
+        args.cert_cn = args.backend_ip
 
     print(f"Creating Backend Certs in {backend_dir}...")
     backend_dir.mkdir(parents=True, exist_ok=True)
@@ -296,9 +295,12 @@ def prepare_agent_deploy(args):
 
 def prepare_backend_deployment(args):
     """Prepare the backend deployment by copying templates and replacing placeholders."""
-    if not args.db_password or not args.openrouter_api_key or not args.virustotal_api_key:
-        print("Error: --db-password, --openrouter-api-key, and --virustotal-api-key are required for backend deployment preparation.")
+    if not args.db_password or not args.openrouter_api_key or not args.virustotal_api_key or not args.backend_ip:
+        print("Error: --db-password, --openrouter-api-key, --virustotal-api-key, and --backend-ip are required for backend deployment preparation.")
         sys.exit(1)
+
+    # Create backend certificates
+    create_backend_certs(args)
 
     api_api_key = args.api_api_key if args.api_api_key else str(uuid.uuid4())
 
@@ -346,6 +348,10 @@ def prepare_backend_deployment(args):
             sys.exit(1)
 
     print("Backend deployment preparation completed.")
+    print("\n" + "="*60)
+    print(f"Backend API Key: {api_api_key}")
+    print("IMPORTANT: Use this key to log in to the Web UI!")
+    print("="*60 + "\n")
 
 def main():
     parser = argparse.ArgumentParser(description="Swissknife setup script for Lophiid")

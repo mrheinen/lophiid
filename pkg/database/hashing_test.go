@@ -170,6 +170,25 @@ func TestGetSameRequestHash(t *testing.T) {
 			wantErr:     false,
 		},
 		{
+			name: "different query case hould match",
+			req1: models.Request{
+				Method:  "GET",
+				Path:    "/search",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "q=test&sort=asc",
+			},
+			req2: models.Request{
+				Method:  "GET",
+				Path:    "/search",
+				Headers: pgtype.FlatArray[string]{"Accept: application/json"},
+				Query:   "q=test&Sort=asc",
+			},
+			shouldMatch: true,
+			wantErr:     false,
+		},
+
+
+		{
 			name: "form encoded bodies with different orders should match",
 			req1: models.Request{
 				Method:      "POST",
