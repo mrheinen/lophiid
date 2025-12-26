@@ -26,6 +26,7 @@ const (
 	IpEventRateLimited   = "RATELIMITED"
 	IpEventPing          = "PING"
 	IpEventSessionInfo   = "SESSION_INFO"
+	IpEventPayload       = "PAYLOAD"
 )
 
 // This needs to be kept in sync with IP_EVENT_SUB_TYPE in the database.

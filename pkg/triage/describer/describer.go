@@ -257,6 +257,20 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 			})
 		}
 
+		if req.TriageHasPayload {
+			b.eventManager.AddEvent(&models.IpEvent{
+				IP:            req.SourceIP,
+				HoneypotIP:    req.HoneypotIP,
+				Source:        constants.IpEventSourceAI,
+				RequestID:     req.ID,
+				SourceRef:     fmt.Sprintf("%d", bh.ID),
+				SourceRefType: constants.IpEventRefTypeRequestDescriptionId,
+				Type:          constants.IpEventPayload,
+				Subtype:       constants.IpEventSubTypeNone,
+				Details:       req.TriagePayloadType,
+			})
+		}
+
 		delete(promptMap, prompt)
 	}
 
