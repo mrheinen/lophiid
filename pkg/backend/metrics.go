@@ -39,7 +39,6 @@ type BackendMetrics struct {
 	honeypotRequests          *prometheus.CounterVec
 	methodPerRequest          *prometheus.CounterVec
 	requestsPerPort           *prometheus.CounterVec
-	rateLimiterRejects        *prometheus.CounterVec
 	firstTriageResult         *prometheus.CounterVec
 	firstTriageSelection      *prometheus.CounterVec
 	firstTriagePayloadType    *prometheus.CounterVec
@@ -143,6 +142,5 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 	reg.MustRegister(m.methodPerRequest)
 	reg.MustRegister(m.requestsPerPort)
 	reg.MustRegister(m.fileUploadRpcResponseTime)
-	reg.MustRegister(m.rateLimiterRejects)
 	return m
 }
