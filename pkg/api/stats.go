@@ -109,7 +109,7 @@ func GetGlobalStatistics(dbc database.DatabaseClient) (GlobalStatisticsResult, e
 
 	_, err = dbc.SimpleQuery(database.QueryTop10URILastDay, &finalResult.Top10URIsLast24Hours)
 	if err != nil {
-		return finalResult, fmt.Errorf("failed to get top 10 source IPs count last 24 hours: %w", err)
+		return finalResult, fmt.Errorf("failed to get top 10 URIs count last 24 hours: %w", err)
 	}
 
 	return finalResult, nil
