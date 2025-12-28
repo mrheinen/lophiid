@@ -107,11 +107,6 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 			prometheus.CounterOpts{
 				Name: "lophiid_backend_request_blocked_total",
 				Help: "Amount of requests blocked by rules"}),
-		rateLimiterRejects: prometheus.NewCounterVec(
-			prometheus.CounterOpts{
-				Name: "lophiid_backend_rate_limiter_rejects_total",
-				Help: "Amount of rejects per type (window or bucket)"},
-			[]string{"type"}),
 		firstTriageTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "lophiid_backend_first_triage_count",
