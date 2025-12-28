@@ -21,26 +21,19 @@ import (
 )
 
 type RatelimiterMetrics struct {
-	ipRateBucketsGauge  prometheus.Gauge
-	uriRateBucketsGauge prometheus.Gauge
+	rateLimiterRejects *prometheus.CounterVec
 }
 
 // Register Metrics
 func CreateRatelimiterMetrics(reg prometheus.Registerer) *RatelimiterMetrics {
 	m := &RatelimiterMetrics{
-		ipRateBucketsGauge: prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Name: "lophiid_backend_ratelimit_ip_buckets_gauge",
-				Help: "The amount of active IP ratelimit buckets"},
-		),
-		uriRateBucketsGauge: prometheus.NewGauge(
-			prometheus.GaugeOpts{
-				Name: "lophiid_backend_ratelimit_uri_buckets_gauge",
-				Help: "The amount of active URI ratelimit buckets"},
-		),
+		rateLimiterRejects: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "lophiid_backend_rate_limiter_rejects_total",
+				Help: "Amount of rejects per type (window or bucket)"},
+			[]string{"type"}),
 	}
 
-	reg.MustRegister(m.ipRateBucketsGauge)
-	reg.MustRegister(m.uriRateBucketsGauge)
+	reg.MustRegister(m.rateLimiterRejects)
 	return m
 }

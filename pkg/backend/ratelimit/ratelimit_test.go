@@ -17,7 +17,6 @@
 package ratelimit
 
 import (
-	"fmt"
 	"lophiid/pkg/database/models"
 	"testing"
 	"time"
@@ -32,9 +31,6 @@ func TestRateLimitOk(t *testing.T) {
 	testMaxIpRequestsPerWindow := 4
 	testMaxIpRequestPerBucket := 2
 
-	testMaxUriRequestsPerWindow := 6
-	testMaxUriRequestPerBucket := 6
-
 	req := models.Request{
 		HoneypotIP: "1.1.1.1",
 		SourceIP:   "2.2.2.2",
@@ -43,11 +39,19 @@ func TestRateLimitOk(t *testing.T) {
 	}
 	reg := prometheus.NewRegistry()
 	rMetrics := CreateRatelimiterMetrics(reg)
-	r := NewWindowRateLimiter(testRateWindow, testBucketDuration, testMaxIpRequestsPerWindow, testMaxIpRequestPerBucket, testMaxUriRequestsPerWindow, testMaxUriRequestPerBucket, rMetrics)
 
-	if testutil.ToFloat64(rMetrics.ipRateBucketsGauge) != 0 {
-		t.Errorf("rateBucketsGauge should be 0 at the start")
-	}
+	// Test IP limiting
+	r := NewWindowRateLimiter(WindowRateLimiterConfig{
+		Name:                 "test_ip",
+		RateWindow:           testRateWindow,
+		BucketDuration:       testBucketDuration,
+		MaxRequestsPerWindow: testMaxIpRequestsPerWindow,
+		MaxRequestPerBucket:  testMaxIpRequestPerBucket,
+		Metrics:              rMetrics,
+		KeyFunc:              IPKeyFunc,
+		BucketExceededErr:    ErrIPBucketLimitExceeded,
+		WindowExceededErr:    ErrIPWindowLimitExceeded,
+	})
 
 	// Simulate multiple requests in the same bucket. It should
 	// work OK twice and be rejected a third time due to the
@@ -69,6 +73,11 @@ func TestRateLimitOk(t *testing.T) {
 		t.Errorf("expected bucket exceeded, got unexpected error %v", err)
 	}
 
+	val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("bucket_" + r.Name()))
+	if val != 1 {
+		t.Errorf("expected bucket reject metric to be 1, got %v", val)
+	}
+
 	// Now we do a tick twice which resets the bucket limit. Therefore
 	// the next request is allowed again.
 	r.Tick()
@@ -86,9 +95,9 @@ func TestRateLimitOk(t *testing.T) {
 		t.Errorf("expected ErrWindowLimitExceeded but got %v", err)
 	}
 
-	m := testutil.ToFloat64(rMetrics.ipRateBucketsGauge)
-	if m != 1 {
-		t.Errorf("rateBucketsGauge should be 1, is %f", m)
+	val = testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("window_" + r.Name()))
+	if val != 1 {
+		t.Errorf("expected window reject metric to be 1, got %v", val)
 	}
 
 	// Now continue ticking until the window is empty and removed.
@@ -97,12 +106,6 @@ func TestRateLimitOk(t *testing.T) {
 	r.Tick()
 	r.Tick()
 	r.Tick()
-
-	// Check if the RateBucket entry is indeed removed.
-	m = testutil.ToFloat64(rMetrics.ipRateBucketsGauge)
-	if m != 0 {
-		t.Errorf("rateBucketsGauge should be 0 after reset")
-	}
 
 	if isAllowed, err := r.AllowRequest(&req); !isAllowed {
 		t.Errorf("unexpected error %v", err)
@@ -170,47 +173,76 @@ func TestAllowRequestForIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			reg := prometheus.NewRegistry()
+			rMetrics := CreateRatelimiterMetrics(reg)
+
 			// Create a new rate limiter for each test
-			r := NewWindowRateLimiter(
-				time.Second*5, // window
-				time.Second,   // bucket duration
-				4,             // max requests per window
-				2,             // max requests per bucket
-				10,            // max URI requests per window (not used in this test)
-				5,             // max URI requests per bucket (not used in this test)
-				CreateRatelimiterMetrics(prometheus.NewRegistry()),
-			)
+			r := NewWindowRateLimiter(WindowRateLimiterConfig{
+				Name:                 "test_ip",
+				RateWindow:           time.Second * 5,
+				BucketDuration:       time.Second,
+				MaxRequestsPerWindow: 4,
+				MaxRequestPerBucket:  2,
+				Metrics:              rMetrics,
+				KeyFunc:              IPKeyFunc,
+				BucketExceededErr:    ErrIPBucketLimitExceeded,
+				WindowExceededErr:    ErrIPWindowLimitExceeded,
+			})
 
 			// Perform setup requests if needed
 			for i := 0; i < tt.setupRequests; i++ {
-				r.allowRequestForIP(tt.req)
+				r.AllowRequest(tt.req)
 			}
 
 			// Record initial bucket state if we're testing new bucket creation
 			if tt.newBucket {
-				ipRateKey := fmt.Sprintf("%s-%d-%s", tt.req.HoneypotIP, tt.req.Port, tt.req.SourceIP)
-				if _, exists := r.IPRateBuckets[ipRateKey]; exists {
+				ipRateKey, _ := IPKeyFunc(tt.req)
+				if _, exists := r.rateBuckets[ipRateKey]; exists {
 					t.Errorf("bucket should not exist before first request")
 				}
 			}
 
 			// Perform the test request
-			allowed, err := r.allowRequestForIP(tt.req)
+			allowed, err := r.AllowRequest(tt.req)
 
 			// Verify results
 			if allowed != tt.expectedAllow {
-				t.Errorf("allowRequestForIP() allowed = %v, want %v", allowed, tt.expectedAllow)
+				t.Errorf("AllowRequest() allowed = %v, want %v", allowed, tt.expectedAllow)
 			}
 
 			if err != tt.expectedError {
-				t.Errorf("allowRequestForIP() error = %v, want %v", err, tt.expectedError)
+				t.Errorf("AllowRequest() error = %v, want %v", err, tt.expectedError)
 			}
 
 			// Verify bucket creation if applicable
 			if tt.newBucket {
-				ipRateKey := fmt.Sprintf("%s-%d-%s", tt.req.HoneypotIP, tt.req.Port, tt.req.SourceIP)
-				if _, exists := r.IPRateBuckets[ipRateKey]; !exists {
+				ipRateKey, _ := IPKeyFunc(tt.req)
+				if _, exists := r.rateBuckets[ipRateKey]; !exists {
 					t.Errorf("bucket should exist after first request")
+				}
+			}
+
+			// Verify metrics
+			if tt.expectedAllow {
+				val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("bucket_" + r.Name()))
+				if val != 0 {
+					t.Errorf("expected bucket reject metric to be 0, got %v", val)
+				}
+				val = testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("window_" + r.Name()))
+				if val != 0 {
+					t.Errorf("expected window reject metric to be 0, got %v", val)
+				}
+			} else {
+				if tt.expectedError == ErrIPBucketLimitExceeded {
+					val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("bucket_" + r.Name()))
+					if val != 1 {
+						t.Errorf("expected bucket reject metric to be 1, got %v", val)
+					}
+				} else if tt.expectedError == ErrIPWindowLimitExceeded {
+					val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("window_" + r.Name()))
+					if val != 1 {
+						t.Errorf("expected window reject metric to be 1, got %v", val)
+					}
 				}
 			}
 		})
@@ -293,55 +325,96 @@ func TestAllowRequestForURI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a new rate limiter for each test
-			r := NewWindowRateLimiter(
-				time.Second*5, // window
-				time.Second,   // bucket duration
-				10,            // max IP requests per window (not used in this test)
-				5,             // max IP requests per bucket (not used in this test)
-				6,             // max URI requests per window
-				5,             // max URI requests per bucket
-				CreateRatelimiterMetrics(prometheus.NewRegistry()),
-			)
+
+			reg := prometheus.NewRegistry()
+			rMetrics := CreateRatelimiterMetrics(reg)
+
+			r := NewWindowRateLimiter(WindowRateLimiterConfig{
+				Name:                 "test_uri",
+				RateWindow:           time.Second * 5,
+				BucketDuration:       time.Second,
+				MaxRequestsPerWindow: 6,
+				MaxRequestPerBucket:  5,
+				Metrics:              rMetrics,
+				KeyFunc:              URIKeyFunc,
+				BucketExceededErr:    ErrURIBucketLimitExceeded,
+				WindowExceededErr:    ErrURIWindowLimitExceeded,
+			})
 
 			// Perform setup requests if needed
 			for i := 0; i < tt.setupRequests; i++ {
 				if tt.name == "window limit exceeded" {
 					// For window limit test, directly set up the buckets
+					// Note: Since we are accessing internal fields for test setup, we need access to rateBuckets or simulate requests carefully.
+					// Since we can't easily access rateBuckets in this test structure (it's unexported but in same package), we can use it.
+					// But for simplicity let's just make requests.
+					// However, simulating spreading across buckets with time sleeps is slow.
+					// We can access r.rateBuckets if we are in the same package (ratelimit).
+					// Yes, package is ratelimit.
+					uriRateKey, _ := URIKeyFunc(tt.req)
 					if i == 0 {
-						r.URIRateBuckets[tt.req.BaseHash] = make([]int, r.NumberBuckets)
+						r.rateBuckets[uriRateKey] = make([]int, r.numberBuckets)
 					}
 					// Spread requests across buckets to reach window limit
-					r.URIRateBuckets[tt.req.BaseHash][i%r.NumberBuckets] = 2
+					r.rateBuckets[uriRateKey][i%r.numberBuckets] = 2
 				} else {
-					r.allowRequestForURI(tt.req)
+					r.AllowRequest(tt.req)
 				}
 			}
 
 			// Record initial bucket state if we're testing new bucket creation
 			if tt.newBucket {
-				uriRateKey := tt.req.BaseHash
-				if _, exists := r.URIRateBuckets[uriRateKey]; exists {
-					t.Errorf("bucket should not exist before first request")
+				uriRateKey, ok := URIKeyFunc(tt.req)
+				if ok {
+					if _, exists := r.rateBuckets[uriRateKey]; exists {
+						t.Errorf("bucket should not exist before first request")
+					}
 				}
 			}
 
 			// Perform the test request
-			allowed, err := r.allowRequestForURI(tt.req)
+			allowed, err := r.AllowRequest(tt.req)
 
 			// Verify results
 			if allowed != tt.expectedAllow {
-				t.Errorf("allowRequestForURI() allowed = %v, want %v", allowed, tt.expectedAllow)
+				t.Errorf("AllowRequest() allowed = %v, want %v", allowed, tt.expectedAllow)
 			}
 
 			if err != tt.expectedError {
-				t.Errorf("allowRequestForURI() error = %v, want %v", err, tt.expectedError)
+				t.Errorf("AllowRequest() error = %v, want %v", err, tt.expectedError)
 			}
 
 			// Verify bucket creation if applicable
 			if tt.newBucket {
-				uriRateKey := tt.req.BaseHash
-				if _, exists := r.URIRateBuckets[uriRateKey]; !exists {
-					t.Errorf("bucket should exist after first request")
+				uriRateKey, ok := URIKeyFunc(tt.req)
+				if ok {
+					if _, exists := r.rateBuckets[uriRateKey]; !exists {
+						t.Errorf("bucket should exist after first request")
+					}
+				}
+			}
+
+			// Verify metrics
+			if tt.expectedAllow {
+				val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("bucket_" + r.Name()))
+				if val != 0 {
+					t.Errorf("expected bucket reject metric to be 0, got %v", val)
+				}
+				val = testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("window_" + r.Name()))
+				if val != 0 {
+					t.Errorf("expected window reject metric to be 0, got %v", val)
+				}
+			} else {
+				if tt.expectedError == ErrURIBucketLimitExceeded {
+					val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("bucket_" + r.Name()))
+					if val != 1 {
+						t.Errorf("expected bucket reject metric to be 1, got %v", val)
+					}
+				} else if tt.expectedError == ErrURIWindowLimitExceeded {
+					val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("window_" + r.Name()))
+					if val != 1 {
+						t.Errorf("expected window reject metric to be 1, got %v", val)
+					}
 				}
 			}
 		})

@@ -48,6 +48,16 @@ type MethodCountResult struct {
 	Method       string `ksql:"method" json:"method"`
 }
 
+type Top10SourceIPs struct {
+	TotalRequests int    `ksql:"total_requests" json:"total_requests"`
+	SourceIP      string `ksql:"source_ip" json:"source_ip"`
+}
+
+type Top10URI struct {
+	TotalRequests int    `ksql:"total_requests" json:"total_requests"`
+	URI           string `ksql:"uri" json:"uri"`
+}
+
 type MalwareCountResult struct {
 	TotalEntries int    `ksql:"total_entries" json:"total_entries"`
 	Type         string `ksql:"type" json:"type"`
@@ -55,11 +65,13 @@ type MalwareCountResult struct {
 }
 
 type GlobalStatisticsResult struct {
-	RequestsPerMonth   []RequestsPerMonthResult `json:"requests_per_month"`
-	RequestsPerDay     []RequestsPerDayResult   `json:"requests_per_day"`
-	DownloadsPerDay    []DownloadsPerDayResult  `json:"downloads_per_day"`
-	MethodsLast24Hours []MethodCountResult      `json:"methods_last_24_hours"`
-	MalwareLast24Hours []MalwareCountResult     `json:"malware_last_24_hours"`
+	RequestsPerMonth          []RequestsPerMonthResult `json:"requests_per_month"`
+	RequestsPerDay            []RequestsPerDayResult   `json:"requests_per_day"`
+	DownloadsPerDay           []DownloadsPerDayResult  `json:"downloads_per_day"`
+	MethodsLast24Hours        []MethodCountResult      `json:"methods_last_24_hours"`
+	Top10SourceIPsLast24Hours []Top10SourceIPs         `json:"top_10_source_ips_last_24_hours"`
+	Top10URIsLast24Hours      []Top10URI               `json:"top_10_uris_last_24_hours"`
+	MalwareLast24Hours        []MalwareCountResult     `json:"malware_last_24_hours"`
 }
 
 func GetGlobalStatistics(dbc database.DatabaseClient) (GlobalStatisticsResult, error) {
@@ -88,6 +100,16 @@ func GetGlobalStatistics(dbc database.DatabaseClient) (GlobalStatisticsResult, e
 	_, err = dbc.SimpleQuery(database.QueryCountMalwareHosted24Hours, &finalResult.MalwareLast24Hours)
 	if err != nil {
 		return finalResult, fmt.Errorf("failed to get malware count last 24 hours: %w", err)
+	}
+
+	_, err = dbc.SimpleQuery(database.QueryTop10SourcesLastDay, &finalResult.Top10SourceIPsLast24Hours)
+	if err != nil {
+		return finalResult, fmt.Errorf("failed to get top 10 source IPs count last 24 hours: %w", err)
+	}
+
+	_, err = dbc.SimpleQuery(database.QueryTop10URILastDay, &finalResult.Top10URIsLast24Hours)
+	if err != nil {
+		return finalResult, fmt.Errorf("failed to get top 10 URIs count last 24 hours: %w", err)
 	}
 
 	return finalResult, nil

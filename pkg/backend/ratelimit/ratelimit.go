@@ -34,11 +34,39 @@ var (
 
 type RateLimiter interface {
 	AllowRequest(req *models.Request) (bool, error)
+	Name() string
 }
 
-// WindowRateLimiter can be used to limit requests per HoneypotIP, Server port
-// and SourceIP combination.  If BucketDuration is set to 1 minute and
-// RateWindow is set to one hour then:
+// KeyFunc extracts a key for rate limiting from a request.
+// The returned boolean indicates whether the request should be rate limited.
+type KeyFunc func(req *models.Request) (string, bool)
+
+func IPKeyFunc(req *models.Request) (string, bool) {
+	return fmt.Sprintf("%s-%d-%s", req.HoneypotIP, req.Port, req.SourceIP), true
+}
+
+func URIKeyFunc(req *models.Request) (string, bool) {
+	if req.Uri == "/" {
+		return "", false
+	}
+	return req.BaseHash, true
+}
+
+// WindowRateLimiterConfig holds the configuration for WindowRateLimiter.
+type WindowRateLimiterConfig struct {
+	Name                 string
+	RateWindow           time.Duration
+	BucketDuration       time.Duration
+	MaxRequestsPerWindow int
+	MaxRequestPerBucket  int
+	KeyFunc              KeyFunc
+	BucketExceededErr    error
+	WindowExceededErr    error
+	Metrics              *RatelimiterMetrics
+}
+
+// WindowRateLimiter can be used to limit requests based on a key extracted from the request.
+// If BucketDuration is set to 1 minute and RateWindow is set to one hour then:
 //
 //	The ratelimiter will only allow MaxRequestPerBucket requests per minute
 //	The ratelimiter will only allow MaxRequestsPerWindow per the entire hour
@@ -48,46 +76,51 @@ type RateLimiter interface {
 //
 // Requires Start() to be called before usage.
 type WindowRateLimiter struct {
-	MaxIPRequestsPerWindow  int
-	MaxIPRequestPerBucket   int
-	MaxURIRequestsPerWindow int
-	MaxURIRequestPerBucket  int
-	RateWindow              time.Duration
-	BucketDuration          time.Duration
-	NumberBuckets           int
-	IPRateBuckets           map[string][]int
-	URIRateBuckets          map[string][]int
-	Metrics                 *RatelimiterMetrics
-	rateIPMu                sync.Mutex
-	rateURIMu               sync.Mutex
-	bgChan                  chan bool
+	name                 string
+	maxRequestsPerWindow int
+	maxRequestPerBucket  int
+	metrics              *RatelimiterMetrics
+	rateWindow           time.Duration
+	bucketDuration       time.Duration
+	numberBuckets        int
+	rateBuckets          map[string][]int
+	keyFunc              KeyFunc
+	bucketExceededErr    error
+	windowExceededErr    error
+	mu                   sync.Mutex
+	bgChan               chan bool
 }
 
-func NewWindowRateLimiter(rateWindow time.Duration, bucketDuration time.Duration, maxIpRequestsPerWindow int, maxIpRequestPerBucket int, maxUriRequestsPerWindow int, maxUriRequestPerBucket int, metrics *RatelimiterMetrics) *WindowRateLimiter {
-	slog.Info("Creating ratelimiter", slog.String("window_size", rateWindow.String()), slog.String("bucket_size", bucketDuration.String()))
+func NewWindowRateLimiter(cfg WindowRateLimiterConfig) *WindowRateLimiter {
+	slog.Info("Creating ratelimiter", slog.String("name", cfg.Name), slog.String("window_size", cfg.RateWindow.String()), slog.String("bucket_size", cfg.BucketDuration.String()))
 	return &WindowRateLimiter{
-		BucketDuration:          bucketDuration,
-		MaxIPRequestPerBucket:   maxIpRequestPerBucket,
-		MaxIPRequestsPerWindow:  maxIpRequestsPerWindow,
-		MaxURIRequestPerBucket:  maxUriRequestPerBucket,
-		MaxURIRequestsPerWindow: maxUriRequestsPerWindow,
-		RateWindow:              rateWindow,
-		IPRateBuckets:           make(map[string][]int),
-		URIRateBuckets:          make(map[string][]int),
-		NumberBuckets:           int(rateWindow / bucketDuration),
-		Metrics:                 metrics,
-		bgChan:                  make(chan bool),
+		name:                 cfg.Name,
+		bucketDuration:       cfg.BucketDuration,
+		maxRequestPerBucket:  cfg.MaxRequestPerBucket,
+		maxRequestsPerWindow: cfg.MaxRequestsPerWindow,
+		rateWindow:           cfg.RateWindow,
+		rateBuckets:          make(map[string][]int),
+		numberBuckets:        int(cfg.RateWindow / cfg.BucketDuration),
+		keyFunc:              cfg.KeyFunc,
+		metrics:              cfg.Metrics,
+		bucketExceededErr:    cfg.BucketExceededErr,
+		windowExceededErr:    cfg.WindowExceededErr,
+		bgChan:               make(chan bool),
 	}
 }
 
+func (r *WindowRateLimiter) Name() string {
+	return r.name
+}
+
 func (r *WindowRateLimiter) Start() {
-	ticker := time.NewTicker(r.BucketDuration)
+	ticker := time.NewTicker(r.bucketDuration)
 	go func() {
 		for {
 			select {
 			case <-r.bgChan:
 				ticker.Stop()
-				slog.Info("RateLimiter stopped")
+				slog.Info("RateLimiter stopped", slog.String("name", r.name))
 				return
 			case <-ticker.C:
 				r.Tick()
@@ -97,7 +130,7 @@ func (r *WindowRateLimiter) Start() {
 }
 
 func (r *WindowRateLimiter) Stop() {
-	slog.Info("Stopping ratelimiter")
+	slog.Info("Stopping ratelimiter", slog.String("name", r.name))
 	r.bgChan <- true
 }
 
@@ -113,30 +146,16 @@ func GetSumOfWindow(window []int) int {
 // bucket while removing windows where all buckets are 0 (basically no traffic
 // seen).
 func (r *WindowRateLimiter) Tick() {
-	r.rateIPMu.Lock()
-	for k := range r.IPRateBuckets {
-		r.IPRateBuckets[k] = r.IPRateBuckets[k][1:]
-		r.IPRateBuckets[k] = append(r.IPRateBuckets[k], 0)
+	r.mu.Lock()
+	for k := range r.rateBuckets {
+		r.rateBuckets[k] = r.rateBuckets[k][1:]
+		r.rateBuckets[k] = append(r.rateBuckets[k], 0)
 
-		if GetSumOfWindow(r.IPRateBuckets[k]) == 0 {
-			delete(r.IPRateBuckets, k)
+		if GetSumOfWindow(r.rateBuckets[k]) == 0 {
+			delete(r.rateBuckets, k)
 		}
 	}
-	r.rateIPMu.Unlock()
-
-	r.rateURIMu.Lock()
-	for k := range r.URIRateBuckets {
-		r.URIRateBuckets[k] = r.URIRateBuckets[k][1:]
-		r.URIRateBuckets[k] = append(r.URIRateBuckets[k], 0)
-
-		if GetSumOfWindow(r.URIRateBuckets[k]) == 0 {
-			delete(r.URIRateBuckets, k)
-		}
-	}
-	r.rateURIMu.Unlock()
-
-	r.Metrics.ipRateBucketsGauge.Set(float64(len(r.IPRateBuckets)))
-	r.Metrics.uriRateBucketsGauge.Set(float64(len(r.URIRateBuckets)))
+	r.mu.Unlock()
 }
 
 // AllowRequest will return true if a request is allowed because the total
@@ -144,81 +163,44 @@ func (r *WindowRateLimiter) Tick() {
 // then an error is returned with the reason why.
 // Requires that Start() has been called before usage.
 func (r *WindowRateLimiter) AllowRequest(req *models.Request) (bool, error) {
-	ret, err := r.allowRequestForIP(req)
-	if !ret {
-		return ret, err
+	if r == nil {
+		return true, nil
 	}
 
-	return r.allowRequestForURI(req)
-}
+	if r.keyFunc == nil {
+		return true, nil
+	}
 
-func (r *WindowRateLimiter) allowRequestForIP(req *models.Request) (bool, error) {
-
-	ipRateKey := fmt.Sprintf("%s-%d-%s", req.HoneypotIP, req.Port, req.SourceIP)
-	r.rateIPMu.Lock()
-	defer r.rateIPMu.Unlock()
-
-	_, ok := r.IPRateBuckets[ipRateKey]
-	// If the key is not present then this IP has no recent requests logged so we
-	// create the buckets.
+	rateKey, ok := r.keyFunc(req)
 	if !ok {
-		r.IPRateBuckets[ipRateKey] = make([]int, r.NumberBuckets)
-		r.IPRateBuckets[ipRateKey][r.NumberBuckets-1] = 1
+		return true, nil
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	_, exists := r.rateBuckets[rateKey]
+	if !exists {
+		r.rateBuckets[rateKey] = make([]int, r.numberBuckets)
+		r.rateBuckets[rateKey][r.numberBuckets-1] = 1 // Count this request
 		return true, nil
 	}
 
 	// Check how many requests there have been in this window.
-	if GetSumOfWindow(r.IPRateBuckets[ipRateKey]) >= r.MaxIPRequestsPerWindow {
-		r.IPRateBuckets[ipRateKey][r.NumberBuckets-1] += 1
-		return false, ErrIPWindowLimitExceeded
+	if GetSumOfWindow(r.rateBuckets[rateKey]) >= r.maxRequestsPerWindow {
+		r.rateBuckets[rateKey][r.numberBuckets-1]++
+		r.metrics.rateLimiterRejects.WithLabelValues("window_" + r.Name()).Add(1)
+		return false, r.windowExceededErr
 	}
 
 	// Check if the bucket limit is not already exceeded.
-	if r.IPRateBuckets[ipRateKey][r.NumberBuckets-1] >= r.MaxIPRequestPerBucket {
-		r.IPRateBuckets[ipRateKey][r.NumberBuckets-1] += 1
-		return false, ErrIPBucketLimitExceeded
+	if r.rateBuckets[rateKey][r.numberBuckets-1] >= r.maxRequestPerBucket {
+		r.rateBuckets[rateKey][r.numberBuckets-1]++
+		r.metrics.rateLimiterRejects.WithLabelValues("bucket_" + r.Name()).Add(1)
+		return false, r.bucketExceededErr
 	}
 
-	r.IPRateBuckets[ipRateKey][r.NumberBuckets-1] += 1
-
-	return true, nil
-}
-
-func (r *WindowRateLimiter) allowRequestForURI(req *models.Request) (bool, error) {
-
-	// Always allow requests to "/". It's too common to ratelimit and we therefore
-	// depend here on the IP ratelimiter to limit the number of requests.
-	if req.Uri == "/" {
-		return true, nil
-	}
-
-	uriRateKey := req.BaseHash
-
-	r.rateURIMu.Lock()
-	defer r.rateURIMu.Unlock()
-
-	_, ok := r.URIRateBuckets[uriRateKey]
-	// If the key is not present then this URI has no recent requests logged so we
-	// create the buckets.
-	if !ok {
-		r.URIRateBuckets[uriRateKey] = make([]int, r.NumberBuckets)
-		r.URIRateBuckets[uriRateKey][r.NumberBuckets-1] = 1
-		return true, nil
-	}
-
-	// Check how many requests there have been in this window.
-	if GetSumOfWindow(r.URIRateBuckets[uriRateKey]) >= r.MaxURIRequestsPerWindow {
-		r.URIRateBuckets[uriRateKey][r.NumberBuckets-1] += 1
-		return false, ErrURIWindowLimitExceeded
-	}
-
-	// Check if the bucket limit is not already exceeded.
-	if r.URIRateBuckets[uriRateKey][r.NumberBuckets-1] >= r.MaxURIRequestPerBucket {
-		r.URIRateBuckets[uriRateKey][r.NumberBuckets-1] += 1
-		return false, ErrURIBucketLimitExceeded
-	}
-
-	r.URIRateBuckets[uriRateKey][r.NumberBuckets-1] += 1
+	r.rateBuckets[rateKey][r.numberBuckets-1]++
 
 	return true, nil
 }
@@ -230,4 +212,8 @@ type FakeRateLimiter struct {
 
 func (f *FakeRateLimiter) AllowRequest(*models.Request) (bool, error) {
 	return f.BoolToReturn, f.ErrorToReturn
+}
+
+func (f *FakeRateLimiter) Name() string {
+	return "fake"
 }

@@ -200,15 +200,31 @@ func main() {
 	bMetrics := backend.CreateBackendMetrics(metricsRegistry)
 	rMetrics := ratelimit.CreateRatelimiterMetrics(metricsRegistry)
 
-	rateLimiter := ratelimit.NewWindowRateLimiter(
-		cfg.Backend.RateLimiter.RateWindow,
-		cfg.Backend.RateLimiter.BucketDuration,
-		cfg.Backend.RateLimiter.MaxIPRequestsPerWindow,
-		cfg.Backend.RateLimiter.MaxIPRequestsPerBucket,
-		cfg.Backend.RateLimiter.MaxURIRequestsPerWindow,
-		cfg.Backend.RateLimiter.MaxURIRequestsPerBucket,
-		rMetrics)
-	rateLimiter.Start()
+	ipRateLimiter := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
+		Name:                 "ip",
+		RateWindow:           cfg.Backend.RateLimiter.IPRateWindow,
+		BucketDuration:       cfg.Backend.RateLimiter.IPBucketDuration,
+		MaxRequestsPerWindow: cfg.Backend.RateLimiter.MaxIPRequestsPerWindow,
+		MaxRequestPerBucket:  cfg.Backend.RateLimiter.MaxIPRequestsPerBucket,
+		Metrics:              rMetrics,
+		KeyFunc:              ratelimit.IPKeyFunc,
+		BucketExceededErr:    ratelimit.ErrIPBucketLimitExceeded,
+		WindowExceededErr:    ratelimit.ErrIPWindowLimitExceeded,
+	})
+	ipRateLimiter.Start()
+
+	uriRateLimiter := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
+		Name:                 "uri",
+		RateWindow:           cfg.Backend.RateLimiter.URIRateWindow,
+		BucketDuration:       cfg.Backend.RateLimiter.URIBucketDuration,
+		MaxRequestsPerWindow: cfg.Backend.RateLimiter.MaxURIRequestsPerWindow,
+		MaxRequestPerBucket:  cfg.Backend.RateLimiter.MaxURIRequestsPerBucket,
+		Metrics:              rMetrics,
+		KeyFunc:              ratelimit.URIKeyFunc,
+		BucketExceededErr:    ratelimit.ErrURIBucketLimitExceeded,
+		WindowExceededErr:    ratelimit.ErrURIWindowLimitExceeded,
+	})
+	uriRateLimiter.Start()
 
 	var llmResponder responder.Responder
 	var desClient describer.DescriberClient
@@ -308,7 +324,7 @@ func main() {
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
 	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, preprocMetric)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, rateLimiter, ipEventManager, llmResponder, sessionMgr, desClient, preproc, cfg)
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter}, ipEventManager, llmResponder, sessionMgr, desClient, preproc, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("error starting backend", slog.String("error", err.Error()))
 	}

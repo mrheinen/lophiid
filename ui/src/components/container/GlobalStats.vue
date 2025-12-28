@@ -56,6 +56,38 @@
             </div>
           </div>
         </div>
+        <div v-if="stats" class="rounded overflow-hidden shadow-lg">
+          <table>
+            <thead>
+              <tr>
+                <th>Source IP</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="stat in stats.top_10_source_ips_last_24_hours">
+                <td>{{ stat.source_ip }}</td>
+                <td>{{ stat.total_requests }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="stats" class="rounded overflow-hidden shadow-lg">
+          <table>
+            <thead>
+              <tr>
+                <th>URI</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="stat in stats.top_10_uris_last_24_hours">
+                <td>{{ stat.uri }}</td>
+                <td>{{ stat.total_requests }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
     <div class="basis-1/5" />
@@ -63,6 +95,8 @@
 </template>
 
 <script>
+
+
 export default {
   components: {},
   inject: ["config"],
