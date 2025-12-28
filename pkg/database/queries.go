@@ -76,3 +76,23 @@ WHERE created_at >= NOW() - INTERVAL '24 hours'
 GROUP BY  type, subtype
 ORDER BY total_entries DESC;
 `
+
+const QueryTop10SourcesLastDay = `
+SELECT
+    source_ip, COUNT(*) AS total_requests
+FROM public.request
+WHERE created_at >= NOW() - INTERVAL '24 hours'
+GROUP BY source_ip
+ORDER BY total_requests DESC
+LIMIT 10;
+`
+
+const QueryTop10URILastDay = `
+SELECT
+    uri, COUNT(*) AS total_requests
+FROM public.request
+WHERE created_at >= NOW() - INTERVAL '24 hours'
+GROUP BY uri
+ORDER BY total_requests DESC
+LIMIT 10;
+`

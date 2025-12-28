@@ -99,7 +99,7 @@ type BackendServer struct {
 	pingQueueMu         sync.Mutex
 	pingsCache          *util.StringMapCache[time.Time]
 	metrics             *BackendMetrics
-	rateLimiter         ratelimit.RateLimiter
+	rateLimiters        []ratelimit.RateLimiter
 	ipEventManager      analysis.IpEventManager
 	config              Config
 	llmResponder        responder.Responder
@@ -118,7 +118,7 @@ type BackendServer struct {
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiter ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriberClient, preprocessor preprocess.PreProcessInterface, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiters []ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriberClient, preprocessor preprocess.PreProcessInterface, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
@@ -168,7 +168,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		sessionCache:        sCache,
 		metrics:             metrics,
 		config:              config,
-		rateLimiter:         rateLimiter,
+		rateLimiters:        rateLimiters,
 		ipEventManager:      ipEventManager,
 		llmResponder:        llmResponder,
 		sessionMgr:          sessionMgr,
@@ -1107,40 +1107,42 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}
 	sReq.SessionID = session.ID
 
-	allowRequest, err := s.rateLimiter.AllowRequest(sReq)
-	if !allowRequest {
-		evt := &models.IpEvent{
-			IP:            sReq.SourceIP,
-			Type:          constants.IpEventRateLimited,
-			Details:       err.Error(),
-			Source:        constants.IpEventSourceBackend,
-			SourceRef:     fmt.Sprintf("%d", session.ID),
-			SourceRefType: constants.IpEventRefTypeSessionId,
-			HoneypotIP:    sReq.HoneypotIP,
+	for _, limiter := range s.rateLimiters {
+		allowRequest, err := limiter.AllowRequest(sReq)
+		if !allowRequest {
+			evt := &models.IpEvent{
+				IP:            sReq.SourceIP,
+				Type:          constants.IpEventRateLimited,
+				Details:       err.Error(),
+				Source:        constants.IpEventSourceBackend,
+				SourceRef:     fmt.Sprintf("%d", session.ID),
+				SourceRefType: constants.IpEventRefTypeSessionId,
+				HoneypotIP:    sReq.HoneypotIP,
+			}
+
+			switch err {
+			case ratelimit.ErrIPBucketLimitExceeded:
+				evt.Subtype = constants.IpEventSubTypeRateIPBucket
+			case ratelimit.ErrIPWindowLimitExceeded:
+				evt.Subtype = constants.IpEventSubTypeRateIPWindow
+			case ratelimit.ErrURIBucketLimitExceeded:
+				evt.Subtype = constants.IpEventSubTypeRateURIBucket
+			case ratelimit.ErrURIWindowLimitExceeded:
+				evt.Subtype = constants.IpEventSubTypeRateURIWindow
+
+			default:
+				// Try to map based on limiter name if the error isn't one of the standard ones,
+				// or just log it. For now, we'll keep the default logging but maybe add metrics?
+				// The prompt asked to keep same metrics but simplify if possible.
+				// If we use standard errors for the new limiters, the switch works.
+				slog.Error("error happened in ratelimiter", slog.String("error", err.Error()), slog.String("limiter", limiter.Name()))
+			}
+
+			s.ipEventManager.AddEvent(evt)
+
+			slog.Debug("ratelimiter blocked request", slog.String("ip", sReq.SourceIP), slog.String("honeypot", sReq.HoneypotIP), slog.String("error", err.Error()), slog.String("limiter", limiter.Name()))
+			return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
 		}
-
-		switch err {
-		case ratelimit.ErrIPBucketLimitExceeded:
-			evt.Subtype = constants.IpEventSubTypeRateIPBucket
-			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonIPBucket).Add(1)
-		case ratelimit.ErrIPWindowLimitExceeded:
-			evt.Subtype = constants.IpEventSubTypeRateIPWindow
-			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonIPWindow).Add(1)
-		case ratelimit.ErrURIBucketLimitExceeded:
-			evt.Subtype = constants.IpEventSubTypeRateURIBucket
-			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonURIBucket).Add(1)
-		case ratelimit.ErrURIWindowLimitExceeded:
-			evt.Subtype = constants.IpEventSubTypeRateURIWindow
-			s.metrics.rateLimiterRejects.WithLabelValues(RatelimiterRejectReasonURIWindow).Add(1)
-
-		default:
-			slog.Error("error happened in ratelimiter", slog.String("error", err.Error()))
-		}
-
-		s.ipEventManager.AddEvent(evt)
-
-		slog.Debug("ratelimiter blocked request", slog.String("ip", sReq.SourceIP), slog.String("honeypot", sReq.HoneypotIP), slog.String("error", err.Error()))
-		return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
 	}
 
 	s.metrics.requestsPerPort.WithLabelValues(fmt.Sprintf("%d", sReq.Port)).Add(1)

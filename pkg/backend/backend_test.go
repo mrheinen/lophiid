@@ -330,7 +330,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 			fakePreprocessor := preprocess.FakePreProcessor{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput, models.NewSession())
 			if test.errorExpected {
@@ -373,7 +373,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	fakePreprocessor := preprocess.FakePreProcessor{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 	myTestIP := "1.2.3.4"
 	session, _ := b.sessionMgr.StartSession(myTestIP)
@@ -465,7 +465,7 @@ func TestGetMatchedRulePortPrioritization(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	fakePreprocessor := preprocess.FakePreProcessor{}
-	s := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	s := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 	// Test that rule with ports gets priority
 	matchedRule, err := s.GetMatchedRule(rules, req, sess)
@@ -503,7 +503,7 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	fakePreprocessor := preprocess.FakePreProcessor{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
@@ -597,7 +597,7 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 			fakePreprocessor := preprocess.FakePreProcessor{}
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 			assert.Equal(t, test.expectedReturn, b.MaybeExtractLinksFromPayload(test.content, test.dInfo))
 
@@ -636,7 +636,7 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 	config.Backend.Advanced.MaxDownloadsPerIP = 3
 
 	fakePreprocessor := preprocess.FakePreProcessor{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, config)
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, config)
 
 	sourceIP := "1.2.3.4"
 
@@ -786,7 +786,7 @@ func TestHandleProbe(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	fakePreprocessor := preprocess.FakePreProcessor{}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -980,7 +980,7 @@ func TestHandleProbePreprocessHeaders(t *testing.T) {
 		},
 	}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 	b.LoadRules()
 
 	ctx := GetContextWithAuthMetadata()
@@ -1106,7 +1106,7 @@ func TestProcessQueue(t *testing.T) {
 		fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 		fakePreprocessor := preprocess.FakePreProcessor{}
 
-		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 		t.Run(test.description, func(t *testing.T) {
 
@@ -1239,7 +1239,7 @@ func TestSendStatus(t *testing.T) {
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 			fakePreprocessor := preprocess.FakePreProcessor{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 			_, err := b.SendStatus(context.Background(), test.request)
 			if test.expectedErrorString != "" {
@@ -1293,7 +1293,7 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	fakePreprocessor := preprocess.FakePreProcessor{}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 	statusRequest := backend_service.StatusRequest{
 		Ip:      testHoneypotIP,
@@ -1371,7 +1371,7 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	fakePreprocessor := preprocess.FakePreProcessor{}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 	uploadRequest := backend_service.UploadFileRequest{
 		RequestId: 42,
@@ -1424,7 +1424,7 @@ func TestHandleP0fResult(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	fakePreprocessor := preprocess.FakePreProcessor{}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 	// Insert a generic one. Should succeed
 	fdbc.P0fErrorToReturn = ksql.ErrRecordNotFound
@@ -1564,7 +1564,7 @@ func TestGetResponderDataCases(t *testing.T) {
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 			fakePreprocessor := preprocess.FakePreProcessor{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, test.responder, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, test.responder, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 			ret := b.getResponderData(&test.request, &test.rule, &test.content)
 
 			assert.Equal(t, test.expectedReturn, ret)
@@ -1637,7 +1637,7 @@ func TestHandlePingStatus(t *testing.T) {
 			fIpMgr := analysis.FakeIpEventManager{}
 			fakePreprocessor := preprocess.FakePreProcessor{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 			ctx := GetContextWithAuthMetadata()
 
 			_, err := b.SendPingStatus(ctx, test.request)
@@ -1780,7 +1780,7 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 				ErrorToReturn: test.preprocessError,
 			}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 			b.LoadRules()
 
 			ctx := GetContextWithAuthMetadata()
@@ -1920,7 +1920,7 @@ func TestGetPreProcessResponse(t *testing.T) {
 				ErrorToReturn: test.preprocessError,
 			}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 			// Setup test request
 			req := &models.Request{
@@ -2018,7 +2018,7 @@ func TestHandlePreProcess(t *testing.T) {
 				ErrorToReturn:  test.preprocessError,
 			}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, &fakeLimiter, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 
 			content := &models.Content{
 				Data: []byte("Original content"),

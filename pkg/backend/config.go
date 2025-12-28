@@ -45,12 +45,15 @@ type Config struct {
 			MaxDownloadSizeMB  int    `fig:"max_download_size_mb" default:"200"`
 		} `fig:"downloader"`
 		RateLimiter struct {
-			RateWindow              time.Duration `fig:"rate_window" default:"1h"`
-			BucketDuration          time.Duration `fig:"bucket_duration" default:"1m"`
-			MaxIPRequestsPerWindow  int           `fig:"max_ip_requests_per_window" default:"1000"`
-			MaxIPRequestsPerBucket  int           `fig:"max_ip_requests_per_bucket" default:"50"`
-			MaxURIRequestsPerWindow int           `fig:"max_uri_requests_per_window" default:"2000"`
-			MaxURIRequestsPerBucket int           `fig:"max_uri_requests_per_bucket" default:"100"`
+			IPRateWindow      time.Duration `fig:"ip_rate_window" default:"1h"`
+			IPBucketDuration  time.Duration `fig:"ip_bucket_duration" default:"1m"`
+			URIRateWindow     time.Duration `fig:"uri_rate_window" default:"1h"`
+			URIBucketDuration time.Duration `fig:"uri_bucket_duration" default:"1m"`
+
+			MaxIPRequestsPerWindow  int `fig:"max_ip_requests_per_window" default:"1000"`
+			MaxIPRequestsPerBucket  int `fig:"max_ip_requests_per_bucket" default:"50"`
+			MaxURIRequestsPerWindow int `fig:"max_uri_requests_per_window" default:"2000"`
+			MaxURIRequestsPerBucket int `fig:"max_uri_requests_per_bucket" default:"100"`
 		} `fig:"ratelimiter"`
 
 		Advanced struct {
