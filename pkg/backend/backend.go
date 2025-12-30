@@ -114,7 +114,7 @@ type BackendServer struct {
 	// payloadSessionCache uses the session ID, cmp_hash and attacked parameter
 	// as key. The value is a map where each key is a hash of the payload with the
 	// request ID as value.
-	payloadSessionCache *util.StringMapCache[map[string]int64]
+	payloadSessionCache *util.StringMapCache[map[string]string]
 }
 
 // NewBackendServer creates a new instance of the backend server.
@@ -144,7 +144,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	plCache := util.NewStringMapCache[struct{}]("payload_cmp_hash_cache", time.Minute*45)
 	plCache.Start()
 
-	cpCache := util.NewStringMapCache[map[string]int64]("consecutive_payload_cache", time.Minute*20)
+	cpCache := util.NewStringMapCache[map[string]string]("consecutive_payload_cache", time.Minute*20)
 	cpCache.Start()
 
 	return &BackendServer{
@@ -918,17 +918,32 @@ func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes
 		return
 	}
 
-	cKey := fmt.Sprintf("%d:%s:%s:%s", sReq.SessionID, sReq.CmpHash, preRes.PayloadType, preRes.TargetedParameter)
+	cKey := fmt.Sprintf("%d:%s:%s:%s", sReq.SessionID, sReq.BaseHash, preRes.PayloadType, preRes.TargetedParameter)
 	pHash := string(util.FastCacheHash(preRes.Payload))
 
 	s.payloadSessionCache.GetOrCreate(cKey,
-		func() map[string]int64 { return make(map[string]int64) },
-		func(val *map[string]int64) {
+		func() map[string]string { return make(map[string]string) },
+		func(val *map[string]string) {
+			// If this payload is not seen before and there are already entries in the
+			// masp then we will create an event.
 			if _, ok := (*val)[pHash]; !ok {
-				// This payload was not seen before for this session/cmp_hash/param combo.
 				if len(*val) > 0 {
+					// Parsing of the payload is not always reliable so we will first
+					// check to see if there is not an entry with the exact same
+					// cmp_hash. If there is one then it means that we got two different
+					// cKeys for the exact same request which extremely likely is due to
+					// the payload not being parsed out the same in both cases. This is
+					// very noisy and we will filter that out here.
+
+					for _, v := range *val {
+						if v == sReq.CmpHash {
+							slog.Debug("found duplicate payload cmp_hash in cache!", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID))
+							return
+						}
+					}
+
 					// Only create event if we've seen at least one other payload before.
-					slog.Debug("found new consecutive payload for session", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("cmp_hash", sReq.CmpHash), slog.String("target_param", preRes.TargetedParameter))
+					slog.Debug("found new consecutive payload for session", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("base_hash", sReq.BaseHash), slog.String("target_param", preRes.TargetedParameter))
 					s.ipEventManager.AddEvent(&models.IpEvent{
 						IP:            sReq.SourceIP,
 						Type:          constants.IpEventSessionInfo,
@@ -941,7 +956,7 @@ func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes
 						HoneypotIP:    sReq.HoneypotIP,
 					})
 				}
-				(*val)[pHash] = sReq.ID
+				(*val)[pHash] = sReq.CmpHash
 			}
 		},
 	)

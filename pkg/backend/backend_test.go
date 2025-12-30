@@ -2054,8 +2054,8 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 		{
 			description: "Different payloads in same parameter creates event",
 			requests: []*models.Request{
-				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
-				{ID: 2, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 1, SessionID: 100, CmpHash: "aa", BaseHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, CmpHash: "bb", BaseHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
 			},
 			preResults: []*preprocess.PreProcessResult{
 				{TargetedParameter: "cmd", Payload: "whoami", PayloadType: constants.TriagePayloadTypeShellCommand},
@@ -2066,8 +2066,8 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 		{
 			description: "Same payload in same parameter creates no event",
 			requests: []*models.Request{
-				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
-				{ID: 2, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 1, SessionID: 100, BaseHash: "aaa", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, BaseHash: "aaa", CmpHash: "hash2", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
 			},
 			preResults: []*preprocess.PreProcessResult{
 				{TargetedParameter: "cmd", Payload: "whoami", PayloadType: constants.TriagePayloadTypeShellCommand},
@@ -2078,8 +2078,8 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 		{
 			description: "Different session IDs do not share cache state",
 			requests: []*models.Request{
-				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
-				{ID: 2, SessionID: 200, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 1, SessionID: 100, BaseHash: "aaa", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 200, BaseHash: "aaa", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
 			},
 			preResults: []*preprocess.PreProcessResult{
 				{TargetedParameter: "cmd", Payload: "whoami", PayloadType: constants.TriagePayloadTypeShellCommand},
@@ -2088,10 +2088,10 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 			expectedEventCount: 0,
 		},
 		{
-			description: "Different CmpHash does not trigger event",
+			description: "Different BaseHash does not trigger event",
 			requests: []*models.Request{
-				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
-				{ID: 2, SessionID: 100, CmpHash: "hash2", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 1, SessionID: 100, BaseHash: "aaa", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, BaseHash: "bbb", CmpHash: "hash2", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
 			},
 			preResults: []*preprocess.PreProcessResult{
 				{TargetedParameter: "cmd", Payload: "whoami", PayloadType: constants.TriagePayloadTypeShellCommand},
@@ -2099,11 +2099,24 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 			},
 			expectedEventCount: 0,
 		},
+		{
+			description: "Same CmpHash does not trigger event",
+			requests: []*models.Request{
+				{ID: 1, SessionID: 100, BaseHash: "aaa", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, BaseHash: "aaa", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+			},
+			preResults: []*preprocess.PreProcessResult{
+				{TargetedParameter: "cmd", Payload: "whoami", PayloadType: constants.TriagePayloadTypeShellCommand},
+				{TargetedParameter: "cmd", Payload: "id", PayloadType: constants.TriagePayloadTypeShellCommand},
+			},
+			expectedEventCount: 0,
+		},
+
 		{
 			description: "Different targeted parameters do not trigger event",
 			requests: []*models.Request{
-				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
-				{ID: 2, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 1, SessionID: 100, BaseHash: "aaa", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, BaseHash: "aaa", CmpHash: "hash2", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
 			},
 			preResults: []*preprocess.PreProcessResult{
 				{TargetedParameter: "cmd", Payload: "whoami", PayloadType: constants.TriagePayloadTypeShellCommand},
@@ -2114,9 +2127,9 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 		{
 			description: "Multiple different payloads create multiple events",
 			requests: []*models.Request{
-				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
-				{ID: 2, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
-				{ID: 3, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 1, SessionID: 100, BaseHash: "111", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 2, SessionID: 100, BaseHash: "111", CmpHash: "hash2", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 3, SessionID: 100, BaseHash: "111", CmpHash: "hash3", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
 			},
 			preResults: []*preprocess.PreProcessResult{
 				{TargetedParameter: "cmd", Payload: "whoami", PayloadType: constants.TriagePayloadTypeShellCommand},
@@ -2128,7 +2141,7 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 		{
 			description: "Single request creates no event",
 			requests: []*models.Request{
-				{ID: 1, SessionID: 100, CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
+				{ID: 1, SessionID: 100, BaseHash: "vvv", CmpHash: "hash1", SourceIP: "1.2.3.4", HoneypotIP: "5.6.7.8"},
 			},
 			preResults: []*preprocess.PreProcessResult{
 				{TargetedParameter: "cmd", Payload: "whoami", PayloadType: constants.TriagePayloadTypeShellCommand},
@@ -2140,7 +2153,7 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 			fIpMgr := analysis.FakeIpEventManager{}
 
 			b := &BackendServer{
-				payloadSessionCache: util.NewStringMapCache[map[string]int64]("test", time.Hour),
+				payloadSessionCache: util.NewStringMapCache[map[string]string]("test", time.Hour),
 				ipEventManager:      &fIpMgr,
 			}
 
