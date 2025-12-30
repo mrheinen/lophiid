@@ -113,7 +113,7 @@ type BackendServer struct {
 	payloadCmpHashCache *util.StringMapCache[struct{}]
 	// payloadSessionCache uses the session ID, cmp_hash and attacked parameter
 	// as key. The value is a map where each key is a hash of the payload with the
-	// request ID as value.
+	// cmp_hash as value.
 	payloadSessionCache *util.StringMapCache[map[string]string]
 }
 
