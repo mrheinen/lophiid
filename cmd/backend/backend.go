@@ -202,16 +202,29 @@ func main() {
 
 	ipRateLimiter := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
 		Name:                 "ip",
-		RateWindow:           cfg.Backend.RateLimiter.IPRateWindow,
-		BucketDuration:       cfg.Backend.RateLimiter.IPBucketDuration,
-		MaxRequestsPerWindow: cfg.Backend.RateLimiter.MaxIPRequestsPerWindow,
-		MaxRequestPerBucket:  cfg.Backend.RateLimiter.MaxIPRequestsPerBucket,
+		RateWindow:           cfg.Backend.RateLimiter.SessionIPRateWindow,
+		BucketDuration:       cfg.Backend.RateLimiter.SessionIPBucketDuration,
+		MaxRequestsPerWindow: cfg.Backend.RateLimiter.MaxSessionIPRequestsPerWindow,
+		MaxRequestPerBucket:  cfg.Backend.RateLimiter.MaxSessionIPRequestsPerBucket,
 		Metrics:              rMetrics,
 		KeyFunc:              ratelimit.IPKeyFunc,
-		BucketExceededErr:    ratelimit.ErrIPBucketLimitExceeded,
-		WindowExceededErr:    ratelimit.ErrIPWindowLimitExceeded,
+		BucketExceededErr:    ratelimit.ErrSessionIPBucketLimitExceeded,
+		WindowExceededErr:    ratelimit.ErrSessionIPWindowLimitExceeded,
 	})
 	ipRateLimiter.Start()
+
+	sourceIPRateLimiter := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
+		Name:                 "source_ip",
+		RateWindow:           cfg.Backend.RateLimiter.SourceIPRateWindow,
+		BucketDuration:       cfg.Backend.RateLimiter.SourceIPBucketDuration,
+		MaxRequestsPerWindow: cfg.Backend.RateLimiter.MaxSourceIPRequestsPerWindow,
+		MaxRequestPerBucket:  cfg.Backend.RateLimiter.MaxSourceIPRequestsPerBucket,
+		Metrics:              rMetrics,
+		KeyFunc:              ratelimit.SourceIPKeyFunc,
+		BucketExceededErr:    ratelimit.ErrSourceIPBucketLimitExceeded,
+		WindowExceededErr:    ratelimit.ErrSourceIPWindowLimitExceeded,
+	})
+	sourceIPRateLimiter.Start()
 
 	uriRateLimiter := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
 		Name:                 "uri",

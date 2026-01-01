@@ -36,8 +36,15 @@ const (
 	IpEventSubTypeMalwareNew = "MALWARE_NEW"
 	IpEventSubTypeMalwareOld = "MALWARE_OLD"
 
-	IpEventSubTypeRateIPWindow  = "IP_RATE_WINDOW"
-	IpEventSubTypeRateIPBucket  = "IP_RATE_BUCKET"
+	IpEventSubTypeRateIPWindow = "IP_RATE_WINDOW"
+	IpEventSubTypeRateIPBucket = "IP_RATE_BUCKET"
+
+	IpEventSubTypeRateSourceIPWindow = "SOURCE_IP_RATE_WINDOW"
+	IpEventSubTypeRateSourceIPBucket = "SOURCE_IP_RATE_BUCKET"
+
+	IpEventSubTypeRateSessionIPWindow = "SESSION_IP_RATE_WINDOW"
+	IpEventSubTypeRateSessionIPBucket = "SESSION_IP_RATE_BUCKET"
+
 	IpEventSubTypeRateURIWindow = "URI_RATE_WINDOW"
 	IpEventSubTypeRateURIBucket = "URI_RATE_BUCKET"
 
