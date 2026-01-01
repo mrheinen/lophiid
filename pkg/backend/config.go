@@ -45,15 +45,20 @@ type Config struct {
 			MaxDownloadSizeMB  int    `fig:"max_download_size_mb" default:"200"`
 		} `fig:"downloader"`
 		RateLimiter struct {
-			IPRateWindow      time.Duration `fig:"ip_rate_window" default:"1h"`
-			IPBucketDuration  time.Duration `fig:"ip_bucket_duration" default:"1m"`
-			URIRateWindow     time.Duration `fig:"uri_rate_window" default:"1h"`
-			URIBucketDuration time.Duration `fig:"uri_bucket_duration" default:"1m"`
+			SessionIPRateWindow           time.Duration `fig:"session_ip_rate_window" default:"1h"`
+			SessionIPBucketDuration       time.Duration `fig:"session_ip_bucket_duration" default:"1m"`
+			MaxSessionIPRequestsPerWindow int           `fig:"max_session_ip_requests_per_window" default:"1000"`
+			MaxSessionIPRequestsPerBucket int           `fig:"max_session_ip_requests_per_bucket" default:"50"`
 
-			MaxIPRequestsPerWindow  int `fig:"max_ip_requests_per_window" default:"1000"`
-			MaxIPRequestsPerBucket  int `fig:"max_ip_requests_per_bucket" default:"50"`
-			MaxURIRequestsPerWindow int `fig:"max_uri_requests_per_window" default:"2000"`
-			MaxURIRequestsPerBucket int `fig:"max_uri_requests_per_bucket" default:"100"`
+			SourceIPRateWindow           time.Duration `fig:"source_ip_rate_window" default:"24h"`
+			SourceIPBucketDuration       time.Duration `fig:"source_ip_bucket_duration" default:"1h"`
+			MaxSourceIPRequestsPerWindow int           `fig:"max_source_ip_requests_per_window" default:"5000"`
+			MaxSourceIPRequestsPerBucket int           `fig:"max_source_ip_requests_per_bucket" default:"3000"`
+
+			URIRateWindow           time.Duration `fig:"uri_rate_window" default:"1h"`
+			URIBucketDuration       time.Duration `fig:"uri_bucket_duration" default:"1m"`
+			MaxURIRequestsPerWindow int           `fig:"max_uri_requests_per_window" default:"2000"`
+			MaxURIRequestsPerBucket int           `fig:"max_uri_requests_per_bucket" default:"100"`
 		} `fig:"ratelimiter"`
 
 		Advanced struct {

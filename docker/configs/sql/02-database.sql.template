@@ -26,7 +26,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION pg_stat_statements; Type: COMMENT; Schema: -; Owner:
 --
 
 COMMENT ON EXTENSION pg_stat_statements IS 'track planning and execution statistics of all SQL statements executed';
@@ -40,7 +40,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner:
 --
 
 COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
@@ -54,7 +54,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION "uuid-ossp"; Type: COMMENT; Schema: -; Owner:
 --
 
 COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
@@ -151,6 +151,10 @@ CREATE TYPE public.ip_event_sub_type AS ENUM (
     'URI_RATE_WINDOW',
     'URI_RATE_BUCKET',
     'IP_RATE_BUCKET',
+    'SOURCE_IP_RATE_BUCKET',
+    'SOURCE_IP_RATE_WINDOW',
+    'SESSION_IP_RATE_BUCKET',
+    'SESSION_IP_RATE_WINDOW',
     'SUCCESS',
     'FAILURE',
     'SUCCESSIVE_PAYLOAD'
@@ -8809,4 +8813,3 @@ GRANT ALL ON SEQUENCE public.yara_id_seq TO lo;
 --
 
 \unrestrict 8cIB8ZWMJEw0sla6NmppxFkp4GDBuPBrZzhcpfsdAtShZ1e4l4JBn126rkPaG2t
-

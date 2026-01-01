@@ -1136,10 +1136,14 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			}
 
 			switch err {
-			case ratelimit.ErrIPBucketLimitExceeded:
-				evt.Subtype = constants.IpEventSubTypeRateIPBucket
-			case ratelimit.ErrIPWindowLimitExceeded:
-				evt.Subtype = constants.IpEventSubTypeRateIPWindow
+			case ratelimit.ErrSessionIPBucketLimitExceeded:
+				evt.Subtype = constants.IpEventSubTypeRateSessionIPBucket
+			case ratelimit.ErrSessionIPWindowLimitExceeded:
+				evt.Subtype = constants.IpEventSubTypeRateSessionIPWindow
+			case ratelimit.ErrSourceIPBucketLimitExceeded:
+				evt.Subtype = constants.IpEventSubTypeRateSourceIPBucket
+			case ratelimit.ErrSourceIPWindowLimitExceeded:
+				evt.Subtype = constants.IpEventSubTypeRateSourceIPWindow
 			case ratelimit.ErrURIBucketLimitExceeded:
 				evt.Subtype = constants.IpEventSubTypeRateURIBucket
 			case ratelimit.ErrURIWindowLimitExceeded:
