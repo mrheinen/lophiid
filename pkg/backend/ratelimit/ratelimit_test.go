@@ -49,8 +49,8 @@ func TestRateLimitOk(t *testing.T) {
 		MaxRequestPerBucket:  testMaxIpRequestPerBucket,
 		Metrics:              rMetrics,
 		KeyFunc:              IPKeyFunc,
-		BucketExceededErr:    ErrIPBucketLimitExceeded,
-		WindowExceededErr:    ErrIPWindowLimitExceeded,
+		BucketExceededErr:    ErrSessionIPBucketLimitExceeded,
+		WindowExceededErr:    ErrSessionIPWindowLimitExceeded,
 	})
 
 	// Simulate multiple requests in the same bucket. It should
@@ -69,7 +69,7 @@ func TestRateLimitOk(t *testing.T) {
 		t.Errorf("request is allowed but it should be rejected")
 	}
 
-	if err != ErrIPBucketLimitExceeded {
+	if err != ErrSessionIPBucketLimitExceeded {
 		t.Errorf("expected bucket exceeded, got unexpected error %v", err)
 	}
 
@@ -91,7 +91,7 @@ func TestRateLimitOk(t *testing.T) {
 		t.Errorf("request exceeds window limit and should be rejected")
 	}
 
-	if err != ErrIPWindowLimitExceeded {
+	if err != ErrSessionIPWindowLimitExceeded {
 		t.Errorf("expected ErrWindowLimitExceeded but got %v", err)
 	}
 
@@ -155,7 +155,7 @@ func TestAllowRequestForIP(t *testing.T) {
 			requestCount:  3,
 			setupRequests: 2, // make 2 requests first to reach the limit
 			expectedAllow: false,
-			expectedError: ErrIPBucketLimitExceeded,
+			expectedError: ErrSessionIPBucketLimitExceeded,
 		},
 		{
 			name: "window limit exceeded",
@@ -167,7 +167,7 @@ func TestAllowRequestForIP(t *testing.T) {
 			requestCount:  5,
 			setupRequests: 4, // make 4 requests first to reach the window limit
 			expectedAllow: false,
-			expectedError: ErrIPWindowLimitExceeded,
+			expectedError: ErrSessionIPWindowLimitExceeded,
 		},
 	}
 
@@ -185,8 +185,8 @@ func TestAllowRequestForIP(t *testing.T) {
 				MaxRequestPerBucket:  2,
 				Metrics:              rMetrics,
 				KeyFunc:              IPKeyFunc,
-				BucketExceededErr:    ErrIPBucketLimitExceeded,
-				WindowExceededErr:    ErrIPWindowLimitExceeded,
+				BucketExceededErr:    ErrSessionIPBucketLimitExceeded,
+				WindowExceededErr:    ErrSessionIPWindowLimitExceeded,
 			})
 
 			// Perform setup requests if needed
@@ -233,12 +233,12 @@ func TestAllowRequestForIP(t *testing.T) {
 					t.Errorf("expected window reject metric to be 0, got %v", val)
 				}
 			} else {
-				if tt.expectedError == ErrIPBucketLimitExceeded {
+				if tt.expectedError == ErrSessionIPBucketLimitExceeded {
 					val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("bucket_" + r.Name()))
 					if val != 1 {
 						t.Errorf("expected bucket reject metric to be 1, got %v", val)
 					}
-				} else if tt.expectedError == ErrIPWindowLimitExceeded {
+				} else if tt.expectedError == ErrSessionIPWindowLimitExceeded {
 					val := testutil.ToFloat64(rMetrics.rateLimiterRejects.WithLabelValues("window_" + r.Name()))
 					if val != 1 {
 						t.Errorf("expected window reject metric to be 1, got %v", val)
