@@ -26,10 +26,10 @@ import (
 )
 
 var (
-	ErrSessionIPBucketLimitExceeded = errors.New("Session IP bucket limit exceeded")
-	ErrSessionIPWindowLimitExceeded = errors.New("Session IP window limit exceeded")
-	ErrSourceIPBucketLimitExceeded  = errors.New("Source IP bucket limit exceeded")
-	ErrSourceIPWindowLimitExceeded  = errors.New("Source IP window limit exceeded")
+	ErrSessionIPBucketLimitExceeded = errors.New("session IP bucket limit exceeded")
+	ErrSessionIPWindowLimitExceeded = errors.New("session IP window limit exceeded")
+	ErrSourceIPBucketLimitExceeded  = errors.New("source IP bucket limit exceeded")
+	ErrSourceIPWindowLimitExceeded  = errors.New("source IP window limit exceeded")
 
 	ErrURIBucketLimitExceeded = errors.New("URI bucket limit exceeded")
 	ErrURIWindowLimitExceeded = errors.New("URI window limit exceeded")
@@ -48,7 +48,7 @@ func IPKeyFunc(req *models.Request) (string, bool) {
 	return fmt.Sprintf("%s-%d-%s", req.HoneypotIP, req.Port, req.SourceIP), true
 }
 
-// GlobalIPKeyFunc is a KeyFunc that uses the source IP as the key. Its used to
+// SourceIPKeyFunc is a KeyFunc that uses the source IP as the key. Its used to
 // limit all requests coming from a single IP.
 func SourceIPKeyFunc(req *models.Request) (string, bool) {
 	return req.SourceIP, true
