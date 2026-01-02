@@ -31,6 +31,7 @@ type Session struct {
 	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
 	StartedAt      time.Time `ksql:"started_at" json:"started_at" doc:"Start time of the session"`
 	EndedAt        time.Time `ksql:"ended_at" json:"ended_at" doc:"End time of the session"`
+	TempRules      []SessionContentRule
 	Mu             sync.RWMutex
 }
 
@@ -42,6 +43,18 @@ func (c *Session) HasServedRule(ruleID int64) bool {
 	defer c.Mu.RUnlock()
 	_, ok := c.RuleIDsServed[ruleID]
 	return ok
+}
+
+func (c *Session) AddTempRule(rule ContentRule, content Content, contentIsCode bool) {
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
+	c.TempRules = append(c.TempRules, SessionContentRule{rule, content, contentIsCode})
+}
+
+func (c *Session) GetTempRules() []SessionContentRule {
+	c.Mu.RLock()
+	defer c.Mu.RUnlock()
+	return c.TempRules
 }
 
 // ServedRuleWithContent updates the session with the given rule and content ID.
