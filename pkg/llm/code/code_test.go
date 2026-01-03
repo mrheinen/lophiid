@@ -29,6 +29,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/shell"
+	"lophiid/pkg/llm/tools"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,7 +48,7 @@ func testEmulator(llmManager *llm.MockLLMManager, dbClient *database.FakeDatabas
 	return &CodeSnippetEmulator{
 		llmManager:  llmManager,
 		dbClient:    dbClient,
-		shellClient: shellClient,
+		toolSet:     tools.NewCodeToolSet(shellClient),
 	}
 }
 
@@ -173,33 +174,6 @@ func TestEmulate_EmptyStdout(t *testing.T) {
 	assert.Equal(t, "java", result.Language)
 }
 
-func TestStringToMD5(t *testing.T) {
-	emulator := &CodeSnippetEmulator{}
-
-	result, err := emulator.StringToMD5("hello")
-
-	assert.NoError(t, err)
-	assert.Equal(t, "5d41402abc4b2a76b9719d911017c592", result)
-}
-
-func TestStringFromBase64(t *testing.T) {
-	emulator := &CodeSnippetEmulator{}
-
-	result, err := emulator.StringFromBase64("aGVsbG8gd29ybGQ=")
-
-	assert.NoError(t, err)
-	assert.Equal(t, "hello world", result)
-}
-
-func TestStringFromBase64_InvalidInput(t *testing.T) {
-	emulator := &CodeSnippetEmulator{}
-
-	result, err := emulator.StringFromBase64("not-valid-base64!!!")
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "error decoding base64")
-	assert.Empty(t, result)
-}
 
 func TestEmulate_WithNilShellClient(t *testing.T) {
 	mockLLM := &llm.MockLLMManager{

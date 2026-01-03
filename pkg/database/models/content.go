@@ -36,6 +36,7 @@ type Content struct {
 	UpdatedAt   time.Time                `ksql:"updated_at,timeNowUTC"              yaml:"updated_at" json:"updated_at" doc:"time.Time of last update"`
 	ExtVersion  int64                    `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the content"`
 	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the content"`
+	HasCode     bool                     `ksql:"has_code" json:"has_code" yaml:"has_code" doc:"A bool (0 or 1) indicating if the content has a code snippet"`
 }
 
 func (c *Content) ModelID() int64              { return c.ID }
