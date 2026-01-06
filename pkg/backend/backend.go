@@ -1147,7 +1147,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 				sReq.RawResponse = string(res.Body)
 			}
 		} else {
-			if content.HasCode {
+			if content.HasCode && s.codeInterpreter != nil {
 				llmRes, err := s.codeInterpreter.Interpret(sReq, &content)
 				if err != nil {
 					slog.Error("error interpreting code", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
