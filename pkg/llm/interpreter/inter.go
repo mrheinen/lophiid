@@ -36,7 +36,7 @@ type InterOutput struct {
 }
 
 const CodeInterpreterSystemPrompt = `
-You are given web application code and an HTTP request. It is your job to determine what output the web application code would generate if it was executed and tasked with handling the given HTTP request. Note that your job is not to actually execute this code, which would be dangerous. Instead I need you to use your knowledge to determine what the output of the web application would be if it was requested with the given request. Pay attention to how what parameters and headers the request sends and how the application processes them.
+You are given web application code and an HTTP request. It is your job to determine what output the web application code would generate if it was executed and tasked with handling the given HTTP request. Note that your job is not to actually execute this code, which would be dangerous. Instead I need you to use your knowledge to determine what the output of the web application would be if it was requested with the given request. Pay attention to what parameters and headers the request sends and how the application processes them.
 
 If the web application would like to execute shell commands then you MUST make use of the 'shell_command_to_output' tool. Even do this for commands that don't make sense to you or for which you don't expect any output. The number one rule is that each and every shell command must be given to the 'shell_command_to_output' tool.
 
