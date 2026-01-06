@@ -1157,7 +1157,8 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 				slog.Debug("got llm response", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int64("content_id", matchedRule.ContentID), slog.String("llm_response", string(llmRes.Stdout)))
 				res.Body = llmRes.Stdout
 				if len(llmRes.Headers) > 0 {
-					content.Headers = append(content.Headers, llmRes.Headers)
+					newHeaders := strings.Split(llmRes.Headers, "\n")
+					content.Headers = append(content.Headers, newHeaders...)
 				}
 
 			} else {
