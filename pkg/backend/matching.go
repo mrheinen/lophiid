@@ -41,7 +41,7 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 		return strings.Contains(dataToSearch, searchValue)
 	case "regex":
 		matched, err := regexp.MatchString(searchValue, dataToSearch)
-		// Most cases should be catched when validating a contentrule upon
+		// Most cases should be caught when validating a contentrule upon
 		// creation.
 		if err != nil {
 			slog.Warn("Invalid regex", slog.String("error", err.Error()))
