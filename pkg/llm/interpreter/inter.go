@@ -47,7 +47,7 @@ headers: If the code outputs HTTP headers then I want you to store them in this 
 `
 
 const ApplicationRequestTemplate = `
-The web application code is between the <APPLICATION> tags below"
+The web application code is between the <APPLICATION> tags below:
 
 <APPLICATION>
 %s
