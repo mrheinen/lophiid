@@ -40,6 +40,7 @@ import (
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/code"
 	"lophiid/pkg/llm/file"
+	"lophiid/pkg/llm/interpreter"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/llm/sql"
 	"lophiid/pkg/triage/describer"
@@ -334,10 +335,20 @@ func main() {
 		sqlEmu = sql.NewSqlInjectionEmulator(sqlLLMManager)
 	}
 
+	var codeInterpreter interpreter.CodeInterpreterInterface
+	if cfg.AI.CodeInterpreter.Enable {
+		interLLMCfg, err := cfg.GetLLMConfig(cfg.AI.CodeInterpreter.LLMConfig)
+		if err != nil {
+			slog.Error("error getting code interpreter LLM config", slog.String("error", err.Error()))
+			return
+		}
+		codeInterpreter = interpreter.NewCodeInterpreter(llm.GetLLMManager(interLLMCfg, llmMetrics), shellClient, dbc)
+	}
+
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
 	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, preprocMetric)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter}, ipEventManager, llmResponder, sessionMgr, desClient, preproc, cfg)
+	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter, sourceIPRateLimiter}, ipEventManager, llmResponder, sessionMgr, desClient, preproc, codeInterpreter, cfg)
 	if err = bs.Start(); err != nil {
 		slog.Error("error starting backend", slog.String("error", err.Error()))
 	}

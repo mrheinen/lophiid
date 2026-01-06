@@ -477,6 +477,7 @@ CREATE TABLE public.content (
     data bytea,
     status_code public.status_code,
     script text,
+    has_code bool DEFAULT false,
     headers character varying(4096)[],
     ext_uuid character varying(36) DEFAULT gen_random_uuid() NOT NULL,
     ext_version integer DEFAULT 1,

@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -32,6 +32,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/llm/interpreter"
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/triage/preprocess"
 	"lophiid/pkg/util"
@@ -142,345 +143,6 @@ func TestIsDebugIP(t *testing.T) {
 	}
 }
 
-func TestGetMatchedRuleBasic(t *testing.T) {
-	bunchOfRules := []models.ContentRule{
-		{ID: 1, AppID: 1, Method: "ANY", Ports: []int{80}, Uri: "/42", UriMatching: "exact", ContentID: 42},
-		{ID: 3, AppID: 2, Method: "GET", Ports: []int{80}, Uri: "/prefix", UriMatching: "prefix", ContentID: 43},
-		{ID: 4, AppID: 3, Method: "GET", Ports: []int{80}, Uri: "contains", UriMatching: "contains", ContentID: 44},
-		{ID: 5, AppID: 4, Method: "GET", Ports: []int{80}, Uri: "suffix", UriMatching: "suffix", ContentID: 45},
-		{ID: 6, AppID: 4, Method: "GET", Ports: []int{80}, Uri: "^/a[8-9/]*", UriMatching: "regex", ContentID: 46},
-		{ID: 7, AppID: 7, Method: "GET", Ports: []int{443}, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
-		{ID: 8, AppID: 8, Method: "GET", Ports: []int{8888}, Uri: "/eeee", UriMatching: "exact", ContentID: 42},
-		{ID: 9, AppID: 9, Method: "GET", Ports: []int{80}, Body: "woohoo", BodyMatching: "exact", ContentID: 42},
-		{ID: 10, AppID: 9, Method: "GET", Ports: []int{80}, Body: "/etc/passwd", BodyMatching: "contains", ContentID: 42},
-		{ID: 11, AppID: 9, Method: "GET", Ports: []int{80}, Uri: "/pppaaattthhh", UriMatching: "exact", Body: "/etc/hosts", BodyMatching: "contains", ContentID: 42},
-		{ID: 12, AppID: 4, Method: "POST", Ports: []int{80}, Uri: "suffix", UriMatching: "suffix", ContentID: 77},
-		{ID: 13, AppID: 4, Method: "POST", Ports: []int{80}, Uri: "/same", UriMatching: "exact", Body: "body", BodyMatching: "exact", ContentID: 77},
-		{ID: 14, AppID: 4, Method: "POST", Ports: []int{80}, Uri: "/same", UriMatching: "exact", ContentID: 77},
-	}
-
-	for _, test := range []struct {
-		description           string
-		requestInput          models.Request
-		contentRulesInput     []models.ContentRule
-		contentRuleIDExpected int64
-		errorExpected         bool
-	}{
-		{
-			description: "matched nothing ",
-			requestInput: models.Request{
-				Uri:    "/fddfffd",
-				Port:   80,
-				Method: "GET",
-			},
-			contentRulesInput: bunchOfRules,
-			errorExpected:     true,
-		},
-		{
-			description: "matched one rule (exact) ",
-			requestInput: models.Request{
-				Uri:    "/42",
-				Port:   80,
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 1,
-			errorExpected:         false,
-		},
-		{
-			description: "matched one rule (prefix) ",
-			requestInput: models.Request{
-				Uri:    "/prefixdsfsfdf",
-				Port:   80,
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 3,
-			errorExpected:         false,
-		},
-
-		{
-			description: "matched one rule (contains) ",
-			requestInput: models.Request{
-				Uri:    "/sddsadcontainsfdfd",
-				Port:   80,
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 4,
-			errorExpected:         false,
-		},
-		{
-			description: "matched one rule (suffix) ",
-			requestInput: models.Request{
-				Uri:    "/ttttt?aa=suffix",
-				Port:   80,
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 5,
-			errorExpected:         false,
-		},
-		{
-			description: "matched one rule (suffix) ",
-			requestInput: models.Request{
-				Uri:    "/ttttt?aa=suffix",
-				Port:   80,
-				Method: "POST",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 12,
-			errorExpected:         false,
-		},
-
-		{
-			description: "matched one rule (regex) ",
-			requestInput: models.Request{
-				Uri:    "/a898989898",
-				Port:   80,
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 6,
-			errorExpected:         false,
-		},
-		{
-			description: "matched one rule (on port) ",
-			requestInput: models.Request{
-				Uri:    "/eeee",
-				Port:   8888,
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 8,
-			errorExpected:         false,
-		},
-		{
-			description: "matched one rule (uri and body)  ",
-			requestInput: models.Request{
-				Uri:    "/same",
-				Port:   80,
-				Body:   []byte("body"),
-				Method: "POST",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 13,
-			errorExpected:         false,
-		},
-
-		{
-			description: "matched on body alone (exact) ",
-			requestInput: models.Request{
-				Uri:    "/eeee",
-				Port:   80,
-				Body:   []byte("woohoo"),
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 9,
-			errorExpected:         false,
-		},
-
-		{
-			description: "matched on body alone (contains) ",
-			requestInput: models.Request{
-				Uri:    "/eeee",
-				Port:   80,
-				Body:   []byte("asdssad /etc/passwd sdds"),
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 10,
-			errorExpected:         false,
-		},
-		{
-			description: "matched on body and path (contains) ",
-			requestInput: models.Request{
-				Uri:    "/pppaaattthhh",
-				Port:   80,
-				Body:   []byte("asdssad /etc/hosts sdds"),
-				Method: "GET",
-			},
-			contentRulesInput:     bunchOfRules,
-			contentRuleIDExpected: 11,
-			errorExpected:         false,
-		},
-	} {
-		t.Run(test.description, func(t *testing.T) {
-			fdbc := &database.FakeDatabaseClient{}
-			fakeJrunner := javascript.FakeJavascriptRunner{}
-
-			alertManager := alerting.NewAlertManager(42)
-			whoisManager := whois.FakeRdapManager{}
-			queryRunner := FakeQueryRunner{
-				ErrorToReturn: nil,
-			}
-
-			reg := prometheus.NewRegistry()
-			bMetrics := CreateBackendMetrics(reg)
-			fakeLimiter := ratelimit.FakeRateLimiter{
-				BoolToReturn:  true,
-				ErrorToReturn: nil,
-			}
-
-			sMetrics := session.CreateSessionMetrics(reg)
-			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-			fIpMgr := analysis.FakeIpEventManager{}
-			fakeRes := &responder.FakeResponder{}
-			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
-			fakePreprocessor := preprocess.FakePreProcessor{}
-
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
-
-			matchedRule, err := b.GetMatchedRule(test.contentRulesInput, &test.requestInput, models.NewSession())
-			if test.errorExpected {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-
-			assert.Equal(t, test.contentRuleIDExpected, matchedRule.ID)
-		})
-	}
-}
-
-func TestGetMatchedRuleSameApp(t *testing.T) {
-	bunchOfRules := []models.ContentRule{
-		{ID: 1, AppID: 1, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
-		{ID: 2, AppID: 1, Method: "GET", Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
-		{ID: 3, AppID: 2, Method: "GET", Port: 80, Uri: "/bb", UriMatching: "exact", ContentID: 42},
-	}
-
-	fdbc := &database.FakeDatabaseClient{}
-	fakeJrunner := javascript.FakeJavascriptRunner{}
-	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeRdapManager{}
-
-	queryRunner := FakeQueryRunner{
-		ErrorToReturn: nil,
-	}
-	reg := prometheus.NewRegistry()
-	bMetrics := CreateBackendMetrics(reg)
-	fakeLimiter := ratelimit.FakeRateLimiter{
-		BoolToReturn:  true,
-		ErrorToReturn: nil,
-	}
-
-	sMetrics := session.CreateSessionMetrics(reg)
-	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-	fIpMgr := analysis.FakeIpEventManager{}
-	fakeRes := &responder.FakeResponder{}
-	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
-
-	fakePreprocessor := preprocess.FakePreProcessor{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
-
-	myTestIP := "1.2.3.4"
-	session, _ := b.sessionMgr.StartSession(myTestIP)
-	matchedRule, _ := b.GetMatchedRule(bunchOfRules, &models.Request{
-		Uri:      "/aa",
-		Method:   "GET",
-		Port:     80,
-		SourceIP: myTestIP,
-	}, session)
-
-	assert.Equal(t, int64(1), matchedRule.ID)
-
-	// The path of the next request matches two rules. We expect rule 2 to be
-	// served though because it shares the app ID of the rule that was already
-	// served.
-	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &models.Request{
-		Uri:      "/bb",
-		Method:   "GET",
-		Port:     80,
-		SourceIP: myTestIP,
-	}, session)
-
-	assert.Equal(t, int64(2), matchedRule.ID)
-
-	// Again this matches two rules. However one of them is already served once
-	// and this is kept track off. Therefore we expect the rule that was not
-	// served before.
-	matchedRule, _ = b.GetMatchedRule(bunchOfRules, &models.Request{
-		Uri:      "/bb",
-		Method:   "GET",
-		Port:     80,
-		SourceIP: myTestIP,
-	}, session)
-
-	assert.Equal(t, int64(3), matchedRule.ID)
-}
-
-func TestGetMatchedRulePortPrioritization(t *testing.T) {
-	// Create test rules with and without ports
-	rules := []models.ContentRule{
-		{
-			ID:          44,
-			Uri:         "/test",
-			Method:      "GET",
-			UriMatching: "exact",
-			AppID:       66,
-		},
-		{
-			ID:          45,
-			Uri:         "/test",
-			Method:      "GET",
-			Ports:       pgtype.FlatArray[int]{80, 443},
-			UriMatching: "exact",
-			AppID:       65,
-		},
-	}
-
-	req := &models.Request{
-		ID:       123,
-		Method:   "GET",
-		Uri:      "/test",
-		SourceIP: "192.168.1.1",
-		Port:     80,
-	}
-
-	// Create session and server
-	sess := models.NewSession()
-
-	fdbc := &database.FakeDatabaseClient{}
-	fakeJrunner := javascript.FakeJavascriptRunner{}
-
-	alertManager := alerting.NewAlertManager(42)
-	whoisManager := whois.FakeRdapManager{}
-	queryRunner := FakeQueryRunner{
-		ErrorToReturn: nil,
-	}
-
-	reg := prometheus.NewRegistry()
-	bMetrics := CreateBackendMetrics(reg)
-	fakeLimiter := ratelimit.FakeRateLimiter{
-		BoolToReturn:  true,
-		ErrorToReturn: nil,
-	}
-
-	sMetrics := session.CreateSessionMetrics(reg)
-	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
-	fIpMgr := analysis.FakeIpEventManager{}
-	fakeRes := &responder.FakeResponder{}
-	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
-
-	fakePreprocessor := preprocess.FakePreProcessor{}
-	s := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
-
-	// Test that rule with ports gets priority
-	matchedRule, err := s.GetMatchedRule(rules, req, sess)
-	require.NoError(t, err)
-	assert.Equal(t, int64(45), matchedRule.ID, "Expected rule with ports (ID 45) to be matched")
-
-	// Mark rule with ports as served
-	sess.ServedRuleWithContent(45, matchedRule.ContentID)
-
-	// Test that rule without ports is selected when rule with ports is served
-	matchedRule, err = s.GetMatchedRule(rules, req, sess)
-	require.NoError(t, err)
-	assert.Equal(t, int64(44), matchedRule.ID, "Expected rule without ports (ID 44) to be matched")
-}
-
 func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	fakeJrunner := javascript.FakeJavascriptRunner{}
@@ -503,7 +165,8 @@ func TestProbeRequestToDatabaseRequest(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 	fakePreprocessor := preprocess.FakePreProcessor{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	fakeInter := &interpreter.FakeCodeInterpreter{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
@@ -597,7 +260,8 @@ func TestMaybeExtractLinksFromPayload(t *testing.T) {
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 
 			fakePreprocessor := preprocess.FakePreProcessor{}
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			fakeInter := &interpreter.FakeCodeInterpreter{}
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 			assert.Equal(t, test.expectedReturn, b.MaybeExtractLinksFromPayload(test.content, test.dInfo))
 
@@ -636,7 +300,9 @@ func TestScheduleDownloadOfPayload(t *testing.T) {
 	config.Backend.Advanced.MaxDownloadsPerIP = 3
 
 	fakePreprocessor := preprocess.FakePreProcessor{}
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, config)
+
+	fakeInter := &interpreter.FakeCodeInterpreter{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, config)
 
 	sourceIP := "1.2.3.4"
 
@@ -730,29 +396,33 @@ func TestHandleProbe(t *testing.T) {
 		HoneypotToReturn: models.Honeypot{RuleGroupID: 1, DefaultContentID: 66},
 		ContentsToReturn: map[int64]models.Content{
 			42: {
-				ID:   42,
-				Data: []byte("content data"),
+				ID:      42,
+				Data:    []byte("content data"),
+				HasCode: false,
 			},
 			43: {
-				ID:   43,
-				Data: []byte("some other data"),
+				ID:      43,
+				Data:    []byte("some other data"),
+				HasCode: false,
 			},
 			44: {
-				ID:     43,
-				Data:   []byte(""),
-				Script: "1+1",
+				ID:      43,
+				Data:    []byte(""),
+				Script:  "1+1",
+				HasCode: false,
 			},
 			66: {
 				ID:      66,
 				Data:    []byte("default"),
 				Headers: pgtype.FlatArray[string]{"X-IP: 1.1.1.1"},
+				HasCode: false,
 			},
 		},
 		RulesPerGroupJoinToReturn: []models.RulePerGroupJoin{
-			{Rule: models.ContentRule{ID: 1, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 1, GroupID: 1}},
-			{Rule: models.ContentRule{ID: 2, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 2, GroupID: 1}},
-			{Rule: models.ContentRule{ID: 3, AppID: 1, Block: false, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44}, RulePerGroup: models.RulePerGroup{ID: 3, RuleID: 3, GroupID: 1}},
-			{Rule: models.ContentRule{ID: 4, AppID: 5, Block: true, Method: "GET", Port: 80, Uri: "/blocked", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 4, RuleID: 4, GroupID: 1}},
+			{Rule: models.ContentRule{Enabled: true, ID: 1, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 1, GroupID: 1}},
+			{Rule: models.ContentRule{Enabled: true, ID: 2, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 2, GroupID: 1}},
+			{Rule: models.ContentRule{Enabled: true, ID: 3, AppID: 1, Block: false, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44}, RulePerGroup: models.RulePerGroup{ID: 3, RuleID: 3, GroupID: 1}},
+			{Rule: models.ContentRule{Enabled: true, ID: 4, AppID: 5, Block: true, Method: "GET", Port: 80, Uri: "/blocked", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 4, RuleID: 4, GroupID: 1}},
 		},
 	}
 
@@ -785,8 +455,9 @@ func TestHandleProbe(t *testing.T) {
 
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	fakePreprocessor := preprocess.FakePreProcessor{}
+	fakeInter := &interpreter.FakeCodeInterpreter{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
 	b.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
@@ -820,6 +491,8 @@ func TestHandleProbe(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, res)
 		require.NotNil(t, res.Response)
+		fmt.Printf("Response: %s\n", res.Response.Body)
+		fmt.Printf("Expected: %s\n", fdbc.ContentsToReturn[42].Data)
 		assert.True(t, bytes.Equal(fdbc.ContentsToReturn[42].Data, res.Response.Body))
 
 		regWrap := <-b.reqsQueue
@@ -860,7 +533,7 @@ func TestHandleProbe(t *testing.T) {
 			Headers:     pgtype.FlatArray[string]{"X-Custom-Header: custom-value", "X-Another: another-value"},
 		}
 		fdbc.RulesPerGroupJoinToReturn = append(fdbc.RulesPerGroupJoinToReturn, models.RulePerGroupJoin{
-			Rule:         models.ContentRule{ID: 99, AppID: 42, Method: "GET", Port: 80, Uri: "/headers-test", UriMatching: "exact", ContentID: 99},
+			Rule:         models.ContentRule{Enabled: true, ID: 99, AppID: 42, Method: "GET", Port: 80, Uri: "/headers-test", UriMatching: "exact", ContentID: 99},
 			RulePerGroup: models.RulePerGroup{ID: 99, RuleID: 99, GroupID: 1},
 		})
 		b.LoadRules()
@@ -950,7 +623,7 @@ func TestHandleProbePreprocessHeaders(t *testing.T) {
 			},
 		},
 		RulesPerGroupJoinToReturn: []models.RulePerGroupJoin{
-			{Rule: models.ContentRule{ID: 100, AppID: 42, Method: "GET", Port: 80, Uri: "/preprocess-headers", UriMatching: "exact", ContentID: 100, Responder: constants.ResponderTypeAuto}, RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 1}},
+			{Rule: models.ContentRule{Enabled: true, ID: 100, AppID: 42, Method: "GET", Port: 80, Uri: "/preprocess-headers", UriMatching: "exact", ContentID: 100, Responder: constants.ResponderTypeAuto}, RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 1}},
 		},
 	}
 
@@ -980,7 +653,9 @@ func TestHandleProbePreprocessHeaders(t *testing.T) {
 		},
 	}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	fakeInter := &interpreter.FakeCodeInterpreter{}
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
+
 	b.LoadRules()
 
 	ctx := GetContextWithAuthMetadata()
@@ -1106,13 +781,15 @@ func TestProcessQueue(t *testing.T) {
 		fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 		fakePreprocessor := preprocess.FakePreProcessor{}
 
-		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+		fakeInter := &interpreter.FakeCodeInterpreter{}
+		b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 		t.Run(test.description, func(t *testing.T) {
 
 			eCol := extractors.NewExtractorCollection(true)
 			eCol.ParseRequest(test.request)
 			err := b.ProcessRequest(test.request, models.ContentRule{
+				Enabled:        true,
 				ID:             int64(test.ruleID),
 				RequestPurpose: test.requestPurpose,
 			}, eCol)
@@ -1239,7 +916,8 @@ func TestSendStatus(t *testing.T) {
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 			fakePreprocessor := preprocess.FakePreProcessor{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			fakeInter := &interpreter.FakeCodeInterpreter{}
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 			_, err := b.SendStatus(context.Background(), test.request)
 			if test.expectedErrorString != "" {
@@ -1292,8 +970,9 @@ func TestSendStatusSendsCommands(t *testing.T) {
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	fakePreprocessor := preprocess.FakePreProcessor{}
+	fakeInter := &interpreter.FakeCodeInterpreter{}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 	statusRequest := backend_service.StatusRequest{
 		Ip:      testHoneypotIP,
@@ -1370,8 +1049,9 @@ func TestHandleFileUploadUpdatesDownloadAndExtractsFromPayload(t *testing.T) {
 	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	fakePreprocessor := preprocess.FakePreProcessor{}
+	fakeInter := &interpreter.FakeCodeInterpreter{}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 	uploadRequest := backend_service.UploadFileRequest{
 		RequestId: 42,
@@ -1423,8 +1103,9 @@ func TestHandleP0fResult(t *testing.T) {
 
 	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 	fakePreprocessor := preprocess.FakePreProcessor{}
+	fakeInter := &interpreter.FakeCodeInterpreter{}
 
-	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+	b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 	// Insert a generic one. Should succeed
 	fdbc.P0fErrorToReturn = ksql.ErrRecordNotFound
@@ -1483,6 +1164,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "([0-9]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeNone,
+				Enabled:          true,
 			},
 			request: models.Request{
 				Raw: []byte("aa 898989"),
@@ -1503,6 +1185,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "([0-9]+)",
 				ResponderDecoder: "DOESNOTEXIST",
+				Enabled: true,
 			},
 			request: models.Request{
 				Raw: []byte("aa 898989"),
@@ -1523,6 +1206,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "foo=([0-9a-f%]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeUri,
+				Enabled: true,
 			},
 			request: models.Request{
 				Raw: []byte("foo=%2e%2e%2e%41%41"),
@@ -1543,6 +1227,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "foo=([&a-z;]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeHtml,
+				Enabled: true,
 			},
 			request: models.Request{
 				Raw: []byte("foo=&gt;&lt;"),
@@ -1563,8 +1248,10 @@ func TestGetResponderDataCases(t *testing.T) {
 
 			fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
 			fakePreprocessor := preprocess.FakePreProcessor{}
+			fakeInter := &interpreter.FakeCodeInterpreter{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, test.responder, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, test.responder, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
+
 			ret := b.getResponderData(&test.request, &test.rule, &test.content)
 
 			assert.Equal(t, test.expectedReturn, ret)
@@ -1636,8 +1323,10 @@ func TestHandlePingStatus(t *testing.T) {
 
 			fIpMgr := analysis.FakeIpEventManager{}
 			fakePreprocessor := preprocess.FakePreProcessor{}
+			fakeInter := &interpreter.FakeCodeInterpreter{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
+
 			ctx := GetContextWithAuthMetadata()
 
 			_, err := b.SendPingStatus(ctx, test.request)
@@ -1746,10 +1435,12 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 							Responder:        test.responderType,
 							ResponderRegex:   test.responderRegex,
 							ResponderDecoder: test.responderDecoder,
+							Enabled:          true,
 						},
 						RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 1, GroupID: 1},
 					},
 				},
+				ErrorToReturn: nil,
 			}
 
 			fakeJrunner := javascript.FakeJavascriptRunner{}
@@ -1780,7 +1471,10 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 				ErrorToReturn: test.preprocessError,
 			}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			fakeInter := &interpreter.FakeCodeInterpreter{}
+
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
+
 			b.LoadRules()
 
 			ctx := GetContextWithAuthMetadata()
@@ -1920,7 +1614,9 @@ func TestGetPreProcessResponse(t *testing.T) {
 				ErrorToReturn: test.preprocessError,
 			}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			fakeInter := &interpreter.FakeCodeInterpreter{}
+
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 			// Setup test request
 			req := &models.Request{
@@ -2018,7 +1714,9 @@ func TestHandlePreProcess(t *testing.T) {
 				ErrorToReturn:  test.preprocessError,
 			}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, GetDefaultBackendConfig())
+			fakeInter := &interpreter.FakeCodeInterpreter{}
+
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
 
 			content := &models.Content{
 				Data: []byte("Original content"),
@@ -2191,7 +1889,7 @@ func TestLoadRules(t *testing.T) {
 			description: "single rule in single group",
 			rulesPerGroupJoin: []models.RulePerGroupJoin{
 				{
-					Rule:         models.ContentRule{ID: 100},
+					Rule:         models.ContentRule{Enabled: true, ID: 100},
 					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
 				},
 			},
@@ -2202,11 +1900,11 @@ func TestLoadRules(t *testing.T) {
 			description: "multiple rules in single group",
 			rulesPerGroupJoin: []models.RulePerGroupJoin{
 				{
-					Rule:         models.ContentRule{ID: 100},
+					Rule:         models.ContentRule{Enabled: true, ID: 100},
 					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
 				},
 				{
-					Rule:         models.ContentRule{ID: 101},
+					Rule:         models.ContentRule{Enabled: true, ID: 101},
 					RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 101, GroupID: 10},
 				},
 			},
@@ -2217,15 +1915,15 @@ func TestLoadRules(t *testing.T) {
 			description: "rules in multiple groups",
 			rulesPerGroupJoin: []models.RulePerGroupJoin{
 				{
-					Rule:         models.ContentRule{ID: 100},
+					Rule:         models.ContentRule{Enabled: true, ID: 100},
 					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
 				},
 				{
-					Rule:         models.ContentRule{ID: 101},
+					Rule:         models.ContentRule{Enabled: true, ID: 101},
 					RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 101, GroupID: 20},
 				},
 				{
-					Rule:         models.ContentRule{ID: 102},
+					Rule:         models.ContentRule{Enabled: true, ID: 102},
 					RulePerGroup: models.RulePerGroup{ID: 3, RuleID: 102, GroupID: 10},
 				},
 			},

@@ -18,9 +18,6 @@
 package code
 
 import (
-	"crypto/md5"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -28,6 +25,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/shell"
+	"lophiid/pkg/llm/tools"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 )
@@ -46,7 +44,6 @@ Make sure you follow the requested JSON format for your output. The json output 
 "stdout": This should contain the output of the code. When determining what this output will be, assume that all operations in the snippet I gave you are successful. Use an empty string if there is no output.
 "headers": If the code outputs HTTP headers then I want you to store them in this field:  each "header: value" pair should be on their own line. Leave empty otherwise.
 "language": The language of the code (e.g. c, java, c++, python, golang, rust, perl, ruby, php, etc). Use "unknown" if you do not recognize the language.
-
 `
 
 type CodeSnippetEmulatorInterface interface {
@@ -65,7 +62,7 @@ func (f *FakeCodeSnippetEmulator) Emulate(req *models.Request, code string) (*mo
 type CodeSnippetEmulator struct {
 	dbClient    database.DatabaseClient
 	llmManager  llm.LLMManagerInterface
-	shellClient shell.ShellClientInterface
+	toolSet     *tools.CodeToolSet
 }
 
 // NewCodeSnippetEmulator creates a new CodeSnippetEmulator.
@@ -74,124 +71,13 @@ func NewCodeSnippetEmulator(llmManager llm.LLMManagerInterface, shellClient shel
 	return &CodeSnippetEmulator{
 		llmManager:  llmManager,
 		dbClient:    dbClient,
-		shellClient: shellClient,
+		toolSet:     tools.NewCodeToolSet(shellClient),
 	}
 }
 
-// StringToMD5 calculates the MD5 checksum of a string
-func (c *CodeSnippetEmulator) StringToMD5(input string) (string, error) {
-	hash := md5.Sum([]byte(input))
-	return hex.EncodeToString(hash[:]), nil
-}
-
-// StringFromBase64 decodes a base64 encoded string
-func (c *CodeSnippetEmulator) StringFromBase64(input string) (string, error) {
-	decoded, err := base64.StdEncoding.DecodeString(input)
-	if err != nil {
-		return "", fmt.Errorf("error decoding base64: %w", err)
-	}
-	return string(decoded), nil
-}
-
-func (c *CodeSnippetEmulator) ShellCommandToOutput(req *models.Request, input string) (string, error) {
-	if c.shellClient == nil {
-		return "", fmt.Errorf("shell client not configured")
-	}
-
-	result, err := c.shellClient.RunCommand(req, input)
-	if err != nil {
-		return "", fmt.Errorf("error running command: %w", err)
-	}
-	return result.Output, nil
-}
-
-func parseToolInput(args string) (string, error) {
-	var params struct {
-		Input string `json:"input"`
-	}
-
-	if err := json.Unmarshal([]byte(args), &params); err != nil {
-		return "", fmt.Errorf("error parsing arguments: %w", err)
-	}
-
-	return params.Input, nil
-}
-
-func (c *CodeSnippetEmulator) buildTools(req *models.Request) []llm.LLMTool {
-	tools := []llm.LLMTool{
-		{
-			Name:        "string_to_md5",
-			Description: "Calculate the MD5 checksum of a string. Use this whenever you need to compute an MD5 hash of a string value.",
-			Parameters: map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"input": map[string]any{
-						"type":        "string",
-						"description": "The string to calculate the MD5 checksum for",
-					},
-				},
-				"required": []string{"input"},
-			},
-			Function: func(args string) (string, error) {
-				input, err := parseToolInput(args)
-				if err != nil {
-					return "", err
-				}
-				return c.StringToMD5(input)
-			},
-		},
-		{
-			Name:        "string_from_base64",
-			Description: "Decode a base64 encoded string. Use this whenever you need to decode a base64 string value.",
-			Parameters: map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"input": map[string]any{
-						"type":        "string",
-						"description": "The base64 encoded string to decode",
-					},
-				},
-				"required": []string{"input"},
-			},
-			Function: func(args string) (string, error) {
-				input, err := parseToolInput(args)
-				if err != nil {
-					return "", err
-				}
-				return c.StringFromBase64(input)
-			},
-		},
-	}
-
-	if c.shellClient != nil {
-		tools = append(tools, llm.LLMTool{
-			Name:        "shell_command_to_output",
-			Description: "Turns shell commands into its output. Use this whenever you need the output of a shell command (or multiple commands at once)",
-			Parameters: map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"input": map[string]any{
-						"type":        "string",
-						"description": "The shell command. Can be multiple commands at once.",
-					},
-				},
-				"required": []string{"input"},
-			},
-			Function: func(args string) (string, error) {
-				input, err := parseToolInput(args)
-				if err != nil {
-					return "", err
-				}
-				return c.ShellCommandToOutput(req, input)
-			},
-		})
-	}
-
-	return tools
-}
 
 func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models.LLMCodeExecution, error) {
-	tools := c.buildTools(req)
+	tools := c.toolSet.BuildTools(req)
 
 	res, err := c.llmManager.CompleteWithTools(
 		[]llm.LLMMessage{

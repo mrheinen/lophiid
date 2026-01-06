@@ -60,7 +60,6 @@ func NewDatabaseSessionManager(dbClient database.DatabaseClient, sessionTimeout 
 // sessions cleaned up so that the caller can deterime whether they want to call
 // the method again.
 func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) {
-
 	res, err := d.dbClient.SearchSession(0, limit, "active:true")
 	if err != nil {
 		return 0, fmt.Errorf("error fetching session: %w", err)

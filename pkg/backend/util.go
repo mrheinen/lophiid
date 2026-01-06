@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package backend
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"regexp"
@@ -127,4 +127,30 @@ func ConvertURLToIPBasedImpl(targetUrl string, lookupFp func(string) ([]net.IP, 
 	// Now update the parsed URL
 	u.Host = net.JoinHostPort(rIP.String(), fmt.Sprintf("%d", rHostPort))
 	return u.String(), rIP.String(), hostHeader, err
+}
+
+func HasParseableContent(fileUrl string, mime string) bool {
+	consumableContentTypes := map[string]bool{
+		"application/x-shellscript": true,
+		"application/x-sh":          true,
+		"application/x-perl":        true,
+		"text/x-shellscript":        true,
+		"text/x-sh":                 true,
+		"text/x-perl":               true,
+		"text/plain":                true,
+	}
+
+	parsedUrl, err := url.Parse(fileUrl)
+	if err != nil {
+		slog.Warn("could not parse URL", slog.String("url", fileUrl))
+		return false
+	}
+
+	contentParts := strings.Split(mime, ";")
+	_, hasGoodContent := consumableContentTypes[contentParts[0]]
+	return hasGoodContent || strings.HasSuffix(parsedUrl.Path, ".sh") ||
+		strings.HasSuffix(parsedUrl.Path, ".pl") ||
+		strings.HasSuffix(parsedUrl.Path, ".bat") ||
+		strings.HasSuffix(parsedUrl.Path, ".rb") ||
+		strings.HasSuffix(parsedUrl.Path, ".py")
 }

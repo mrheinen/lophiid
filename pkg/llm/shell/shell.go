@@ -94,6 +94,7 @@ func (s *ShellClient) StoreCommandOutput(cmdOutput CommandOutput, req *models.Re
 		EnvUser:     cmdOutput.Username,
 		Input:       cmd,
 		Output:      cmdOutput.CommandOutput,
+		SourceModel: s.llmManager.LoadedModel(),
 	}
 
 	_, err := s.dbClient.Insert(ins)
