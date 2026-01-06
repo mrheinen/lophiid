@@ -111,7 +111,7 @@ func (c *CodeInterpreter) Interpret(req *models.Request, content *models.Content
 		return nil, err
 	}
 
-	retVal := models.LLMCodeExecution{
+	retVal := &models.LLMCodeExecution{
 		Stdout:      []byte(result.Output),
 		Headers:     result.Headers,
 		RequestID:   req.ID,
@@ -120,12 +120,12 @@ func (c *CodeInterpreter) Interpret(req *models.Request, content *models.Content
 		SourceModel: c.llmManager.LoadedModel(),
 	}
 
-	_, err = c.dbClient.Insert(&retVal)
+	_, err = c.dbClient.Insert(retVal)
 	if err != nil {
 		slog.Error("error inserting llm code execution", slog.String("error", err.Error()))
 		// On purpose we continue here and do not return. It's not the end of the
 		// world if the database is not updated.
 	}
 
-	return &retVal, nil
+	return retVal, nil
 }
