@@ -134,13 +134,13 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 		}
 
 		if !foundPortRule {
-			matchedRule = unservedRules[rand.Int()%len(unservedRules)]
+			matchedRule = unservedRules[rand.Intn(len(unservedRules))]
 		}
 
 	} else {
 		// In this case all rule content combinations have been served at least
 		// once to this target. We send a random one.
-		matchedRule = matchedRules[rand.Int()%len(matchedRules)]
+		matchedRule = matchedRules[rand.Intn(len(matchedRules))]
 	}
 
 	return matchedRule, nil
