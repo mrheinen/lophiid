@@ -71,7 +71,7 @@ type CodeInterpreter struct {
 	toolSet    *tools.CodeToolSet
 }
 
-// NewCodeSnippetEmulator creates a new CodeSnippetEmulator.
+// NewCodeInterpreter creates a new CodeSnippetEmulator.
 func NewCodeInterpreter(llmManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, dbClient database.DatabaseClient) *CodeInterpreter {
 	llmManager.SetResponseSchemaFromObject(InterOutput{}, "The code output")
 	return &CodeInterpreter{
