@@ -106,6 +106,24 @@
           />
         </div>
 
+        <div>
+        <label class="label">Extra options</label>
+        <table>
+          <tbody>
+            <tr>
+              <th>Interpret data</th>
+              <td>
+                <CheckBox
+                  v-model="localContent.has_code"
+                  input-id="has_code"
+                  :binary="true"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+
         <div v-if="!scriptMode">
           <label class="label">Data</label>
           <TextArea

@@ -155,6 +155,10 @@ ai:
     enable: 1
     llm_config: qwen_coder
 
+  code_interpreter:
+    enable: 1
+    llm_config: qwen_coder
+
   triage:
     describer:
       enable: 1

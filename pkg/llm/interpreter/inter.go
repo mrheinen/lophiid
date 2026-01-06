@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2025 Niels Heinen
+// Copyright (C) 2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -31,12 +31,14 @@ import (
 )
 
 type InterOutput struct {
-	Stdout  string `json:"stdout" jsonschema_description:"The stdout output of the code"`
+	Output  string `json:"stdout" jsonschema_description:"The output of the code"`
 	Headers string `json:"headers" jsonschema_description:"HTTP headers output of the code"`
 }
 
 const CodeInterpreterSystemPrompt = `
-You are given web application code and an HTTP request. It is your job to determine what output the web application code would generate if it was executed and tasked with handling the given HTTP request.
+You are given web application code and an HTTP request. It is your job to determine what output the web application code would generate if it was executed and tasked with handling the given HTTP request. Note that your job is not to actually execute this code, which would be dangerous. Instead I need you to use your knowledge to determine what the output of the web application would be if it was requested with the given request. Pay attention to how what parameters and headers the request sends and how the application processes them.
+
+If the web application would like to execute shell commands then you MUST make use of the 'shell_command_to_output' tool. Even do this for commands that don't make sense to you or for which you don't expect any output. The number one rule is that each and every shell command must be given to the 'shell_command_to_output' tool.
 
 Reply with a JSON response where the following fields are present:
 
@@ -64,21 +66,20 @@ type CodeInterpreterInterface interface {
 }
 
 type CodeInterpreter struct {
-	dbClient    database.DatabaseClient
-	llmManager  llm.LLMManagerInterface
-	toolSet     *tools.CodeToolSet
+	dbClient   database.DatabaseClient
+	llmManager llm.LLMManagerInterface
+	toolSet    *tools.CodeToolSet
 }
 
 // NewCodeSnippetEmulator creates a new CodeSnippetEmulator.
 func NewCodeInterpreter(llmManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, dbClient database.DatabaseClient) *CodeInterpreter {
 	llmManager.SetResponseSchemaFromObject(InterOutput{}, "The code output")
 	return &CodeInterpreter{
-		llmManager:  llmManager,
-		dbClient:    dbClient,
-		toolSet:     tools.NewCodeToolSet(shellClient),
+		llmManager: llmManager,
+		dbClient:   dbClient,
+		toolSet:    tools.NewCodeToolSet(shellClient),
 	}
 }
-
 
 func (c *CodeInterpreter) Interpret(req *models.Request, content *models.Content) (*models.LLMCodeExecution, error) {
 	tools := c.toolSet.BuildTools(req)
@@ -95,7 +96,9 @@ func (c *CodeInterpreter) Interpret(req *models.Request, content *models.Content
 			},
 		},
 		tools,
-		true,
+		/* Do not cache the results. Note however that the tools themselves are free
+		* to cache (and the shell emulator, for example, does this) */
+		false,
 	)
 
 	if err != nil {
@@ -109,9 +112,10 @@ func (c *CodeInterpreter) Interpret(req *models.Request, content *models.Content
 	}
 
 	retVal := models.LLMCodeExecution{
-		Stdout:      []byte(result.Stdout),
+		Stdout:      []byte(result.Output),
 		Headers:     result.Headers,
 		RequestID:   req.ID,
+		Snippet:     content.Data,
 		SessionID:   req.SessionID,
 		SourceModel: c.llmManager.LoadedModel(),
 	}

@@ -160,6 +160,10 @@ type Config struct {
 			Enable    bool   `fig:"enable" default:"0"`
 			LLMConfig string `fig:"llm_config"`
 		} `fig:"sql_emulation"`
+		CodeInterpreter struct {
+			Enable    bool   `fig:"enable" default:"0"`
+			LLMConfig string `fig:"llm_config"`
+		} `fig:"code_interpreter"`
 
 		Triage struct {
 			Describer struct {

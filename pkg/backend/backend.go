@@ -45,6 +45,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/llm/interpreter"
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/triage/preprocess"
 	"lophiid/pkg/util"
@@ -106,6 +107,7 @@ type BackendServer struct {
 	sessionMgr          session.SessionManager
 	describer           describer.DescriberClient
 	preprocessor        preprocess.PreProcessInterface
+	codeInterpreter     interpreter.CodeInterpreterInterface
 	hCache              *util.StringMapCache[models.Honeypot]
 	HpDefaultContentID  int
 	// payloadCmpHashCache is used to cache cmp_hash for requests to allow similar
@@ -118,7 +120,7 @@ type BackendServer struct {
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiters []ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriberClient, preprocessor preprocess.PreProcessInterface, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiters []ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriberClient, preprocessor preprocess.PreProcessInterface, codeInterpreter interpreter.CodeInterpreterInterface, config Config) *BackendServer {
 
 	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
@@ -178,6 +180,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		preprocessor:        preprocessor,
 		payloadCmpHashCache: plCache,
 		payloadSessionCache: cpCache,
+		codeInterpreter:     codeInterpreter,
 	}
 }
 
@@ -322,33 +325,6 @@ func (s *BackendServer) ProbeRequestToDatabaseRequest(req *backend_service.Handl
 	sReq.TriagePayloadType = constants.TriagePayloadTypeUnknown
 	return &sReq, nil
 }
-func MatchesString(method string, dataToSearch string, searchValue string) bool {
-	if searchValue == "" {
-		return false
-	}
-
-	switch method {
-	case "exact":
-		return dataToSearch == searchValue
-	case "prefix":
-		return strings.HasPrefix(dataToSearch, searchValue)
-	case "suffix":
-		return strings.HasSuffix(dataToSearch, searchValue)
-	case "contains":
-		return strings.Contains(dataToSearch, searchValue)
-	case "regex":
-		matched, err := regexp.MatchString(searchValue, dataToSearch)
-		// Most cases should be catched when validating a contentrule upon
-		// creation.
-		if err != nil {
-			slog.Warn("Invalid regex", slog.String("error", err.Error()))
-			return false
-		}
-		return matched
-	default:
-		return false
-	}
-}
 
 // AddLLMResponseToContent adds the LLM response to the content.
 func AddLLMResponseToContent(content *models.Content, llmResponse string) string {
@@ -358,102 +334,6 @@ func AddLLMResponseToContent(content *models.Content, llmResponse string) string
 	}
 
 	return strings.Replace(template, constants.LLMReplacementTag, llmResponse, 1)
-}
-
-func (s *BackendServer) GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session) (models.ContentRule, error) {
-	matchedPriority1 := []models.ContentRule{}
-	matchedPriority2 := []models.ContentRule{}
-
-	for _, rule := range rules {
-
-		if len(rule.Ports) != 0 {
-			found := false
-			for _, port := range rule.Ports {
-				if int64(port) == req.Port {
-					found = true
-					break
-				}
-			}
-
-			// This means ports were specified but none matched the request. In that
-			// case we can continue the search.
-			if !found {
-				continue
-			}
-		}
-
-		if rule.Method != "ANY" && rule.Method != req.Method {
-			continue
-		}
-
-		matchedUri := MatchesString(rule.UriMatching, req.Uri, rule.Uri)
-		matchedBody := MatchesString(rule.BodyMatching, string(req.Body), rule.Body)
-
-		// We assume here that at least path or body are set.
-		if matchedUri && rule.Body == "" {
-			matchedPriority1 = append(matchedPriority1, rule)
-		} else if matchedBody && rule.Uri == "" {
-			matchedPriority1 = append(matchedPriority1, rule)
-		} else if matchedBody && matchedUri {
-			matchedPriority2 = append(matchedPriority2, rule)
-		}
-	}
-
-	// This is important. If there are rules that have more matching criteria
-	// then we will take these rules and serve them first.
-	var matchedRules []models.ContentRule
-	if len(matchedPriority2) > 0 {
-		matchedRules = matchedPriority2
-	} else {
-		matchedRules = matchedPriority1
-	}
-
-	if len(matchedRules) == 0 {
-		return models.ContentRule{}, fmt.Errorf("no rule found")
-	}
-
-	if len(matchedRules) == 1 {
-		s.UpdateSessionWithRule(req.SourceIP, session, &matchedRules[0])
-		return matchedRules[0], nil
-	}
-
-	var unservedRules []models.ContentRule
-	// Find out what rules match but haven't been served.
-	for _, r := range matchedRules {
-		if !session.HasServedRule(r.ID) {
-			unservedRules = append(unservedRules, r)
-			// A rule matching the same app id is prefered.
-			if r.AppID == session.LastRuleServed.AppID {
-				s.UpdateSessionWithRule(req.SourceIP, session, &r)
-				return r, nil
-			}
-		}
-	}
-
-	var matchedRule models.ContentRule
-	if len(unservedRules) > 0 {
-		// Rules with ports get priority.
-		foundPortRule := false
-		for _, rule := range unservedRules {
-			if len(rule.Ports) > 0 {
-				foundPortRule = true
-				matchedRule = rule
-				break
-			}
-		}
-
-		if !foundPortRule {
-			matchedRule = unservedRules[rand.Int()%len(unservedRules)]
-		}
-
-	} else {
-		// In this case all rule content combinations have been served at least
-		// once to this target. We send a random one.
-		matchedRule = matchedRules[rand.Int()%len(matchedRules)]
-	}
-
-	s.UpdateSessionWithRule(req.SourceIP, session, &matchedRule)
-	return matchedRule, nil
 }
 
 func (s *BackendServer) UpdateSessionWithRule(ip string, session *models.Session, rule *models.ContentRule) {
@@ -638,32 +518,6 @@ func (s *BackendServer) HandleP0fResult(ip string, res *backend_service.P0FResul
 		return false, fmt.Errorf("while inserting p0f result: %w (result: %+v)", err, pr)
 	}
 	return true, nil
-}
-
-func HasParseableContent(fileUrl string, mime string) bool {
-	consumableContentTypes := map[string]bool{
-		"application/x-shellscript": true,
-		"application/x-sh":          true,
-		"application/x-perl":        true,
-		"text/x-shellscript":        true,
-		"text/x-sh":                 true,
-		"text/x-perl":               true,
-		"text/plain":                true,
-	}
-
-	parsedUrl, err := url.Parse(fileUrl)
-	if err != nil {
-		slog.Warn("could not parse URL", slog.String("url", fileUrl))
-		return false
-	}
-
-	contentParts := strings.Split(mime, ";")
-	_, hasGoodContent := consumableContentTypes[contentParts[0]]
-	return hasGoodContent || strings.HasSuffix(parsedUrl.Path, ".sh") ||
-		strings.HasSuffix(parsedUrl.Path, ".pl") ||
-		strings.HasSuffix(parsedUrl.Path, ".bat") ||
-		strings.HasSuffix(parsedUrl.Path, ".rb") ||
-		strings.HasSuffix(parsedUrl.Path, ".py")
 }
 
 // getCachedHoneypot returns the honeypot with the given IP from the cache.
@@ -1180,12 +1034,13 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		return nil, status.Errorf(codes.NotFound, "could not find honeypot")
 	}
 
-	matchedRule, ruleErr := s.GetMatchedRule(s.safeRules.GetGroup(hp.RuleGroupID), sReq, session)
+	matchedRule, ruleErr := GetMatchedRule(s.safeRules.GetGroup(hp.RuleGroupID), sReq, session)
 	matchedRuleIsDefault := false
 
-	// If there was no matched rule then serve the default content of the honeypot.
-	if ruleErr != nil {
-		// Fallback to an empty rule.
+	if ruleErr == nil {
+		s.UpdateSessionWithRule(sReq.SourceIP, session, &matchedRule)
+	} else {
+		// If there was no matched rule then serve the default content of the honeypot.
 		matchedRuleIsDefault = true
 		matchedRule.ContentID = hp.DefaultContentID
 		matchedRule.AppID = 0
@@ -1292,7 +1147,22 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 				sReq.RawResponse = string(res.Body)
 			}
 		} else {
-			res.Body = content.Data
+			if content.HasCode {
+				llmRes, err := s.codeInterpreter.Interpret(sReq, &content)
+				if err != nil {
+					slog.Error("error interpreting code", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+					return nil, status.Errorf(codes.Internal, "running content code: %s", err.Error())
+				}
+
+				slog.Debug("got llm response", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int64("content_id", matchedRule.ContentID), slog.String("llm_response", string(llmRes.Stdout)))
+				res.Body = llmRes.Stdout
+				if len(llmRes.Headers) > 0 {
+					content.Headers = append(content.Headers, llmRes.Headers)
+				}
+
+			} else {
+				res.Body = content.Data
+			}
 		}
 	}
 
@@ -1351,6 +1221,9 @@ func (s *BackendServer) LoadRules() error {
 	ruleCount := 0
 	finalRules := map[int64][]models.ContentRule{}
 	for _, rpg := range rulePerGroup {
+		if !rpg.Rule.Enabled {
+			continue
+		}
 		finalRules[rpg.RulePerGroup.GroupID] = append(finalRules[rpg.RulePerGroup.GroupID], rpg.Rule)
 		ruleCount++
 	}
