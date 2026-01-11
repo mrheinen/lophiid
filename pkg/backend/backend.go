@@ -72,6 +72,10 @@ const maxSqlDelayMs = 10000
 const DebugHeaderRequestID = "X-Lophiid-Request-ID"
 const DebugHeaderSessionID = "X-Lophiid-Session-ID"
 
+// The maximum allowed attacker payload upload size for temporary content and
+// rules.
+const MaxUploadSizeBytes = 3000000
+
 // FallbackContent is used for cases where we are not able to provide any other
 // content (e.g. due to an error).
 const FallbackContent = "<html></html>"
@@ -948,6 +952,11 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		expiryTime := time.Now().Add(time.Hour * 1)
 		payloadResponse.TmpContentRule.Content.ValidUntil = &expiryTime
 		payloadResponse.TmpContentRule.Rule.ValidUntil = &expiryTime
+
+		pLen := len(payloadResponse.TmpContentRule.Content.Data)
+		if pLen > MaxUploadSizeBytes {
+			return fmt.Errorf("rejecting payload upload: too long (%d bytes)", pLen)
+		}
 
 		insertedContent, err := s.dbClient.Insert(&payloadResponse.TmpContentRule.Content)
 		if err != nil {
