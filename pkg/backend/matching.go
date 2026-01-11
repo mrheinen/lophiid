@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -21,8 +21,10 @@ import (
 	"log/slog"
 	"lophiid/pkg/database/models"
 	"math/rand"
+	"net"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func MatchesString(method string, dataToSearch string, searchValue string) bool {
@@ -58,6 +60,24 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 	matchedPriority2 := []models.ContentRule{}
 
 	for _, rule := range rules {
+		// Exclude rules that are expired.
+		if rule.ValidUntil != nil && time.Now().After(*rule.ValidUntil) {
+			slog.Debug("rule is nolonger valid", slog.Int64("request_id", req.ID), slog.Int64("session_id", session.ID), slog.Int64("rule_id", rule.ID))
+			continue
+		}
+
+		if rule.AllowFromNet != nil {
+			_, ipNet, err := net.ParseCIDR(*rule.AllowFromNet)
+			if err != nil {
+				slog.Error("invalid rule network", slog.Int64("request_id", req.ID), slog.Int64("session_id", session.ID), slog.Int64("rule_id", rule.ID), slog.String("network", *rule.AllowFromNet), slog.String("error", err.Error()))
+				continue
+			}
+
+			if !ipNet.Contains(net.ParseIP(req.SourceIP)) {
+				slog.Error("request not allowed from network", slog.Int64("request_id", req.ID), slog.Int64("session_id", session.ID), slog.Int64("rule_id", rule.ID), slog.String("network", *rule.AllowFromNet))
+				continue
+			}
+		}
 
 		if len(rule.Ports) != 0 {
 			found := false
