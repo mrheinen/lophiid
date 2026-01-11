@@ -59,6 +59,11 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 	matchedPriority1 := []models.ContentRule{}
 	matchedPriority2 := []models.ContentRule{}
 
+	sourceAddr := net.ParseIP(req.SourceIP)
+	if sourceAddr == nil {
+		return models.ContentRule{}, fmt.Errorf("invalid source ip: %s", req.SourceIP)
+	}
+
 	for _, rule := range rules {
 		// Exclude rules that are expired.
 		if rule.ValidUntil != nil && time.Now().After(*rule.ValidUntil) {
@@ -73,7 +78,7 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 				continue
 			}
 
-			if !ipNet.Contains(net.ParseIP(req.SourceIP)) {
+			if !ipNet.Contains(sourceAddr) {
 				slog.Error("request not allowed from network", slog.Int64("request_id", req.ID), slog.Int64("session_id", session.ID), slog.Int64("rule_id", rule.ID), slog.String("network", *rule.AllowFromNet))
 				continue
 			}
