@@ -29,6 +29,8 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func createTestMetrics() *PreprocessMetrics {
@@ -523,6 +525,97 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 
 	if pRes.Output != expectedOutput {
 		t.Errorf("Expected body '%s', got: %s", expectedOutput, pRes.Output)
+	}
+}
+
+func TestProcess_FileUploadPayload(t *testing.T) {
+	mockLLM := &llm.MockLLMManager{}
+	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	metrics := createTestMetrics()
+
+	preprocessResult := PreProcessResult{
+		HasPayload:  true,
+		PayloadType: "FILE_UPLOAD",
+		Payload:     "<?php echo 'pwned'; ?>",
+		Target:      "/var/www/html/shell.php",
+	}
+
+	jsonResult, _ := json.Marshal(preprocessResult)
+	mockLLM.CompletionToReturn = string(jsonResult)
+	mockLLM.ErrorToReturn = nil
+
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+
+	req := &models.Request{
+		ID:        42,
+		SessionID: 100,
+		SourceIP:  "192.168.1.55",
+		Raw:       []byte("POST /upload.php HTTP/1.1\r\nHost: example.com\r\n\r\n<?php echo 'pwned'; ?>"),
+	}
+
+	result, pRes, err := preprocess.Process(req)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.HasPayload)
+	assert.Equal(t, "FILE_UPLOAD", result.PayloadType)
+	require.NotNil(t, pRes)
+	require.NotNil(t, pRes.TmpContentRule)
+	assert.Equal(t, "shell.php", pRes.TmpContentRule.Rule.Uri)
+	assert.Equal(t, "<?php echo 'pwned'; ?>", string(pRes.TmpContentRule.Content.Data))
+
+	// Verify AllowFromNet is set to the /24 network of the source IP
+	require.NotNil(t, pRes.TmpContentRule.Rule.AllowFromNet)
+	assert.Equal(t, "192.168.1.0", *pRes.TmpContentRule.Rule.AllowFromNet)
+
+	assert.Equal(t, int64(42, pRes.TmpContentRule.Rule.AppID)
+}
+
+func TestProcess_FileUploadInvalidFilename(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		target string
+	}{
+		{"empty filename", ""},
+		{"filename too short", "a.p"},
+		{"filename too long", strings.Repeat("a", 2049) + ".php"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mockLLM := &llm.MockLLMManager{}
+			fakeShell := &shell.FakeShellClient{}
+			fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+			fakeFileEmu := &file.FakeFileAccessEmulator{}
+			fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+			metrics := createTestMetrics()
+
+			preprocessResult := PreProcessResult{
+				HasPayload:  true,
+				PayloadType: "FILE_UPLOAD",
+				Payload:     "<?php echo 'pwned'; ?>",
+				Target:      tc.target,
+			}
+
+			jsonResult, _ := json.Marshal(preprocessResult)
+			mockLLM.CompletionToReturn = string(jsonResult)
+			mockLLM.ErrorToReturn = nil
+
+			preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+
+			req := &models.Request{
+				ID:        1,
+				SessionID: 100,
+				Raw:       []byte("POST /upload.php HTTP/1.1\r\nHost: example.com\r\n\r\n<?php echo 'pwned'; ?>"),
+			}
+
+			result, pRes, err := preprocess.Process(req)
+
+			require.NoError(t, err)
+			assert.Nil(t, result)
+			assert.Nil(t, pRes)
+		})
 	}
 }
 
