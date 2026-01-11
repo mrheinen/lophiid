@@ -949,12 +949,12 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		payloadResponse.TmpContentRule.Content.ValidUntil = &expiryTime
 		payloadResponse.TmpContentRule.Rule.ValidUntil = &expiryTime
 
-		content, err := s.dbClient.Insert(&payloadResponse.TmpContentRule.Content)
+		insertedContent, err := s.dbClient.Insert(&payloadResponse.TmpContentRule.Content)
 		if err != nil {
 			return fmt.Errorf("error inserting tmp content: %w", err)
 		}
 
-		payloadResponse.TmpContentRule.Rule.ContentID = content.ModelID()
+		payloadResponse.TmpContentRule.Rule.ContentID = insertedContent.ModelID()
 		rule, err := s.dbClient.Insert(&payloadResponse.TmpContentRule.Rule)
 		if err != nil {
 			return fmt.Errorf("error inserting tmp rule: %w", err)
