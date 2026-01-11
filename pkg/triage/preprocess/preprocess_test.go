@@ -569,9 +569,9 @@ func TestProcess_FileUploadPayload(t *testing.T) {
 
 	// Verify AllowFromNet is set to the /24 network of the source IP
 	require.NotNil(t, pRes.TmpContentRule.Rule.AllowFromNet)
-	assert.Equal(t, "192.168.1.0", *pRes.TmpContentRule.Rule.AllowFromNet)
+	assert.Equal(t, "192.168.1.0/24", *pRes.TmpContentRule.Rule.AllowFromNet)
 
-	assert.Equal(t, int64(42, pRes.TmpContentRule.Rule.AppID)
+	assert.Equal(t, int64(42), pRes.TmpContentRule.Rule.AppID)
 }
 
 func TestProcess_FileUploadInvalidFilename(t *testing.T) {
