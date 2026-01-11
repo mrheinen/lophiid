@@ -965,7 +965,9 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		}
 
 		slog.Debug("Added tmp rule", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("network", *payloadResponse.TmpContentRule.Rule.AllowFromNet), slog.Int64("rule_id", rule.ModelID()), slog.String("rule_uri", payloadResponse.TmpContentRule.Rule.Uri))
-		s.LoadRules()
+
+		newRule := rule.(*models.ContentRule)
+		s.safeRules.Add(*newRule, constants.DefaultRuleGroupID)
 	}
 
 	res.Body = []byte(AddLLMResponseToContent(content, payloadResponse.Output))
