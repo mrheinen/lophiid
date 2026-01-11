@@ -16,9 +16,8 @@
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package models
 
-// SessionContentRule combines a content rule and content for use in a session.
-type SessionContentRule struct {
-	Rule          ContentRule
-	Content       Content
-	ContentIsCode bool
+// TemporaryContentRule combines a content rule and content for use in a session.
+type TemporaryContentRule struct {
+	Rule    ContentRule
+	Content Content
 }

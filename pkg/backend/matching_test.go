@@ -19,6 +19,7 @@ package backend
 import (
 	"lophiid/pkg/database/models"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
@@ -293,4 +294,99 @@ func TestGetMatchedRulePortPrioritization(t *testing.T) {
 	matchedRule, err = GetMatchedRule(rules, req, sess)
 	require.NoError(t, err)
 	assert.Equal(t, int64(44), matchedRule.ID, "Expected rule without ports (ID 44) to be matched")
+}
+
+func TestGetMatchedRuleAllowFromNet(t *testing.T) {
+	validCIDR := "192.168.1.0/24"
+	invalidCIDR := "not-a-cidr"
+	differentCIDR := "10.0.0.0/8"
+
+	for _, tc := range []struct {
+		name          string
+		allowFromNet  *string
+		sourceIP      string
+		expectMatched bool
+	}{
+		{"nil AllowFromNet matches any IP", nil, "1.2.3.4", true},
+		{"valid CIDR matches IP in range", &validCIDR, "192.168.1.100", true},
+		{"valid CIDR does not match IP outside range", &validCIDR, "10.0.0.1", false},
+		{"invalid CIDR skips rule", &invalidCIDR, "192.168.1.100", false},
+		{"different CIDR does not match", &differentCIDR, "192.168.1.100", false},
+		{"different CIDR matches IP in its range", &differentCIDR, "10.5.5.5", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rules := []models.ContentRule{
+				{
+					ID:           1,
+					AppID:        1,
+					Method:       "GET",
+					Uri:          "/test",
+					UriMatching:  "exact",
+					AllowFromNet: tc.allowFromNet,
+				},
+			}
+
+			req := &models.Request{
+				ID:       123,
+				Method:   "GET",
+				Uri:      "/test",
+				Port:     80,
+				SourceIP: tc.sourceIP,
+			}
+
+			matchedRule, err := GetMatchedRule(rules, req, models.NewSession())
+
+			if tc.expectMatched {
+				require.NoError(t, err)
+				assert.Equal(t, int64(1), matchedRule.ID)
+			} else {
+				assert.Error(t, err)
+				assert.Equal(t, int64(0), matchedRule.ID)
+			}
+		})
+	}
+}
+
+func TestGetMatchedRuleValidUntil(t *testing.T) {
+	pastTime := time.Now().Add(-1 * time.Hour)
+	futureTime := time.Now().Add(1 * time.Hour)
+
+	for _, tc := range []struct {
+		name          string
+		validUntil    *time.Time
+		expectMatched bool
+	}{
+		{"nil ValidUntil matches", nil, true},
+		{"past ValidUntil skipped", &pastTime, false},
+		{"future ValidUntil matches", &futureTime, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rules := []models.ContentRule{
+				{
+					ID:          1,
+					AppID:       1,
+					Method:      "GET",
+					Uri:         "/test",
+					UriMatching: "exact",
+					ValidUntil:  tc.validUntil,
+				},
+			}
+
+			req := &models.Request{
+				Method: "GET",
+				Uri:    "/test",
+				Port:   80,
+			}
+
+			matchedRule, err := GetMatchedRule(rules, req, models.NewSession())
+
+			if tc.expectMatched {
+				require.NoError(t, err)
+				assert.Equal(t, int64(1), matchedRule.ID)
+			} else {
+				assert.Error(t, err)
+				assert.Equal(t, int64(0), matchedRule.ID)
+			}
+		})
+	}
 }

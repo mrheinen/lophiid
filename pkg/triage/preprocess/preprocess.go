@@ -27,7 +27,9 @@ import (
 	"lophiid/pkg/llm/file"
 	"lophiid/pkg/llm/shell"
 	"lophiid/pkg/llm/sql"
+	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -57,30 +59,34 @@ type PreProcess struct {
 type PreProcessResult struct {
 	HasPayload        bool   `json:"has_payload" jsonschema_description:"This is a boolean field. Use the value 'true' if the request has a payload, such as to execute a command or inject code or open a file. Otherwise use the value 'false'"`
 	TargetedParameter string `json:"targeted_parameter" jsonschema_description:"The name of the HTTP URL/body parameter that is targeted. Use an empty string if you don't know. Use the header name if the payload is in a header and use __body__ if the payload is in the body but without a specific parameter"`
-	PayloadType       string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\" and \"UNKNOWN\" (if you don't know)"`
+	PayloadType       string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\", \"SQL_INJECTION\", \"FILE_UPLOAD\" and \"UNKNOWN\" (if you don't know)"`
 	Payload           string `json:"payload" jsonschema_description:"The payload if there is one. Empty otherwise"`
+	Target            string `json:"target" jsonschema_description:"The target resource of the payload, such as a filename for file operations or a table name for SQL. Empty if not applicable"`
 }
 
 type PayloadProcessingResult struct {
-	Output     string
-	Headers    string
-	SqlIsBlind bool
-	SqlDelayMs int
+	Output         string
+	Headers        string
+	TmpContentRule *models.TemporaryContentRule
+	SqlIsBlind     bool
+	SqlDelayMs     int
 }
 
 var ProcessPrompt = `
 Analyze the provided HTTP request and tell me in the JSON response whether the request has a payload in the has_payload field using a boolean (true or false) . Tell me the name of the HTTP URL/body parameter that is targeted in the targeted_parameter field or leave it empty if no parameter is targeted or when you don't know. If the payload is in the body of the request but not tied to a specific parameter then use "__body__" as the targeted_parameter field. If the payload is in a header then use the header name as targeted_parameter field. Last but not least: tell me what kind of payload it is (payload_type) and you can choose between the strings:
 
-"CODE_EXECUTION" for attempts to execute code (like with <?php tags)
+"FILE_UPLOAD" for file upload attempts. These are typically POST requests where the attacker uploads code.
+"CODE_EXECUTION" for attempts to execute code (like with <?php tags) but note that code execution attempts via file uploading need to be marked as type FILE_UPLOAD.
 "SHELL_COMMAND" for anything that looks like shell/cli commands
 "FILE_ACCESS" for attempts to access a file (e.g. /etc/passwd)
 "SQL_INJECTION" for SQL injection attempts (e.g. ' OR 1=1, UNION SELECT)
 "UNKNOWN" for when the payload type doesn't fall into the above categories.
 
-Important: If you see code execution that also has shell/cli commands then always choose CODE_EXECUTION.
+When in doubt between CODE_EXECUTION and FILE_UPLOAD: chose FILE_UPLOAD.
 
 If you chose "SHELL_COMMAND" then provide the shell commands in the 'payload' field.
 If you chose "FILE_ACCESS" then provide the filename (full path) in the 'payload' field.
+If you chose "FILE_UPLOAD" then provide the filename (full path) of the uploaded file in the target field and the uploaded file itself in the 'payload' field.
 If you chose "CODE_EXECUTION" then provide the code snippet that was attempted to be executed in the 'payload' field.
 If you chose "SQL_INJECTION" then provide the SQL injection payload in the 'payload' field.
 If you chose "UNKNOWN" then provide whatever the payload is in the 'payload' field.
@@ -229,7 +235,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 			slog.Error("sql emulator disabled")
 			return nil, nil, nil
 		}
-		slog.Debug("Running sql emulator", slog.String("payload", res.Payload))
+		slog.Debug("Running sql emulator", slog.Int64("request_id", req.ID), slog.String("payload", res.Payload))
 		sqlStartTime := time.Now()
 		sRes, err := p.sqlEmu.Emulate(req, res.Payload)
 		if err != nil {
@@ -239,8 +245,60 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 		p.metrics.sqlEmuLLMResponseTime.Observe(time.Since(sqlStartTime).Seconds())
 
 		return res, &PayloadProcessingResult{Output: sRes.Output, SqlIsBlind: sRes.IsBlind, SqlDelayMs: sRes.DelayMs}, nil
+
+	case constants.TriagePayloadTypeFileUpload:
+
+		fileName := strings.TrimSpace(filepath.Base(res.Target))
+		if fileName == "" {
+			slog.Error("no filename found for upload", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("uri", req.Uri))
+			return nil, nil, nil
+		}
+
+		if len(fileName) < 4 {
+			slog.Error("filename too short", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("filename", fileName))
+			return nil, nil, nil
+		}
+
+		if len(fileName) > 2048 {
+			slog.Error("filename too long", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("filename", fileName))
+			return nil, nil, nil
+		}
+
+		slog.Debug("Handling file upload", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("file", fileName))
+
+		// Get the /24 for the source IP. We will limit access to the rule/content
+		// to only IPs in this network. This in order to prevent abuse.
+		net, err := util.Get24NetworkString(req.SourceIP)
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting network: %w", err)
+		}
+
+		TmpContentRule := models.TemporaryContentRule{
+			Content: models.Content{
+				HasCode:     true,
+				Data:        []byte(res.Payload),
+				StatusCode:  constants.HTTPStatusCodeOK,
+				Server:      "Apache",
+				ContentType: "text/html",
+			},
+			Rule: models.ContentRule{
+				Uri:              fileName,
+				UriMatching:      constants.MatchingTypeContains,
+				BodyMatching:     constants.MatchingTypeNone,
+				Enabled:          true,
+				AllowFromNet:     &net,
+				AppID:            req.ID,
+				Method:           "ANY",
+				RequestPurpose:   constants.RequestPurposeAttack,
+				Responder:        constants.ResponderTypeNone,
+				ResponderDecoder: constants.ResponderDecoderTypeNone,
+			},
+		}
+
+		return res, &PayloadProcessingResult{TmpContentRule: &TmpContentRule}, nil
+
 	default:
-		slog.Debug("Unknown payload type", slog.String("type", res.PayloadType), slog.String("payload", res.Payload))
+		slog.Debug("Unknown payload type", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("type", res.PayloadType), slog.String("payload", res.Payload))
 
 	}
 

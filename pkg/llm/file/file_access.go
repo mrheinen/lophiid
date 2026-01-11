@@ -38,7 +38,7 @@ Only provide the content of the file, nothing else.
 Make sure you follow the requested JSON format for your output and put the content in the "content" field.
 `
 
-type FileOutput struct {
+type FileAccessOutput struct {
 	Content string `json:"content" jsonschema_description:"The content of the file"`
 }
 
@@ -60,7 +60,7 @@ type FileAccessEmulator struct {
 }
 
 func NewFileAccessEmulator(llmManager llm.LLMManagerInterface) *FileAccessEmulator {
-	llmManager.SetResponseSchemaFromObject(FileOutput{}, "The file content")
+	llmManager.SetResponseSchemaFromObject(FileAccessOutput{}, "The file content")
 	return &FileAccessEmulator{
 		llmManager: llmManager,
 	}
@@ -86,7 +86,7 @@ func (f *FileAccessEmulator) Emulate(req *models.Request, filename string) (stri
 		return "", fmt.Errorf("error completing prompt: %w", err)
 	}
 
-	result := &FileOutput{}
+	result := &FileAccessOutput{}
 	if err = json.Unmarshal([]byte(util.RemoveJsonExpression(res.Output)), result); err != nil {
 		slog.Error("error parsing json", slog.String("error", err.Error()), slog.String("json", res.Output))
 		return "", err

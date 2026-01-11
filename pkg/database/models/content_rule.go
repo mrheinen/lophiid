@@ -43,15 +43,17 @@ type ContentRule struct {
 	ContentID    int64                 `ksql:"content_id" json:"content_id" yaml:"content_id" doc:"The ID of the Content this rule serves"`
 	AppID        int64                 `ksql:"app_id" json:"app_id"         yaml:"app_id" doc:"The ID of the application for which this rule is"`
 	// The content and app UUID are only set on imported rules.
-	AppUuid     string    `ksql:"app_uuid" json:"app_uuid" yaml:"app_uuid" doc:"The external UUID of the related app"`
-	ContentUuid string    `ksql:"content_uuid" json:"content_uuid" yaml:"content_uuid" doc:"The external UUID of the related content"`
-	CreatedAt   time.Time `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Creation date of the rule"`
-	UpdatedAt   time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Last update date of the rule"`
-	Alert       bool      `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
-	Enabled     bool      `ksql:"enabled" json:"enabled" doc:"A bool (0 or 1) indicating if the rule is enabled"`
-	Block       bool      `ksql:"block" json:"block" doc:"A bool (0 or 1) indicating if requests matching the rule should be blocked"`
-	ExtVersion  int64     `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
-	ExtUuid     string    `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
+	AppUuid      string     `ksql:"app_uuid" json:"app_uuid" yaml:"app_uuid" doc:"The external UUID of the related app"`
+	ContentUuid  string     `ksql:"content_uuid" json:"content_uuid" yaml:"content_uuid" doc:"The external UUID of the related content"`
+	CreatedAt    time.Time  `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Creation date of the rule"`
+	UpdatedAt    time.Time  `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Last update date of the rule"`
+	ValidUntil   *time.Time `ksql:"valid_until"    json:"valid_until" yaml:"valid_until" doc:"time.Time of expiration"`
+	Alert        bool       `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	AllowFromNet *string    `ksql:"allow_from_net" json:"allow_from_net" doc:"The IP network range from which the rule is allowed to match (e.g. 1.1.1.1/24)"`
+	Enabled      bool       `ksql:"enabled" json:"enabled" doc:"A bool (0 or 1) indicating if the rule is enabled"`
+	Block        bool       `ksql:"block" json:"block" doc:"A bool (0 or 1) indicating if requests matching the rule should be blocked"`
+	ExtVersion   int64      `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
+	ExtUuid      string     `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
 	// The request purpose should indicate what the request is intended to do. It
 	// is used, amongst other things, to determine whether a request is malicious
 	// or not.

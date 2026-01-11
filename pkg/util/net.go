@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
 package util
 
 import (
+	"net/netip"
 	"net/url"
 	"strings"
 )
@@ -31,4 +31,17 @@ func CustomParseQuery(query string) (url.Values, error) {
 	}
 
 	return ret, err
+}
+
+// Get24Network takes an IP string and returns the /24 network address.
+func Get24NetworkString(ipAddr string) (string, error) {
+	addr, err := netip.ParseAddr(ipAddr)
+	if err != nil {
+		return "", err
+	}
+
+	prefix := netip.PrefixFrom(addr, 24)
+
+	// Masked() returns the network address (zeroing out the host bits)
+	return prefix.Masked().Addr().String() + "/24", nil
 }
