@@ -250,18 +250,15 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 
 		fileName := strings.TrimSpace(filepath.Base(res.Target))
 		if fileName == "" {
-			slog.Error("no filename found for upload", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("uri", req.Uri))
-			return nil, nil, nil
+			return nil, nil, fmt.Errorf("no filename found for upload")
 		}
 
 		if len(fileName) < 4 {
-			slog.Error("filename too short", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("filename", fileName))
-			return nil, nil, nil
+			return nil, nil, fmt.Errorf("filename too short: %s", fileName)
 		}
 
 		if len(fileName) > 2048 {
-			slog.Error("filename too long", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("filename", fileName))
-			return nil, nil, nil
+			return nil, nil, fmt.Errorf("filename too long: %s", fileName)
 		}
 
 		slog.Debug("Handling file upload", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("file", fileName))
@@ -273,7 +270,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 			return nil, nil, fmt.Errorf("getting network: %w", err)
 		}
 
-		TmpContentRule := models.TemporaryContentRule{
+		tmpContentRule := models.TemporaryContentRule{
 			Content: models.Content{
 				HasCode:     true,
 				Data:        []byte(res.Payload),
@@ -295,7 +292,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 			},
 		}
 
-		return res, &PayloadProcessingResult{TmpContentRule: &TmpContentRule}, nil
+		return res, &PayloadProcessingResult{TmpContentRule: &tmpContentRule}, nil
 
 	default:
 		slog.Debug("Unknown payload type", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("type", res.PayloadType), slog.String("payload", res.Payload))

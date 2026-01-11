@@ -612,7 +612,7 @@ func TestProcess_FileUploadInvalidFilename(t *testing.T) {
 
 			result, pRes, err := preprocess.Process(req)
 
-			require.NoError(t, err)
+			require.Error(t, err)
 			assert.Nil(t, result)
 			assert.Nil(t, pRes)
 		})

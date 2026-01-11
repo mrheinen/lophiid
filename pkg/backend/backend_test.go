@@ -1670,6 +1670,7 @@ func TestHandlePreProcess(t *testing.T) {
 		expectedBody     string
 		expectedHeaders  []string // Keys that should exist in headers
 		expectedSqlDelay int
+		expectError      bool
 	}{
 		{
 			description: "Success with payload response",
@@ -1692,6 +1693,7 @@ func TestHandlePreProcess(t *testing.T) {
 			preprocessResult: nil,
 			preprocessError:  preprocess.ErrNotProcessed,
 			expectedBody:     "Original content",
+			expectError:      true,
 		},
 		{
 			description: "Success with SQL delay",
@@ -1705,6 +1707,24 @@ func TestHandlePreProcess(t *testing.T) {
 			},
 			preprocessError: nil,
 			expectedBody:    "Original content\nDelayed content",
+		},
+		{
+			description: "Reject payload exceeding MaxUploadSizeBytes",
+			preprocessResult: &preprocess.PreProcessResult{
+				HasPayload:  true,
+				PayloadType: "FILE_UPLOAD",
+			},
+			payloadResponse: &preprocess.PayloadProcessingResult{
+				TmpContentRule: &models.TemporaryContentRule{
+					Content: models.Content{
+						Data: make([]byte, MaxUploadSizeBytes+1),
+					},
+					Rule: models.ContentRule{},
+				},
+			},
+			preprocessError: nil,
+			expectedBody:    "Original content",
+			expectError:     true,
 		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
@@ -1731,7 +1751,13 @@ func TestHandlePreProcess(t *testing.T) {
 			}
 
 			startTime := time.Now()
-			b.handlePreProcess(sReq, content, res, &finalHeaders, startTime, false)
+			err := b.handlePreProcess(sReq, content, res, &finalHeaders, startTime, false)
+
+			if test.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 
 			assert.Equal(t, test.expectedBody, string(res.Body))
 
