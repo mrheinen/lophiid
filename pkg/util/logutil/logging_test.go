@@ -86,19 +86,48 @@ func TestDebug(t *testing.T) {
 	slog.SetDefault(logger)
 	defer slog.SetDefault(slog.Default())
 
-	req := &models.Request{ID: 789, SessionID: 101112}
-	buf.Reset()
-	Debug("test debug", req, slog.String("key", "value"))
-	output := buf.String()
+	for _, test := range []struct {
+		description   string
+		req           *models.Request
+		msg           string
+		args          []any
+		wantRequestID bool
+		wantSessionID bool
+	}{{
+		description:   "with request",
+		req:           &models.Request{ID: 789, SessionID: 101112},
+		msg:           "test debug",
+		args:          []any{slog.String("key", "value")},
+		wantRequestID: true,
+		wantSessionID: true,
+	},
+		{
+			description:   "with nil request",
+			req:           nil,
+			msg:           "test debug",
+			args:          []any{slog.String("key", "value")},
+			wantRequestID: false,
+			wantSessionID: false,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			buf.Reset()
+			Debug(test.msg, test.req, test.args...)
+			output := buf.String()
 
-	if !strings.Contains(output, "request_id=789") {
-		t.Errorf("expected output to contain request_id=789, got: %s", output)
-	}
-	if !strings.Contains(output, "session_id=101112") {
-		t.Errorf("expected output to contain session_id=101112, got: %s", output)
-	}
-	if !strings.Contains(output, "test debug") {
-		t.Errorf("expected output to contain message 'test debug', got: %s", output)
+			if test.wantRequestID && !strings.Contains(output, "request_id=789") {
+				t.Errorf("expected output to contain request_id=789, got: %s", output)
+			}
+			if test.wantSessionID && !strings.Contains(output, "session_id=101112") {
+				t.Errorf("expected output to contain session_id=101112, got: %s", output)
+			}
+			if !test.wantRequestID && strings.Contains(output, "request_id") {
+				t.Errorf("expected output to not contain request_id, got: %s", output)
+			}
+			if !strings.Contains(output, test.msg) {
+				t.Errorf("expected output to contain message '%s', got: %s", test.msg, output)
+			}
+		})
 	}
 }
 

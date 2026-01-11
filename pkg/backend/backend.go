@@ -792,13 +792,13 @@ func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes
 
 					for _, v := range *val {
 						if v == sReq.CmpHash {
-							slog.Debug("found duplicate payload cmp_hash in cache!", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID))
+							logutil.Debug("found duplicate payload cmp_hash in cache!", sReq)
 							return
 						}
 					}
 
 					// Only create event if we've seen at least one other payload before.
-					slog.Debug("found new consecutive payload for session", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("base_hash", sReq.BaseHash), slog.String("target_param", preRes.TargetedParameter))
+					logutil.Debug("found new consecutive payload for session", sReq, slog.String("base_hash", sReq.BaseHash), slog.String("target_param", preRes.TargetedParameter))
 					s.ipEventManager.AddEvent(&models.IpEvent{
 						IP:            sReq.SourceIP,
 						Type:          constants.IpEventSessionInfo,
@@ -1122,7 +1122,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		logutil.Debug("running script", sReq)
 		err := s.jRunner.RunScript(content.Script, *sReq, res, colEx, false)
 		if err != nil {
-			slog.Warn("couldn't run script", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+			logutil.Warn("couldn't run script", sReq, slog.String("error", err.Error()))
 		} else {
 			sReq.ContentDynamic = true
 			if len(res.GetHeader()) > 0 {
@@ -1338,7 +1338,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 			if downloadsScheduled <= maxUrlsToExtractForDownload {
 				ipBasedUrl, ip, hostHeader, err := ConvertURLToIPBased(m.Data)
 				if err != nil {
-					slog.Warn("error converting URL", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("url", m.Data), slog.String("error", err.Error()))
+					logutil.Warn("error converting URL", req, slog.String("url", m.Data), slog.String("error", err.Error()))
 				} else {
 					s.ScheduleDownloadOfPayload(req.SourceIP, req.HoneypotIP, m.Data, ip, ipBasedUrl, hostHeader, req.ID)
 					downloadsScheduled += 1
