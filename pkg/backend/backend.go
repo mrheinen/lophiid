@@ -51,7 +51,7 @@ import (
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
-	logutil "lophiid/pkg/util/log"
+	"lophiid/pkg/util/logutil"
 	"lophiid/pkg/util/shell"
 	"lophiid/pkg/util/templator"
 	"lophiid/pkg/vt"
