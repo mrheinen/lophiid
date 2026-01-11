@@ -53,6 +53,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched nothing ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/fddfffd",
 				Port:   80,
 				Method: "GET",
@@ -63,6 +64,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (exact) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/42",
 				Port:   80,
 				Method: "GET",
@@ -74,6 +76,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (prefix) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/prefixdsfsfdf",
 				Port:   80,
 				Method: "GET",
@@ -86,6 +89,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (contains) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/sddsadcontainsfdfd",
 				Port:   80,
 				Method: "GET",
@@ -97,6 +101,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (suffix) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/ttttt?aa=suffix",
 				Port:   80,
 				Method: "GET",
@@ -108,6 +113,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (suffix) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/ttttt?aa=suffix",
 				Port:   80,
 				Method: "POST",
@@ -120,6 +126,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (regex) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/a898989898",
 				Port:   80,
 				Method: "GET",
@@ -131,6 +138,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (on port) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/eeee",
 				Port:   8888,
 				Method: "GET",
@@ -142,6 +150,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (uri and body)  ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/same",
 				Port:   80,
 				Body:   []byte("body"),
@@ -155,6 +164,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body alone (exact) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/eeee",
 				Port:   80,
 				Body:   []byte("woohoo"),
@@ -168,6 +178,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body alone (contains) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/eeee",
 				Port:   80,
 				Body:   []byte("asdssad /etc/passwd sdds"),
@@ -180,6 +191,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body and path (contains) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/pppaaattthhh",
 				Port:   80,
 				Body:   []byte("asdssad /etc/hosts sdds"),
@@ -375,6 +387,7 @@ func TestGetMatchedRuleValidUntil(t *testing.T) {
 			req := &models.Request{
 				Method: "GET",
 				Uri:    "/test",
+				SourceIP: "1.1.1.1",
 				Port:   80,
 			}
 
