@@ -6,3 +6,7 @@ bazel-testlogs
 ui/dist/*
 MODULE.bazel.lock
 package-lock.json
+
+# Compiled binaries
+agent_cli
+backend

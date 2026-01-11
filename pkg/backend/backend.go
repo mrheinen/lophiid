@@ -51,6 +51,7 @@ import (
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
+	logutil "lophiid/pkg/util/log"
 	"lophiid/pkg/util/shell"
 	"lophiid/pkg/util/templator"
 	"lophiid/pkg/vt"
@@ -742,12 +743,12 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 		case constants.ResponderDecoderTypeUri:
 			final_match = decoding.DecodeURLOrEmptyString(string(match[1]), true)
 			if final_match == "" {
-				slog.Error("could not decode URI", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("match", string(match[1])))
+				logutil.Error("could not decode URI", sReq, slog.String("match", string(match[1])))
 			}
 		case constants.ResponderDecoderTypeHtml:
 			final_match = decoding.DecodeHTML(string(match[1]))
 		default:
-			slog.Error("unknown responder decoder", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("decoder", rule.ResponderDecoder))
+			logutil.Error("unknown responder decoder", sReq, slog.String("decoder", rule.ResponderDecoder))
 		}
 
 		if final_match == "" {
@@ -756,7 +757,7 @@ func (s *BackendServer) getResponderData(sReq *models.Request, rule *models.Cont
 
 		body, err := s.llmResponder.Respond(rule.Responder, final_match, string(content.Data))
 		if err != nil {
-			slog.Error("error responding", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("match", final_match), slog.String("error", err.Error()))
+			logutil.Error("error responding", sReq, slog.String("match", final_match), slog.String("error", err.Error()))
 		}
 		return body
 	}
@@ -831,7 +832,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 		// the original IP. Instead we want to preprocess all similar requests in the
 		// future for the duration of the entry in the cache.
 		if _, err = s.payloadCmpHashCache.Get(sReq.CmpHash); err == nil {
-			slog.Debug("found payload cmp_hash in cache!", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("url", sReq.Uri))
+			logutil.Debug("found payload cmp_hash in cache!", sReq, slog.String("url", sReq.Uri))
 			s.metrics.firstTriageSelection.WithLabelValues("filter_accept_similar").Inc()
 			preRes, payloadResponse, err = s.preprocessor.Process(sReq)
 		} else {
@@ -877,11 +878,11 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	}
 
 	if payloadResponse == nil {
-		slog.Error("no payload response", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("url", sReq.Uri), slog.String("cmp_hash", sReq.CmpHash))
+		logutil.Error("no payload response", sReq, slog.String("url", sReq.Uri), slog.String("cmp_hash", sReq.CmpHash))
 		return nil, fmt.Errorf("no payload response found")
 	}
+	logutil.Debug("found payload", sReq, slog.String("url", sReq.Uri), slog.String("cmp_hash", sReq.CmpHash), slog.String("type", preRes.PayloadType))
 
-	slog.Debug("found payload!", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("url", sReq.Uri), slog.String("type", preRes.PayloadType))
 	s.metrics.firstTriageResult.WithLabelValues("success_payload").Inc()
 	s.metrics.firstTriagePayloadType.WithLabelValues(preRes.PayloadType).Inc()
 
@@ -899,7 +900,6 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	}
 
 	logArgs := []any{
-		slog.Int64("request_id", sReq.ID),
 		slog.String("cmp_hash", sReq.CmpHash),
 		slog.Bool("triaged", sReq.Triaged),
 		slog.Bool("triage_has_payload", sReq.TriageHasPayload),
@@ -909,7 +909,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	if sReq.TriageTargetParameter != nil {
 		logArgs = append(logArgs, slog.String("triage_target_parameter", *sReq.TriageTargetParameter))
 	}
-	slog.Debug("updating triaged request", logArgs...)
+	logutil.Debug("updating triaged request", sReq, logArgs...)
 	return payloadResponse, nil
 }
 
@@ -918,26 +918,26 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 
 	if err != nil {
 		if !errors.Is(err, preprocess.ErrNotProcessed) {
-			slog.Error("error pre-processing", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+			logutil.Error("error pre-processing", sReq, slog.String("error", err.Error()))
 		}
-		slog.Error("pre-processing failed", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()), slog.String("cmp_hash", sReq.CmpHash), slog.String("uri", sReq.Uri))
+		logutil.Error("pre-processing failed", sReq, slog.String("error", err.Error()), slog.String("cmp_hash", sReq.CmpHash), slog.String("uri", sReq.Uri))
 		res.Body = content.Data
 		return
 	}
 
 	if payloadResponse.SqlDelayMs > 0 {
-		slog.Debug("sql delay", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int("ms", payloadResponse.SqlDelayMs))
+		logutil.Debug("sql delay", sReq, slog.Int("ms", payloadResponse.SqlDelayMs))
 		rpcDuration := time.Since(rpcStartTime).Milliseconds()
 		timeRemainMs := payloadResponse.SqlDelayMs - int(rpcDuration)
 
 		if timeRemainMs <= 0 {
-			slog.Debug("skipping sql delay", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int("timeRemainMs", timeRemainMs))
+			logutil.Debug("skipping sql delay", sReq, slog.Int("timeRemainMs", timeRemainMs))
 		} else {
-			slog.Debug("sql delay", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int("timeRemainMs", timeRemainMs))
+			logutil.Debug("sql delay", sReq, slog.Int("timeRemainMs", timeRemainMs))
 			if timeRemainMs < maxSqlDelayMs {
 				time.Sleep(time.Duration(timeRemainMs) * time.Millisecond)
 			} else {
-				slog.Error("sql delay too large", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int("timeRemainMs", timeRemainMs))
+				logutil.Error("sql delay too large", sReq, slog.Int("timeRemainMs", timeRemainMs))
 			}
 		}
 	}
@@ -956,7 +956,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "no authentication found")
 	}
-
 	slog.Info("Got request", slog.String("uri", req.GetRequestUri()), slog.String("method", req.GetRequest().GetMethod()), slog.String("ip", req.GetRequest().GetRemoteAddress()))
 
 	rpcStartTime := time.Now()
@@ -969,7 +968,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	if err != nil || session == nil {
 		session, err = s.sessionMgr.StartSession(sReq.SourceIP)
 		if err != nil {
-			slog.Error("error starting session", slog.String("ip", sReq.SourceIP), slog.String("error", err.Error()))
+			logutil.Error("error starting session", sReq, slog.String("error", err.Error()))
 		} else {
 			session.LastRuleServed.AppID = -1
 		}
@@ -1008,12 +1007,12 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 				// or just log it. For now, we'll keep the default logging but maybe add metrics?
 				// The prompt asked to keep same metrics but simplify if possible.
 				// If we use standard errors for the new limiters, the switch works.
-				slog.Error("error happened in ratelimiter", slog.String("error", err.Error()), slog.String("limiter", limiter.Name()))
+				logutil.Error("error happened in ratelimiter", sReq, slog.String("error", err.Error()), slog.String("limiter", limiter.Name()))
 			}
 
 			s.ipEventManager.AddEvent(evt)
 
-			slog.Debug("ratelimiter blocked request", slog.String("ip", sReq.SourceIP), slog.String("honeypot", sReq.HoneypotIP), slog.String("error", err.Error()), slog.String("limiter", limiter.Name()))
+			logutil.Debug("ratelimiter blocked request", sReq, slog.String("error", err.Error()), slog.String("limiter", limiter.Name()))
 			return nil, status.Errorf(codes.ResourceExhausted, "ratelimiter blocked request: %s", err)
 		}
 	}
@@ -1025,12 +1024,12 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	hp, hpErr := s.getCachedHoneypot(sReq.HoneypotIP)
 	if hpErr != nil {
-		slog.Error("error finding honeypot", slog.String("error", hpErr.Error()), slog.String("honeypot", sReq.HoneypotIP))
+		logutil.Error("error finding honeypot", sReq, slog.String("error", hpErr.Error()), slog.String("honeypot", sReq.HoneypotIP))
 		return nil, status.Errorf(codes.Internal, "honeypot error: %s", hpErr.Error())
 	}
 
 	if hp == nil {
-		slog.Error("could not find honeypot", slog.String("ip", sReq.HoneypotIP))
+		logutil.Error("could not find honeypot", sReq, slog.String("ip", sReq.HoneypotIP))
 		return nil, status.Errorf(codes.NotFound, "could not find honeypot")
 	}
 
@@ -1077,7 +1076,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		for _, tagperrule := range matchedRule.TagsToApply {
 			go func() {
 				if _, err := s.dbClient.Insert(&models.TagPerRequest{TagID: tagperrule.TagID, RequestID: sReq.ID, TagPerRuleID: &tagperrule.ID}); err != nil {
-					slog.Error("error inserting tag", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int64("tag_per_rule_id", tagperrule.TagID), slog.String("error", err.Error()))
+					logutil.Error("error inserting tag", sReq, slog.Int64("tag_per_rule_id", tagperrule.TagID), slog.String("error", err.Error()))
 				}
 			}()
 		}
@@ -1097,10 +1096,10 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		}
 	}()
 
-	slog.Debug("Fetching content", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int64("content_id", matchedRule.ContentID))
+	logutil.Debug("Fetching content", sReq, slog.Int64("content_id", matchedRule.ContentID))
 	content, err := s.dbClient.GetContentByID(matchedRule.ContentID)
 	if err != nil {
-		slog.Error("error getting content", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("honeypot", sReq.HoneypotIP), slog.Int64("content_id", matchedRule.ContentID), slog.String("error", err.Error()))
+		logutil.Error("error getting content", sReq, slog.String("honeypot", sReq.HoneypotIP), slog.Int64("content_id", matchedRule.ContentID), slog.String("error", err.Error()))
 		return nil, status.Errorf(codes.Unavailable, "fetching content ID %d: %s", matchedRule.ContentID, err)
 	}
 
@@ -1120,7 +1119,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}
 
 	if content.Script != "" {
-		slog.Debug("running script", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID))
+		logutil.Debug("running script", sReq)
 		err := s.jRunner.RunScript(content.Script, *sReq, res, colEx, false)
 		if err != nil {
 			slog.Warn("couldn't run script", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
@@ -1150,11 +1149,12 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			if content.HasCode && s.codeInterpreter != nil {
 				llmRes, err := s.codeInterpreter.Interpret(sReq, &content)
 				if err != nil {
-					slog.Error("error interpreting code", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+
+					logutil.Error("error interpreting code", sReq, slog.String("error", err.Error()))
 					return nil, status.Errorf(codes.Internal, "running content code: %s", err.Error())
 				}
 
-				slog.Debug("got llm response", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.Int64("content_id", matchedRule.ContentID), slog.String("llm_response", string(llmRes.Stdout)))
+				logutil.Debug("got llm response", sReq, slog.Int64("content_id", matchedRule.ContentID), slog.String("llm_response", string(llmRes.Stdout)))
 				res.Body = llmRes.Stdout
 				if len(llmRes.Headers) > 0 {
 					newHeaders := strings.Split(llmRes.Headers, "\n")
@@ -1175,11 +1175,11 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	// allows scripts to also output macros.
 	templr := templator.NewTemplator()
 	if templr == nil {
-		slog.Error("templator is not initialized", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID))
+		logutil.Error("templator is not initialized", sReq)
 	} else {
 		newBody, err := templr.RenderTemplate(sReq, res.Body)
 		if err != nil {
-			slog.Error("error rendering template", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+			logutil.Error("error rendering template", sReq, slog.String("error", err.Error()))
 		} else {
 			res.Body = newBody
 		}
@@ -1194,7 +1194,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	for key, value := range finalHeaders {
 		newHdr, err := templr.RenderTemplate(sReq, []byte(value))
 		if err != nil {
-			slog.Error("error rendering template for header", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()), slog.String("header", key))
+			logutil.Error("error rendering template for header", sReq, slog.String("error", err.Error()), slog.String("header", key))
 		} else {
 			value = string(newHdr)
 		}
@@ -1263,7 +1263,6 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 	// Log triage state before database update to help debug potential race conditions
 	if req.Triaged {
 		logArgs := []any{
-			slog.Int64("request_id", req.ID),
 			slog.String("cmp_hash", req.CmpHash),
 			slog.Bool("triaged", req.Triaged),
 			slog.Bool("triage_has_payload", req.TriageHasPayload),
@@ -1273,7 +1272,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 		if req.TriageTargetParameter != nil {
 			logArgs = append(logArgs, slog.String("triage_target_parameter", *req.TriageTargetParameter))
 		}
-		slog.Debug("updating triaged request", logArgs...)
+		logutil.Debug("updating triaged request", req, logArgs...)
 	}
 
 	err := s.dbClient.Update(req)
@@ -1284,7 +1283,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 	if s.describer != nil {
 		err := s.describer.MaybeAddNewHash(req.CmpHash, req)
 		if err != nil {
-			slog.Error("error adding new hash", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("error", err.Error()))
+			logutil.Error("error adding new hash", req, slog.String("error", err.Error()))
 		}
 	}
 
@@ -1345,7 +1344,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 					downloadsScheduled += 1
 				}
 			} else {
-				slog.Warn("skipping download due to excessive links", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("url", m.Data))
+				logutil.Warn("skipping download due to excessive links", req, slog.String("url", m.Data))
 			}
 
 		case constants.ExtractorTypePing:
@@ -1353,24 +1352,24 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 			if pingsScheduled <= maxPingsToExtract {
 				parts := strings.Split(m.Data, " ")
 				if len(parts) != 2 {
-					slog.Error("invalid ping request", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("data", m.Data))
+					logutil.Error("invalid ping request", req, slog.String("data", m.Data))
 				} else {
 					cnt, err := strconv.Atoi(parts[1])
 					if err != nil {
-						slog.Error("invalid ping count", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("data", m.Data))
+						logutil.Error("invalid ping count", req, slog.String("data", m.Data))
 						cnt = 3
 					}
 					s.SchedulePingOfAddress(req.HoneypotIP, parts[0], int64(cnt), m.RequestID)
 				}
 
 			} else {
-				slog.Warn("skipping ping due to excessive amount", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("ping", m.Data))
+				logutil.Warn("skipping ping due to excessive amount", req, slog.String("ping", m.Data))
 			}
 		}
 
 		_, err := s.dbClient.Insert(m)
 		if err != nil {
-			slog.Warn("Could not save metadata for request", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("error", err.Error()))
+			logutil.Warn("Could not save metadata for request", req, slog.String("error", err.Error()))
 		}
 		return nil
 	})
