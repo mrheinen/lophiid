@@ -72,10 +72,6 @@ const maxSqlDelayMs = 10000
 const DebugHeaderRequestID = "X-Lophiid-Request-ID"
 const DebugHeaderSessionID = "X-Lophiid-Session-ID"
 
-// The maximum allowed attacker payload upload size for temporary content and
-// rules.
-const MaxUploadSizeBytes = 3000000
-
 // FallbackContent is used for cases where we are not able to provide any other
 // content (e.g. due to an error).
 const FallbackContent = "<html></html>"
@@ -105,6 +101,7 @@ type BackendServer struct {
 	downloadsCache      *util.StringMapCache[time.Time]
 	downloadsIPCounts   *util.StringMapCache[int64]
 	downloadsIPCountsMu sync.Mutex
+	uploadsIPCounts     *util.StringMapCache[int64]
 	pingQueue           map[string][]backend_service.CommandPingAddress
 	pingQueueMu         sync.Mutex
 	pingsCache          *util.StringMapCache[time.Time]
@@ -141,6 +138,10 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	dIPCount := util.NewStringMapCache[int64]("download_ip_counters", time.Minute*5)
 	dIPCount.Start()
 
+	// Keep track of how many uploads each IP makes.
+	uIPCount := util.NewStringMapCache[int64]("upload_ip_counters", time.Minute*config.Backend.Advanced.MaxUploadsPerIPWindow)
+	uIPCount.Start()
+
 	// Same for the ping cache.
 	pCache := util.NewStringMapCache[time.Time]("ping_cache", config.Backend.Advanced.PingCacheDuration)
 
@@ -172,6 +173,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		reqsQueue:           make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
 		downloadQueue:       make(map[string][]backend_service.CommandDownloadFile),
 		downloadsCache:      dCache,
+		uploadsIPCounts:     uIPCount,
 		downloadsIPCounts:   dIPCount,
 		downloadsIPCountsMu: sync.Mutex{},
 		pingQueue:           make(map[string][]backend_service.CommandPingAddress),
@@ -949,12 +951,17 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 	}
 
 	if payloadResponse.TmpContentRule != nil {
+		cnt := s.uploadsIPCounts.GetOrCreate(sReq.SourceIP, func() int64 { return 0 }, func(v *int64) { *v++ })
+		if cnt > int64(s.config.Backend.Advanced.MaxUploadsPerIP) {
+			return fmt.Errorf("IP upload limit reached")
+		}
+
 		expiryTime := time.Now().Add(time.Hour * 1)
 		payloadResponse.TmpContentRule.Content.ValidUntil = &expiryTime
 		payloadResponse.TmpContentRule.Rule.ValidUntil = &expiryTime
 
 		pLen := len(payloadResponse.TmpContentRule.Content.Data)
-		if pLen > MaxUploadSizeBytes {
+		if pLen > s.config.Backend.Advanced.MaxUploadSizeBytes {
 			return fmt.Errorf("rejecting payload upload: too long (%d bytes)", pLen)
 		}
 

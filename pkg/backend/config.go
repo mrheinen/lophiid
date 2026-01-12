@@ -65,7 +65,13 @@ type Config struct {
 			ContentCacheDuration  time.Duration `fig:"content_cache_duration" default:"30m"`
 			DownloadCacheDuration time.Duration `fig:"download_cache_duration" default:"5m"`
 			// Max downloads per IP per every 5 minutes
-			MaxDownloadsPerIP          int           `fig:"max_downloads_per_ip" default:"50"`
+			MaxDownloadsPerIP int `fig:"max_downloads_per_ip" default:"50"`
+			// Upload limits. By default allow 3MB uploads. Maximum of 5 per 30
+			// minutes per unique IP.
+			MaxUploadSizeBytes         int           `fig:"max_upload_size_bytes" default:"3000000"`
+			MaxUploadsPerIP            int           `fig:"max_uploads_per_ip" default:"5"`
+			MaxUploadsPerIPWindow      time.Duration `fig:"max_uploads_per_ip_window" default:"30m"`
+
 			PingCacheDuration          time.Duration `fig:"ping_cache_duration" default:"5m"`
 			QueriesRunnerInterval      time.Duration `fig:"stored_queries_run_interval" default:"1h"`
 			RequestsQueueSize          int           `fig:"requests_queue_size" default:"500"`
