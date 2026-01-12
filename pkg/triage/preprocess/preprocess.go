@@ -285,7 +285,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 				Enabled:          true,
 				AllowFromNet:     &net,
 				AppID:            req.ID,
-				Method:           "ANY",
+				Method:           constants.HTTPMethodAny,
 				RequestPurpose:   constants.RequestPurposeAttack,
 				Responder:        constants.ResponderTypeNone,
 				ResponderDecoder: constants.ResponderDecoderTypeNone,

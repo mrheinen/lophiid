@@ -205,3 +205,12 @@ const (
 const (
 	HTTPStatusCodeOK = "200"
 )
+
+const (
+	HTTPMethodGet     = "GET"
+	HTTPMethodPost    = "POST"
+	HTTPMethodOptions = "OPTIONS"
+	HTTPMethodTrace   = "TRACE"
+	HTTPMethodHead    = "HEAD"
+	HTTPMethodAny     = "ANY"
+)
