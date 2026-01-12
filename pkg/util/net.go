@@ -33,15 +33,23 @@ func CustomParseQuery(query string) (url.Values, error) {
 	return ret, err
 }
 
-// Get24Network takes an IP string and returns the /24 network address.
+// Get24NetworkString takes an IP string and returns the network address in CIDR notation.
+// For IPv4 addresses, it returns the /24 network. For IPv6 addresses, it returns the /64 network.
 func Get24NetworkString(ipAddr string) (string, error) {
 	addr, err := netip.ParseAddr(ipAddr)
 	if err != nil {
 		return "", err
 	}
 
-	prefix := netip.PrefixFrom(addr, 24)
+	var prefixLen int
+	if addr.Is6() {
+		prefixLen = 64
+	} else {
+		prefixLen = 24
+	}
+
+	prefix := netip.PrefixFrom(addr, prefixLen)
 
 	// Masked() returns the network address (zeroing out the host bits)
-	return prefix.Masked().Addr().String() + "/24", nil
+	return prefix.Masked().String(), nil
 }
