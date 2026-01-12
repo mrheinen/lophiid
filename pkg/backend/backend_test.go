@@ -43,7 +43,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/kkyr/fig"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
@@ -62,6 +61,8 @@ func GetDefaultBackendConfig() Config {
 	cfg.Backend.Advanced.ContentCacheDuration = time.Minute * 5
 	cfg.Backend.Advanced.DownloadCacheDuration = time.Minute * 5
 	cfg.Backend.Advanced.RequestsQueueSize = 100
+	cfg.Backend.Advanced.MaxUploadsPerIP = 5
+	cfg.Backend.Advanced.MaxUploadSizeBytes = 500
 	return cfg
 }
 
@@ -1662,9 +1663,7 @@ func TestHandlePreProcess(t *testing.T) {
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
 	fakeDescriber := describer.FakeDescriberClient{}
-
-	cfg := Config{}
-	fig.Load(&cfg, fig.IgnoreFile())
+	backendConfig := GetDefaultBackendConfig()
 
 	for _, test := range []struct {
 		description      string
@@ -1721,7 +1720,7 @@ func TestHandlePreProcess(t *testing.T) {
 			payloadResponse: &preprocess.PayloadProcessingResult{
 				TmpContentRule: &models.TemporaryContentRule{
 					Content: models.Content{
-						Data: make([]byte, cfg.Backend.Advanced.MaxUploadSizeBytes+1),
+						Data: make([]byte, backendConfig.Backend.Advanced.MaxUploadSizeBytes+1),
 					},
 					Rule: models.ContentRule{},
 				},
@@ -1740,7 +1739,7 @@ func TestHandlePreProcess(t *testing.T) {
 
 			fakeInter := &interpreter.FakeCodeInterpreter{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, backendConfig)
 
 			content := &models.Content{
 				Data: []byte("Original content"),
@@ -1791,11 +1790,9 @@ func TestHandlePreProcessUploadIPLimit(t *testing.T) {
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
 	fakeDescriber := describer.FakeDescriberClient{}
-
 	allowNet := "192.168.1.0/24"
 
-	cfg := Config{}
-	fig.Load(&cfg, fig.IgnoreFile())
+  backendConfig := GetDefaultBackendConfig()
 
 	for _, test := range []struct {
 		description       string
@@ -1813,13 +1810,13 @@ func TestHandlePreProcessUploadIPLimit(t *testing.T) {
 		{
 			description:      "Upload allowed at threshold",
 			sourceIP:         "10.0.0.2",
-			prePopulateCount: cfg.Backend.Advanced.MaxUploadsPerIP - 1, // Will be incremented to threshold
+			prePopulateCount: backendConfig.Backend.Advanced.MaxUploadsPerIP - 1, // Will be incremented to threshold
 			expectError:      false,
 		},
 		{
 			description:       "Upload rejected when over limit",
 			sourceIP:          "10.0.0.3",
-			prePopulateCount:  cfg.Backend.Advanced.MaxUploadsPerIP, // Will be incremented past threshold
+			prePopulateCount:  backendConfig.Backend.Advanced.MaxUploadsPerIP, // Will be incremented past threshold
 			expectError:       true,
 			expectErrorString: "IP upload limit reached",
 		},
@@ -1844,7 +1841,7 @@ func TestHandlePreProcessUploadIPLimit(t *testing.T) {
 			}
 			fakeInter := &interpreter.FakeCodeInterpreter{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, backendConfig)
 
 			// Initialize SafeRules map to avoid nil map panic
 			b.safeRules.Set(make(map[int64][]models.ContentRule))
