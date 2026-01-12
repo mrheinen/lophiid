@@ -1851,7 +1851,7 @@ func TestHandlePreProcessUploadIPLimit(t *testing.T) {
 
 			// Pre-populate the upload count for this IP if needed
 			if test.prePopulateCount > 0 {
-				b.uploadsIPCounts.GetOrCreate(test.sourceIP, func() int64 { return test.prePopulateCount }, func(v *int64) {})
+				b.uploadsIPCounts.Store(test.sourceIP, int64(test.prePopulateCount))
 			}
 
 			content := &models.Content{
