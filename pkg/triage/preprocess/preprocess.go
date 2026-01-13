@@ -86,7 +86,7 @@ When in doubt between CODE_EXECUTION and FILE_UPLOAD: chose FILE_UPLOAD.
 
 If you chose "SHELL_COMMAND" then provide the shell commands in the 'payload' field.
 If you chose "FILE_ACCESS" then provide the filename (full path) in the 'payload' field.
-If you chose "FILE_UPLOAD" then provide the filename (full path) of the uploaded file in the target field and the uploaded file itself in the 'payload' field.
+If you chose "FILE_UPLOAD" then provide the filename (full path) of the uploaded file in the target field and the uploaded file itself in the 'payload' field (original bytes of the file, no summary).
 If you chose "CODE_EXECUTION" then provide the code snippet that was attempted to be executed in the 'payload' field.
 If you chose "SQL_INJECTION" then provide the SQL injection payload in the 'payload' field.
 If you chose "UNKNOWN" then provide whatever the payload is in the 'payload' field.
