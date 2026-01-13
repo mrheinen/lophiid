@@ -55,6 +55,22 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 	}
 }
 
+// returnIfAllowedFromNet verifies that the source IP is allowed by the rule's network restriction.
+func returnIfAllowedFromNet(rule models.ContentRule, sourceAddr net.IP) (models.ContentRule, error) {
+	if rule.AllowFromNet != nil {
+		_, ipNet, err := net.ParseCIDR(*rule.AllowFromNet)
+		if err != nil {
+			return models.ContentRule{}, fmt.Errorf("invalid rule network. rule_id: %d, network: %s", rule.ID, *rule.AllowFromNet)
+		}
+
+		if !ipNet.Contains(sourceAddr) {
+			return models.ContentRule{}, fmt.Errorf("request not allowed from network. rule_id: %d, network: %s", rule.ID, *rule.AllowFromNet)
+		}
+	}
+	return rule, nil
+}
+
+// GetMatchedRule finds the best matching content rule for the given request and session.
 func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session) (models.ContentRule, error) {
 	matchedPriority1 := []models.ContentRule{}
 	matchedPriority2 := []models.ContentRule{}
@@ -118,7 +134,7 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 	}
 
 	if len(matchedRules) == 1 {
-		return matchedRules[0], nil
+		return returnIfAllowedFromNet(matchedRules[0], sourceAddr)
 	}
 
 	var unservedRules []models.ContentRule
@@ -128,7 +144,7 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 			unservedRules = append(unservedRules, r)
 			// A rule matching the same app id is prefered.
 			if r.AppID == session.LastRuleServed.AppID {
-				return r, nil
+				return returnIfAllowedFromNet(r, sourceAddr)
 			}
 		}
 	}
@@ -155,16 +171,5 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 		matchedRule = matchedRules[rand.Intn(len(matchedRules))]
 	}
 
-	if matchedRule.AllowFromNet != nil {
-		_, ipNet, err := net.ParseCIDR(*matchedRule.AllowFromNet)
-		if err != nil {
-			return models.ContentRule{}, fmt.Errorf("invalid rule network. rule_id: %d, network: %s", matchedRule.ID, *matchedRule.AllowFromNet)
-		}
-
-		if !ipNet.Contains(sourceAddr) {
-			return models.ContentRule{}, fmt.Errorf("request not allowed from network. rule_id: %d, network: %s", matchedRule.ID, *matchedRule.AllowFromNet)
-		}
-	}
-
-	return matchedRule, nil
+	return returnIfAllowedFromNet(matchedRule, sourceAddr)
 }
