@@ -35,11 +35,11 @@ import { copyToClipboardHelper, decodeUnicodeString } from "../../helpers.js";
 export default {
   props: {
     "label": {
-      type: Object,
+      type: String,
       required: true
     },
     "data": {
-      type: Object,
+      type: String,
       required: true
     }
   },

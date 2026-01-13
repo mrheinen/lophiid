@@ -23,7 +23,7 @@
 export default {
   props: {
     "mylabel": {
-      type: Object,
+      type: String,
       required: true
     }
   },

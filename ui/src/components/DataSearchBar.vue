@@ -42,7 +42,7 @@ export default {
   props: {
     options: {
       type: Object,
-      required: true,
+      required: false,
     },
     query: {
       type: String,
@@ -57,7 +57,7 @@ export default {
       required: true,
     },
     showage: {
-      type: Boolean,
+      type: String,
       required: true,
     },
     defaultage: {

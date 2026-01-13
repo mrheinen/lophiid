@@ -268,11 +268,11 @@ export default {
   props: {
     "download": {
       type: Object,
-      required: true
+      required: false
     },
     "whois": {
       type: Object,
-      required: true
+      required: false
     }
   },
   emits: ["require-auth"],
