@@ -17,7 +17,12 @@
 //
 package util
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
 func TestCustomParseQuery(t *testing.T) {
 
@@ -29,5 +34,36 @@ func TestCustomParseQuery(t *testing.T) {
 
 	if len(res) != 1 {
 		t.Errorf("expected 1 result, got %d", len(res))
+	}
+}
+
+func TestGet24Network(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		ipAddr      string
+		expected    string
+		expectError bool
+	}{
+		{"valid IPv4 returns /24 network", "192.168.1.100", "192.168.1.0/24", false},
+		{"IPv4 at network boundary", "10.20.30.0", "10.20.30.0/24", false},
+		{"IPv4 with max host bits", "172.16.5.255", "172.16.5.0/24", false},
+		{"different /24 network", "8.8.8.8", "8.8.8.0/24", false},
+		{"IPv6 returns /64 network", "2001:db8:85a3::8a2e:370:7334", "2001:db8:85a3::/64", false},
+		{"IPv6 at network boundary", "2001:db8:1234:5678::", "2001:db8:1234:5678::/64", false},
+		{"IPv6 with host bits", "fe80::1", "fe80::/64", false},
+		{"invalid IP returns error", "not-an-ip", "", true},
+		{"empty string returns error", "", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Get24NetworkString(tc.ipAddr)
+
+			if tc.expectError {
+				require.Error(t, err)
+				assert.Empty(t, result)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expected, result)
+			}
+		})
 	}
 }

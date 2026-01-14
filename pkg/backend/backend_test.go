@@ -61,6 +61,8 @@ func GetDefaultBackendConfig() Config {
 	cfg.Backend.Advanced.ContentCacheDuration = time.Minute * 5
 	cfg.Backend.Advanced.DownloadCacheDuration = time.Minute * 5
 	cfg.Backend.Advanced.RequestsQueueSize = 100
+	cfg.Backend.Advanced.MaxUploadsPerIP = 5
+	cfg.Backend.Advanced.MaxUploadSizeBytes = 500
 	return cfg
 }
 
@@ -1185,7 +1187,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "([0-9]+)",
 				ResponderDecoder: "DOESNOTEXIST",
-				Enabled: true,
+				Enabled:          true,
 			},
 			request: models.Request{
 				Raw: []byte("aa 898989"),
@@ -1206,7 +1208,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "foo=([0-9a-f%]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeUri,
-				Enabled: true,
+				Enabled:          true,
 			},
 			request: models.Request{
 				Raw: []byte("foo=%2e%2e%2e%41%41"),
@@ -1227,7 +1229,7 @@ func TestGetResponderDataCases(t *testing.T) {
 				Responder:        "COMMAND_INJECTION",
 				ResponderRegex:   "foo=([&a-z;]+)",
 				ResponderDecoder: constants.ResponderDecoderTypeHtml,
-				Enabled: true,
+				Enabled:          true,
 			},
 			request: models.Request{
 				Raw: []byte("foo=&gt;&lt;"),
@@ -1661,6 +1663,7 @@ func TestHandlePreProcess(t *testing.T) {
 	fIpMgr := analysis.FakeIpEventManager{}
 	fakeRes := &responder.FakeResponder{}
 	fakeDescriber := describer.FakeDescriberClient{}
+	backendConfig := GetDefaultBackendConfig()
 
 	for _, test := range []struct {
 		description      string
@@ -1670,6 +1673,7 @@ func TestHandlePreProcess(t *testing.T) {
 		expectedBody     string
 		expectedHeaders  []string // Keys that should exist in headers
 		expectedSqlDelay int
+		expectError      bool
 	}{
 		{
 			description: "Success with payload response",
@@ -1692,6 +1696,7 @@ func TestHandlePreProcess(t *testing.T) {
 			preprocessResult: nil,
 			preprocessError:  preprocess.ErrNotProcessed,
 			expectedBody:     "Original content",
+			expectError:      true,
 		},
 		{
 			description: "Success with SQL delay",
@@ -1706,6 +1711,24 @@ func TestHandlePreProcess(t *testing.T) {
 			preprocessError: nil,
 			expectedBody:    "Original content\nDelayed content",
 		},
+		{
+			description: "Reject payload exceeding MaxUploadSizeBytes",
+			preprocessResult: &preprocess.PreProcessResult{
+				HasPayload:  true,
+				PayloadType: "FILE_UPLOAD",
+			},
+			payloadResponse: &preprocess.PayloadProcessingResult{
+				TmpContentRule: &models.TemporaryContentRule{
+					Content: models.Content{
+						Data: make([]byte, backendConfig.Backend.Advanced.MaxUploadSizeBytes+1),
+					},
+					Rule: models.ContentRule{},
+				},
+			},
+			preprocessError: nil,
+			expectedBody:    "Original content",
+			expectError:     true,
+		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
 			fakePreprocessor := preprocess.FakePreProcessor{
@@ -1716,7 +1739,7 @@ func TestHandlePreProcess(t *testing.T) {
 
 			fakeInter := &interpreter.FakeCodeInterpreter{}
 
-			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, GetDefaultBackendConfig())
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, backendConfig)
 
 			content := &models.Content{
 				Data: []byte("Original content"),
@@ -1731,12 +1754,126 @@ func TestHandlePreProcess(t *testing.T) {
 			}
 
 			startTime := time.Now()
-			b.handlePreProcess(sReq, content, res, &finalHeaders, startTime, false)
+			err := b.handlePreProcess(sReq, content, res, &finalHeaders, startTime, false)
+
+			if test.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 
 			assert.Equal(t, test.expectedBody, string(res.Body))
 
 			for _, h := range test.expectedHeaders {
 				assert.Contains(t, finalHeaders, h, "expected header %s to be present", h)
+			}
+		})
+	}
+}
+
+// TestHandlePreProcessUploadIPLimit tests the upload IP rate limiting functionality.
+// It verifies that uploads are allowed when under the limit and rejected when over.
+func TestHandlePreProcessUploadIPLimit(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{}
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	fakeLimiter := ratelimit.FakeRateLimiter{
+		BoolToReturn:  true,
+		ErrorToReturn: nil,
+	}
+	sMetrics := session.CreateSessionMetrics(reg)
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	fIpMgr := analysis.FakeIpEventManager{}
+	fakeRes := &responder.FakeResponder{}
+	fakeDescriber := describer.FakeDescriberClient{}
+	allowNet := "192.168.1.0/24"
+
+  backendConfig := GetDefaultBackendConfig()
+
+	for _, test := range []struct {
+		description       string
+		sourceIP          string
+		prePopulateCount  int // Count to pre-populate for this IP
+		expectError       bool
+		expectErrorString string
+	}{
+		{
+			description:      "Upload allowed when under limit",
+			sourceIP:         "10.0.0.1",
+			prePopulateCount: 0,
+			expectError:      false,
+		},
+		{
+			description:      "Upload allowed at threshold",
+			sourceIP:         "10.0.0.2",
+			prePopulateCount: backendConfig.Backend.Advanced.MaxUploadsPerIP - 1, // Will be incremented to threshold
+			expectError:      false,
+		},
+		{
+			description:       "Upload rejected when over limit",
+			sourceIP:          "10.0.0.3",
+			prePopulateCount:  backendConfig.Backend.Advanced.MaxUploadsPerIP, // Will be incremented past threshold
+			expectError:       true,
+			expectErrorString: "IP upload limit reached",
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fakePreprocessor := preprocess.FakePreProcessor{
+				ResultToReturn: &preprocess.PreProcessResult{
+					HasPayload:  true,
+					PayloadType: "FILE_UPLOAD",
+				},
+				PayloadResult: &preprocess.PayloadProcessingResult{
+					TmpContentRule: &models.TemporaryContentRule{
+						Content: models.Content{
+							Data: []byte("small payload"),
+						},
+						Rule: models.ContentRule{
+							AllowFromNet: &allowNet,
+						},
+					},
+				},
+				ErrorToReturn: nil,
+			}
+			fakeInter := &interpreter.FakeCodeInterpreter{}
+
+			b := NewBackendServer(fdbc, bMetrics, &fakeJrunner, alertManager, &vt.FakeVTManager{}, &whoisManager, &queryRunner, []ratelimit.RateLimiter{&fakeLimiter}, &fIpMgr, fakeRes, fSessionMgr, &fakeDescriber, &fakePreprocessor, fakeInter, backendConfig)
+
+			// Initialize SafeRules map to avoid nil map panic
+			b.safeRules.Set(make(map[int64][]models.ContentRule))
+
+			// Pre-populate the upload count for this IP if needed
+			if test.prePopulateCount > 0 {
+				b.uploadsIPCounts.Store(test.sourceIP, int64(test.prePopulateCount))
+			}
+
+			content := &models.Content{
+				Data: []byte("Original content"),
+			}
+			res := &backend_service.HttpResponse{
+				Body:   []byte("Original content"),
+				Header: []*backend_service.KeyValue{},
+			}
+			finalHeaders := make(map[string]string)
+			sReq := &models.Request{
+				Uri:      "/test",
+				SourceIP: test.sourceIP,
+			}
+
+			startTime := time.Now()
+			err := b.handlePreProcess(sReq, content, res, &finalHeaders, startTime, false)
+
+			if test.expectError {
+				assert.Error(t, err)
+				if test.expectErrorString != "" {
+					assert.Contains(t, err.Error(), test.expectErrorString)
+				}
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

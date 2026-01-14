@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -21,8 +21,10 @@ import (
 	"log/slog"
 	"lophiid/pkg/database/models"
 	"math/rand"
+	"net"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func MatchesString(method string, dataToSearch string, searchValue string) bool {
@@ -53,11 +55,37 @@ func MatchesString(method string, dataToSearch string, searchValue string) bool 
 	}
 }
 
+// returnIfAllowedFromNet verifies that the source IP is allowed by the rule's network restriction.
+func returnIfAllowedFromNet(rule models.ContentRule, sourceAddr net.IP) (models.ContentRule, error) {
+	if rule.AllowFromNet != nil {
+		_, ipNet, err := net.ParseCIDR(*rule.AllowFromNet)
+		if err != nil {
+			return models.ContentRule{}, fmt.Errorf("invalid rule network. rule_id: %d, network: %s", rule.ID, *rule.AllowFromNet)
+		}
+
+		if !ipNet.Contains(sourceAddr) {
+			return models.ContentRule{}, fmt.Errorf("request not allowed from network. rule_id: %d, network: %s", rule.ID, *rule.AllowFromNet)
+		}
+	}
+	return rule, nil
+}
+
+// GetMatchedRule finds the best matching content rule for the given request and session.
 func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *models.Session) (models.ContentRule, error) {
 	matchedPriority1 := []models.ContentRule{}
 	matchedPriority2 := []models.ContentRule{}
 
+	sourceAddr := net.ParseIP(req.SourceIP)
+	if sourceAddr == nil {
+		return models.ContentRule{}, fmt.Errorf("invalid source ip: %s", req.SourceIP)
+	}
+
 	for _, rule := range rules {
+		// Exclude rules that are expired.
+		if rule.ValidUntil != nil && time.Now().After(*rule.ValidUntil) {
+			slog.Debug("rule is nolonger valid", slog.Int64("request_id", req.ID), slog.Int64("session_id", session.ID), slog.Int64("rule_id", rule.ID))
+			continue
+		}
 
 		if len(rule.Ports) != 0 {
 			found := false
@@ -106,7 +134,7 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 	}
 
 	if len(matchedRules) == 1 {
-		return matchedRules[0], nil
+		return returnIfAllowedFromNet(matchedRules[0], sourceAddr)
 	}
 
 	var unservedRules []models.ContentRule
@@ -116,7 +144,7 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 			unservedRules = append(unservedRules, r)
 			// A rule matching the same app id is prefered.
 			if r.AppID == session.LastRuleServed.AppID {
-				return r, nil
+				return returnIfAllowedFromNet(r, sourceAddr)
 			}
 		}
 	}
@@ -143,5 +171,5 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 		matchedRule = matchedRules[rand.Intn(len(matchedRules))]
 	}
 
-	return matchedRule, nil
+	return returnIfAllowedFromNet(matchedRule, sourceAddr)
 }

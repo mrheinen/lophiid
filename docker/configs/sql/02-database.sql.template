@@ -100,6 +100,7 @@ CREATE TYPE public.ip_event_ref_type AS ENUM (
     'APP_ID',
     'NONE',
     'DOWNLOAD_ID',
+    'DYNAMIC_RULE',
     'REQUEST_DESCRIPTION_ID'
 );
 
@@ -155,6 +156,7 @@ CREATE TYPE public.ip_event_sub_type AS ENUM (
     'SOURCE_IP_RATE_WINDOW',
     'SESSION_IP_RATE_BUCKET',
     'SESSION_IP_RATE_WINDOW',
+    'RULE',
     'SUCCESS',
     'FAILURE',
     'SUCCESSIVE_PAYLOAD'
@@ -263,6 +265,7 @@ CREATE TYPE public.payload_type AS ENUM (
     'UNKNOWN',
     'SHELL_COMMAND',
     'FILE_ACCESS',
+    'FILE_UPLOAD',
     'CODE_EXECUTION',
     'SQL_INJECTION'
 );
@@ -471,6 +474,7 @@ CREATE TABLE public.content (
     name character varying(256) NOT NULL,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    valid_until timestamp without time zone,
     content_type character varying(256),
     server character varying(256),
     description text,
@@ -554,6 +558,7 @@ CREATE TABLE public.content_rule (
     id integer NOT NULL,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    valid_until timestamp without time zone,
     uri character varying(2048) NOT NULL,
     uri_matching public.matching_type,
     body character varying(2048),
@@ -571,6 +576,7 @@ CREATE TABLE public.content_rule (
     responder public.responder_type DEFAULT 'UNKNOWN'::public.responder_type,
     responder_regex character varying(1024) DEFAULT ''::character varying,
     responder_decoder public.responder_decoder_type DEFAULT 'NONE'::public.responder_decoder_type,
+    allow_from_net character varying(50),
     enabled boolean DEFAULT true,
     ports integer[] DEFAULT '{}'::integer[],
     block boolean DEFAULT false,

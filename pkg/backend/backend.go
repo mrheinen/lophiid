@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2025 Niels Heinen
+// Copyright (C) 2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -72,6 +72,10 @@ const maxSqlDelayMs = 10000
 const DebugHeaderRequestID = "X-Lophiid-Request-ID"
 const DebugHeaderSessionID = "X-Lophiid-Session-ID"
 
+// FallbackContent is used for cases where we are not able to provide any other
+// content (e.g. due to an error).
+const FallbackContent = "<html></html>"
+
 type ReqQueueEntry struct {
 	req        *models.Request
 	rule       models.ContentRule
@@ -97,6 +101,7 @@ type BackendServer struct {
 	downloadsCache      *util.StringMapCache[time.Time]
 	downloadsIPCounts   *util.StringMapCache[int64]
 	downloadsIPCountsMu sync.Mutex
+	uploadsIPCounts     *util.StringMapCache[int64]
 	pingQueue           map[string][]backend_service.CommandPingAddress
 	pingQueueMu         sync.Mutex
 	pingsCache          *util.StringMapCache[time.Time]
@@ -133,6 +138,10 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	dIPCount := util.NewStringMapCache[int64]("download_ip_counters", time.Minute*5)
 	dIPCount.Start()
 
+	// Keep track of how many uploads each IP makes.
+	uIPCount := util.NewStringMapCache[int64]("upload_ip_counters", time.Minute*config.Backend.Advanced.MaxUploadsPerIPWindow)
+	uIPCount.Start()
+
 	// Same for the ping cache.
 	pCache := util.NewStringMapCache[time.Time]("ping_cache", config.Backend.Advanced.PingCacheDuration)
 
@@ -164,6 +173,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		reqsQueue:           make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
 		downloadQueue:       make(map[string][]backend_service.CommandDownloadFile),
 		downloadsCache:      dCache,
+		uploadsIPCounts:     uIPCount,
 		downloadsIPCounts:   dIPCount,
 		downloadsIPCountsMu: sync.Mutex{},
 		pingQueue:           make(map[string][]backend_service.CommandPingAddress),
@@ -913,16 +923,14 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	return payloadResponse, nil
 }
 
-func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.Content, res *backend_service.HttpResponse, finalHeaders *map[string]string, rpcStartTime time.Time, filter bool) {
+func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.Content, res *backend_service.HttpResponse, finalHeaders *map[string]string, rpcStartTime time.Time, filter bool) error {
 	payloadResponse, err := s.GetPreProcessResponse(sReq, filter)
 
 	if err != nil {
 		if !errors.Is(err, preprocess.ErrNotProcessed) {
-			logutil.Error("error pre-processing", sReq, slog.String("error", err.Error()))
+			return fmt.Errorf("error pre-processing: %w", err)
 		}
-		logutil.Error("pre-processing failed", sReq, slog.String("error", err.Error()), slog.String("cmp_hash", sReq.CmpHash), slog.String("uri", sReq.Uri))
-		res.Body = content.Data
-		return
+		return nil
 	}
 
 	if payloadResponse.SqlDelayMs > 0 {
@@ -942,10 +950,48 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		}
 	}
 
+	if payloadResponse.TmpContentRule != nil {
+		cnt := s.uploadsIPCounts.GetOrCreate(sReq.SourceIP, func() int64 { return 0 }, func(v *int64) { *v++ })
+		if cnt > int64(s.config.Backend.Advanced.MaxUploadsPerIP) {
+			return fmt.Errorf("IP upload limit reached")
+		}
+
+		expiryTime := time.Now().Add(time.Hour * 1)
+		payloadResponse.TmpContentRule.Content.ValidUntil = &expiryTime
+		payloadResponse.TmpContentRule.Rule.ValidUntil = &expiryTime
+
+		pLen := len(payloadResponse.TmpContentRule.Content.Data)
+		if pLen > s.config.Backend.Advanced.MaxUploadSizeBytes {
+			return fmt.Errorf("rejecting payload upload: too long (%d bytes)", pLen)
+		}
+
+		insertedContent, err := s.dbClient.Insert(&payloadResponse.TmpContentRule.Content)
+		if err != nil {
+			return fmt.Errorf("error inserting tmp content: %w", err)
+		}
+
+		payloadResponse.TmpContentRule.Rule.ContentID = insertedContent.ModelID()
+		rule, err := s.dbClient.Insert(&payloadResponse.TmpContentRule.Rule)
+		if err != nil {
+			return fmt.Errorf("error inserting tmp rule: %w", err)
+		}
+
+		if _, err := s.dbClient.Insert(&models.RulePerGroup{RuleID: rule.ModelID(), GroupID: constants.DefaultRuleGroupID}); err != nil {
+			return fmt.Errorf("error inserting rule per group: %w", err)
+		}
+
+		slog.Debug("Added tmp rule", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("network", *payloadResponse.TmpContentRule.Rule.AllowFromNet), slog.Int64("rule_id", rule.ModelID()), slog.String("rule_uri", payloadResponse.TmpContentRule.Rule.Uri))
+
+		newRule := rule.(*models.ContentRule)
+		s.safeRules.Add(*newRule, constants.DefaultRuleGroupID)
+	}
+
 	res.Body = []byte(AddLLMResponseToContent(content, payloadResponse.Output))
 	if payloadResponse.Headers != "" {
 		util.ParseHeaders(payloadResponse.Headers, finalHeaders)
 	}
+
+	return nil
 }
 
 // HandleProbe receives requests from te honeypots and tells them how to
@@ -1068,7 +1114,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 	dm, err := s.dbClient.Insert(sReq)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not save request to database: %s", err)
+		return nil, status.Errorf(codes.Internal, "could not save request to database: %s", err)
 	}
 	sReq = dm.(*models.Request)
 
@@ -1080,6 +1126,21 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 				}
 			}()
 		}
+	}
+
+	// If a dynamic rule was requested, create an event.
+	if matchedRule.ValidUntil != nil && matchedRule.AllowFromNet != nil {
+		s.ipEventManager.AddEvent(&models.IpEvent{
+			IP:            sReq.SourceIP,
+			Type:          constants.IpEventRule,
+			Subtype:       constants.IpEventSubTypeDynamicRule,
+			Details:       "dynamic rule was requested",
+			Source:        constants.IpEventSourceRule,
+			SourceRef:     fmt.Sprintf("%d", matchedRule.ID),
+			SourceRefType: constants.IpEventRefTypeRuleId,
+			RequestID:     sReq.ID,
+			HoneypotIP:    sReq.HoneypotIP,
+		})
 	}
 
 	colEx := extractors.NewExtractorCollection(true)
@@ -1140,7 +1201,16 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 		if matchedRule.Responder != "" && matchedRule.Responder != constants.ResponderTypeNone {
 			if matchedRule.Responder == constants.ResponderTypeAuto {
-				s.handlePreProcess(sReq, &content, res, &finalHeaders, rpcStartTime, false)
+				err := s.handlePreProcess(sReq, &content, res, &finalHeaders, rpcStartTime, false)
+				if err != nil {
+					slog.Error("error handling pre-process", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+					if content.HasCode {
+						// We wouldn't want to return the code itself.
+						res.Body = []byte(FallbackContent)
+					} else {
+						res.Body = content.Data
+					}
+				}
 			} else {
 				res.Body = []byte(s.getResponderData(sReq, &matchedRule, &content))
 				sReq.RawResponse = string(res.Body)
@@ -1168,7 +1238,16 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}
 
 	if matchedRuleIsDefault {
-		s.handlePreProcess(sReq, &content, res, &finalHeaders, rpcStartTime, true)
+		err := s.handlePreProcess(sReq, &content, res, &finalHeaders, rpcStartTime, true)
+		if err != nil {
+			slog.Error("error handling pre-process", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+			if content.HasCode {
+				// We wouldn't want to return the code itself.
+				res.Body = []byte(FallbackContent)
+			} else {
+				res.Body = content.Data
+			}
+		}
 	}
 
 	// Apply the templating and render the macros after the scripts have run. This

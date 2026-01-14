@@ -40,6 +40,19 @@ func (s *SafeRules) Get() map[int64][]models.ContentRule {
 	return result
 }
 
+// Add adds a content rule to a group. It does not check if the rule already
+// exists.
+func (s *SafeRules) Add(r models.ContentRule, groupID int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.rulesPerGroup[groupID]; !ok {
+		s.rulesPerGroup[groupID] = []models.ContentRule{r}
+	} else {
+		s.rulesPerGroup[groupID] = append(s.rulesPerGroup[groupID], r)
+	}
+}
+
 func (s *SafeRules) GetGroup(groupID int64) []models.ContentRule {
 	s.mu.Lock()
 	defer s.mu.Unlock()

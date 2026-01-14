@@ -107,7 +107,7 @@ func (r *StringMapCache[T]) Replace(key string, data T) error {
 // GetOrCreate atomically gets an existing entry or creates a new one using
 // createFn, then runs the callback on the data while holding the lock.
 // This avoids TOCTOU issues when checking and modifying cache entries.
-func (r *StringMapCache[T]) GetOrCreate(key string, createFn func() T, callback func(*T)) {
+func (r *StringMapCache[T]) GetOrCreate(key string, createFn func() T, callback func(*T)) T {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -123,6 +123,7 @@ func (r *StringMapCache[T]) GetOrCreate(key string, createFn func() T, callback 
 	callback(&entry.Data)
 	entry.LastStoreTime = time.Now()
 	r.entries[key] = entry
+	return entry.Data
 }
 
 // Check will lock the entry for `key` and will give run callback on the entry.

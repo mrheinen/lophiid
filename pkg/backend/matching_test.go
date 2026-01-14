@@ -19,6 +19,7 @@ package backend
 import (
 	"lophiid/pkg/database/models"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
@@ -52,6 +53,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched nothing ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/fddfffd",
 				Port:   80,
 				Method: "GET",
@@ -62,6 +64,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (exact) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/42",
 				Port:   80,
 				Method: "GET",
@@ -73,6 +76,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (prefix) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/prefixdsfsfdf",
 				Port:   80,
 				Method: "GET",
@@ -85,6 +89,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (contains) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/sddsadcontainsfdfd",
 				Port:   80,
 				Method: "GET",
@@ -96,6 +101,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (suffix) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/ttttt?aa=suffix",
 				Port:   80,
 				Method: "GET",
@@ -107,6 +113,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (suffix) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/ttttt?aa=suffix",
 				Port:   80,
 				Method: "POST",
@@ -119,6 +126,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (regex) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/a898989898",
 				Port:   80,
 				Method: "GET",
@@ -130,6 +138,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (on port) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/eeee",
 				Port:   8888,
 				Method: "GET",
@@ -141,6 +150,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched one rule (uri and body)  ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/same",
 				Port:   80,
 				Body:   []byte("body"),
@@ -154,6 +164,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body alone (exact) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/eeee",
 				Port:   80,
 				Body:   []byte("woohoo"),
@@ -167,6 +178,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body alone (contains) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/eeee",
 				Port:   80,
 				Body:   []byte("asdssad /etc/passwd sdds"),
@@ -179,6 +191,7 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 		{
 			description: "matched on body and path (contains) ",
 			requestInput: models.Request{
+				SourceIP: "1.1.1.1",
 				Uri:    "/pppaaattthhh",
 				Port:   80,
 				Body:   []byte("asdssad /etc/hosts sdds"),
@@ -293,4 +306,100 @@ func TestGetMatchedRulePortPrioritization(t *testing.T) {
 	matchedRule, err = GetMatchedRule(rules, req, sess)
 	require.NoError(t, err)
 	assert.Equal(t, int64(44), matchedRule.ID, "Expected rule without ports (ID 44) to be matched")
+}
+
+func TestGetMatchedRuleAllowFromNet(t *testing.T) {
+	validCIDR := "192.168.1.0/24"
+	invalidCIDR := "not-a-cidr"
+	differentCIDR := "10.0.0.0/8"
+
+	for _, tc := range []struct {
+		name          string
+		allowFromNet  *string
+		sourceIP      string
+		expectMatched bool
+	}{
+		{"nil AllowFromNet matches any IP", nil, "1.2.3.4", true},
+		{"valid CIDR matches IP in range", &validCIDR, "192.168.1.100", true},
+		{"valid CIDR does not match IP outside range", &validCIDR, "10.0.0.1", false},
+		{"invalid CIDR skips rule", &invalidCIDR, "192.168.1.100", false},
+		{"different CIDR does not match", &differentCIDR, "192.168.1.100", false},
+		{"different CIDR matches IP in its range", &differentCIDR, "10.5.5.5", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rules := []models.ContentRule{
+				{
+					ID:           1,
+					AppID:        1,
+					Method:       "GET",
+					Uri:          "/test",
+					UriMatching:  "exact",
+					AllowFromNet: tc.allowFromNet,
+				},
+			}
+
+			req := &models.Request{
+				ID:       123,
+				Method:   "GET",
+				Uri:      "/test",
+				Port:     80,
+				SourceIP: tc.sourceIP,
+			}
+
+			matchedRule, err := GetMatchedRule(rules, req, models.NewSession())
+
+			if tc.expectMatched {
+				require.NoError(t, err)
+				assert.Equal(t, int64(1), matchedRule.ID)
+			} else {
+				assert.Error(t, err)
+				assert.Equal(t, int64(0), matchedRule.ID)
+			}
+		})
+	}
+}
+
+func TestGetMatchedRuleValidUntil(t *testing.T) {
+	pastTime := time.Now().Add(-1 * time.Hour)
+	futureTime := time.Now().Add(1 * time.Hour)
+
+	for _, tc := range []struct {
+		name          string
+		validUntil    *time.Time
+		expectMatched bool
+	}{
+		{"nil ValidUntil matches", nil, true},
+		{"past ValidUntil skipped", &pastTime, false},
+		{"future ValidUntil matches", &futureTime, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rules := []models.ContentRule{
+				{
+					ID:          1,
+					AppID:       1,
+					Method:      "GET",
+					Uri:         "/test",
+					UriMatching: "exact",
+					ValidUntil:  tc.validUntil,
+				},
+			}
+
+			req := &models.Request{
+				Method: "GET",
+				Uri:    "/test",
+				SourceIP: "1.1.1.1",
+				Port:   80,
+			}
+
+			matchedRule, err := GetMatchedRule(rules, req, models.NewSession())
+
+			if tc.expectMatched {
+				require.NoError(t, err)
+				assert.Equal(t, int64(1), matchedRule.ID)
+			} else {
+				assert.Error(t, err)
+				assert.Equal(t, int64(0), matchedRule.ID)
+			}
+		})
+	}
 }

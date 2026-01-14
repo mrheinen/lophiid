@@ -7,14 +7,9 @@
 ![Lophiid build workflow](https://github.com/mrheinen/lophiid/actions/workflows/go.yml/badge.svg)
 ![CodeQL](https://github.com/mrheinen/lophiid/actions/workflows/github-code-scanning/codeql/badge.svg)
 
-IMPORTANT: Lophiid is currently being transformed into a hybrid AI honeypot. You can try
-our the code in the main branch but keep in mind that a lot of the documentation
-needs updating.  The first release is scheduled for the first week of January!
-
-
 ## Introduction
 
-Lophiid is a distributed honeypot for detecting and interacting with mass web
+Lophiid is a hybrid AI honeypot for detecting and interacting with mass web
 application exploitation attempts.
 
 The design of lophiid is that one backend controls multiple honeypot sensors
@@ -23,17 +18,19 @@ backend is able to track interactions with attackers across all of them.
 
 Say an attacker scans for / across the internet and it hits 50 lophiid
 honeypots. The backend can make sure that during each individual interaction
-with a honeypot a different response is send to the attacker and with that
+with a honeypot a different response is sent to the attacker and with that
 increases the chance that the attacker gets something they are looking for which
 can result in further interaction.
 
-Similarly lophiid can respond differently to multiple command injections against
-the same endpoint.
+While you can configure Lophiid with static content and rules, you can also make
+use of the AI triage and responsing of requests. In that case, AI will determine
+what kind of attack is happening and will then involve the right "responder"
+(code) with the right AI model to deal with that request.
 
 Key features:
 
-- A distributed honeypot approach
-- Rule based interactions with attacks
+- Hybrid AI honeypot approach
+- Highly scalable
 - Static, scripted (Javascript) and AI supported response handling
 - Alerting possible (Telegram, extensible)
 - UI with comprehensive search
@@ -47,14 +44,9 @@ Key features:
 - Extensive metrics for prometheus/grafana
 - Highly customizable
 
-Running lophiid is already very interesting and you'll collect a lot of threat
-information. The project is still in an early phase of development though and
-large changes are still to be expected in the near future.
+For more information check out the [Detailed Description](./DETAILED_DESCRIPTION.md) document. To get started, make use of the [Quick Start](./QUICKSTART.md) guide.
 
-For more information check out the [Detailed Description](./DETAILED_DESCRIPTION.md) document and get started with the
-[Setup](./SETUP.md) guide.
-
-Don't hesitate to reach out to niels.heinen{at}gmail.com for any assistance.
+If you need any assistance, please don't hesitate to open an issue or to reach out to niels.heinen{at}gmail.com.
 
 # Screenshots
 

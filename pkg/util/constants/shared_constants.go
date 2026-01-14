@@ -1,8 +1,24 @@
+// Lophiid distributed honeypot
+// Copyright (C) 2026 Niels Heinen
+//
+// This program is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation; either version 2 of the License, or (at your
+// option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+// or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+// for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package constants
 
 // The lophiid version. Needs to be bumped with every release and is used by
 // both the agent and the backend.
-const LophiidVersion = "0.50.1-alpha"
+const LophiidVersion = "0.80.0-alpha"
 
 // IP event sources are used to indicate the source of an IP event. The values
 // below need to be kept in sync with IP_EVENT_SOURCE in the database.
@@ -27,6 +43,7 @@ const (
 	IpEventPing          = "PING"
 	IpEventSessionInfo   = "SESSION_INFO"
 	IpEventPayload       = "PAYLOAD"
+	IpEventRule          = "RULE"
 )
 
 // This needs to be kept in sync with IP_EVENT_SUB_TYPE in the database.
@@ -60,6 +77,8 @@ const (
 	IpEventSubTypeFailure = "FAILURE"
 
 	IpEventSubTypeSuccessivePayload = "SUCCESSIVE_PAYLOAD"
+
+	IpEventSubTypeDynamicRule = "DYNAMIC_RULE"
 )
 
 // These need to be kept in sync with IP_EVENT_REF_TYPE in the database.
@@ -102,6 +121,24 @@ const (
 	ResponderDecoderTypeHtml = "HTML"
 )
 
+// This needs to be kept in sync with public.matching_type in the database
+const (
+	MatchingTypeNone     = "none"
+	MatchingTypeExact    = "exact"
+	MatchingTypePrefix   = "prefix"
+	MatchingTypeSuffix   = "suffix"
+	MatchingTypeContains = "contains"
+	MatchingTypeRegex    = "regex"
+)
+
+// This needs to be kept in sync with public.request_purpose in the database.
+const (
+	RequestPurposeUnknown = "UNKNOWN"
+	RequestPurposeRecon   = "RECON"
+	RequestPurposeCrawl   = "CRAWL"
+	RequestPurposeAttack  = "ATTACK"
+)
+
 // These need to be kept in sync with REVIEW_STATUS_TYPE in the database
 const (
 	DescriberUnreviewed  = "UNREVIEWED"
@@ -138,6 +175,7 @@ const (
 	TriagePayloadTypeFileAccess   = "FILE_ACCESS"
 	TriagePayloadTypeCodeExec     = "CODE_EXECUTION"
 	TriagePayloadTypeSqlInjection = "SQL_INJECTION"
+	TriagePayloadTypeFileUpload   = "FILE_UPLOAD"
 )
 
 // Template constants used by the templator.
@@ -162,4 +200,17 @@ const (
 const (
 	// The default rule group ID that all rules need to be added to.
 	DefaultRuleGroupID = 0
+)
+
+const (
+	HTTPStatusCodeOK = "200"
+)
+
+const (
+	HTTPMethodGet     = "GET"
+	HTTPMethodPost    = "POST"
+	HTTPMethodOptions = "OPTIONS"
+	HTTPMethodTrace   = "TRACE"
+	HTTPMethodHead    = "HEAD"
+	HTTPMethodAny     = "ANY"
 )
