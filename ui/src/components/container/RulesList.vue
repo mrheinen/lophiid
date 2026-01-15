@@ -2,7 +2,8 @@
   <PrimeDialog
     v-model:visible="contentFormVisible"
     modal
-    header="Add content"
+    header="Add content (esc disabled)"
+    :closeOnEscape="false"
   >
     <ContentForm
       @update-content="onAddedContent"
