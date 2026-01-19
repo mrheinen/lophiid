@@ -19,6 +19,7 @@ package session
 import (
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/analysis"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
@@ -87,6 +88,15 @@ func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) 
 func (d *DatabaseSessionManager) EndSession(session *models.Session) error {
 	session.Active = false
 	session.EndedAt = time.Now().UTC()
+
+	profile, err := analysis.GetSessionBehaviorProfile(session.RequestGaps)
+	if err != nil {
+		slog.Error("error getting behavior profile", slog.String("ip", session.IP), slog.String("error", err.Error()))
+	} else {
+		session.BehaviorCV = profile.OverallCV
+		session.BehaviorHasBursts = profile.HasBursts
+		session.BehaviorIsHuman = profile.IsHuman()
+	}
 
 	if err := d.dbClient.Update(session); err != nil {
 		return fmt.Errorf("error updating session: %w", err)
