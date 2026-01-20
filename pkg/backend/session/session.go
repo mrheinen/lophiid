@@ -96,6 +96,7 @@ func (d *DatabaseSessionManager) EndSession(session *models.Session) error {
 		session.BehaviorCV = profile.OverallCV
 		session.BehaviorHasBursts = profile.HasBursts
 		session.BehaviorIsHuman = profile.IsHuman()
+		session.BehaviorFinalGaps = profile.FinalGaps
 	}
 
 	if err := d.dbClient.Update(session); err != nil {
