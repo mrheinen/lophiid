@@ -37,7 +37,7 @@ jobs:
         run: sudo apt-get install -y libmagic-dev
 
       - name: Clone yara-x
-        run: git clone --depth 1 https://github.com/VirusTotal/yara-x.git
+        run: git clone --depth 1 https://github.com/VirusTotal/yara-x.git --branch 1.11.0
 
       # Cache Rust toolchain, Cargo registry, and build output
       - name: Cache Cargo and Rust build
