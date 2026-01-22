@@ -19,19 +19,62 @@ package analysis
 import (
 	"fmt"
 	"math"
+	"sort"
 )
 
 const minimumGapsRequired = 4
 const minimumMeanGapSeconds = 0.0001 // 0.1ms - treat anything below as instant
-const burstThresholdSeconds = 1.0    // Gaps below this are considered part of a burst
+const burstThresholdSeconds = 2.0     // Gaps below this are considered part of a burst
+const maxGapsForVarianceAnalysis = 1000 // Only analyze up to this many gaps.
 
 type BehaviorProfile struct {
 	OverallCV float64
 	HasBursts bool
+	FinalGaps []float64
 }
 
 func (p *BehaviorProfile) IsHuman() bool {
 	return p.OverallCV > 1.0
+}
+
+// RemoveOutliers removes upper-bound outliers using the IQR method.
+// It returns a new slice with outliers removed.
+func RemoveOutliers(gaps []float64) []float64 {
+	if len(gaps) < 4 {
+		return gaps
+	}
+
+	sorted := make([]float64, len(gaps))
+	copy(sorted, gaps)
+	sort.Float64s(sorted)
+
+	q1 := getPercentile(sorted, 0.25)
+	q3 := getPercentile(sorted, 0.75)
+	iqr := q3 - q1
+	upperBound := q3 + 3*iqr
+
+	var result []float64
+	for _, g := range gaps {
+		if g <= upperBound {
+			result = append(result, g)
+		}
+	}
+	return result
+}
+
+func getPercentile(sorted []float64, p float64) float64 {
+	n := float64(len(sorted))
+	if n == 0 {
+		return 0
+	}
+	pos := p * (n - 1)
+	idx := int(pos)
+	frac := pos - float64(idx)
+
+	if idx+1 < len(sorted) {
+		return sorted[idx] + frac*(sorted[idx+1]-sorted[idx])
+	}
+	return sorted[idx]
 }
 
 // CalculateCoefficientOfVariation returns the coefficient of variation for a given set of inter-arrival times.
@@ -115,12 +158,21 @@ func GroupBurstGaps(gaps []float64, threshold float64) []float64 {
 }
 
 func GetSessionBehaviorProfile(gaps []float64) (BehaviorProfile, error) {
+	retVal := BehaviorProfile{}
+
+	if len(gaps) > maxGapsForVarianceAnalysis {
+    return BehaviorProfile{}, fmt.Errorf("too many gaps to analyze")
+  }
+
 	nonBurstGaps := GroupBurstGaps(gaps, burstThresholdSeconds)
 
-	retVal := BehaviorProfile{}
-	retVal.HasBursts = len(nonBurstGaps) < len(gaps)
+	// Remove outliers to prevent single large gaps from skewing the CV
+	filteredGaps := RemoveOutliers(nonBurstGaps)
 
-	cv, err := CalculateCoefficientOfVariation(nonBurstGaps)
+	retVal.HasBursts = len(nonBurstGaps) < len(gaps)
+	retVal.FinalGaps = filteredGaps
+
+	cv, err := CalculateCoefficientOfVariation(filteredGaps)
 	if err != nil {
 		return BehaviorProfile{}, err
 	}

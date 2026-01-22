@@ -143,3 +143,75 @@ func TestCalculateCoefficientOfVariation(t *testing.T) {
 		})
 	}
 }
+
+// TestGetSessionBehaviorProfile_TooManyGaps verifies that GetSessionBehaviorProfile
+// returns an error when the number of gaps exceeds maxGapsForVarianceAnalysis.
+func TestGetSessionBehaviorProfile_TooManyGaps(t *testing.T) {
+	gaps := make([]float64, maxGapsForVarianceAnalysis+1)
+	for i := range gaps {
+		gaps[i] = 1.0
+	}
+
+	_, err := GetSessionBehaviorProfile(gaps)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "too many gaps to analyze")
+}
+
+func TestRemoveOutliers(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []float64
+		expected []float64
+	}{
+		{
+			name:     "no outliers",
+			input:    []float64{1.0, 2.0, 3.0, 4.0, 5.0},
+			expected: []float64{1.0, 2.0, 3.0, 4.0, 5.0},
+		},
+		{
+			name:     "one large outlier",
+			input:    []float64{1.0, 2.0, 3.0, 4.0, 100.0},
+			expected: []float64{1.0, 2.0, 3.0, 4.0},
+		},
+		{
+			name:     "user scenario",
+			input:    []float64{0.833333, 2.000000, 1.000000, 62.000000, 0.916667},
+			expected: []float64{0.833333, 2.000000, 1.000000, 0.916667},
+		},
+		{
+			name:     "too few elements",
+			input:    []float64{1.0, 100.0},
+			expected: []float64{1.0, 100.0},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := RemoveOutliers(tt.input)
+			assert.Equal(t, len(tt.expected), len(result), "length mismatch")
+			for i, val := range result {
+				assert.Equal(t, tt.expected[i], val, "value mismatch at index %d", i)
+			}
+		})
+	}
+}
+
+func TestGetSessionBehaviorProfile_WithOutliers(t *testing.T) {
+	// User reported scenario
+	gaps := []float64{0.833333, 2.000000, 1.000000, 62.000000, 0.916667}
+
+	profile, err := GetSessionBehaviorProfile(gaps)
+	assert.NoError(t, err)
+
+	// If 62 is removed, the max gap should be around 2.0
+	maxGap := 0.0
+	for _, g := range profile.FinalGaps {
+		if g > maxGap {
+			maxGap = g
+		}
+	}
+
+	// We expect the 62.0 to be gone.
+	assert.Less(t, maxGap, 10.0, "The outlier 62.0 should have been removed")
+	assert.Equal(t, 4, len(profile.FinalGaps), "Should have 4 gaps left")
+}
