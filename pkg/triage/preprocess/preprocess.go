@@ -273,17 +273,18 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 		tmpContentRule := models.TemporaryContentRule{
 			Content: models.Content{
 				HasCode:     true,
+				Name:        fmt.Sprintf("Temp content: %s-%d", fileName, req.ID),
 				Data:        []byte(res.Payload),
 				StatusCode:  constants.HTTPStatusCodeOK,
 				Server:      "Apache",
 				ContentType: "text/html",
 			},
 			Rule: models.ContentRule{
-				Uri:              fileName,
-				UriMatching:      constants.MatchingTypeContains,
-				BodyMatching:     constants.MatchingTypeNone,
-				Enabled:          true,
-				AllowFromNet:     &net,
+				Uri:          fileName,
+				UriMatching:  constants.MatchingTypeContains,
+				BodyMatching: constants.MatchingTypeNone,
+				Enabled:      true,
+				AllowFromNet: &net,
 				// Next we use the request ID for the app ID. This is not an error. We
 				// need some value there and do not want to create an app at the moment.
 				AppID:            req.ID,

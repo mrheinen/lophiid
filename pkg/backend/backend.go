@@ -1082,15 +1082,30 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	matchedRule, ruleErr := GetMatchedRule(s.safeRules.GetGroup(hp.RuleGroupID), sReq, session)
 	matchedRuleIsDefault := false
 
-	if ruleErr == nil {
-		s.UpdateSessionWithRule(sReq.SourceIP, session, &matchedRule)
-	} else {
+	if ruleErr != nil {
 		// If there was no matched rule then serve the default content of the honeypot.
 		matchedRuleIsDefault = true
 		matchedRule.ContentID = hp.DefaultContentID
 		matchedRule.AppID = 0
 		matchedRule.ID = 0
 	}
+
+	// Already update the cached session immediately so that consecutive requests
+	// can take into account session info such as the last matched rule.
+	s.UpdateSessionWithRule(sReq.SourceIP, session, &matchedRule)
+
+	// Also do another update at the end of the RPC to capture time the last
+	// request of the session was served.
+	defer func() {
+		if session.RequestCount > 0 {
+			timeDiff := rpcStartTime.Sub(session.LastRequestAt)
+			session.AddRequestGap(timeDiff.Seconds())
+		}
+
+		session.SetLastRequestAt(time.Now())
+		session.IncreaseRequestCount()
+		s.UpdateSessionWithRule(sReq.SourceIP, session, &matchedRule)
+	}()
 
 	// Alert if necessary
 	if matchedRule.Alert {
@@ -1226,6 +1241,8 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 
 				logutil.Debug("got llm response", sReq, slog.Int64("content_id", matchedRule.ContentID), slog.String("llm_response", string(llmRes.Stdout)))
 				res.Body = llmRes.Stdout
+				sReq.RawResponse = string(llmRes.Stdout)
+
 				if len(llmRes.Headers) > 0 {
 					newHeaders := strings.Split(llmRes.Headers, "\n")
 					content.Headers = append(content.Headers, newHeaders...)
