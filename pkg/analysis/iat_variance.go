@@ -53,7 +53,7 @@ func RemoveOutliers(gaps []float64) []float64 {
 	iqr := q3 - q1
 	upperBound := q3 + 3*iqr
 
-	var result []float64
+	result := make([]float64, 0, len(gaps))
 	for _, g := range gaps {
 		if g <= upperBound {
 			result = append(result, g)
