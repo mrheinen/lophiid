@@ -278,6 +278,10 @@ export default {
       this.query = this.$route.query.q;
       this.loadRules(true, function () {});
     } else {
+
+      this.$refs.searchBar.setQuery("is_temporary:false");
+      this.query = "is_temporary:false";
+
       // If a uri and method parameter is given, reset the form and use the given
       // values.
       var that = this;

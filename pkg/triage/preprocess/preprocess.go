@@ -32,6 +32,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -278,6 +280,8 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 				StatusCode:  constants.HTTPStatusCodeOK,
 				Server:      "Apache",
 				ContentType: "text/html",
+				IsTemporary: true,
+				ExtUuid:     uuid.NewString(),
 			},
 			Rule: models.ContentRule{
 				Uri:          fileName,
@@ -292,6 +296,8 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 				RequestPurpose:   constants.RequestPurposeAttack,
 				Responder:        constants.ResponderTypeNone,
 				ResponderDecoder: constants.ResponderDecoderTypeNone,
+				IsTemporary:      true,
+				ExtUuid:          uuid.NewString(),
 			},
 		}
 

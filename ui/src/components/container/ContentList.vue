@@ -185,6 +185,9 @@ export default {
     if (this.$route.query.q) {
       this.query = this.$route.query.q;
       this.$refs.searchBar.setQuery(this.$route.query.q);
+    } else {
+      this.query = "is_temporary:false";
+      this.$refs.searchBar.setQuery(this.query);
     }
     this.loadContents(true, function(){})
   },
