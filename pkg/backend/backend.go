@@ -1102,6 +1102,8 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			session.AddRequestGap(timeDiff.Seconds())
 		}
 
+		// We use time.Now instead of rpcStartTime because we really want to capture
+		// the time the RPC is finished and not when it started.
 		session.SetLastRequestAt(time.Now())
 		session.IncreaseRequestCount()
 		s.UpdateSessionWithRule(sReq.SourceIP, session, &matchedRule)

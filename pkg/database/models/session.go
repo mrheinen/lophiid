@@ -34,6 +34,7 @@ type Session struct {
 	BehaviorCV        float64   `ksql:"behavior_cv" json:"behavior_cv" doc:"The behavior CV"`
 	BehaviorIsHuman   bool      `ksql:"behavior_is_human" json:"behavior_is_human" doc:"Is the behavior of the session human-like"`
 	BehaviorHasBursts bool      `ksql:"behavior_has_bursts" json:"behavior_has_bursts" doc:"Does the behavior of the session have bursts"`
+	BehaviorFinalGaps []float64 `ksql:"behavior_final_gaps" json:"behavior_final_gaps" doc:"The final gaps of the behavior of the session"`
 	RequestCount      int64
 	RequestGaps       []float64
 	LastRequestAt     time.Time
