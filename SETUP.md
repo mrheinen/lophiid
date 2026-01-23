@@ -1,8 +1,9 @@
-# IMPORTANT
+> [!IMPORTANT]
+> If you run into ANY problems or have questions then just open an issue and
+> we'll help out!
 
-This software is in an early stage of development so if you run into ANY problems or have questions then please open an issue. I will follow up quickly
-and will help you out.
-
+Note that this is for manually deploying lophiid on your own server without
+using docker. It is highly recommended however to use docker and you find instructions for doing so in the [Quick Start](./QUICK_START.md)
 
 # Setting up the backend and agents
 
@@ -34,8 +35,6 @@ Once cargo-c is installed, go to the directory of the YARA-X repository and run 
 ```shell
 cargo cinstall -p yara-x-capi --release
 ```
-
-
 
 ##### Protobuf
 
@@ -164,17 +163,19 @@ sudo apt install postgresql postgresql-contrib
 
 #### Import the database schema
 
-> [!IMPORTANT]
-> You need to edit config/database.sql to uncomment and edit the create user command at the top. Set a secure password!
+Now import the database definition that are stored in ./docker/configs/sql/.
+First you need to edit the files and replace all macros (which start with %%)
+with the values you want to use in production.
 
-
-Now import the database definition that is in [config/database.sql](https://github.com/mrheinen/lophiid/blob/main/config/database.sql) using the following commands:
+Import using the following commands:
 
 ```shell
 # Become the postgres user
 sudo su postgres
 # Import the database schema
-psql -f config/database.sql
+psql -f ./docker/configs/sql/01-database.sql.template
+psql -f ./docker/configs/sql/02-database.sql.template
+psql -f ./docker/configs/sql/03-database.sql.template
 ```
 
 ### Create the backend configuration
@@ -187,7 +188,7 @@ Note that it is important that the backend is reachable to all the honeypot agen
 
 Create an account on [www.virustotal.com](http://www.virustotal.com) and click on your profile picture in the top right corner of the screen. Now click on `API Key` and it will bring you to a page where you can copy the API key (and paste it in the config).
 
-The default free account on VirusTotal has plenty of quota. You probably can run 100-200 honeypots on dedicated IPs before running into quota issues.
+The default free account on VirusTotal has plenty of quota. You probably can run 75 honeypots on dedicated IPs before running into real quota issues.
 
 The VirusTotal client in lophiid is also written in a way where requests are queued and retried in case of quota issues.  This queue, which is only populated when you run out of quota, is not persistent during lophiid restarts though.
 
@@ -220,8 +221,7 @@ If you like to enable LLM triage and LLM descriptions of attacks then you will
 need edit the backend [config](./config/backend-config.yaml) and enable the
 triage process.
 
-In the config set AI -> Triage -> enable to 1.  Also make sure you have set an
-API endpoint and API key in the AI section.
+In the config set AI -> Triage -> Describer -> enable to 1.  Also make sure you have set an LLM config in that section.
 
 Now you need to run the triage process:
 
@@ -262,9 +262,7 @@ and 'user' to the user created with the command above.
 
 ## Allow ICMP packets
 
-Use the following command to allow ICMP ping by the agent. The example is a bit
-lazy and allows it to all users. You can pudate the group range with a group ID
-that lophiid-agent belongs to in order to make it more strict.
+Use the following command to allow ICMP ping by the agent. The example is a bit lazy and allows it to all users. You can update the group range with a group ID that lophiid-agent belongs to in order to make it more strict.
 ```shell
 sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 ```
@@ -277,16 +275,13 @@ agents on a single machine and each is configured individually.
 
 ## Setting up p0f (optional)
 
-When p0f is running, you will need to setup the agent to use it.  First you need
-to make sure that the p0f unix socket is accessible from the chroot directory so
-using the example above, you want to run p0f with something like this:
+When p0f is running, you will need to setup the agent to use it.  First you need to make sure that the p0f unix socket is accessible from the chroot directory so using the example above, you want to run p0f with something like this:
 
 ```shell
 p0f -s /var/empty/lophiid/p0f.socket
 ```
 
-While you might run multiple agents on a machine; you typically only have to run
-one p0f instance per machine.
+While you might run multiple agents on a machine; you typically only have to run one p0f instance per machine.
 
 # Setting up the UI
 
@@ -319,10 +314,7 @@ First install the vue dependency:
 npm i @vue/cli-service
 ```
 
-Modify the backendAddress and make sure it points to the API server. This needs
-to be edited in the ./ui/src/Config.js and you should do this before doing the
-next step. In fact, keep in mind that whenever you change the config, restart
-the UI server.
+Modify the backendAddress and make sure it points to the API server. This needs to be edited in the ./ui/src/Config.js and you should do this before doing the next step. In fact, keep in mind that whenever you change the config, restart the UI server.
 
 Now you can build and run the UI. This will start a development server
 and it is not recommended to expose it to the internet but fine to use
