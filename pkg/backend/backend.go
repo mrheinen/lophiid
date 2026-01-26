@@ -238,7 +238,7 @@ func (s *BackendServer) ScheduleDownloadOfPayload(sourceIP string, honeypotIP st
 		}
 	}
 
-	slog.Debug("adding URL to cache", slog.String("original_url", originalUrl))
+	slog.Debug("adding URL to cache", slog.Int64("request_id", requestID), slog.String("original_url", originalUrl))
 	s.downloadsCache.Store(originalUrl, time.Now())
 
 	s.downloadQueueMu.Lock()
