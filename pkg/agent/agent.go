@@ -306,7 +306,7 @@ func (a *Agent) DownloadToBuffer(request *backend_service.CommandDownloadFile) (
 }
 
 func (a *Agent) DownloadFileAndSubmit(request *backend_service.CommandDownloadFile) error {
-	slog.Info("Downloading URL", slog.String("url", request.Url))
+	slog.Info("Downloading URL", slog.Int64("requestId", request.RequestId), slog.String("original_url", request.OriginalUrl), slog.String("url", request.Url))
 	downloadInfo, err := a.DownloadToBuffer(request)
 	if err != nil {
 		return fmt.Errorf("could not download: %w", err)
