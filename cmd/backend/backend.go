@@ -89,7 +89,7 @@ func main() {
 		return
 	}
 
-	lf, err := os.OpenFile(cfg.Backend.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	lf, err := util.NewDailyRotatingLogWriter(cfg.Backend.LogFile)
 	if err != nil {
 		fmt.Printf("Could not open logfile: %s\n", err)
 		return
