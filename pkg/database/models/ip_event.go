@@ -19,22 +19,27 @@ package models
 import "time"
 
 type IpEvent struct {
-	ID            int64     `ksql:"id,skipInserts" json:"id"`
-	IP            string    `ksql:"ip" json:"ip" doc:"The source IP"`
-	HoneypotIP    string    `ksql:"honeypot_ip" json:"honeypot_ip" doc:"The honeypot IP"`
-	Domain        string    `ksql:"domain" json:"domain" doc:"The domain for the IP"`
-	Type          string    `ksql:"type" json:"type" doc:"The type of event (e.g. ATTACKED, CRAWLED)"`
-	Subtype       string    `ksql:"subtype" json:"subtype" doc:"The subtype of the event (e.g. RCE, LFI)"`
-	Details       string    `ksql:"details" json:"details" doc:"Any additional details about the event"`
-	Note          string    `ksql:"note" json:"note"`
-	Count         int64     `ksql:"count" json:"count" doc:"How often this event was seen"`
-	RequestID     int64     `ksql:"request_id" json:"request_id" doc:"The ID of a request related to the event"`
-	FirstSeenAt   time.Time `ksql:"first_seen_at,skipUpdates" json:"first_seen_at" doc:"When the event was first seen"`
-	CreatedAt     time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"When the event was created in the database"`
-	UpdatedAt     time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last time the event was updated"`
-	Source        string    `ksql:"source" json:"source" doc:"The source of the event"`
-	SourceRef     string    `ksql:"source_ref" json:"source_ref" doc:"A reference related to the source of the event"`
-	SourceRefType string    `ksql:"source_ref_type" json:"source_ref_type" doc:"The type of reference related to the source of the event"`
+	ID             int64     `ksql:"id,skipInserts" json:"id"`
+	IP             string    `ksql:"ip" json:"ip" doc:"The source IP"`
+	HoneypotIP     string    `ksql:"honeypot_ip" json:"honeypot_ip" doc:"The honeypot IP"`
+	Domain         string    `ksql:"domain" json:"domain" doc:"The domain for the IP"`
+	Type           string    `ksql:"type" json:"type" doc:"The type of event (e.g. ATTACKED, CRAWLED)"`
+	Subtype        string    `ksql:"subtype" json:"subtype" doc:"The subtype of the event (e.g. RCE, LFI)"`
+	Details        string    `ksql:"details" json:"details" doc:"Any additional details about the event"`
+	Note           string    `ksql:"note" json:"note"`
+	Count          int64     `ksql:"count" json:"count" doc:"How often this event was seen"`
+	RequestID      int64     `ksql:"request_id" json:"request_id" doc:"The ID of a request related to the event"`
+	FirstSeenAt    time.Time `ksql:"first_seen_at,skipUpdates" json:"first_seen_at" doc:"When the event was first seen"`
+	CreatedAt      time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"When the event was created in the database"`
+	UpdatedAt      time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Last time the event was updated"`
+	Source         string    `ksql:"source" json:"source" doc:"The source of the event"`
+	// Is this the cleanest solution ? No. Is it the best? Yes.
+	SourceRef      string    `ksql:"source_ref" json:"source_ref" doc:"A reference related to the source of the event"`
+	SourceRefType  string    `ksql:"source_ref_type" json:"source_ref_type" doc:"The type of reference related to the source of the event"`
+	SourceRef2     *string    `ksql:"source_ref2" json:"source_ref2" doc:"A second reference related to the source of the event"`
+	SourceRefType2 *string    `ksql:"source_ref_type2" json:"source_ref_type2" doc:"The type of the second reference related to the source of the event"`
+	SourceRef3     *string    `ksql:"source_ref3" json:"source_ref3" doc:"A third reference related to the source of the event"`
+	SourceRefType3 *string    `ksql:"source_ref_type3" json:"source_ref_type3" doc:"The type of the third reference related to the source of the event"`
 }
 
 func (c *IpEvent) ModelID() int64 { return c.ID }

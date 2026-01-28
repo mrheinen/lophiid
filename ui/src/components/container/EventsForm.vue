@@ -34,6 +34,10 @@
                 <th>Request ID</th>
                 <td>{{ localEvent.request_id }}</td>
               </tr>
+              <tr v-if="localEvent.source_ref2 && localEvent.source_ref_type2 == 'PARAMETER'">
+                <th>Target Parameter</th>
+                <td>{{ localEvent.source_ref2 }}</td>
+              </tr>
             </tbody>
           </table>
         </template>

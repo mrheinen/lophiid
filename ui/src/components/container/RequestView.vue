@@ -203,11 +203,19 @@
                   />
                 </div>
 
-                <table v-if="request.triage_payload_type">
+                <table v-if="request.triaged == true">
                   <tbody>
-                    <tr>
+                    <tr v-if="request.triage_payload_type">
                       <th>Triage Payload type</th>
                       <td>{{ request.triage_payload_type }}</td>
+                    </tr>
+                    <tr v-if="request.triage_has_payload">
+                      <th>Triage Has Payload</th>
+                      <td>{{ request.triage_has_payload }}</td>
+                    </tr>
+                    <tr v-if="request.triage_target_parameter">
+                      <th>Triage Parameter</th>
+                      <td>{{ request.triage_target_parameter }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -223,7 +231,7 @@
                         <th>Source request ID</th>
                         <td>{{ localDescription.example_request_id }}</td>
                       </tr>
-                      <tr>
+                      <tr v-if="localDescription.ai_application">
                         <th>Detected application</th>
                         <td>{{ localDescription.ai_application }}</td>
                       </tr>

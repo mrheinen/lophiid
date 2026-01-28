@@ -94,6 +94,7 @@ const (
 	IpEventRefTypeSessionId            = "SESSION_ID"
 	IpEventRefTypeDownloadId           = "DOWNLOAD_ID"
 	IpEventRefTypeRequestDescriptionId = "REQUEST_DESCRIPTION_ID"
+	IpEventRefTypeParameter            = "PARAMETER"
 )
 
 // These constants are the extractor types used in ./pkg/backend/extractors

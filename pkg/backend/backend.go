@@ -219,7 +219,7 @@ func (s *BackendServer) isDebugIP(ip string) bool {
 func (s *BackendServer) ScheduleDownloadOfPayload(sourceIP string, honeypotIP string, originalUrl string, targetIP string, targetUrl string, hostHeader string, requestID int64) bool {
 	_, err := s.downloadsCache.Get(originalUrl)
 	if err == nil {
-		slog.Debug("skipping download as it is in the cache", slog.String("url", originalUrl))
+		slog.Debug("skipping download as it is in the cache", slog.Int64("request_id", requestID), slog.String("url", originalUrl))
 		return false
 	}
 
@@ -233,12 +233,12 @@ func (s *BackendServer) ScheduleDownloadOfPayload(sourceIP string, honeypotIP st
 		*val = *val + 1
 		s.downloadsIPCounts.Replace(sourceIP, *val)
 		if *val > int64(s.config.Backend.Advanced.MaxDownloadsPerIP) {
-			slog.Debug("skipping download as IP is over the limit", slog.String("url", originalUrl), slog.String("ip", sourceIP))
+			slog.Debug("skipping download as IP is over the limit", slog.Int64("request_id", requestID), slog.String("url", originalUrl), slog.String("ip", sourceIP))
 			return false
 		}
 	}
 
-	slog.Debug("adding URL to cache", slog.String("original_url", originalUrl))
+	slog.Debug("adding URL to cache", slog.Int64("request_id", requestID), slog.String("original_url", originalUrl))
 	s.downloadsCache.Store(originalUrl, time.Now())
 
 	s.downloadQueueMu.Lock()
@@ -259,11 +259,11 @@ func (s *BackendServer) SchedulePingOfAddress(honeypotIP string, address string,
 
 	_, err := s.pingsCache.Get(address)
 	if err == nil {
-		slog.Debug("skipping ping as it is in the cache", slog.String("address", address))
+		slog.Debug("skipping ping as it is in the cache", slog.Int64("request_id", requestID), slog.String("address", address))
 		return false
 	}
 
-	slog.Debug("adding ping address to cache", slog.String("address", address))
+	slog.Debug("scheduling ping address", slog.Int64("request_id", requestID), slog.String("honeypot_ip", honeypotIP), slog.String("address", address))
 	s.pingsCache.Store(address, time.Now())
 
 	s.pingQueueMu.Lock()
@@ -351,7 +351,7 @@ func (s *BackendServer) UpdateSessionWithRule(ip string, session *models.Session
 	session.LastRuleServed = *rule
 	session.ServedRuleWithContent(rule.ID, rule.ContentID)
 	if err := s.sessionMgr.UpdateCachedSession(ip, session); err != nil {
-		slog.Error("error updating session", slog.String("ip", ip), slog.String("error", err.Error()))
+		slog.Error("error updating session", slog.Int64("session_id", session.ID), slog.String("ip", ip), slog.String("error", err.Error()))
 	}
 }
 
@@ -379,7 +379,7 @@ func (s *BackendServer) SendPingStatus(ctx context.Context, req *backend_service
 		SourceRefType: constants.IpEventRefTypeNone,
 	}
 
-	slog.Info("ping status", slog.String("ip", req.GetAddress()), slog.String("outcome", outcome), slog.Int64("packets_sent", req.GetPacketsSent()), slog.Int64("packets_received", req.GetPacketsReceived()), slog.Int64("average_rtt", req.GetAverageRttMs()), slog.Int64("min_rtt", req.GetMinRttMs()), slog.Int64("max_rtt", req.GetMaxRttMs()))
+	slog.Info("ping status", slog.Int64("request_id", req.GetRequestId()), slog.String("ip", req.GetAddress()), slog.String("outcome", outcome), slog.Int64("packets_sent", req.GetPacketsSent()), slog.Int64("packets_received", req.GetPacketsReceived()), slog.Int64("average_rtt", req.GetAverageRttMs()), slog.Int64("min_rtt", req.GetMinRttMs()), slog.Int64("max_rtt", req.GetMaxRttMs()))
 	s.ipEventManager.AddEvent(evt)
 
 	return &backend_service.SendPingStatusResponse{}, nil
@@ -660,7 +660,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 		if req.GetInfo().GetRawHttpResponse() != "" {
 			dm.RawHttpResponse = req.GetInfo().GetRawHttpResponse()
 		} else {
-			slog.Debug("No HTTP response found for URL upload", slog.String("url", req.GetInfo().GetOriginalUrl()), slog.String("honeypot_ip", req.GetInfo().GetHoneypotIp()))
+			slog.Debug("No HTTP response found for URL upload", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()), slog.String("honeypot_ip", req.GetInfo().GetHoneypotIp()))
 		}
 
 		if err = s.dbClient.Update(&dm); err != nil {
@@ -681,7 +681,7 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 		}
 
 		s.MaybeExtractLinksFromPayload(req.GetInfo().GetData(), dInfo)
-		slog.Debug("Updated existing entry for URL upload", slog.String("url", req.GetInfo().GetOriginalUrl()))
+		slog.Debug("Updated existing entry for URL upload", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
 		s.metrics.fileUploadRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
 		return &backend_service.UploadFileResponse{}, nil
 	}
@@ -725,9 +725,9 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 		return &backend_service.UploadFileResponse{}, status.Errorf(codes.Internal, "unexpected database error on insert: %s", err)
 	}
 
-	slog.Debug("Added entry for URL upload", slog.String("url", req.GetInfo().GetOriginalUrl()))
+	slog.Debug("Added entry for URL upload", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
 	if s.vtMgr != nil {
-		slog.Debug("Adding URL to VT queue", slog.String("url", req.GetInfo().GetOriginalUrl()))
+		slog.Debug("Adding URL to VT queue", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
 		s.vtMgr.QueueURL(dInfo.OriginalUrl)
 	}
 
@@ -809,16 +809,20 @@ func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes
 
 					// Only create event if we've seen at least one other payload before.
 					logutil.Debug("found new consecutive payload for session", sReq, slog.String("base_hash", sReq.BaseHash), slog.String("target_param", preRes.TargetedParameter))
+
+					refType2 := constants.IpEventRefTypeParameter
 					s.ipEventManager.AddEvent(&models.IpEvent{
-						IP:            sReq.SourceIP,
-						Type:          constants.IpEventSessionInfo,
-						Subtype:       constants.IpEventSubTypeSuccessivePayload,
-						Details:       fmt.Sprintf("successive payloads - %s", preRes.PayloadType),
-						Source:        constants.IpEventSourceAnalysis,
-						SourceRef:     fmt.Sprintf("%d", sReq.SessionID),
-						SourceRefType: constants.IpEventRefTypeSessionId,
-						RequestID:     sReq.ID,
-						HoneypotIP:    sReq.HoneypotIP,
+						IP:             sReq.SourceIP,
+						Type:           constants.IpEventSessionInfo,
+						Subtype:        constants.IpEventSubTypeSuccessivePayload,
+						Details:        fmt.Sprintf("successive payloads - %s", preRes.PayloadType),
+						Source:         constants.IpEventSourceAnalysis,
+						SourceRef:      fmt.Sprintf("%d", sReq.SessionID),
+						SourceRefType:  constants.IpEventRefTypeSessionId,
+						SourceRef2:     &preRes.TargetedParameter,
+						SourceRefType2: &refType2,
+						RequestID:      sReq.ID,
+						HoneypotIP:     sReq.HoneypotIP,
 					})
 				}
 				(*val)[pHash] = sReq.CmpHash

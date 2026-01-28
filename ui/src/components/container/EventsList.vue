@@ -39,19 +39,49 @@
             field="type"
             header="Type"
             style="width: 10%"
-          />
+          >
+            <template #body="slotProps">
+              <span
+                class="pointer filter-cell"
+                @click="handleFieldClick($event, 'type', slotProps.data.type)"
+              >
+                {{ slotProps.data.type }}
+                <i v-if="altPressed && !shiftPressed" class="pi pi-search-plus filter-icon" />
+                <i v-if="altPressed && shiftPressed" class="pi pi-search-minus filter-icon filter-icon-exclude" />
+              </span>
+            </template>
+          </DataColumn>
           <DataColumn
             field="subtype"
             header="SubType"
             style="width: 10%"
-          />
+          >
+            <template #body="slotProps">
+              <span
+                class="pointer filter-cell"
+                @click="handleFieldClick($event, 'subtype', slotProps.data.subtype)"
+              >
+                {{ slotProps.data.subtype }}
+                <i v-if="altPressed && !shiftPressed" class="pi pi-search-plus filter-icon" />
+                <i v-if="altPressed && shiftPressed" class="pi pi-search-minus filter-icon filter-icon-exclude" />
+              </span>
+            </template>
+          </DataColumn>
 
           <DataColumn
             header="IP"
             style="width: 10%"
           >
             <template #body="slotProps">
-              <a :href="config.eventLink + '?q=ip:' + slotProps.data.ip">{{ slotProps.data.ip }}</a>
+              <a
+                class="filter-cell"
+                :href="config.eventLink + '?q=ip:' + slotProps.data.ip"
+                @click="handleFieldClick($event, 'ip', slotProps.data.ip)"
+              >
+                {{ slotProps.data.ip }}
+                <i v-if="altPressed && !shiftPressed" class="pi pi-search-plus filter-icon" />
+                <i v-if="altPressed && shiftPressed" class="pi pi-search-minus filter-icon filter-icon-exclude" />
+              </a>
             </template>
           </DataColumn>
           <DataColumn
@@ -70,7 +100,18 @@
             field="source"
             header="Source"
             style="width: 5%"
-          />
+          >
+            <template #body="slotProps">
+              <span
+                class="pointer filter-cell"
+                @click="handleFieldClick($event, 'source', slotProps.data.source)"
+              >
+                {{ slotProps.data.source }}
+                <i v-if="altPressed && !shiftPressed" class="pi pi-search-plus filter-icon" />
+                <i v-if="altPressed && shiftPressed" class="pi pi-search-minus filter-icon filter-icon-exclude" />
+              </span>
+            </template>
+          </DataColumn>
           <DataColumn
             header="Source ref"
             style="width: 7%"
@@ -177,6 +218,8 @@ export default {
       selectedLimit: 21,
       limitOptions: [10, 20, 30, 40, 50],
       offset: 0,
+      altPressed: false,
+      shiftPressed: false,
       base: {
         id: 0,
       },
@@ -208,8 +251,48 @@ export default {
       this.query = this.$route.query.q;
     }
     this.loadEvents(true, function () {});
+    window.addEventListener('keydown', this.handleKeyDown);
+    window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('blur', this.handleBlur);
+  },
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.handleKeyDown);
+    window.removeEventListener('keyup', this.handleKeyUp);
+    window.removeEventListener('blur', this.handleBlur);
   },
   methods: {
+    handleBlur() {
+      this.altPressed = false;
+      this.shiftPressed = false;
+    },
+    handleKeyDown(event) {
+      if (event.repeat) return;
+      if (event.key === 'Alt') {
+        this.altPressed = true;
+      }
+      if (event.key === 'Shift') {
+        this.shiftPressed = true;
+      }
+    },
+    handleKeyUp(event) {
+      if (event.key === 'Alt') {
+        this.altPressed = false;
+      }
+      if (event.key === 'Shift') {
+        this.shiftPressed = false;
+      }
+    },
+    handleFieldClick(event, fieldName, value) {
+      if (event.altKey) {
+        event.preventDefault();
+        const prefix = event.shiftKey ? "-" + fieldName + ":" : fieldName + ":";
+        const filter = prefix + value;
+        const currentQuery = this.query?.trim() || "";
+        const newQuery = currentQuery ? currentQuery + " " + filter : filter;
+        this.$refs.searchBar.setQuery(newQuery);
+        this.performNewSearch(newQuery);
+      }
+    },
     onChangeLimit() {
       this.limit = this.selectedLimit
       this.loadEvents(true, function () {});
@@ -355,5 +438,26 @@ i.pi-style-right {
 
 .p-inputtext {
   width: 100%;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.filter-icon {
+  position: absolute;
+  right: -10px;
+  top: -3px;
+  font-size: 0.7rem;
+  color: #00d1b2;
+}
+
+.filter-icon-exclude {
+  color: #e57373;
+}
+
+.filter-cell {
+  position: relative;
+  display: block;
 }
 </style>

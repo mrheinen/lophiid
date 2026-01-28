@@ -29,7 +29,7 @@ type LLMConfig struct {
 	MaxContextSize            int64    `fig:"max_context_size" default:"32000"`
 	Temperature               float64  `fig:"temperature" default:"0.2"`
 	TopP                      float64  `fig:"top_p" default:"0.1"`
-	OpenRouterProviders       []string `fig:"openrouter_providers" default:""`
+	OpenRouterProviders       []string `fig:"openrouter_providers"`
 	OpenRouterReasoningEffort string   `fig:"openrouter_reasoning_effort" default:"none"`
 }
 
