@@ -266,6 +266,7 @@ export default {
       this.shiftPressed = false;
     },
     handleKeyDown(event) {
+      if (event.repeat) return;
       if (event.key === 'Alt') {
         this.altPressed = true;
       }
@@ -286,7 +287,7 @@ export default {
         event.preventDefault();
         const prefix = event.shiftKey ? "-" + fieldName + ":" : fieldName + ":";
         const filter = prefix + value;
-        const currentQuery = this.query ? this.query.trim() : "";
+        const currentQuery = this.query?.trim() || "";
         const newQuery = currentQuery ? currentQuery + " " + filter : filter;
         this.$refs.searchBar.setQuery(newQuery);
         this.performNewSearch(newQuery);

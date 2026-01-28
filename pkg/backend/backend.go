@@ -809,6 +809,8 @@ func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes
 
 					// Only create event if we've seen at least one other payload before.
 					logutil.Debug("found new consecutive payload for session", sReq, slog.String("base_hash", sReq.BaseHash), slog.String("target_param", preRes.TargetedParameter))
+
+					refType2 := constants.IpEventRefTypeParameter
 					s.ipEventManager.AddEvent(&models.IpEvent{
 						IP:             sReq.SourceIP,
 						Type:           constants.IpEventSessionInfo,
@@ -817,10 +819,10 @@ func (s *BackendServer) CheckForConsecutivePayloads(sReq *models.Request, preRes
 						Source:         constants.IpEventSourceAnalysis,
 						SourceRef:      fmt.Sprintf("%d", sReq.SessionID),
 						SourceRefType:  constants.IpEventRefTypeSessionId,
-						SourceRef2:     preRes.TargetedParameter,
-						SourceRefType2: constants.IpEventRefTypeParameter,
-						RequestID:  sReq.ID,
-						HoneypotIP: sReq.HoneypotIP,
+						SourceRef2:     &preRes.TargetedParameter,
+						SourceRefType2: &refType2,
+						RequestID:      sReq.ID,
+						HoneypotIP:     sReq.HoneypotIP,
 					})
 				}
 				(*val)[pHash] = sReq.CmpHash

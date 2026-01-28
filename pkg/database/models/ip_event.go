@@ -36,10 +36,10 @@ type IpEvent struct {
 	// Is this the cleanest solution ? No. Is it the best? Yes.
 	SourceRef      string    `ksql:"source_ref" json:"source_ref" doc:"A reference related to the source of the event"`
 	SourceRefType  string    `ksql:"source_ref_type" json:"source_ref_type" doc:"The type of reference related to the source of the event"`
-	SourceRef2     string    `ksql:"source_ref2" json:"source_ref2" doc:"A second reference related to the source of the event"`
-	SourceRefType2 string    `ksql:"source_ref_type2" json:"source_ref_type2" doc:"The type of the second reference related to the source of the event"`
-	SourceRef3     string    `ksql:"source_ref3" json:"source_ref3" doc:"A third reference related to the source of the event"`
-	SourceRefType3 string    `ksql:"source_ref_type3" json:"source_ref_type3" doc:"The type of the third reference related to the source of the event"`
+	SourceRef2     *string    `ksql:"source_ref2" json:"source_ref2" doc:"A second reference related to the source of the event"`
+	SourceRefType2 *string    `ksql:"source_ref_type2" json:"source_ref_type2" doc:"The type of the second reference related to the source of the event"`
+	SourceRef3     *string    `ksql:"source_ref3" json:"source_ref3" doc:"A third reference related to the source of the event"`
+	SourceRefType3 *string    `ksql:"source_ref_type3" json:"source_ref_type3" doc:"The type of the third reference related to the source of the event"`
 }
 
 func (c *IpEvent) ModelID() int64 { return c.ID }
