@@ -19,24 +19,20 @@ package main
 import (
 	"crypto/tls"
 	"errors"
-	"flag"
 	"fmt"
-	"io"
 	"log"
 	"log/slog"
 	"lophiid/pkg/agent"
 	"lophiid/pkg/backend"
+	"lophiid/pkg/bootstrap"
 	"lophiid/pkg/util"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/kkyr/fig"
 	"github.com/mrheinen/p0fclient"
 )
-
-var configFile = flag.String("c", "", "Config file")
 
 type Config struct {
 	General struct {
@@ -79,42 +75,21 @@ type Config struct {
 }
 
 func main() {
-
-	flag.Parse()
-
 	var cfg Config
-	if err := fig.Load(&cfg, fig.File(*configFile)); err != nil {
-		fmt.Printf("Could not parse config: %s\n", err)
-		return
-	}
 
-	lf, err := os.OpenFile(cfg.General.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	cleanup, err := bootstrap.Initialize(&cfg, bootstrap.InitConfig{
+		LogFileExtractor: func(c any) string {
+			return c.(*Config).General.LogFile
+		},
+		LogLevelExtractor: func(c any) string {
+			return c.(*Config).General.LogLevel
+		},
+	})
 	if err != nil {
-		fmt.Printf("Could not open logfile: %s\n", err)
+		fmt.Printf("Initialization failed: %s\n", err)
 		return
 	}
-
-	defer lf.Close()
-
-	teeWriter := util.NewTeeLogWriter([]io.Writer{os.Stdout, lf})
-
-	var programLevel = new(slog.LevelVar) // Info by default
-	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
-	slog.SetDefault(slog.New(h))
-
-	switch cfg.General.LogLevel {
-	case "info":
-		programLevel.Set(slog.LevelInfo)
-	case "warn":
-		programLevel.Set(slog.LevelWarn)
-	case "debug":
-		programLevel.Set(slog.LevelDebug)
-	case "error":
-		programLevel.Set(slog.LevelError)
-	default:
-		fmt.Printf("Unknown log level given. Using info")
-		programLevel.Set(slog.LevelInfo)
-	}
+	defer cleanup()
 
 	if cfg.HTTPSListener.IP == "" && cfg.HTTPListener.IP == "" {
 		slog.Warn("No listener IPs specified\n")
