@@ -311,7 +311,7 @@ func main() {
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
 	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, preprocMetric)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter, sourceIPRateLimiter}, ipEventManager, llmResponder, sessionMgr, desClient, preproc, codeInterpreter, cfg)
+	bs := backend.NewBackendServer(dbc, bMetrics, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter, sourceIPRateLimiter}, cfg, backend.WithJavascriptRunner(jRunner), backend.WithAlertManager(alertMgr), backend.WithVTManager(vtMgr), backend.WithWhoisManager(whoisManager), backend.WithQueryRunner(queryRunner), backend.WithIpEventManager(ipEventManager), backend.WithResponder(llmResponder), backend.WithSessionManager(sessionMgr), backend.WithDescriber(desClient), backend.WithPreprocessor(preproc), backend.WithCodeInterpreter(codeInterpreter))
 	if err = bs.Start(); err != nil {
 		slog.Error("error starting backend", slog.String("error", err.Error()))
 	}

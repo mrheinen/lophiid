@@ -76,6 +76,85 @@ const DebugHeaderSessionID = "X-Lophiid-Session-ID"
 // content (e.g. due to an error).
 const FallbackContent = "<html></html>"
 
+type Option func(*BackendServer)
+
+// WithCodeInterpreter sets the code interpreter for the backend server.
+func WithCodeInterpreter(ci interpreter.CodeInterpreterInterface) Option {
+	return func(s *BackendServer) {
+		s.codeInterpreter = ci
+	}
+}
+
+// WithPreprocessor sets the preprocessor for the backend server.
+func WithPreprocessor(p preprocess.PreProcessInterface) Option {
+	return func(s *BackendServer) {
+		s.preprocessor = p
+	}
+}
+
+// WithSessionManager sets the session manager for the backend server.
+func WithSessionManager(sm session.SessionManager) Option {
+	return func(s *BackendServer) {
+		s.sessionMgr = sm
+	}
+}
+
+// WithDescriber sets the describer client for the backend server.
+func WithDescriber(d describer.DescriberClient) Option {
+	return func(s *BackendServer) {
+		s.describer = d
+	}
+}
+
+// WithIpEventManager sets the IP event manager for the backend server.
+func WithIpEventManager(m analysis.IpEventManager) Option {
+	return func(s *BackendServer) {
+		s.ipEventManager = m
+	}
+}
+
+// WithResponder sets the LLM responder for the backend server.
+func WithResponder(r responder.Responder) Option {
+	return func(s *BackendServer) {
+		s.llmResponder = r
+	}
+}
+
+// WithJavascriptRunner sets the JavaScript runner for the backend server.
+func WithJavascriptRunner(jr javascript.JavascriptRunner) Option {
+	return func(s *BackendServer) {
+		s.jRunner = jr
+	}
+}
+
+// WithAlertManager sets the alert manager for the backend server.
+func WithAlertManager(am *alerting.AlertManager) Option {
+	return func(s *BackendServer) {
+		s.alertMgr = am
+	}
+}
+
+// WithVTManager sets the VirusTotal manager for the backend server.
+func WithVTManager(vtm vt.VTManager) Option {
+	return func(s *BackendServer) {
+		s.vtMgr = vtm
+	}
+}
+
+// WithWhoisManager sets the WHOIS/RDAP manager for the backend server.
+func WithWhoisManager(wm whois.RdapManager) Option {
+	return func(s *BackendServer) {
+		s.whoisMgr = wm
+	}
+}
+
+// WithQueryRunner sets the query runner for the backend server.
+func WithQueryRunner(qr QueryRunner) Option {
+	return func(s *BackendServer) {
+		s.qRunner = qr
+	}
+}
+
 type ReqQueueEntry struct {
 	req        *models.Request
 	rule       models.ContentRule
@@ -126,7 +205,7 @@ type BackendServer struct {
 }
 
 // NewBackendServer creates a new instance of the backend server.
-func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunner javascript.JavascriptRunner, alertMgr *alerting.AlertManager, vtManager vt.VTManager, wManager whois.RdapManager, qRunner QueryRunner, rateLimiters []ratelimit.RateLimiter, ipEventManager analysis.IpEventManager, llmResponder responder.Responder, sessionMgr session.SessionManager, describer describer.DescriberClient, preprocessor preprocess.PreProcessInterface, codeInterpreter interpreter.CodeInterpreterInterface, config Config) *BackendServer {
+func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, rateLimiters []ratelimit.RateLimiter, config Config, opts ...Option) *BackendServer {
 
 	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
 	// Setup the download cache and keep entries for 5 minutes. This means that if
@@ -159,14 +238,9 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 	cpCache := util.NewStringMapCache[map[string]string]("consecutive_payload_cache", time.Minute*20)
 	cpCache.Start()
 
-	return &BackendServer{
+	be := &BackendServer{
 		dbClient:            c,
-		jRunner:             jRunner,
-		qRunner:             qRunner,
 		qRunnerChan:         make(chan bool),
-		alertMgr:            alertMgr,
-		vtMgr:               vtManager,
-		whoisMgr:            wManager,
 		safeRules:           &SafeRules{},
 		maintenanceChan:     make(chan bool),
 		reqsProcessChan:     make(chan bool),
@@ -182,17 +256,17 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, jRunne
 		metrics:             metrics,
 		config:              config,
 		rateLimiters:        rateLimiters,
-		ipEventManager:      ipEventManager,
-		llmResponder:        llmResponder,
-		sessionMgr:          sessionMgr,
-		describer:           describer,
 		hCache:              hCache,
 		HpDefaultContentID:  config.Backend.Advanced.HoneypotDefaultContentID,
-		preprocessor:        preprocessor,
 		payloadCmpHashCache: plCache,
 		payloadSessionCache: cpCache,
-		codeInterpreter:     codeInterpreter,
 	}
+
+	for _, opt := range opts {
+		opt(be)
+	}
+
+	return be
 }
 
 // isDebugIP checks if the given IP is in the list of debug networks configured
