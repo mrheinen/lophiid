@@ -21,24 +21,19 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"lophiid/pkg/api"
+	"lophiid/pkg/bootstrap"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
 	"lophiid/pkg/llm/shell"
-	"lophiid/pkg/util"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
-	"log/slog"
-
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	"github.com/kkyr/fig"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/cors"
 	"github.com/vingarcia/ksql"
@@ -47,7 +42,6 @@ import (
 
 var logLevel = flag.String("v", "debug", "Loglevel (debug, info, warn, error)")
 
-var configFile = flag.String("c", "", "Config file")
 var apiKey = flag.String("k", "", "API key to run with")
 
 type Config struct {
@@ -74,53 +68,20 @@ type Config struct {
 }
 
 func main() {
-
-	flag.Parse()
-
-	if _, err := os.Stat(*configFile); err != nil {
-		if os.IsNotExist(err) {
-			fmt.Printf("Could not find config file: %s\n", *configFile)
-		} else {
-			fmt.Printf("Error accessing config file %s: %v\n", *configFile, err)
-		}
-		return
-	}
-
-	d, f := util.SplitFilepath(*configFile)
-
 	var cfg Config
-	if err := fig.Load(&cfg, fig.File(f), fig.Dirs(d)); err != nil {
-		fmt.Printf("Could not parse config: %s (file: \"%s\")\n", err, *configFile)
-		return
-	}
-
-	lf, err := os.OpenFile(cfg.General.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	cleanup, err := bootstrap.Initialize(&cfg, bootstrap.InitConfig{
+		LogFileExtractor: func(c any) string {
+			return c.(*Config).General.LogFile
+		},
+		LogLevelExtractor: func(c any) string {
+			return c.(*Config).General.LogLevel
+		},
+	})
 	if err != nil {
-		fmt.Printf("Could not open logfile: %s\n", err)
+		fmt.Printf("Initialization failed: %s\n", err)
 		return
 	}
-
-	defer lf.Close()
-
-	teeWriter := util.NewTeeLogWriter([]io.Writer{os.Stdout, lf})
-
-	var programLevel = new(slog.LevelVar) // Info by default
-	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
-	slog.SetDefault(slog.New(h))
-
-	switch cfg.General.LogLevel {
-	case "info":
-		programLevel.Set(slog.LevelInfo)
-	case "warn":
-		programLevel.Set(slog.LevelWarn)
-	case "debug":
-		programLevel.Set(slog.LevelDebug)
-	case "error":
-		programLevel.Set(slog.LevelError)
-	default:
-		fmt.Printf("Unknown log level given. Using info")
-		programLevel.Set(slog.LevelInfo)
-	}
+	defer cleanup()
 
 	db, err := kpgx.New(context.Background(), cfg.Database.Url,
 		ksql.Config{
