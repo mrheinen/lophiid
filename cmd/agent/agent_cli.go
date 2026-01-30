@@ -86,8 +86,8 @@ func main() {
 		},
 	})
 	if err != nil {
-		fmt.Printf("Initialization failed: %s\n", err)
-		return
+		fmt.Fprintln(os.Stderr, "Initialization failed:", err)
+		os.Exit(1)
 	}
 	defer cleanup()
 
