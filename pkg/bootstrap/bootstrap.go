@@ -64,18 +64,12 @@ func Initialize(cfg any, initCfg InitConfig) (func(), error) {
 	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
 	slog.SetDefault(slog.New(h))
 
-	switch logLevel {
-	case "info":
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(logLevel)); err != nil {
+		slog.Error("Unknown log level given, defaulting to info", "level", logLevel)
 		programLevel.Set(slog.LevelInfo)
-	case "warn":
-		programLevel.Set(slog.LevelWarn)
-	case "debug":
-		programLevel.Set(slog.LevelDebug)
-	case "error":
-		programLevel.Set(slog.LevelError)
-	default:
-		slog.Info("Unknown log level given, defaulting to info", "level", logLevel)
-		programLevel.Set(slog.LevelInfo)
+	} else {
+		programLevel.Set(level)
 	}
 
 	return func() {
