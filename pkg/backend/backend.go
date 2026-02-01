@@ -155,6 +155,53 @@ func WithQueryRunner(qr QueryRunner) Option {
 	}
 }
 
+// BackendCaches holds all the caches used by the BackendServer.
+type BackendCaches struct {
+	sessionCache        *util.StringMapCache[models.ContentRule]
+	downloadsCache      *util.StringMapCache[time.Time]
+	downloadsIPCounts   *util.StringMapCache[int64]
+	uploadsIPCounts     *util.StringMapCache[int64]
+	pingsCache          *util.StringMapCache[time.Time]
+	hCache              *util.StringMapCache[models.Honeypot]
+	payloadCmpHashCache *util.StringMapCache[struct{}]
+	payloadSessionCache *util.StringMapCache[map[string]string]
+}
+
+// NewBackendCaches creates and starts all caches used by the BackendServer.
+func NewBackendCaches(config Config) *BackendCaches {
+	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
+
+	dCache := util.NewStringMapCache[time.Time]("download_cache", config.Backend.Advanced.DownloadCacheDuration)
+
+	dIPCount := util.NewStringMapCache[int64]("download_ip_counters", config.Backend.Advanced.DownloadIPCountersDuration)
+	dIPCount.Start()
+
+	uIPCount := util.NewStringMapCache[int64]("upload_ip_counters", config.Backend.Advanced.MaxUploadsPerIPWindow)
+	uIPCount.Start()
+
+	pCache := util.NewStringMapCache[time.Time]("ping_cache", config.Backend.Advanced.PingCacheDuration)
+
+	hCache := util.NewStringMapCache[models.Honeypot]("honeypot_cache", config.Backend.Advanced.HoneypotCacheDuration)
+	hCache.Start()
+
+	plCache := util.NewStringMapCache[struct{}]("payload_cmp_hash_cache", config.Backend.Advanced.PayloadCmpHashDuration)
+	plCache.Start()
+
+	cpCache := util.NewStringMapCache[map[string]string]("consecutive_payload_cache", config.Backend.Advanced.ConsecutivePayloadDuration)
+	cpCache.Start()
+
+	return &BackendCaches{
+		sessionCache:        sCache,
+		downloadsCache:      dCache,
+		downloadsIPCounts:   dIPCount,
+		uploadsIPCounts:     uIPCount,
+		pingsCache:          pCache,
+		hCache:              hCache,
+		payloadCmpHashCache: plCache,
+		payloadSessionCache: cpCache,
+	}
+}
+
 type ReqQueueEntry struct {
 	req        *models.Request
 	rule       models.ContentRule
@@ -206,37 +253,7 @@ type BackendServer struct {
 
 // NewBackendServer creates a new instance of the backend server.
 func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, rateLimiters []ratelimit.RateLimiter, config Config, opts ...Option) *BackendServer {
-
-	sCache := util.NewStringMapCache[models.ContentRule]("content_cache", config.Backend.Advanced.ContentCacheDuration)
-	// Setup the download cache and keep entries for 5 minutes. This means that if
-	// we get a request with the same download (payload URL) within that time
-	// window then we will not download it again.
-	dCache := util.NewStringMapCache[time.Time]("download_cache", config.Backend.Advanced.DownloadCacheDuration)
-	// Set up the counters for downloads per IP. This is a very basic way of
-	// limiting the amount of downloads an IP can make per 5 minutes.
-	dIPCount := util.NewStringMapCache[int64]("download_ip_counters", time.Minute*5)
-	dIPCount.Start()
-
-	// Keep track of how many uploads each IP makes.
-	uIPCount := util.NewStringMapCache[int64]("upload_ip_counters", time.Minute*config.Backend.Advanced.MaxUploadsPerIPWindow)
-	uIPCount.Start()
-
-	// Same for the ping cache.
-	pCache := util.NewStringMapCache[time.Time]("ping_cache", config.Backend.Advanced.PingCacheDuration)
-
-	// The honeypot cache is simply to try and reduce the amount of honeypot
-	// queries to the database.
-	hCache := util.NewStringMapCache[models.Honeypot]("honeypot_cache", time.Minute*15)
-	hCache.Start()
-
-	// The payload cache stores the compare hash of the request as key and is used
-	// to check if future requests for with that hash should also be triaged by
-	// AI to check if there is a payload.
-	plCache := util.NewStringMapCache[struct{}]("payload_cmp_hash_cache", time.Minute*45)
-	plCache.Start()
-
-	cpCache := util.NewStringMapCache[map[string]string]("consecutive_payload_cache", time.Minute*20)
-	cpCache.Start()
+	caches := NewBackendCaches(config)
 
 	be := &BackendServer{
 		dbClient:            c,
@@ -246,20 +263,20 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, rateLi
 		reqsProcessChan:     make(chan bool),
 		reqsQueue:           make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
 		downloadQueue:       make(map[string][]backend_service.CommandDownloadFile),
-		downloadsCache:      dCache,
-		uploadsIPCounts:     uIPCount,
-		downloadsIPCounts:   dIPCount,
+		downloadsCache:      caches.downloadsCache,
+		uploadsIPCounts:     caches.uploadsIPCounts,
+		downloadsIPCounts:   caches.downloadsIPCounts,
 		downloadsIPCountsMu: sync.Mutex{},
 		pingQueue:           make(map[string][]backend_service.CommandPingAddress),
-		pingsCache:          pCache,
-		sessionCache:        sCache,
+		pingsCache:          caches.pingsCache,
+		sessionCache:        caches.sessionCache,
 		metrics:             metrics,
 		config:              config,
 		rateLimiters:        rateLimiters,
-		hCache:              hCache,
+		hCache:              caches.hCache,
 		HpDefaultContentID:  config.Backend.Advanced.HoneypotDefaultContentID,
-		payloadCmpHashCache: plCache,
-		payloadSessionCache: cpCache,
+		payloadCmpHashCache: caches.payloadCmpHashCache,
+		payloadSessionCache: caches.payloadSessionCache,
 	}
 
 	for _, opt := range opts {

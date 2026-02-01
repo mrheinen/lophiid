@@ -60,6 +60,12 @@ func GetDefaultBackendConfig() Config {
 	cfg := Config{}
 	cfg.Backend.Advanced.ContentCacheDuration = time.Minute * 5
 	cfg.Backend.Advanced.DownloadCacheDuration = time.Minute * 5
+	cfg.Backend.Advanced.DownloadIPCountersDuration = time.Minute * 5
+	cfg.Backend.Advanced.MaxUploadsPerIPWindow = time.Minute * 30
+	cfg.Backend.Advanced.PingCacheDuration = time.Minute * 5
+	cfg.Backend.Advanced.HoneypotCacheDuration = time.Minute * 15
+	cfg.Backend.Advanced.PayloadCmpHashDuration = time.Minute * 45
+	cfg.Backend.Advanced.ConsecutivePayloadDuration = time.Minute * 20
 	cfg.Backend.Advanced.RequestsQueueSize = 100
 	cfg.Backend.Advanced.MaxUploadsPerIP = 5
 	cfg.Backend.Advanced.MaxUploadSizeBytes = 500
