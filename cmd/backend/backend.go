@@ -21,9 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"flag"
 	"fmt"
-	"io"
 	"log"
 	"log/slog"
 	"lophiid/backend_service"
@@ -34,6 +32,7 @@ import (
 	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/backend/responder"
 	"lophiid/pkg/backend/session"
+	"lophiid/pkg/bootstrap"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
@@ -54,7 +53,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/kkyr/fig"
 	"github.com/openrdap/rdap"
 	kpgx "github.com/vingarcia/ksql/adapters/kpgx5"
 	"google.golang.org/grpc"
@@ -65,57 +63,22 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var configFile = flag.String("c", "", "Config file")
-
 func main() {
-
-	flag.Parse()
-
 	var cfg backend.Config
 
-	if _, err := os.Stat(*configFile); err != nil {
-		if os.IsNotExist(err) {
-			fmt.Printf("Could not find config file: %s\n", *configFile)
-		} else {
-			fmt.Printf("Error accessing config file %s: %v\n", *configFile, err)
-		}
-		return
-	}
-
-	d, f := util.SplitFilepath(*configFile)
-
-	if err := fig.Load(&cfg, fig.File(f), fig.Dirs(d)); err != nil {
-		fmt.Printf("Could not parse config: %s (file: \"%s\")\n", err, *configFile)
-		return
-	}
-
-	lf, err := util.NewDailyRotatingLogWriter(cfg.Backend.LogFile)
+	cleanup, err := bootstrap.Initialize(&cfg, bootstrap.InitConfig{
+		LogFileExtractor: func(c any) string {
+			return c.(*backend.Config).Backend.LogFile
+		},
+		LogLevelExtractor: func(c any) string {
+			return c.(*backend.Config).Backend.LogLevel
+		},
+	})
 	if err != nil {
-		fmt.Printf("Could not open logfile: %s\n", err)
+		fmt.Printf("Initialization failed: %s\n", err)
 		return
 	}
-
-	defer lf.Close()
-
-	teeWriter := util.NewTeeLogWriter([]io.Writer{os.Stdout, lf})
-
-	var programLevel = new(slog.LevelVar) // Info by default
-	h := slog.NewTextHandler(teeWriter, &slog.HandlerOptions{Level: programLevel})
-	slog.SetDefault(slog.New(h))
-
-	switch cfg.Backend.LogLevel {
-	case "info":
-		programLevel.Set(slog.LevelInfo)
-	case "warn":
-		programLevel.Set(slog.LevelWarn)
-	case "debug":
-		programLevel.Set(slog.LevelDebug)
-	case "error":
-		programLevel.Set(slog.LevelError)
-	default:
-		fmt.Printf("Unknown log level given. Using info")
-		programLevel.Set(slog.LevelInfo)
-	}
+	defer cleanup()
 
 	metricsRegistry := prometheus.NewRegistry()
 	http.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{Registry: metricsRegistry}))
@@ -348,7 +311,7 @@ func main() {
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
 	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, preprocMetric)
 
-	bs := backend.NewBackendServer(dbc, bMetrics, jRunner, alertMgr, vtMgr, whoisManager, queryRunner, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter, sourceIPRateLimiter}, ipEventManager, llmResponder, sessionMgr, desClient, preproc, codeInterpreter, cfg)
+	bs := backend.NewBackendServer(dbc, bMetrics, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter, sourceIPRateLimiter}, cfg, backend.WithJavascriptRunner(jRunner), backend.WithAlertManager(alertMgr), backend.WithVTManager(vtMgr), backend.WithWhoisManager(whoisManager), backend.WithQueryRunner(queryRunner), backend.WithIpEventManager(ipEventManager), backend.WithResponder(llmResponder), backend.WithSessionManager(sessionMgr), backend.WithDescriber(desClient), backend.WithPreprocessor(preproc), backend.WithCodeInterpreter(codeInterpreter))
 	if err = bs.Start(); err != nil {
 		slog.Error("error starting backend", slog.String("error", err.Error()))
 	}
