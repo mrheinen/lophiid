@@ -73,6 +73,10 @@ type Config struct {
 			MaxUploadsPerIPWindow      time.Duration `fig:"max_uploads_per_ip_window" default:"30m"`
 
 			PingCacheDuration          time.Duration `fig:"ping_cache_duration" default:"5m"`
+			DownloadIPCountersDuration time.Duration `fig:"download_ip_counters_duration" default:"5m"`
+			HoneypotCacheDuration      time.Duration `fig:"honeypot_cache_duration" default:"15m"`
+			PayloadCmpHashDuration     time.Duration `fig:"payload_cmp_hash_duration" default:"45m"`
+			ConsecutivePayloadDuration time.Duration `fig:"consecutive_payload_duration" default:"20m"`
 			QueriesRunnerInterval      time.Duration `fig:"stored_queries_run_interval" default:"1h"`
 			RequestsQueueSize          int           `fig:"requests_queue_size" default:"500"`
 			MaintenanceRoutineInterval time.Duration `fig:"maintenance_routine_interval" default:"1m"`
