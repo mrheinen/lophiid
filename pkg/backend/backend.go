@@ -157,14 +157,14 @@ func WithQueryRunner(qr QueryRunner) Option {
 
 // BackendCaches holds all the caches used by the BackendServer.
 type BackendCaches struct {
-	sessionCache        *util.StringMapCache[models.ContentRule]
-	downloadsCache      *util.StringMapCache[time.Time]
-	downloadsIPCounts   *util.StringMapCache[int64]
-	uploadsIPCounts     *util.StringMapCache[int64]
-	pingsCache          *util.StringMapCache[time.Time]
-	hCache              *util.StringMapCache[models.Honeypot]
-	payloadCmpHashCache *util.StringMapCache[struct{}]
-	payloadSessionCache *util.StringMapCache[map[string]string]
+	sessionCache            *util.StringMapCache[models.ContentRule]
+	downloadsCache          *util.StringMapCache[time.Time]
+	downloadsIPCounts       *util.StringMapCache[int64]
+	uploadsIPCounts         *util.StringMapCache[int64]
+	pingsCache              *util.StringMapCache[time.Time]
+	hCache                  *util.StringMapCache[models.Honeypot]
+	payloadCmpHashCache     *util.StringMapCache[struct{}]
+	consecutivePayloadCache *util.StringMapCache[map[string]string]
 }
 
 // NewBackendCaches creates and starts all caches used by the BackendServer.
@@ -191,14 +191,14 @@ func NewBackendCaches(config Config) *BackendCaches {
 	cpCache.Start()
 
 	return &BackendCaches{
-		sessionCache:        sCache,
-		downloadsCache:      dCache,
-		downloadsIPCounts:   dIPCount,
-		uploadsIPCounts:     uIPCount,
-		pingsCache:          pCache,
-		hCache:              hCache,
-		payloadCmpHashCache: plCache,
-		payloadSessionCache: cpCache,
+		sessionCache:            sCache,
+		downloadsCache:          dCache,
+		downloadsIPCounts:       dIPCount,
+		uploadsIPCounts:         uIPCount,
+		pingsCache:              pCache,
+		hCache:                  hCache,
+		payloadCmpHashCache:     plCache,
+		consecutivePayloadCache: cpCache,
 	}
 }
 
@@ -276,7 +276,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, rateLi
 		hCache:              caches.hCache,
 		HpDefaultContentID:  config.Backend.Advanced.HoneypotDefaultContentID,
 		payloadCmpHashCache: caches.payloadCmpHashCache,
-		payloadSessionCache: caches.payloadSessionCache,
+		payloadSessionCache: caches.consecutivePayloadCache,
 	}
 
 	for _, opt := range opts {
