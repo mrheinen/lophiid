@@ -86,6 +86,23 @@ type StoredQueryJSON struct {
 	TagsToApply []string  `json:"tags_to_apply"`
 }
 
+func GetQueryParameters(req *http.Request) (int64, int64, string, error) {
+	offset := req.URL.Query().Get("offset")
+	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	if err != nil {
+		return 0, 0, "", err
+	}
+
+	limit := req.URL.Query().Get("limit")
+	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil {
+		return 0, 0, "", err
+	}
+
+	query := req.URL.Query().Get("q")
+	return iOffset, iLimit, query, nil
+}
+
 func NewApiServer(dbc database.DatabaseClient, jRunner javascript.JavascriptRunner, apiKey string) *ApiServer {
 
 	return &ApiServer{
@@ -857,22 +874,14 @@ func (a *ApiServer) HandleUpsertStoredQuery(w http.ResponseWriter, req *http.Req
 }
 
 func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var reqs []models.Request
-	query := req.URL.Query().Get("q")
-	reqs, err = a.dbc.SearchRequests(iOffset, iLimit, query)
+	reqs, err = a.dbc.SearchRequests(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -882,22 +891,14 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 }
 
 func (a *ApiServer) HandleSearchYara(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var rls []models.Yara
-	query := req.URL.Query().Get("q")
-	rls, err = a.dbc.SearchYara(iOffset, iLimit, query)
+	rls, err = a.dbc.SearchYara(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -907,22 +908,14 @@ func (a *ApiServer) HandleSearchYara(w http.ResponseWriter, req *http.Request) {
 }
 
 func (a *ApiServer) HandleSearchContentRules(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var rls []models.ContentRule
-	query := req.URL.Query().Get("q")
-	rls, err = a.dbc.SearchContentRules(iOffset, iLimit, query)
+	rls, err = a.dbc.SearchContentRules(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -932,22 +925,14 @@ func (a *ApiServer) HandleSearchContentRules(w http.ResponseWriter, req *http.Re
 }
 
 func (a *ApiServer) HandleSearchContent(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var rls []models.Content
-	query := req.URL.Query().Get("q")
-	rls, err = a.dbc.SearchContent(iOffset, iLimit, query)
+	rls, err = a.dbc.SearchContent(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -957,22 +942,14 @@ func (a *ApiServer) HandleSearchContent(w http.ResponseWriter, req *http.Request
 }
 
 func (a *ApiServer) HandleSearchEvents(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var rls []models.IpEvent
-	query := req.URL.Query().Get("q")
-	rls, err = a.dbc.SearchEvents(iOffset, iLimit, query)
+	rls, err = a.dbc.SearchEvents(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -982,22 +959,14 @@ func (a *ApiServer) HandleSearchEvents(w http.ResponseWriter, req *http.Request)
 }
 
 func (a *ApiServer) HandleSearchDownloads(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var rls []models.Download
-	query := req.URL.Query().Get("q")
-	rls, err = a.dbc.SearchDownloads(iOffset, iLimit, query)
+	rls, err = a.dbc.SearchDownloads(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -1007,22 +976,14 @@ func (a *ApiServer) HandleSearchDownloads(w http.ResponseWriter, req *http.Reque
 }
 
 func (a *ApiServer) HandleSearchHoneypots(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var rls []models.Honeypot
-	query := req.URL.Query().Get("q")
-	rls, err = a.dbc.SearchHoneypots(iOffset, iLimit, query)
+	rls, err = a.dbc.SearchHoneypots(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -1032,22 +993,15 @@ func (a *ApiServer) HandleSearchHoneypots(w http.ResponseWriter, req *http.Reque
 }
 
 func (a *ApiServer) HandleSearchStoredQueries(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var qs []models.StoredQuery
-	query := req.URL.Query().Get("q")
-	qs, err = a.dbc.SearchStoredQuery(iOffset, iLimit, query)
+	qs, err = a.dbc.SearchStoredQuery(offset, limit, query)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
@@ -1057,22 +1011,14 @@ func (a *ApiServer) HandleSearchStoredQueries(w http.ResponseWriter, req *http.R
 }
 
 func (a *ApiServer) HandleSearchTags(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
-	if err != nil {
-		a.sendStatus(w, err.Error(), ResultError, nil)
-		return
-	}
 	var rls []models.Tag
-	query := req.URL.Query().Get("q")
-	rls, err = a.dbc.SearchTags(iOffset, iLimit, query)
+	rls, err = a.dbc.SearchTags(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -1082,22 +1028,31 @@ func (a *ApiServer) HandleSearchTags(w http.ResponseWriter, req *http.Request) {
 }
 
 func (a *ApiServer) HandleSearchApps(w http.ResponseWriter, req *http.Request) {
-	offset := req.URL.Query().Get("offset")
-	iOffset, err := strconv.ParseInt(offset, 10, 64)
+	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
 
-	limit := req.URL.Query().Get("limit")
-	iLimit, err := strconv.ParseInt(limit, 10, 64)
+	var rls []models.Application
+	rls, err = a.dbc.SearchApps(offset, limit, query)
+
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
 		return
 	}
-	var rls []models.Application
-	query := req.URL.Query().Get("q")
-	rls, err = a.dbc.SearchApps(iOffset, iLimit, query)
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
+func (a *ApiServer) HandleSearchRuleGroups(w http.ResponseWriter, req *http.Request) {
+	offset, limit, query, err := GetQueryParameters(req)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	var rls []models.RuleGroup
+	rls, err = a.dbc.SearchRuleGroup(offset, limit, query)
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)

@@ -174,10 +174,11 @@ func main() {
 
 	r.HandleFunc("/stats/global", as.HandleGetGlobalStatistics).Methods("GET")
 
+	r.HandleFunc("/rulegroup/segment", as.HandleSearchRuleGroups).Methods("GET")
 	r.Use(as.AuthMW)
 
 	origins := make([]string, 0)
-	for _, o := range strings.Split(cfg.Cors.AllowedOrigins, ",") {
+	for o := range strings.SplitSeq(cfg.Cors.AllowedOrigins, ",") {
 		origins = append(origins, strings.TrimSpace(o))
 	}
 
