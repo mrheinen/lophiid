@@ -65,7 +65,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="stat in stats.top_10_source_ips_last_24_hours">
+              <tr v-for="stat in stats.top_10_source_ips_last_24_hours" :key="stat.source_ip">
                 <td><a :href="'/requests?q=source_ip:' + stat.source_ip">{{ stat.source_ip }}</a></td>
                 <td>{{ stat.total_requests }}</td>
               </tr>
@@ -81,7 +81,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="stat in stats.top_10_uris_last_24_hours">
+              <tr v-for="stat in stats.top_10_uris_last_24_hours" :key="stat.uri">
                 <td><a :href="'/requests?q=uri:' + encodeURIComponent(stat.uri)">{{ stat.uri }}</a></td>
                 <td>{{ stat.total_requests }}</td>
               </tr>
