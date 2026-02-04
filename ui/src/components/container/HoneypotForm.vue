@@ -59,7 +59,8 @@
             {{ localSSLPorts }}
           </div>
 
-
+          <label class="label">Rule Group</label>
+          <RuleGroupSelector v-model="localHoneypot.rule_group_id" />
 
           <br>
           <PrimeButton
@@ -108,7 +109,13 @@
 </template>
 
 <script>
+
+import RuleGroupSelector from "../RuleGroupSelector.vue";
+
 export default {
+  components: {
+    RuleGroupSelector,
+  },
   inject: ["config"],
   props: {
     "honeypot": {
@@ -137,7 +144,6 @@ export default {
     },
   },
   created() {
-    // this.app = this.modelValue;
   },
   methods: {
     requireConfirmation(event) {

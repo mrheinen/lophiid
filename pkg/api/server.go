@@ -716,7 +716,18 @@ func (a *ApiServer) HandleUpdateHoneypot(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	err := a.dbc.Update(&rb)
+	rules, err := a.dbc.SearchContent(0, 1, fmt.Sprintf("id:%d", rb.DefaultContentID))
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("fetching default content: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	if len(rules) == 0 {
+		a.sendStatus(w, "content rule does not exist", ResultError, nil)
+		return
+	}
+
+	err = a.dbc.Update(&rb)
 	if err != nil {
 		a.sendStatus(w, fmt.Sprintf("unable to update honeypot: %s", err.Error()), ResultError, nil)
 		return
