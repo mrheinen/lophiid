@@ -721,14 +721,14 @@ func (a *ApiServer) HandleUpdateHoneypot(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	rules, err := a.dbc.SearchContent(0, 1, fmt.Sprintf("id:%d", rb.DefaultContentID))
+	contents, err := a.dbc.SearchContent(0, 1, fmt.Sprintf("id:%d", rb.DefaultContentID))
 	if err != nil {
 		a.sendStatus(w, fmt.Sprintf("fetching default content: %s", err.Error()), ResultError, nil)
 		return
 	}
 
-	if len(rules) == 0 {
-		a.sendStatus(w, "content rule does not exist", ResultError, nil)
+	if len(contents) == 0 {
+		a.sendStatus(w, "default content does not exist", ResultError, nil)
 		return
 	}
 
