@@ -88,12 +88,17 @@ type StoredQueryJSON struct {
 
 func GetQueryParameters(req *http.Request) (int64, int64, string, error) {
 	offset := req.URL.Query().Get("offset")
+	limit := req.URL.Query().Get("limit")
+
+	if offset == "" || limit == "" {
+		return 0, 0, "", errors.New("offset and limit must be provided")
+	}
+
 	iOffset, err := strconv.ParseInt(offset, 10, 64)
 	if err != nil {
 		return 0, 0, "", err
 	}
 
-	limit := req.URL.Query().Get("limit")
 	iLimit, err := strconv.ParseInt(limit, 10, 64)
 	if err != nil {
 		return 0, 0, "", err
