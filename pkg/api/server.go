@@ -96,12 +96,12 @@ func GetQueryParameters(req *http.Request) (int64, int64, string, error) {
 
 	iOffset, err := strconv.ParseInt(offset, 10, 64)
 	if err != nil {
-		return 0, 0, "", err
+		return 0, 0, "", fmt.Errorf("invalid offset %s: %w", offset, err)
 	}
 
 	iLimit, err := strconv.ParseInt(limit, 10, 64)
 	if err != nil {
-		return 0, 0, "", err
+		return 0, 0, "", fmt.Errorf("invalid limit %s: %w", limit, err)
 	}
 
 	query := req.URL.Query().Get("q")
