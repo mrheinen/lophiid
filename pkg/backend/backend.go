@@ -1071,7 +1071,12 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 			return fmt.Errorf("error inserting tmp rule: %w", err)
 		}
 
-		if _, err := s.dbClient.Insert(&models.RulePerGroup{RuleID: rule.ModelID(), GroupID: constants.DefaultRuleGroupID}); err != nil {
+		hp, err := s.getCachedHoneypot(sReq.HoneypotIP)
+		if err != nil {
+			return fmt.Errorf("error finding honeypot. IP: %s, Err: %w", sReq.HoneypotIP, err)
+		}
+
+		if _, err := s.dbClient.Insert(&models.RulePerGroup{RuleID: rule.ModelID(), GroupID: hp.RuleGroupID}); err != nil {
 			return fmt.Errorf("error inserting rule per group: %w", err)
 		}
 
