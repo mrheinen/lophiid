@@ -23,6 +23,7 @@ import (
 
 var configFile = flag.String("c", "backend-config.json", "Location of the config")
 var logFile = flag.String("l", "shell.log", "Location of the log file")
+var sessionID = flag.Int64("s", 42, "Session ID")
 
 func main() {
 
@@ -62,7 +63,8 @@ func main() {
 
 	metricsRegistry := prometheus.NewRegistry()
 	llmMetrics := llm.CreateLLMMetrics(metricsRegistry)
-	responderLLMCfg, err := cfg.GetLLMConfig(cfg.AI.Responder.LLMConfig)
+	responderLLMCfg, err := cfg.GetLLMConfig(cfg.AI.ShellEmulation.LLMConfig)
+	slog.Info("Using model", slog.String("model", responderLLMCfg.PrimaryLLM.Model))
 	if err != nil {
 		slog.Error("error getting responder LLM config", slog.String("error", err.Error()))
 		return
@@ -73,7 +75,7 @@ func main() {
 
 	fakeRequest := models.Request{
 		ID:        42,
-		SessionID: 42,
+		SessionID: *sessionID,
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
