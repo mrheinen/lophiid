@@ -1885,6 +1885,84 @@ func TestHandlePreProcessUploadIPLimit(t *testing.T) {
 	}
 }
 
+// TestHandlePreProcessRulePerGroup tests that handlePreProcess looks up the
+// honeypot and inserts a RulePerGroup linking the rule to the honeypot's group.
+func TestHandlePreProcessRulePerGroup(t *testing.T) {
+	allowNet := "192.168.1.0/24"
+	backendConfig := GetDefaultBackendConfig()
+
+	for _, test := range []struct {
+		description       string
+		honeypotToReturn  models.Honeypot
+		honeypotError     error
+		expectError       bool
+		expectErrorString string
+		expectedGroupID   int64
+	}{
+		{
+			description:      "Success inserts RulePerGroup with correct GroupID",
+			honeypotToReturn: models.Honeypot{RuleGroupID: 42},
+			expectError:      false,
+			expectedGroupID:  42,
+		},
+		{
+			description:       "Honeypot lookup error propagates",
+			honeypotError:     fmt.Errorf("db down"),
+			expectError:       true,
+			expectErrorString: "error finding honeypot",
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fdbc := &database.FakeDatabaseClient{
+				HoneypotToReturn:      test.honeypotToReturn,
+				HoneypotErrorToReturn: test.honeypotError,
+			}
+			reg := prometheus.NewRegistry()
+			bMetrics := CreateBackendMetrics(reg)
+			fakeLimiter := ratelimit.FakeRateLimiter{BoolToReturn: true}
+			sMetrics := session.CreateSessionMetrics(reg)
+			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+			fakePreprocessor := preprocess.FakePreProcessor{
+				ResultToReturn: &preprocess.PreProcessResult{
+					HasPayload:  true,
+					PayloadType: "FILE_UPLOAD",
+				},
+				PayloadResult: &preprocess.PayloadProcessingResult{
+					TmpContentRule: &models.TemporaryContentRule{
+						Content: models.Content{Data: []byte("small")},
+						Rule:    models.ContentRule{AllowFromNet: &allowNet},
+					},
+				},
+			}
+			fakeInter := &interpreter.FakeCodeInterpreter{}
+
+			b := NewBackendServer(fdbc, bMetrics, []ratelimit.RateLimiter{&fakeLimiter}, backendConfig, WithJavascriptRunner(&javascript.FakeJavascriptRunner{}), WithAlertManager(alerting.NewAlertManager(42)), WithVTManager(&vt.FakeVTManager{}), WithWhoisManager(&whois.FakeRdapManager{}), WithQueryRunner(&FakeQueryRunner{}), WithIpEventManager(&analysis.FakeIpEventManager{}), WithResponder(&responder.FakeResponder{}), WithSessionManager(fSessionMgr), WithDescriber(&describer.FakeDescriberClient{}), WithPreprocessor(&fakePreprocessor), WithCodeInterpreter(fakeInter))
+			b.safeRules.Set(make(map[int64][]models.ContentRule))
+
+			content := &models.Content{Data: []byte("Original content")}
+			res := &backend_service.HttpResponse{Body: []byte("Original content")}
+			finalHeaders := make(map[string]string)
+			sReq := &models.Request{
+				Uri:        "/test",
+				SourceIP:   "10.0.0.1",
+				HoneypotIP: "5.6.7.8",
+			}
+
+			err := b.handlePreProcess(sReq, content, res, &finalHeaders, time.Now(), false)
+
+			if test.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.expectErrorString)
+			} else {
+				assert.NoError(t, err)
+				rpg, ok := fdbc.LastDataModelSeen.(*models.RulePerGroup)
+				assert.True(t, ok, "expected last insert to be *RulePerGroup")
+				assert.Equal(t, test.expectedGroupID, rpg.GroupID)
+			}
+		})
+	}
+}
+
 func TestCheckForConsecutivePayloads(t *testing.T) {
 	for _, test := range []struct {
 		description        string

@@ -44,7 +44,7 @@ Key features:
 - Extensive metrics for prometheus/grafana
 - Highly customizable
 
-For more information check out the [Detailed Description](./DETAILED_DESCRIPTION.md) document. To get started, make use of the [Quick Start](./QUICKSTART.md) guide.
+For more information check out the [Detailed Description](./DETAILED_DESCRIPTION.md) document. To get started, make use of the [Quick Start](./QUICK_START.md) guide.
 
 If you need any assistance, please don't hesitate to open an issue or to reach out to niels.heinen{at}gmail.com.
 

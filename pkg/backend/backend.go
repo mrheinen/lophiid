@@ -642,8 +642,7 @@ func (s *BackendServer) getCachedHoneypot(hpIP string) (*models.Honeypot, error)
 		return &hps[0], nil
 	}
 
-	slog.Error("could not find honeypot", slog.String("ip", hpIP))
-	return nil, nil
+	return nil, fmt.Errorf("could not find honeypot: %s", hpIP)
 }
 
 func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo models.Download) bool {
@@ -1071,7 +1070,12 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 			return fmt.Errorf("error inserting tmp rule: %w", err)
 		}
 
-		if _, err := s.dbClient.Insert(&models.RulePerGroup{RuleID: rule.ModelID(), GroupID: constants.DefaultRuleGroupID}); err != nil {
+		hp, err := s.getCachedHoneypot(sReq.HoneypotIP)
+		if err != nil {
+			return fmt.Errorf("error finding honeypot. IP: %s, Err: %w", sReq.HoneypotIP, err)
+		}
+
+		if _, err := s.dbClient.Insert(&models.RulePerGroup{RuleID: rule.ModelID(), GroupID: hp.RuleGroupID}); err != nil {
 			return fmt.Errorf("error inserting rule per group: %w", err)
 		}
 
@@ -1167,11 +1171,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	if hpErr != nil {
 		logutil.Error("error finding honeypot", sReq, slog.String("error", hpErr.Error()), slog.String("honeypot", sReq.HoneypotIP))
 		return nil, status.Errorf(codes.Internal, "honeypot error: %s", hpErr.Error())
-	}
-
-	if hp == nil {
-		logutil.Error("could not find honeypot", sReq, slog.String("ip", sReq.HoneypotIP))
-		return nil, status.Errorf(codes.NotFound, "could not find honeypot")
 	}
 
 	matchedRule, ruleErr := GetMatchedRule(s.safeRules.GetGroup(hp.RuleGroupID), sReq, session)
