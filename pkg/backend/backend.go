@@ -642,8 +642,7 @@ func (s *BackendServer) getCachedHoneypot(hpIP string) (*models.Honeypot, error)
 		return &hps[0], nil
 	}
 
-	slog.Error("could not find honeypot", slog.String("ip", hpIP))
-	return nil, nil
+	return nil, fmt.Errorf("could not find honeypot: %s", hpIP)
 }
 
 func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo models.Download) bool {
@@ -1172,11 +1171,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	if hpErr != nil {
 		logutil.Error("error finding honeypot", sReq, slog.String("error", hpErr.Error()), slog.String("honeypot", sReq.HoneypotIP))
 		return nil, status.Errorf(codes.Internal, "honeypot error: %s", hpErr.Error())
-	}
-
-	if hp == nil {
-		logutil.Error("could not find honeypot", sReq, slog.String("ip", sReq.HoneypotIP))
-		return nil, status.Errorf(codes.NotFound, "could not find honeypot")
 	}
 
 	matchedRule, ruleErr := GetMatchedRule(s.safeRules.GetGroup(hp.RuleGroupID), sReq, session)
