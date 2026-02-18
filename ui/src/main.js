@@ -19,6 +19,7 @@ import QueryList from './components/container/QueryList.vue';
 import EventsList from './components/container/EventsList.vue';
 import TagList from './components/container/TagList.vue';
 import YaraList from './components/container/YaraList.vue';
+import RuleGroupList from './components/container/RuleGroupList.vue';
 import GlobalStats from './components/container/GlobalStats.vue';
 import InfoCard from './components/cards/InfoCard.vue';
 import PrimeVue from './../node_modules/primevue/config';
@@ -58,6 +59,8 @@ const router = createRouter({
     {path: Config.eventSegmentLink, component: EventsList },
     {path: Config.yaraLink, component: YaraList },
     {path: Config.yaraSegmentLink, component: YaraList },
+    {path: Config.ruleGroupsLink, component: RuleGroupList },
+    {path: Config.ruleGroupsSegmentLink, component: RuleGroupList },
     {path: Config.statsLink, component: GlobalStats },
   ]
 });

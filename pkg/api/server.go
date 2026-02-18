@@ -940,6 +940,81 @@ func (a *ApiServer) HandleSearchContentRules(w http.ResponseWriter, req *http.Re
 	a.sendStatus(w, "", ResultSuccess, rls)
 }
 
+func (a *ApiServer) HandleSearchAppPerGroup(w http.ResponseWriter, req *http.Request) {
+	offset, limit, query, err := GetQueryParameters(req)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	var rls []models.AppPerGroup
+	rls, err = a.dbc.SearchAppPerGroup(offset, limit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
+func (a *ApiServer) HandleGetAppsPerGroup(w http.ResponseWriter, req *http.Request) {
+	rls, err := a.dbc.GetAppPerGroupJoin()
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	type AppsGroup struct {
+		RuleGroup models.RuleGroup     `json:"rulegroup"`
+		Apps      []models.Application `json:"apps"`
+	}
+
+	ret := make(map[int64]*AppsGroup)
+
+	for _, appgroup := range rls {
+		if _, ok := ret[appgroup.RuleGroup.ID]; !ok {
+			ret[appgroup.RuleGroup.ID] = &AppsGroup{
+				RuleGroup: appgroup.RuleGroup,
+				Apps:      []models.Application{appgroup.App},
+			}
+		} else {
+			ret[appgroup.RuleGroup.ID].Apps = append(ret[appgroup.RuleGroup.ID].Apps, appgroup.App)
+		}
+	}
+
+	a.sendStatus(w, "", ResultSuccess, ret)
+}
+
+// HandleUpdateAppsForGroup handles updating the applications for a rule group.
+// It expects a JSON body with group_id and app_ids fields. It replaces all
+// existing app_per_group entries for the given group with the provided app IDs.
+func (a *ApiServer) HandleUpdateAppsForGroup(w http.ResponseWriter, req *http.Request) {
+	var rb struct {
+		GroupID int64   `json:"group_id"`
+		AppIDs  []int64 `json:"app_ids"`
+	}
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&rb); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if rb.GroupID == 0 {
+		a.sendStatus(w, "group_id is required", ResultError, nil)
+		return
+	}
+
+	if err := a.dbc.ReplaceAppsForGroup(rb.GroupID, rb.AppIDs); err != nil {
+		a.sendStatus(w, fmt.Sprintf("failed to update apps for group: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, fmt.Sprintf("Updated apps for group %d", rb.GroupID), ResultSuccess, nil)
+}
+
 func (a *ApiServer) HandleSearchContent(w http.ResponseWriter, req *http.Request) {
 	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
@@ -1075,6 +1150,68 @@ func (a *ApiServer) HandleSearchRuleGroups(w http.ResponseWriter, req *http.Requ
 		return
 	}
 	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
+// HandleUpsertRuleGroup handles creating or updating a rule group.
+func (a *ApiServer) HandleUpsertRuleGroup(w http.ResponseWriter, req *http.Request) {
+	var rb models.RuleGroup
+	rb.ID = 0
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&rb); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if rb.Name == "" {
+		a.sendStatus(w, "Name is required", ResultError, nil)
+		return
+	}
+
+	if rb.ID == 0 {
+		dm, err := a.dbc.Insert(&rb)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("unable to insert rule group: %s", err.Error()), ResultError, nil)
+			return
+		}
+
+		a.sendStatus(w, fmt.Sprintf("Added new rule group (id: %d)", dm.ModelID()), ResultSuccess, []models.DataModel{dm})
+		return
+	} else {
+		err := a.dbc.Update(&rb)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("unable to update rule group: %s", err.Error()), ResultError, nil)
+			return
+		}
+
+		a.sendStatus(w, "Updated rule group", ResultSuccess, nil)
+		return
+	}
+}
+
+// HandleDeleteRuleGroup handles deleting a rule group by ID.
+func (a *ApiServer) HandleDeleteRuleGroup(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	id := req.Form.Get("id")
+	intID, err := strconv.ParseInt(id, 10, 64)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	err = a.dbc.Delete(&models.RuleGroup{ID: intID})
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, fmt.Sprintf("Deleted rule group with ID: %s", id), ResultSuccess, nil)
 }
 
 func (a *ApiServer) HandleGetMetadataForRequest(w http.ResponseWriter, req *http.Request) {

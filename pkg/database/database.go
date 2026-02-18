@@ -53,6 +53,7 @@ var YaraTable = ksql.NewTable("yara")
 var CodeEmuTable = ksql.NewTable("llm_code_execution")
 var TagPerRuleTable = ksql.NewTable("tag_per_rule")
 var RulePerGroupTable = ksql.NewTable("rule_per_group")
+var AppPerGroupTable = ksql.NewTable("app_per_group")
 var RuleGroupTable = ksql.NewTable("rule_group")
 
 type DatabaseClient interface {
@@ -84,11 +85,14 @@ type DatabaseClient interface {
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
 	SearchTagPerRule(offset int64, limit int64, query string) ([]models.TagPerRule, error)
 	SearchTagPerRequest(offset int64, limit int64, query string) ([]models.TagPerRequest, error)
+	SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error)
 	SearchRulePerGroup(offset int64, limit int64, query string) ([]models.RulePerGroup, error)
 	SearchRuleGroup(offset int64, limit int64, query string) ([]models.RuleGroup, error)
 	GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error)
 	GetRulePerGroupJoin() ([]models.RulePerGroupJoin, error)
+	GetAppPerGroupJoin() ([]models.AppPerGroupJoin, error)
+	ReplaceAppsForGroup(groupID int64, appIDs []int64) error
 	GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error)
 	SimpleQuery(query string, result any) (any, error)
 }
@@ -193,6 +197,7 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["SessionExecutionContext"] = &SessionContextTable
 	sqlTable["LLMCodeExecution"] = &CodeEmuTable
 	sqlTable["TagPerRule"] = &TagPerRuleTable
+	sqlTable["AppPerGroup"] = &AppPerGroupTable
 	sqlTable["RulePerGroup"] = &RulePerGroupTable
 	sqlTable["RuleGroup"] = &RuleGroupTable
 
@@ -515,6 +520,12 @@ func (d *KSQLClient) SearchTagPerRequest(offset int64, limit int64, query string
 	return result, err
 }
 
+func (d *KSQLClient) SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error) {
+	var result []models.AppPerGroup
+	err := d.Search(offset, limit, query, appPerGroupConfig, &result)
+	return result, err
+}
+
 // SearchRulePerGroup searches for rule-per-group associations based on the query.
 func (d *KSQLClient) SearchRulePerGroup(offset int64, limit int64, query string) ([]models.RulePerGroup, error) {
 	var result []models.RulePerGroup
@@ -539,6 +550,34 @@ func (d *KSQLClient) GetRulePerGroupJoin() ([]models.RulePerGroupJoin, error) {
 	var md []models.RulePerGroupJoin
 	err := d.db.Query(d.ctx, &md, "FROM rule_per_group JOIN content_rule ON content_rule.id = rule_per_group.rule_id")
 	return md, err
+}
+
+func (d *KSQLClient) GetAppPerGroupJoin() ([]models.AppPerGroupJoin, error) {
+	var md []models.AppPerGroupJoin
+	err := d.db.Query(d.ctx, &md, "FROM app_per_group JOIN app ON app.id = app_per_group.app_id JOIN rule_group ON app_per_group.group_id = rule_group.id")
+	return md, err
+}
+
+// ReplaceAppsForGroup atomically replaces all app_per_group entries for the
+// given group ID within a single transaction.
+func (d *KSQLClient) ReplaceAppsForGroup(groupID int64, appIDs []int64) error {
+	return d.db.Transaction(d.ctx, func(db ksql.Provider) error {
+		if _, err := db.Exec(d.ctx, "DELETE FROM app_per_group WHERE group_id = $1", groupID); err != nil {
+			return fmt.Errorf("deleting existing apps: %w", err)
+		}
+
+		for _, appID := range appIDs {
+			apg := models.AppPerGroup{
+				AppID:   appID,
+				GroupID: groupID,
+			}
+			if err := db.Insert(d.ctx, AppPerGroupTable, &apg); err != nil {
+				return fmt.Errorf("inserting app %d: %w", appID, err)
+			}
+		}
+
+		return nil
+	})
 }
 
 func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error) {

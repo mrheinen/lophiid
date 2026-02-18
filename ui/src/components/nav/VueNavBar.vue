@@ -104,6 +104,13 @@ export default {
                 this.$router.push(this.config.appsLink);
               },
             },
+            {
+              label: "Rule Groups",
+              icon: "ico pi pi-objects-column",
+              command: () => {
+                this.$router.push(this.config.ruleGroupsLink);
+              },
+            },
           ],
         },
 

@@ -809,3 +809,81 @@ func TestHandleUpdateSingleDownload(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleUpdateAppsForGroup(t *testing.T) {
+	for _, test := range []struct {
+		description       string
+		body              string
+		status            string
+		statusMsgContains string
+		dbErr             error
+	}{
+		{
+			description:       "Success with apps",
+			body:              `{"group_id": 1, "app_ids": [10, 20]}`,
+			status:            ResultSuccess,
+			statusMsgContains: "Updated apps",
+			dbErr:             nil,
+		},
+		{
+			description:       "Success with empty apps",
+			body:              `{"group_id": 1, "app_ids": []}`,
+			status:            ResultSuccess,
+			statusMsgContains: "Updated apps",
+			dbErr:             nil,
+		},
+		{
+			description:       "Missing group_id",
+			body:              `{"app_ids": [10]}`,
+			status:            ResultError,
+			statusMsgContains: "group_id is required",
+			dbErr:             nil,
+		},
+		{
+			description:       "Invalid JSON",
+			body:              `{bad json`,
+			status:            ResultError,
+			statusMsgContains: "",
+			dbErr:             nil,
+		},
+		{
+			description:       "DB error on replace",
+			body:              `{"group_id": 1, "app_ids": [10]}`,
+			status:            ResultError,
+			statusMsgContains: "failed to update apps",
+			dbErr:             errors.New("db error"),
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fd := database.FakeDatabaseClient{
+				ErrorToReturn: test.dbErr,
+			}
+			fakeJrunner := javascript.FakeJavascriptRunner{}
+			s := NewApiServer(&fd, &fakeJrunner, "apikey")
+
+			req := httptest.NewRequest(http.MethodPost, "/apppergroup/update", strings.NewReader(test.body))
+			w := httptest.NewRecorder()
+			s.HandleUpdateAppsForGroup(w, req)
+			res := w.Result()
+
+			defer res.Body.Close()
+			data, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("reading response body: %s", err)
+			}
+
+			pdata := HttpResult{}
+			if err = json.Unmarshal(data, &pdata); err != nil {
+				t.Fatalf("error parsing response: %s (%s)", err, string(data))
+			}
+
+			if pdata.Status != test.status {
+				t.Errorf("expected status %s, got %s (msg: %s)", test.status, pdata.Status, pdata.Message)
+			}
+
+			if test.statusMsgContains != "" && !strings.Contains(pdata.Message, test.statusMsgContains) {
+				t.Errorf("expected message to contain %q, got %q", test.statusMsgContains, pdata.Message)
+			}
+		})
+	}
+}
