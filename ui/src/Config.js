@@ -16,6 +16,8 @@ export default {
   storedquerySegmentLink: '/query/:offset/:limit',
   yaraLink: '/yara',
   yaraSegmentLink: '/yara/:offset/:limit',
+  ruleGroupsLink: '/rulegroups',
+  ruleGroupsSegmentLink: '/rulegroups/:offset/:limit',
   tagsLink: '/tag',
   statsLink: '/stats',
   datamodelDocLink: '/datamodel/doc',
