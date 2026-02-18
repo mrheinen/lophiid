@@ -175,6 +175,12 @@ func main() {
 	r.HandleFunc("/stats/global", as.HandleGetGlobalStatistics).Methods("GET")
 
 	r.HandleFunc("/rulegroup/segment", as.HandleSearchRuleGroups).Methods("GET")
+	r.HandleFunc("/rulegroup/upsert", as.HandleUpsertRuleGroup).Methods("POST")
+	r.HandleFunc("/rulegroup/delete", as.HandleDeleteRuleGroup).Methods("POST")
+
+	r.HandleFunc("/apppergroup/segment", as.HandleSearchAppPerGroup).Methods("GET")
+	r.HandleFunc("/apppergroup/join", as.HandleGetAppsPerGroup).Methods("GET")
+	r.HandleFunc("/apppergroup/update", as.HandleUpdateAppsForGroup).Methods("POST")
 	r.Use(as.AuthMW)
 
 	origins := make([]string, 0)

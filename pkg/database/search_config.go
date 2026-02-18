@@ -134,6 +134,13 @@ var tagPerRequestConfig = SearchConfig{
 	OrderBy:       "",
 }
 
+var appPerGroupConfig = SearchConfig{
+	Table:         &AppPerGroupTable,
+	TableName:     "app_per_group",
+	AllowedFields: getDatamodelDatabaseFields(models.AppPerGroup{}),
+	OrderBy:       "id DESC",
+}
+
 var rulePerGroupConfig = SearchConfig{
 	Table:         &RulePerGroupTable,
 	TableName:     "rule_per_group",

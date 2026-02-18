@@ -55,9 +55,11 @@ type FakeDatabaseClient struct {
 	SimpleQueryResult               any
 	SessionExecutionContextToReturn []models.SessionExecutionContext
 	TagsPerRuleToReturn             []models.TagPerRule
+	AppPerGroupToReturn            []models.AppPerGroup
 	RulePerGroupToReturn            []models.RulePerGroup
 	RuleGroupToReturn               []models.RuleGroup
 	RulesPerGroupJoinToReturn       []models.RulePerGroupJoin
+	AppPerGroupJoinToReturn       []models.AppPerGroupJoin
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -123,6 +125,12 @@ func (f *FakeDatabaseClient) GetAppByID(id int64) (models.Application, error) {
 func (f *FakeDatabaseClient) GetRulePerGroupJoin() ([]models.RulePerGroupJoin, error) {
 	return f.RulesPerGroupJoinToReturn, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) GetAppPerGroupJoin() ([]models.AppPerGroupJoin, error) {
+	return f.AppPerGroupJoinToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) ReplaceAppsForGroup(groupID int64, appIDs []int64) error {
+	return f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) SearchApps(offset int64, limit int64, query string) ([]models.Application, error) {
 	return []models.Application{f.ApplicationToReturn}, nil
 }
@@ -170,6 +178,9 @@ func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) 
 }
 func (f *FakeDatabaseClient) SearchRulePerGroup(offset int64, limit int64, query string) ([]models.RulePerGroup, error) {
 	return f.RulePerGroupToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error) {
+	return f.AppPerGroupToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchRuleGroup(offset int64, limit int64, query string) ([]models.RuleGroup, error) {
 	return f.RuleGroupToReturn, f.ErrorToReturn
