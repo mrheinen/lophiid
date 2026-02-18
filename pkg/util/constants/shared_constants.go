@@ -200,7 +200,7 @@ const (
 
 const (
 	// The default rule group ID that all rules need to be added to.
-	DefaultRuleGroupID = 0
+	DefaultRuleGroupID = 1
 )
 
 const (
