@@ -426,11 +426,22 @@ func TestHandleProbe(t *testing.T) {
 				HasCode: false,
 			},
 		},
-		RulesPerGroupJoinToReturn: []models.RulePerGroupJoin{
-			{Rule: models.ContentRule{Enabled: true, ID: 1, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 1, GroupID: 1}},
-			{Rule: models.ContentRule{Enabled: true, ID: 2, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 2, GroupID: 1}},
-			{Rule: models.ContentRule{Enabled: true, ID: 3, AppID: 1, Block: false, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44}, RulePerGroup: models.RulePerGroup{ID: 3, RuleID: 3, GroupID: 1}},
-			{Rule: models.ContentRule{Enabled: true, ID: 4, AppID: 5, Block: true, Method: "GET", Port: 80, Uri: "/blocked", UriMatching: "exact", ContentID: 42}, RulePerGroup: models.RulePerGroup{ID: 4, RuleID: 4, GroupID: 1}},
+		AppPerGroupJoinToReturn: []models.AppPerGroupJoin{
+			{App: models.Application{ID: 42}, AppPerGroup: models.AppPerGroup{ID: 1, AppID: 42, GroupID: 1}},
+			{App: models.Application{ID: 1}, AppPerGroup: models.AppPerGroup{ID: 2, AppID: 1, GroupID: 1}},
+			{App: models.Application{ID: 5}, AppPerGroup: models.AppPerGroup{ID: 3, AppID: 5, GroupID: 1}},
+		},
+		ContentRulesByAppIDToReturn: map[int64][]models.ContentRule{
+			42: {
+				{Enabled: true, ID: 1, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+				{Enabled: true, ID: 2, AppID: 42, Block: false, Method: "GET", Port: 80, Uri: "/aa", UriMatching: "exact", ContentID: 42},
+			},
+			1: {
+				{Enabled: true, ID: 3, AppID: 1, Block: false, Method: "GET", Port: 80, Uri: "/script", UriMatching: "exact", ContentID: 44},
+			},
+			5: {
+				{Enabled: true, ID: 4, AppID: 5, Block: true, Method: "GET", Port: 80, Uri: "/blocked", UriMatching: "exact", ContentID: 42},
+			},
 		},
 	}
 
@@ -540,10 +551,9 @@ func TestHandleProbe(t *testing.T) {
 			Server:      "TestServer",
 			Headers:     pgtype.FlatArray[string]{"X-Custom-Header: custom-value", "X-Another: another-value"},
 		}
-		fdbc.RulesPerGroupJoinToReturn = append(fdbc.RulesPerGroupJoinToReturn, models.RulePerGroupJoin{
-			Rule:         models.ContentRule{Enabled: true, ID: 99, AppID: 42, Method: "GET", Port: 80, Uri: "/headers-test", UriMatching: "exact", ContentID: 99},
-			RulePerGroup: models.RulePerGroup{ID: 99, RuleID: 99, GroupID: 1},
-		})
+		fdbc.ContentRulesByAppIDToReturn[42] = append(fdbc.ContentRulesByAppIDToReturn[42],
+			models.ContentRule{Enabled: true, ID: 99, AppID: 42, Method: "GET", Port: 80, Uri: "/headers-test", UriMatching: "exact", ContentID: 99},
+		)
 		b.LoadRules()
 
 		probeReq.RequestUri = "/headers-test"
@@ -630,8 +640,13 @@ func TestHandleProbePreprocessHeaders(t *testing.T) {
 				Data: []byte("preprocess content"),
 			},
 		},
-		RulesPerGroupJoinToReturn: []models.RulePerGroupJoin{
-			{Rule: models.ContentRule{Enabled: true, ID: 100, AppID: 42, Method: "GET", Port: 80, Uri: "/preprocess-headers", UriMatching: "exact", ContentID: 100, Responder: constants.ResponderTypeAuto}, RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 1}},
+		AppPerGroupJoinToReturn: []models.AppPerGroupJoin{
+			{App: models.Application{ID: 42}, AppPerGroup: models.AppPerGroup{ID: 1, AppID: 42, GroupID: 1}},
+		},
+		ContentRulesByAppIDToReturn: map[int64][]models.ContentRule{
+			42: {
+				{Enabled: true, ID: 100, AppID: 42, Method: "GET", Port: 80, Uri: "/preprocess-headers", UriMatching: "exact", ContentID: 100, Responder: constants.ResponderTypeAuto},
+			},
 		},
 	}
 
@@ -1430,9 +1445,12 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 						Data: test.contentData,
 					},
 				},
-				RulesPerGroupJoinToReturn: []models.RulePerGroupJoin{
-					{
-						Rule: models.ContentRule{
+				AppPerGroupJoinToReturn: []models.AppPerGroupJoin{
+					{App: models.Application{ID: 1}, AppPerGroup: models.AppPerGroup{ID: 1, AppID: 1, GroupID: 1}},
+				},
+				ContentRulesByAppIDToReturn: map[int64][]models.ContentRule{
+					1: {
+						{
 							ID:               1,
 							AppID:            1,
 							Method:           "GET",
@@ -1445,7 +1463,6 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 							ResponderDecoder: test.responderDecoder,
 							Enabled:          true,
 						},
-						RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 1, GroupID: 1},
 					},
 				},
 				ErrorToReturn: nil,
@@ -2094,75 +2111,91 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 
 func TestLoadRules(t *testing.T) {
 	for _, test := range []struct {
-		description       string
-		rulesPerGroupJoin []models.RulePerGroupJoin
-		dbError           error
-		expectError       bool
-		expectedGroups    map[int64][]int64 // groupID -> list of rule IDs
+		description        string
+		appPerGroupJoin    []models.AppPerGroupJoin
+		rulesByAppID       map[int64][]models.ContentRule
+		dbError            error
+		expectError        bool
+		expectedGroups     map[int64][]int64 // groupID -> list of rule IDs
 	}{
 		{
-			description:       "empty rules",
-			rulesPerGroupJoin: []models.RulePerGroupJoin{},
-			expectError:       false,
-			expectedGroups:    map[int64][]int64{},
+			description:     "empty rules",
+			appPerGroupJoin: []models.AppPerGroupJoin{},
+			rulesByAppID:    map[int64][]models.ContentRule{},
+			expectError:     false,
+			expectedGroups:  map[int64][]int64{},
 		},
 		{
 			description: "single rule in single group",
-			rulesPerGroupJoin: []models.RulePerGroupJoin{
-				{
-					Rule:         models.ContentRule{Enabled: true, ID: 100},
-					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
-				},
+			appPerGroupJoin: []models.AppPerGroupJoin{
+				{App: models.Application{ID: 1}, AppPerGroup: models.AppPerGroup{ID: 1, AppID: 1, GroupID: 10}},
+			},
+			rulesByAppID: map[int64][]models.ContentRule{
+				1: {{Enabled: true, ID: 100, AppID: 1}},
 			},
 			expectError:    false,
 			expectedGroups: map[int64][]int64{10: {100}},
 		},
 		{
-			description: "multiple rules in single group",
-			rulesPerGroupJoin: []models.RulePerGroupJoin{
-				{
-					Rule:         models.ContentRule{Enabled: true, ID: 100},
-					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
-				},
-				{
-					Rule:         models.ContentRule{Enabled: true, ID: 101},
-					RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 101, GroupID: 10},
+			description: "multiple rules in single group via one app",
+			appPerGroupJoin: []models.AppPerGroupJoin{
+				{App: models.Application{ID: 1}, AppPerGroup: models.AppPerGroup{ID: 1, AppID: 1, GroupID: 10}},
+			},
+			rulesByAppID: map[int64][]models.ContentRule{
+				1: {
+					{Enabled: true, ID: 100, AppID: 1},
+					{Enabled: true, ID: 101, AppID: 1},
 				},
 			},
 			expectError:    false,
 			expectedGroups: map[int64][]int64{10: {100, 101}},
 		},
 		{
-			description: "rules in multiple groups",
-			rulesPerGroupJoin: []models.RulePerGroupJoin{
-				{
-					Rule:         models.ContentRule{Enabled: true, ID: 100},
-					RulePerGroup: models.RulePerGroup{ID: 1, RuleID: 100, GroupID: 10},
+			description: "rules in multiple groups via different apps",
+			appPerGroupJoin: []models.AppPerGroupJoin{
+				{App: models.Application{ID: 1}, AppPerGroup: models.AppPerGroup{ID: 1, AppID: 1, GroupID: 10}},
+				{App: models.Application{ID: 2}, AppPerGroup: models.AppPerGroup{ID: 2, AppID: 2, GroupID: 20}},
+			},
+			rulesByAppID: map[int64][]models.ContentRule{
+				1: {
+					{Enabled: true, ID: 100, AppID: 1},
+					{Enabled: true, ID: 102, AppID: 1},
 				},
-				{
-					Rule:         models.ContentRule{Enabled: true, ID: 101},
-					RulePerGroup: models.RulePerGroup{ID: 2, RuleID: 101, GroupID: 20},
-				},
-				{
-					Rule:         models.ContentRule{Enabled: true, ID: 102},
-					RulePerGroup: models.RulePerGroup{ID: 3, RuleID: 102, GroupID: 10},
+				2: {
+					{Enabled: true, ID: 101, AppID: 2},
 				},
 			},
 			expectError:    false,
 			expectedGroups: map[int64][]int64{10: {100, 102}, 20: {101}},
 		},
 		{
-			description:       "database error",
-			rulesPerGroupJoin: nil,
-			dbError:           errors.New("db error"),
-			expectError:       true,
-			expectedGroups:    nil,
+			description: "disabled rules are skipped",
+			appPerGroupJoin: []models.AppPerGroupJoin{
+				{App: models.Application{ID: 1}, AppPerGroup: models.AppPerGroup{ID: 1, AppID: 1, GroupID: 10}},
+			},
+			rulesByAppID: map[int64][]models.ContentRule{
+				1: {
+					{Enabled: true, ID: 100, AppID: 1},
+					{Enabled: false, ID: 101, AppID: 1},
+				},
+			},
+			expectError:    false,
+			expectedGroups: map[int64][]int64{10: {100}},
+		},
+		{
+			description:     "database error",
+			appPerGroupJoin: nil,
+			rulesByAppID:    nil,
+			dbError:         errors.New("db error"),
+			expectError:     true,
+			expectedGroups:  nil,
 		},
 	} {
 		t.Run(test.description, func(t *testing.T) {
 			fakeDB := &database.FakeDatabaseClient{
-				RulesPerGroupJoinToReturn: test.rulesPerGroupJoin,
-				ErrorToReturn:             test.dbError,
+				AppPerGroupJoinToReturn:    test.appPerGroupJoin,
+				ContentRulesByAppIDToReturn: test.rulesByAppID,
+				ErrorToReturn:              test.dbError,
 			}
 
 			b := &BackendServer{

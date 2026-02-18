@@ -1404,21 +1404,38 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}, nil
 }
 
-// LoadRules loads the content rules from the database.
+// LoadRules loads the content rules from the database. It first fetches the
+// app-per-group mappings and then fetches the rules for each app separately.
 func (s *BackendServer) LoadRules() error {
-	rulePerGroup, err := s.dbClient.GetRulePerGroupJoin()
+	appPerGroup, err := s.dbClient.GetAppPerGroupJoin()
 	if err != nil {
-		return err
+		return fmt.Errorf("getting app per group: %w", err)
+	}
+
+	// Build a map of app ID to the group IDs it belongs to, and track which
+	// apps we need to fetch rules for.
+	appToGroups := map[int64][]int64{}
+	for _, apg := range appPerGroup {
+		appToGroups[apg.App.ID] = append(appToGroups[apg.App.ID], apg.AppPerGroup.GroupID)
 	}
 
 	ruleCount := 0
 	finalRules := map[int64][]models.ContentRule{}
-	for _, rpg := range rulePerGroup {
-		if !rpg.Rule.Enabled {
-			continue
+	for appID, groupIDs := range appToGroups {
+		rules, err := s.dbClient.SearchContentRules(0, 0, fmt.Sprintf("app_id:%d", appID))
+		if err != nil {
+			return fmt.Errorf("searching rules for app %d: %w", appID, err)
 		}
-		finalRules[rpg.RulePerGroup.GroupID] = append(finalRules[rpg.RulePerGroup.GroupID], rpg.Rule)
-		ruleCount++
+
+		for _, rule := range rules {
+			if !rule.Enabled {
+				continue
+			}
+			for _, groupID := range groupIDs {
+				finalRules[groupID] = append(finalRules[groupID], rule)
+				ruleCount++
+			}
+		}
 	}
 
 	slog.Info("loaded rules", slog.Int("rules_count", ruleCount), slog.Int("amount_of_groups", len(finalRules)))

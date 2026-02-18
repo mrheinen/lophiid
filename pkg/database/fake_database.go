@@ -19,6 +19,8 @@ package database
 import (
 	"fmt"
 	"lophiid/pkg/database/models"
+	"strconv"
+	"strings"
 )
 
 // FakeDatabaseClient is a struct specifically for testing users of the
@@ -59,7 +61,8 @@ type FakeDatabaseClient struct {
 	RulePerGroupToReturn            []models.RulePerGroup
 	RuleGroupToReturn               []models.RuleGroup
 	RulesPerGroupJoinToReturn       []models.RulePerGroupJoin
-	AppPerGroupJoinToReturn       []models.AppPerGroupJoin
+	AppPerGroupJoinToReturn         []models.AppPerGroupJoin
+	ContentRulesByAppIDToReturn     map[int64][]models.ContentRule
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -101,6 +104,14 @@ func (f *FakeDatabaseClient) SearchEvents(offset int64, limit int64, query strin
 	return []models.IpEvent{f.IpEventToReturn}, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error) {
+	if f.ContentRulesByAppIDToReturn != nil && strings.HasPrefix(query, "app_id:") {
+		idStr := strings.TrimPrefix(query, "app_id:")
+		appID, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("fake: invalid app_id: %s", idStr)
+		}
+		return f.ContentRulesByAppIDToReturn[appID], f.ErrorToReturn
+	}
 	return f.ContentRulesToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchYara(offset int64, limit int64, query string) ([]models.Yara, error) {
