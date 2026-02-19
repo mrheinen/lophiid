@@ -104,6 +104,14 @@ func GetQueryParameters(req *http.Request) (int64, int64, string, error) {
 		return 0, 0, "", fmt.Errorf("invalid limit %s: %w", limit, err)
 	}
 
+	if iLimit <= 0 {
+		return 0, 0, "", fmt.Errorf("limit must be greater than 0")
+	}
+
+	if iOffset < 0 {
+		return 0, 0, "", fmt.Errorf("offset must be positive")
+	}
+
 	query := req.URL.Query().Get("q")
 	return iOffset, iLimit, query, nil
 }
@@ -292,13 +300,6 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
 			errMsg := fmt.Sprintf("unable to update rule: %s", err.Error())
-			a.sendStatus(w, errMsg, ResultError, nil)
-			return
-		}
-
-		// Add the rule to the default rule group.
-		if _, err := a.dbc.Insert(&models.RulePerGroup{RuleID: rb.ID, GroupID: constants.DefaultRuleGroupID}); err != nil {
-			errMsg := fmt.Sprintf("unable to update rule group for rule %d: %s", dm.ModelID(), err.Error())
 			a.sendStatus(w, errMsg, ResultError, nil)
 			return
 		}
@@ -957,6 +958,10 @@ func (a *ApiServer) HandleSearchAppPerGroup(w http.ResponseWriter, req *http.Req
 	a.sendStatus(w, "", ResultSuccess, rls)
 }
 
+// HandleGetAppsPerGroup returns a map where the key is a group ID and the value
+// is an AppsGroup. The for each RuleGroup the AppsGroup contains the RuleGroup
+// struct and t a list of Applications that belong to the group.
+// An application can be in multiple groups.
 func (a *ApiServer) HandleGetAppsPerGroup(w http.ResponseWriter, req *http.Request) {
 	rls, err := a.dbc.GetAppPerGroupJoin()
 	if err != nil {
