@@ -2057,43 +2057,6 @@ ALTER SEQUENCE public.rule_group_id_seq OWNED BY public.rule_group.id;
 
 
 --
--- Name: rule_per_group; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.rule_per_group (
-    id integer NOT NULL,
-    rule_id integer NOT NULL,
-    group_id integer NOT NULL,
-    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-
-ALTER TABLE public.rule_per_group OWNER TO postgres;
-
---
--- Name: rule_per_group_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
-
-CREATE SEQUENCE public.rule_per_group_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.rule_per_group_id_seq OWNER TO postgres;
-
---
--- Name: rule_per_group_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
-ALTER SEQUENCE public.rule_per_group_id_seq OWNED BY public.rule_per_group.id;
-
-
---
 -- Name: app_per_group; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2105,6 +2068,7 @@ CREATE TABLE public.app_per_group (
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+ALTER TABLE ONLY public.app_per_group ADD CONSTRAINT app_per_group_app_id_group_id_key UNIQUE (app_id, group_id);
 
 ALTER TABLE public.app_per_group OWNER TO postgres;
 
@@ -2813,12 +2777,6 @@ ALTER TABLE ONLY public.request_metadata ALTER COLUMN id SET DEFAULT nextval('pu
 ALTER TABLE ONLY public.rule_group ALTER COLUMN id SET DEFAULT nextval('public.rule_group_id_seq'::regclass);
 
 
---
--- Name: rule_per_group id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.rule_per_group ALTER COLUMN id SET DEFAULT nextval('public.rule_per_group_id_seq'::regclass);
-
 
 ALTER TABLE ONLY public.app_per_group ALTER COLUMN id SET DEFAULT nextval('public.app_per_group_id_seq'::regclass);
 
@@ -3178,13 +3136,6 @@ ALTER TABLE ONLY public.request_y2026m11_12
 ALTER TABLE ONLY public.rule_group
     ADD CONSTRAINT rule_group_pkey PRIMARY KEY (id);
 
-
---
--- Name: rule_per_group rule_per_group_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.rule_per_group
-    ADD CONSTRAINT rule_per_group_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.app_per_group ADD CONSTRAINT app_per_group_pkey PRIMARY KEY (id);
 
@@ -8377,13 +8328,6 @@ ALTER TABLE ONLY public.request_description
     ADD CONSTRAINT fk_example_request_id FOREIGN KEY (example_request_id) REFERENCES public.request_refs(id);
 
 
---
--- Name: rule_per_group fk_group_id_per_group; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.rule_per_group
-    ADD CONSTRAINT fk_group_id_per_group FOREIGN KEY (group_id) REFERENCES public.rule_group(id) ON DELETE CASCADE;
-
 ALTER TABLE ONLY public.app_per_group
     ADD CONSTRAINT fk_app_group_id_per_group FOREIGN KEY (group_id) REFERENCES public.rule_group(id) ON DELETE CASCADE;
 
@@ -8459,14 +8403,6 @@ ALTER TABLE ONLY public.downloads
 
 ALTER TABLE ONLY public.request_metadata
     ADD CONSTRAINT fk_request_id FOREIGN KEY (request_id) REFERENCES public.request_refs(id);
-
-
---
--- Name: rule_per_group fk_rule_id_per_rule; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.rule_per_group
-    ADD CONSTRAINT fk_rule_id_per_rule FOREIGN KEY (rule_id) REFERENCES public.content_rule(id) ON DELETE CASCADE;
 
 
 ALTER TABLE ONLY public.app_per_group
@@ -8710,19 +8646,6 @@ GRANT ALL ON TABLE public.rule_group TO lo;
 
 GRANT ALL ON SEQUENCE public.rule_group_id_seq TO lo;
 
-
---
--- Name: TABLE rule_per_group; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT ALL ON TABLE public.rule_per_group TO lo;
-
-
---
--- Name: SEQUENCE rule_per_group_id_seq; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT ALL ON SEQUENCE public.rule_per_group_id_seq TO lo;
 
 GRANT ALL ON SEQUENCE public.app_per_group_id_seq TO lo;
 
