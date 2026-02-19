@@ -1422,7 +1422,7 @@ func (s *BackendServer) LoadRules() error {
 	ruleCount := 0
 	finalRules := map[int64][]models.ContentRule{}
 	for appID, groupIDs := range appToGroups {
-		rules, err := s.dbClient.SearchContentRules(0, 0, fmt.Sprintf("app_id:%d", appID))
+		rules, err := s.dbClient.SearchContentRules(0, 1000, fmt.Sprintf("app_id:%d", appID))
 		if err != nil {
 			return fmt.Errorf("searching rules for app %d: %w", appID, err)
 		}
