@@ -25,6 +25,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/util/constants"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -901,6 +902,46 @@ func TestHandleUpdateSingleDownload(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleDeleteAppDefaultProtected(t *testing.T) {
+	fd := database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	s := NewApiServer(&fd, &fakeJrunner, "apikey")
+
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/app/delete?id=%d", constants.DefaultUploadAppID), nil)
+	w := httptest.NewRecorder()
+	s.HandleDeleteApp(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	assert.NoError(t, err)
+
+	pdata := HttpResult{}
+	assert.NoError(t, json.Unmarshal(data, &pdata))
+	assert.Equal(t, ResultError, pdata.Status)
+	assert.Contains(t, pdata.Message, "cannot delete the default upload application")
+}
+
+func TestHandleDeleteRuleGroupDefaultProtected(t *testing.T) {
+	fd := database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	s := NewApiServer(&fd, &fakeJrunner, "apikey")
+
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/rulegroup/delete?id=%d", constants.DefaultRuleGroupID), nil)
+	w := httptest.NewRecorder()
+	s.HandleDeleteRuleGroup(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	assert.NoError(t, err)
+
+	pdata := HttpResult{}
+	assert.NoError(t, json.Unmarshal(data, &pdata))
+	assert.Equal(t, ResultError, pdata.Status)
+	assert.Contains(t, pdata.Message, "cannot delete the default rule group")
 }
 
 func TestHandleUpdateAppsForGroup(t *testing.T) {

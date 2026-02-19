@@ -659,6 +659,11 @@ func (a *ApiServer) HandleDeleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if intID == constants.DefaultUploadAppID {
+		a.sendStatus(w, "cannot delete the default upload application", ResultError, nil)
+		return
+	}
+
 	err = a.dbc.Delete(&models.Application{ID: intID})
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -1207,6 +1212,11 @@ func (a *ApiServer) HandleDeleteRuleGroup(w http.ResponseWriter, req *http.Reque
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if intID == constants.DefaultRuleGroupID {
+		a.sendStatus(w, "cannot delete the default rule group", ResultError, nil)
 		return
 	}
 

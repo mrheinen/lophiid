@@ -288,10 +288,8 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 				UriMatching:  constants.MatchingTypeContains,
 				BodyMatching: constants.MatchingTypeNone,
 				Enabled:      true,
-				AllowFromNet: &net,
-				// Next we use the request ID for the app ID. This is not an error. We
-				// need some value there and do not want to create an app at the moment.
-				AppID:            req.ID,
+				AllowFromNet:     &net,
+				AppID:            constants.DefaultUploadAppID,
 				Method:           constants.HTTPMethodAny,
 				RequestPurpose:   constants.RequestPurposeAttack,
 				Responder:        constants.ResponderTypeNone,

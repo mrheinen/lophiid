@@ -36,6 +36,7 @@ type FakeDatabaseClient struct {
 	RequestToReturn                 models.Request
 	DownloadsToReturn               []models.Download
 	ApplicationToReturn             models.Application
+	AppErrorToReturn                error
 	HoneypotToReturn                models.Honeypot
 	HoneypotErrorToReturn           error
 	QueriesToReturn                 []models.StoredQuery
@@ -129,7 +130,7 @@ func (f *FakeDatabaseClient) SearchContent(offset int64, limit int64, query stri
 	return ret, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) GetAppByID(id int64) (models.Application, error) {
-	return f.ApplicationToReturn, nil
+	return f.ApplicationToReturn, f.AppErrorToReturn
 }
 func (f *FakeDatabaseClient) GetAppPerGroupJoin() ([]models.AppPerGroupJoin, error) {
 	return f.AppPerGroupJoinToReturn, f.ErrorToReturn
