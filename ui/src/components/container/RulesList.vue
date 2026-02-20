@@ -21,12 +21,8 @@
       @require-auth="$emit('require-auth')"
     />
   </PrimeDialog>
-  <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div
-      class="col-span-3"
-      style="mleft"
-    >
-      <div class="rounded overflow-hidden shadow-lg">
+  <div class="list-layout">
+    <div class="list-table-wrap">
         <DataTable
           v-model:selection="selectedRule"
           :value="appRules"
@@ -59,7 +55,7 @@
           />
           <DataColumn
             header="App name"
-            style="width: 15%"
+            class="col-shrink"
           >
             <template #body="slotProps">
               <a :href="config.rulesLink + '?q=app_id:' + slotProps.data.app_id">
@@ -69,19 +65,19 @@
           <DataColumn
             field="app_version"
             header="App version"
-            style="width: 15%"
+            class="col-shrink"
           />
           <DataColumn
             field="app_id"
             header="App ID"
-            style="width: 7%"
+            class="col-shrink"
           />
 
 
           <DataColumn
             field="method"
             header="Method"
-            style="width: 6%"
+            class="col-shrink"
           />
           <DataColumn header="Uri / Body">
             <template #body="slotProps">
@@ -94,7 +90,7 @@
           </DataColumn>
           <DataColumn
             header="Content ID"
-            style="width: 8%"
+            class="col-shrink"
           >
             <template #body="slotProps">
               <a :href="config.contentLink + '?q=id:' + slotProps.data.content_id">
@@ -160,9 +156,8 @@
             </div>
           </template>
         </DataTable>
-      </div>
     </div>
-    <div class="col-span-2">
+    <div class="list-form-wrap">
       <rule-form
         :rule="selectedRule"
         :contentid="selectedContentId"
@@ -542,32 +537,5 @@ export default {
 <style scoped>
 .p-inputtext {
   width: 100%;
-}
-.table tr.is-selected {
-  background-color: #4e726d;
-}
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-right {
-  float: right;
-}
-
-td {
-  font-size: 13px;
-}
-
-table {
-  width: 100%;
-}
-
-.alert {
-  color: red;
-}
-
-.pointer {
-  cursor: pointer;
 }
 </style>

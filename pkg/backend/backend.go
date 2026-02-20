@@ -1075,14 +1075,21 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 			return fmt.Errorf("error finding honeypot. IP: %s, Err: %w", sReq.HoneypotIP, err)
 		}
 
-		if _, err := s.dbClient.Insert(&models.RulePerGroup{RuleID: rule.ModelID(), GroupID: hp.RuleGroupID}); err != nil {
-			return fmt.Errorf("error inserting rule per group: %w", err)
+		// Ensure the default upload app is associated with this honeypot's rule group.
+		apgs, err := s.dbClient.SearchAppPerGroup(0, 1, fmt.Sprintf("app_id:%d group_id:%d", constants.DefaultUploadAppID, hp.RuleGroupID))
+		if err != nil {
+			return fmt.Errorf("error searching app per group: %w", err)
+		}
+		if len(apgs) == 0 {
+			if _, err := s.dbClient.Insert(&models.AppPerGroup{AppID: constants.DefaultUploadAppID, GroupID: hp.RuleGroupID}); err != nil {
+				return fmt.Errorf("error inserting app per group: %w", err)
+			}
 		}
 
 		slog.Debug("Added tmp rule", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("network", *payloadResponse.TmpContentRule.Rule.AllowFromNet), slog.Int64("rule_id", rule.ModelID()), slog.String("rule_uri", payloadResponse.TmpContentRule.Rule.Uri))
 
 		newRule := rule.(*models.ContentRule)
-		s.safeRules.Add(*newRule, constants.DefaultRuleGroupID)
+		s.safeRules.Add(*newRule, hp.RuleGroupID)
 	}
 
 	res.Body = []byte(AddLLMResponseToContent(content, payloadResponse.Output))
@@ -1422,7 +1429,7 @@ func (s *BackendServer) LoadRules() error {
 	ruleCount := 0
 	finalRules := map[int64][]models.ContentRule{}
 	for appID, groupIDs := range appToGroups {
-		rules, err := s.dbClient.SearchContentRules(0, 0, fmt.Sprintf("app_id:%d", appID))
+		rules, err := s.dbClient.SearchContentRules(0, 1000, fmt.Sprintf("app_id:%d", appID))
 		if err != nil {
 			return fmt.Errorf("searching rules for app %d: %w", appID, err)
 		}
@@ -1587,7 +1594,39 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 	return nil
 }
 
+// ensureDefaults checks that the default upload application and the default
+// rule group exist in the database and creates them if they do not.
+func (s *BackendServer) ensureDefaults() error {
+	// Ensure the default upload application exists.
+	if _, err := s.dbClient.GetAppByID(constants.DefaultUploadAppID); err != nil {
+		slog.Info("Default upload app not found, creating it", slog.Int64("app_id", constants.DefaultUploadAppID))
+		var apps []models.Application
+		if _, err := s.dbClient.SimpleQuery(fmt.Sprintf("INSERT INTO app (id, name) VALUES (%d, 'Default Upload App') ON CONFLICT (id) DO NOTHING RETURNING *", constants.DefaultUploadAppID), &apps); err != nil {
+			return fmt.Errorf("inserting default upload app: %w", err)
+		}
+	}
+
+	// Ensure the default rule group exists.
+	rgs, err := s.dbClient.SearchRuleGroup(0, 1, fmt.Sprintf("id:%d", constants.DefaultRuleGroupID))
+	if err != nil {
+		return fmt.Errorf("searching default rule group: %w", err)
+	}
+	if len(rgs) == 0 {
+		slog.Info("Default rule group not found, creating it", slog.Int64("group_id", constants.DefaultRuleGroupID))
+		var groups []models.RuleGroup
+		if _, err := s.dbClient.SimpleQuery(fmt.Sprintf("INSERT INTO rule_group (id, name) VALUES (%d, 'default') ON CONFLICT (id) DO NOTHING RETURNING *", constants.DefaultRuleGroupID), &groups); err != nil {
+			return fmt.Errorf("inserting default rule group: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func (s *BackendServer) Start() error {
+	if err := s.ensureDefaults(); err != nil {
+		return fmt.Errorf("ensuring defaults: %w", err)
+	}
+
 	// Load the rules once.
 	err := s.LoadRules()
 	if err != nil {

@@ -141,13 +141,6 @@ var appPerGroupConfig = SearchConfig{
 	OrderBy:       "id DESC",
 }
 
-var rulePerGroupConfig = SearchConfig{
-	Table:         &RulePerGroupTable,
-	TableName:     "rule_per_group",
-	AllowedFields: getDatamodelDatabaseFields(models.RulePerGroup{}),
-	OrderBy:       "id DESC",
-}
-
 var ruleGroupConfig = SearchConfig{
 	Table:         &RuleGroupTable,
 	TableName:     "rule_group",

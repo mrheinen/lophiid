@@ -1902,25 +1902,38 @@ func TestHandlePreProcessUploadIPLimit(t *testing.T) {
 	}
 }
 
-// TestHandlePreProcessRulePerGroup tests that handlePreProcess looks up the
-// honeypot and inserts a RulePerGroup linking the rule to the honeypot's group.
-func TestHandlePreProcessRulePerGroup(t *testing.T) {
+// TestHandlePreProcessAppPerGroup tests that handlePreProcess looks up the
+// honeypot and ensures an AppPerGroup entry exists for the default upload app
+// and the honeypot's rule group.
+func TestHandlePreProcessAppPerGroup(t *testing.T) {
 	allowNet := "192.168.1.0/24"
 	backendConfig := GetDefaultBackendConfig()
 
 	for _, test := range []struct {
-		description       string
-		honeypotToReturn  models.Honeypot
-		honeypotError     error
-		expectError       bool
-		expectErrorString string
-		expectedGroupID   int64
+		description        string
+		honeypotToReturn   models.Honeypot
+		honeypotError      error
+		appPerGroupReturn  []models.AppPerGroup
+		expectError        bool
+		expectErrorString  string
+		expectedGroupID    int64
+		expectInsert       bool
 	}{
 		{
-			description:      "Success inserts RulePerGroup with correct GroupID",
-			honeypotToReturn: models.Honeypot{RuleGroupID: 42},
-			expectError:      false,
-			expectedGroupID:  42,
+			description:       "Inserts AppPerGroup when none exists",
+			honeypotToReturn:  models.Honeypot{RuleGroupID: 42},
+			appPerGroupReturn: []models.AppPerGroup{},
+			expectError:       false,
+			expectedGroupID:   42,
+			expectInsert:      true,
+		},
+		{
+			description:       "Skips insert when AppPerGroup already exists",
+			honeypotToReturn:  models.Honeypot{RuleGroupID: 42},
+			appPerGroupReturn: []models.AppPerGroup{{ID: 1, AppID: constants.DefaultUploadAppID, GroupID: 42}},
+			expectError:       false,
+			expectedGroupID:   42,
+			expectInsert:      false,
 		},
 		{
 			description:       "Honeypot lookup error propagates",
@@ -1933,6 +1946,7 @@ func TestHandlePreProcessRulePerGroup(t *testing.T) {
 			fdbc := &database.FakeDatabaseClient{
 				HoneypotToReturn:      test.honeypotToReturn,
 				HoneypotErrorToReturn: test.honeypotError,
+				AppPerGroupToReturn:   test.appPerGroupReturn,
 			}
 			reg := prometheus.NewRegistry()
 			bMetrics := CreateBackendMetrics(reg)
@@ -1972,9 +1986,75 @@ func TestHandlePreProcessRulePerGroup(t *testing.T) {
 				assert.Contains(t, err.Error(), test.expectErrorString)
 			} else {
 				assert.NoError(t, err)
-				rpg, ok := fdbc.LastDataModelSeen.(*models.RulePerGroup)
-				assert.True(t, ok, "expected last insert to be *RulePerGroup")
-				assert.Equal(t, test.expectedGroupID, rpg.GroupID)
+				if test.expectInsert {
+					apg, ok := fdbc.LastDataModelSeen.(*models.AppPerGroup)
+					assert.True(t, ok, "expected last insert to be *AppPerGroup")
+					assert.Equal(t, int64(constants.DefaultUploadAppID), apg.AppID)
+					assert.Equal(t, test.expectedGroupID, apg.GroupID)
+				}
+			}
+		})
+	}
+}
+
+// TestEnsureDefaults tests that ensureDefaults creates the default upload app
+// and default rule group when they do not exist.
+func TestEnsureDefaults(t *testing.T) {
+	for _, test := range []struct {
+		description       string
+		appToReturn       models.Application
+		appError          error
+		ruleGroupReturn   []models.RuleGroup
+		expectError       bool
+		expectErrorString string
+	}{
+		{
+			description:     "Both exist already",
+			appToReturn:     models.Application{ID: constants.DefaultUploadAppID, Name: "Default Upload App"},
+			ruleGroupReturn: []models.RuleGroup{{ID: constants.DefaultRuleGroupID, Name: "default"}},
+			expectError:     false,
+		},
+		{
+			description:     "App missing, group exists",
+			appError:        fmt.Errorf("found no app for ID: 1"),
+			ruleGroupReturn: []models.RuleGroup{{ID: constants.DefaultRuleGroupID, Name: "default"}},
+			expectError:     false,
+		},
+		{
+			description:     "App exists, group missing",
+			appToReturn:     models.Application{ID: constants.DefaultUploadAppID, Name: "Default Upload App"},
+			ruleGroupReturn: []models.RuleGroup{},
+			expectError:     false,
+		},
+		{
+			description:     "Both missing",
+			appError:        fmt.Errorf("found no app for ID: 1"),
+			ruleGroupReturn: []models.RuleGroup{},
+			expectError:     false,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fdbc := &database.FakeDatabaseClient{
+				ApplicationToReturn: test.appToReturn,
+				AppErrorToReturn:    test.appError,
+				RuleGroupToReturn:   test.ruleGroupReturn,
+			}
+			reg := prometheus.NewRegistry()
+			bMetrics := CreateBackendMetrics(reg)
+			fakeLimiter := ratelimit.FakeRateLimiter{BoolToReturn: true}
+			sMetrics := session.CreateSessionMetrics(reg)
+			fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+			backendConfig := GetDefaultBackendConfig()
+
+			b := NewBackendServer(fdbc, bMetrics, []ratelimit.RateLimiter{&fakeLimiter}, backendConfig, WithJavascriptRunner(&javascript.FakeJavascriptRunner{}), WithAlertManager(alerting.NewAlertManager(42)), WithVTManager(&vt.FakeVTManager{}), WithWhoisManager(&whois.FakeRdapManager{}), WithQueryRunner(&FakeQueryRunner{}), WithIpEventManager(&analysis.FakeIpEventManager{}), WithResponder(&responder.FakeResponder{}), WithSessionManager(fSessionMgr), WithDescriber(&describer.FakeDescriberClient{}), WithPreprocessor(&preprocess.FakePreProcessor{}), WithCodeInterpreter(&interpreter.FakeCodeInterpreter{}))
+
+			err := b.ensureDefaults()
+
+			if test.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.expectErrorString)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

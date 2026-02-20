@@ -1,96 +1,146 @@
 <template>
-  <div class="flex flex-row">
-    <div class="basis-1/5" />
-    <div
-      class="basis-3/5"
-      style="margin-left: 15px"
-    >
-      <div class="grid grid-cols-2 gap-4">
-        <div class="rounded overflow-hidden shadow-lg">
+  <div class="stats-page">
+    <div class="stats-grid">
+      <!-- Line Charts -->
+      <div class="stats-card stats-card-wide">
+        <div class="stats-card-header">
+          <i class="pi pi-calendar" />
+          <span>Requests per Month</span>
+        </div>
+        <div class="stats-chart-wrap">
           <PrimeChart
             type="line"
             :data="rpmChartData"
             :options="chartOptions2"
-            class="h-[30rem]"
+            class="stats-chart"
           />
         </div>
+      </div>
 
-        <div class="rounded overflow-hidden shadow-lg">
+      <div class="stats-card stats-card-wide">
+        <div class="stats-card-header">
+          <i class="pi pi-chart-line" />
+          <span>Requests per Day</span>
+        </div>
+        <div class="stats-chart-wrap">
           <PrimeChart
             type="line"
             :data="rpdChartData"
             :options="chartOptions"
-            class="h-[30rem]"
+            class="stats-chart"
           />
         </div>
+      </div>
 
-        <div class="rounded overflow-hidden shadow-lg">
+      <div class="stats-card stats-card-wide">
+        <div class="stats-card-header">
+          <i class="pi pi-download" />
+          <span>Downloads per Day</span>
+        </div>
+        <div class="stats-chart-wrap">
           <PrimeChart
             type="line"
             :data="dpdChartData"
             :options="chartOptions2"
-            class="h-[30rem]"
+            class="stats-chart"
           />
         </div>
+      </div>
 
-        <div class="rounded overflow-hidden shadow-lg">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="rounded overflow-hidden shadow-lg">
-              Method count last 24 hours
-              <PrimeChart
-                type="doughnut"
-                :data="methodPieChartData"
-                :options="pieChartOptions"
-                class=""
-              />
-            </div>
-
-            <div class="rounded overflow-hidden shadow-lg">
-              Unique malware URLs seen last 24 hours
-              <PrimeChart
-                type="doughnut"
-                :data="malwarePieChartData"
-                :options="pieChartOptions"
-                class=""
-              />
-            </div>
-          </div>
+      <!-- Doughnut Charts -->
+      <div class="stats-card">
+        <div class="stats-card-header">
+          <i class="pi pi-chart-pie" />
+          <span>Methods (24h)</span>
         </div>
-        <div v-if="stats" class="rounded overflow-hidden shadow-lg">
+        <div class="stats-pie-wrap">
+          <PrimeChart
+            type="doughnut"
+            :data="methodPieChartData"
+            :options="pieChartOptions"
+          />
+        </div>
+      </div>
+
+      <!-- Top Source IPs -->
+      <div
+        v-if="stats"
+        class="stats-card"
+      >
+        <div class="stats-card-header">
+          <i class="pi pi-globe" />
+          <span>Top Source IPs (24h)</span>
+        </div>
+        <div class="stats-table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Source IP</th>
-                <th>Amount</th>
+                <th>Count</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="stat in stats.top_10_source_ips_last_24_hours" :key="stat.source_ip">
-                <td><a :href="'/requests?q=source_ip:' + stat.source_ip">{{ stat.source_ip }}</a></td>
-                <td>{{ stat.total_requests }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-if="stats" class="rounded overflow-hidden shadow-lg">
-          <table>
-            <thead>
-              <tr>
-                <th>URI</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="stat in stats.top_10_uris_last_24_hours" :key="stat.uri">
-                <td><a :href="'/requests?q=uri:' + encodeURIComponent(stat.uri)">{{ stat.uri }}</a></td>
+              <tr
+                v-for="stat in stats.top_10_source_ips_last_24_hours"
+                :key="stat.source_ip"
+              >
+                <td>
+                  <a :href="'/requests?q=source_ip:' + stat.source_ip">{{ stat.source_ip }}</a>
+                </td>
                 <td>{{ stat.total_requests }}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
+
+      <!-- Top URIs -->
+      <div
+        v-if="stats"
+        class="stats-card"
+      >
+        <div class="stats-card-header">
+          <i class="pi pi-link" />
+          <span>Top URIs (24h)</span>
+        </div>
+        <div class="stats-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>URI</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="stat in stats.top_10_uris_last_24_hours"
+                :key="stat.uri"
+              >
+                <td>
+                  <a :href="'/requests?q=uri:' + encodeURIComponent(stat.uri)">{{ stat.uri }}</a>
+                </td>
+                <td>{{ stat.total_requests }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Malware Doughnut -->
+      <div class="stats-card">
+        <div class="stats-card-header">
+          <i class="pi pi-exclamation-triangle" />
+          <span>Malware URLs (24h)</span>
+        </div>
+        <div class="stats-pie-wrap">
+          <PrimeChart
+            type="doughnut"
+            :data="malwarePieChartData"
+            :options="pieChartOptions"
+          />
+        </div>
+      </div>
     </div>
-    <div class="basis-1/5" />
   </div>
 </template>
 
@@ -394,30 +444,79 @@ export default {
 </script>
 
 <style scoped>
-#date {
-  width: 170px;
+.stats-page {
+  max-width: 1400px;
+  margin: 0 auto;
 }
-.table tr.is-selected {
-  background-color: #4e726d;
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 1rem;
 }
-table {
+
+.stats-card {
+  background: var(--p-surface-0);
+  border: 1px solid var(--p-surface-200);
+  border-radius: var(--p-border-radius);
+  overflow: hidden;
+}
+
+.stats-card-wide {
+  grid-column: 1 / -1;
+}
+
+.stats-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--p-surface-50);
+  border-bottom: 1px solid var(--p-surface-200);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--p-text-muted-color);
+}
+
+.stats-card-header i {
+  font-size: 1rem;
+  color: var(--p-primary-500);
+}
+
+.stats-chart-wrap {
+  padding: 1rem;
+  height: 22rem;
+}
+
+.stats-chart {
+  height: 100% !important;
+}
+
+.stats-pie-wrap {
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  max-height: 280px;
+}
+
+.stats-table-wrap {
+  padding: 0.75rem 1rem;
+}
+
+.stats-table-wrap table {
   width: 100%;
+  border-collapse: collapse;
 }
 
-td {
-  font-size: 13px;
+.stats-table-wrap th,
+.stats-table-wrap td {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.9rem;
 }
 
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-right {
-  float: right;
-}
-
-.p-inputtext {
-  width: 100%;
+.stats-table-wrap tbody tr:hover {
+  background: var(--p-surface-50);
 }
 </style>

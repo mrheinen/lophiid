@@ -25,10 +25,10 @@ import (
 type Application struct {
 	ID         int64                    `ksql:"id,skipInserts" json:"id" doc:"The ID of the application"`
 	Name       string                   `ksql:"name" json:"name" doc:"The application name"`
-	Version    string                   `ksql:"version" json:"version" doc:"The application version"`
-	Vendor     string                   `ksql:"vendor" json:"vendor" doc:"The application vendor"`
-	OS         string                   `ksql:"os" json:"os" doc:"The OS on which the application runs"`
-	Link       string                   `ksql:"link" json:"link" doc:"A reference link"`
+	Version    *string                  `ksql:"version" json:"version" doc:"The application version"`
+	Vendor     *string                  `ksql:"vendor" json:"vendor" doc:"The application vendor"`
+	OS         *string                  `ksql:"os" json:"os" doc:"The OS on which the application runs"`
+	Link       *string                  `ksql:"link" json:"link" doc:"A reference link"`
 	CreatedAt  time.Time                `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Date and time of creation"`
 	UpdatedAt  time.Time                `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Date and time of last update"`
 	ExtVersion int64                    `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version"`

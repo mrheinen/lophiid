@@ -1,10 +1,6 @@
 <template>
-  <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div
-      class="col-span-3"
-      style="mleft"
-    >
-      <div class="rounded overflow-hidden shadow-lg">
+  <div class="list-layout">
+    <div class="list-table-wrap">
         <DataTable
           v-model:selection="selectedQuery"
           :value="queries"
@@ -38,12 +34,12 @@
           <DataColumn
             field="parsed.created_at"
             header="Created at"
-            style="width: 12%"
+            class="col-shrink"
           />
           <DataColumn
             field="parsed.last_ran_at"
             header="Last ran"
-            style="width: 12%"
+            class="col-shrink"
           />
           <DataColumn header="Query">
             <template #body="slotProps">
@@ -86,9 +82,8 @@
             </div>
           </template>
         </DataTable>
-      </div>
     </div>
-    <div class="col-span-2">
+    <div class="list-form-wrap">
       <query-form
         :query="selectedQuery"
         @update-query="onUpdateQuery"
@@ -257,29 +252,6 @@ export default {
 </script>
 
 <style scoped>
-#date {
-  width: 170px;
-}
-.table tr.is-selected {
-  background-color: #4e726d;
-}
-table {
-  width: 100%;
-}
-
-td {
-  font-size: 13px;
-}
-
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-right {
-  float: right;
-}
-
 .p-inputtext {
   width: 100%;
 }

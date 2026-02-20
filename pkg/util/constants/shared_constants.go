@@ -200,7 +200,8 @@ const (
 
 const (
 	// The default rule group ID that all rules need to be added to.
-	DefaultRuleGroupID = 1
+	DefaultRuleGroupID = 1000
+	DefaultUploadAppID = 1000
 )
 
 const (

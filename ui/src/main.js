@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 
-import './index.css'
+import './index.css';
 
 // Allow toast messages.
 import ToastPlugin from 'vue-toast-notification';
@@ -22,85 +22,61 @@ import YaraList from './components/container/YaraList.vue';
 import RuleGroupList from './components/container/RuleGroupList.vue';
 import GlobalStats from './components/container/GlobalStats.vue';
 import InfoCard from './components/cards/InfoCard.vue';
-import PrimeVue from './../node_modules/primevue/config';
 
-import CodeMirror from './../node_modules/vue-codemirror';
+import PrimeVue from 'primevue/config';
+import CodeMirror from 'vue-codemirror';
+import hljsVuePlugin from '@highlightjs/vue-plugin';
 
-import './../node_modules/@fontsource/roboto/index.css';
-import './../node_modules/@fontsource/source-sans-pro/400.css';
-import './../node_modules/primeicons/primeicons.css';
-import './../node_modules/highlight.js/styles/stackoverflow-light.css'
-import './../node_modules/highlight.js/lib/common';
+import '@fontsource/roboto/index.css';
+import '@fontsource/source-sans-pro/400.css';
+import 'primeicons/primeicons.css';
+import 'highlight.js/styles/stackoverflow-light.css';
+import 'highlight.js/lib/common';
 
 import store from './authStore.js';
 
-import hljsVuePlugin from "./../node_modules/@highlightjs/vue-plugin";
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes: [
-    {path: Config.contentLink, component: ContentList },
-    {path: Config.contentSegmentLink, component: ContentList },
-    {path: Config.rulesLink, component: RulesList },
-    {path: Config.rulesSegmentLink, component: RulesList },
-    {path: Config.appsLink, component: AppsList },
-    {path: Config.appsSegmentLink, component: AppsList },
-    {path: Config.downloadsLink, component: DownList },
-    {path: Config.downloadsSegmentLink, component: DownList },
-    {path: Config.honeypotsLink, component: HoneyList },
-    {path: Config.honeypotsSegmentLink, component: HoneyList },
-    {path: Config.storedqueryLink, component: QueryList },
-    {path: Config.storedquerySegmentLink, component: QueryList },
-    {path: Config.tagsLink, component: TagList },
-    {path: Config.tagsSegmentLink, component: TagList },
-    {path: Config.requestsLink, component: RequestsList },
-    {path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },
-    {path: Config.eventLink, component: EventsList },
-    {path: Config.eventSegmentLink, component: EventsList },
-    {path: Config.yaraLink, component: YaraList },
-    {path: Config.yaraSegmentLink, component: YaraList },
-    {path: Config.ruleGroupsLink, component: RuleGroupList },
-    {path: Config.ruleGroupsSegmentLink, component: RuleGroupList },
-    {path: Config.statsLink, component: GlobalStats },
-  ]
-});
-
-import AutoComplete from './../node_modules/primevue/autocomplete';
-import Textarea from './../node_modules/primevue/textarea';
-import InputText from './../node_modules/primevue/inputtext';
-import InputNumber from './../node_modules/primevue/inputnumber';
-import Select from './../node_modules/primevue/select';
-import Badge from './../node_modules/primevue/badge';
-import ListBox from './../node_modules/primevue/listbox';
-import FieldSet from './../node_modules/primevue/fieldset';
-import Button from './../node_modules/primevue/button';
-import ConfirmPopup from './../node_modules/primevue/confirmpopup';
-import Dialog from './../node_modules/primevue/dialog';
-import CheckBox from './../node_modules/primevue/checkbox';
-import MenuBar from './../node_modules/primevue/menubar';
-import MultiSelect from './../node_modules/primevue/multiselect';
-import ColorPicker from './../node_modules/primevue/colorpicker';
-import PopOver from './../node_modules/primevue/popover';
-import IconField from './../node_modules/primevue/iconfield';
-import InputIcon from './../node_modules/primevue/inputicon';
-import DataTable from './../node_modules/primevue/datatable';
-import Column from './../node_modules/primevue/column';
-import Skeleton from './../node_modules/primevue/skeleton';
-import Tabs from './../node_modules/primevue/tabs';
-import TabList from './../node_modules/primevue/tablist';
-import Tab from './../node_modules/primevue/tab';
-import TabPanels from './../node_modules/primevue/tabpanels';
-import TabPanel from './../node_modules/primevue/tabpanel';
-import ConfirmationService from './../node_modules/primevue/confirmationservice';
-import Chart from './../node_modules/primevue/chart';
-
-
+// PrimeVue component imports
+import AutoComplete from 'primevue/autocomplete';
+import Textarea from 'primevue/textarea';
+import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import InputGroup from 'primevue/inputgroup';
+import InputGroupAddon from 'primevue/inputgroupaddon';
+import Select from 'primevue/select';
+import Badge from 'primevue/badge';
+import ListBox from 'primevue/listbox';
+import FieldSet from 'primevue/fieldset';
+import Button from 'primevue/button';
+import ConfirmPopup from 'primevue/confirmpopup';
+import Dialog from 'primevue/dialog';
+import CheckBox from 'primevue/checkbox';
+import MenuBar from 'primevue/menubar';
+import MultiSelect from 'primevue/multiselect';
+import ColorPicker from 'primevue/colorpicker';
+import PopOver from 'primevue/popover';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Skeleton from 'primevue/skeleton';
+import Tabs from 'primevue/tabs';
+import TabList from 'primevue/tablist';
+import Tab from 'primevue/tab';
+import TabPanels from 'primevue/tabpanels';
+import TabPanel from 'primevue/tabpanel';
+import ConfirmationService from 'primevue/confirmationservice';
+import Chart from 'primevue/chart';
+import Card from 'primevue/card';
+import Tag from 'primevue/tag';
+import Toolbar from 'primevue/toolbar';
+import ProgressBar from 'primevue/progressbar';
+import Tooltip from 'primevue/tooltip';
+import Divider from 'primevue/divider';
 
 import Lara from '@primevue/themes/lara';
 import { definePreset } from '@primevue/themes';
 
-
-const MyPreset = definePreset(Lara, {
+const LophiidPreset = definePreset(Lara, {
     semantic: {
         primary: {
             50: '{amber.50}',
@@ -114,13 +90,61 @@ const MyPreset = definePreset(Lara, {
             800: '{amber.800}',
             900: '{amber.900}',
             950: '{amber.950}'
+        },
+        colorScheme: {
+            light: {
+                surface: {
+                    0: '#ffffff',
+                    50: '{slate.50}',
+                    100: '{slate.100}',
+                    200: '{slate.200}',
+                    300: '{slate.300}',
+                    400: '{slate.400}',
+                    500: '{slate.500}',
+                    600: '{slate.600}',
+                    700: '{slate.700}',
+                    800: '{slate.800}',
+                    900: '{slate.900}',
+                    950: '{slate.950}'
+                }
+            }
         }
     }
 });
 
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/', redirect: Config.requestsLink },
+    { path: Config.contentLink, component: ContentList },
+    { path: Config.contentSegmentLink, component: ContentList },
+    { path: Config.rulesLink, component: RulesList },
+    { path: Config.rulesSegmentLink, component: RulesList },
+    { path: Config.appsLink, component: AppsList },
+    { path: Config.appsSegmentLink, component: AppsList },
+    { path: Config.downloadsLink, component: DownList },
+    { path: Config.downloadsSegmentLink, component: DownList },
+    { path: Config.honeypotsLink, component: HoneyList },
+    { path: Config.honeypotsSegmentLink, component: HoneyList },
+    { path: Config.storedqueryLink, component: QueryList },
+    { path: Config.storedquerySegmentLink, component: QueryList },
+    { path: Config.tagsLink, component: TagList },
+    { path: Config.tagsSegmentLink, component: TagList },
+    { path: Config.requestsLink, component: RequestsList },
+    { path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },
+    { path: Config.eventLink, component: EventsList },
+    { path: Config.eventSegmentLink, component: EventsList },
+    { path: Config.yaraLink, component: YaraList },
+    { path: Config.yaraSegmentLink, component: YaraList },
+    { path: Config.ruleGroupsLink, component: RuleGroupList },
+    { path: Config.ruleGroupsSegmentLink, component: RuleGroupList },
+    { path: Config.statsLink, component: GlobalStats },
+  ]
+});
 
 const app = createApp(App);
 
+// Register PrimeVue components globally
 app.component('PrimeTabs', Tabs);
 app.component('PrimeTab', Tab);
 app.component('TabList', TabList);
@@ -131,6 +155,8 @@ app.component('AutoComplete', AutoComplete);
 app.component('TextArea', Textarea);
 app.component('InputText', InputText);
 app.component('InputNumber', InputNumber);
+app.component('InputGroup', InputGroup);
+app.component('InputGroupAddon', InputGroupAddon);
 app.component('FormSelect', Select);
 app.component('ListBox', ListBox);
 app.component('FieldSet', FieldSet);
@@ -149,18 +175,31 @@ app.component('InputIcon', InputIcon);
 app.component('PopOver', PopOver);
 app.component('PrimeChart', Chart);
 app.component('InfoCard', InfoCard);
+app.component('PrimeCard', Card);
+app.component('PrimeTag', Tag);
+app.component('PrimeToolbar', Toolbar);
+app.component('ProgressBar', ProgressBar);
+app.component('PrimeDivider', Divider);
+
+// Directives
+app.directive('tooltip', Tooltip);
+
+// Plugins
 app.use(hljsVuePlugin);
 app.use(router);
 app.use(store);
 app.use(PrimeVue, {
+    ripple: true,
     theme: {
-        preset: MyPreset
+        preset: LophiidPreset,
+        options: {
+            darkModeSelector: '.app-dark',
+        }
     }
 });
 app.use(ToastPlugin);
 app.use(ConfirmationService);
 app.use(CodeMirror, {
-  // optional default global options
   autofocus: true,
   disabled: false,
   indentWithTab: true,
@@ -168,6 +207,6 @@ app.use(CodeMirror, {
   placeholder: 'Code goes here...',
   extensions: [],
   theme: 'base16-dark'
-})
+});
 
 app.mount('#app');

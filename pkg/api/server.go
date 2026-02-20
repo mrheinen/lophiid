@@ -104,6 +104,14 @@ func GetQueryParameters(req *http.Request) (int64, int64, string, error) {
 		return 0, 0, "", fmt.Errorf("invalid limit %s: %w", limit, err)
 	}
 
+	if iLimit <= 0 {
+		return 0, 0, "", fmt.Errorf("limit must be greater than 0")
+	}
+
+	if iOffset < 0 {
+		return 0, 0, "", fmt.Errorf("offset must be positive")
+	}
+
 	query := req.URL.Query().Get("q")
 	return iOffset, iLimit, query, nil
 }
@@ -292,13 +300,6 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
 			errMsg := fmt.Sprintf("unable to update rule: %s", err.Error())
-			a.sendStatus(w, errMsg, ResultError, nil)
-			return
-		}
-
-		// Add the rule to the default rule group.
-		if _, err := a.dbc.Insert(&models.RulePerGroup{RuleID: rb.ID, GroupID: constants.DefaultRuleGroupID}); err != nil {
-			errMsg := fmt.Sprintf("unable to update rule group for rule %d: %s", dm.ModelID(), err.Error())
 			a.sendStatus(w, errMsg, ResultError, nil)
 			return
 		}
@@ -617,7 +618,7 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	if rb.Name == "" || rb.Version == "" {
+	if rb.Name == "" || rb.Version == nil || *rb.Version == "" {
 		a.sendStatus(w, "App name and version are required", ResultError, nil)
 		return
 	}
@@ -655,6 +656,11 @@ func (a *ApiServer) HandleDeleteApp(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if intID == constants.DefaultUploadAppID {
+		a.sendStatus(w, "cannot delete the default upload application", ResultError, nil)
 		return
 	}
 
@@ -957,6 +963,10 @@ func (a *ApiServer) HandleSearchAppPerGroup(w http.ResponseWriter, req *http.Req
 	a.sendStatus(w, "", ResultSuccess, rls)
 }
 
+// HandleGetAppsPerGroup returns a map where the key is a group ID and the value
+// is an AppsGroup. The for each RuleGroup the AppsGroup contains the RuleGroup
+// struct and t a list of Applications that belong to the group.
+// An application can be in multiple groups.
 func (a *ApiServer) HandleGetAppsPerGroup(w http.ResponseWriter, req *http.Request) {
 	rls, err := a.dbc.GetAppPerGroupJoin()
 	if err != nil {
@@ -1205,6 +1215,11 @@ func (a *ApiServer) HandleDeleteRuleGroup(w http.ResponseWriter, req *http.Reque
 		return
 	}
 
+	if intID == constants.DefaultRuleGroupID {
+		a.sendStatus(w, "cannot delete the default rule group", ResultError, nil)
+		return
+	}
+
 	err = a.dbc.Delete(&models.RuleGroup{ID: intID})
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -1287,9 +1302,9 @@ type AppExport struct {
 }
 
 type AppYamlExport struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Vendor  string `json:"vendor"`
+	Name    string  `json:"name"`
+	Version *string `json:"version"`
+	Vendor  *string `json:"vendor"`
 	Yaml    string `json:"yaml"`
 }
 

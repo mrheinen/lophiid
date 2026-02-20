@@ -25,6 +25,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/javascript"
+	"lophiid/pkg/util/constants"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -32,8 +33,101 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
+
+func TestGetQueryParameters(t *testing.T) {
+	for _, test := range []struct {
+		description    string
+		queryString    string
+		wantOffset     int64
+		wantLimit      int64
+		wantQuery      string
+		wantErr        bool
+		errMsgContains string
+	}{
+		{
+			description:    "missing offset and limit",
+			queryString:    "",
+			wantErr:        true,
+			errMsgContains: "offset and limit must be provided",
+		},
+		{
+			description:    "missing offset",
+			queryString:    "limit=10",
+			wantErr:        true,
+			errMsgContains: "offset and limit must be provided",
+		},
+		{
+			description:    "missing limit",
+			queryString:    "offset=0",
+			wantErr:        true,
+			errMsgContains: "offset and limit must be provided",
+		},
+		{
+			description:    "invalid offset",
+			queryString:    "offset=abc&limit=10",
+			wantErr:        true,
+			errMsgContains: "invalid offset",
+		},
+		{
+			description:    "invalid limit",
+			queryString:    "offset=0&limit=abc",
+			wantErr:        true,
+			errMsgContains: "invalid limit",
+		},
+		{
+			description:    "limit is zero",
+			queryString:    "offset=0&limit=0",
+			wantErr:        true,
+			errMsgContains: "limit must be greater than 0",
+		},
+		{
+			description:    "limit is negative",
+			queryString:    "offset=0&limit=-5",
+			wantErr:        true,
+			errMsgContains: "limit must be greater than 0",
+		},
+		{
+			description:    "negative offset",
+			queryString:    "offset=-1&limit=10",
+			wantErr:        true,
+			errMsgContains: "offset must be positive",
+		},
+		{
+			description: "valid without query",
+			queryString: "offset=0&limit=10",
+			wantOffset:  0,
+			wantLimit:   10,
+			wantQuery:   "",
+			wantErr:     false,
+		},
+		{
+			description: "valid with query",
+			queryString: "offset=5&limit=20&q=name%3Dfoo",
+			wantOffset:  5,
+			wantLimit:   20,
+			wantQuery:   "name=foo",
+			wantErr:     false,
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/test?"+test.queryString, nil)
+			offset, limit, query, err := GetQueryParameters(req)
+
+			if test.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.errMsgContains)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.wantOffset, offset)
+				assert.Equal(t, test.wantLimit, limit)
+				assert.Equal(t, test.wantQuery, query)
+			}
+		})
+	}
+}
 
 func TestUpsertSingleContent(t *testing.T) {
 	for _, test := range []struct {
@@ -808,6 +902,46 @@ func TestHandleUpdateSingleDownload(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleDeleteAppDefaultProtected(t *testing.T) {
+	fd := database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	s := NewApiServer(&fd, &fakeJrunner, "apikey")
+
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/app/delete?id=%d", constants.DefaultUploadAppID), nil)
+	w := httptest.NewRecorder()
+	s.HandleDeleteApp(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	assert.NoError(t, err)
+
+	pdata := HttpResult{}
+	assert.NoError(t, json.Unmarshal(data, &pdata))
+	assert.Equal(t, ResultError, pdata.Status)
+	assert.Contains(t, pdata.Message, "cannot delete the default upload application")
+}
+
+func TestHandleDeleteRuleGroupDefaultProtected(t *testing.T) {
+	fd := database.FakeDatabaseClient{}
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	s := NewApiServer(&fd, &fakeJrunner, "apikey")
+
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/rulegroup/delete?id=%d", constants.DefaultRuleGroupID), nil)
+	w := httptest.NewRecorder()
+	s.HandleDeleteRuleGroup(w, req)
+	res := w.Result()
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	assert.NoError(t, err)
+
+	pdata := HttpResult{}
+	assert.NoError(t, json.Unmarshal(data, &pdata))
+	assert.Equal(t, ResultError, pdata.Status)
+	assert.Contains(t, pdata.Message, "cannot delete the default rule group")
 }
 
 func TestHandleUpdateAppsForGroup(t *testing.T) {

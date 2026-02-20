@@ -30,12 +30,8 @@
     </div>
   </PrimeDialog>
 
-  <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div
-      class="col-span-3"
-      style="mleft"
-    >
-      <div class="rounded overflow-hidden shadow-lg">
+  <div class="list-layout">
+    <div class="list-table-wrap">
         <DataTable
           v-model:selection="selectedRuleGroup"
           :value="ruleGroups"
@@ -64,7 +60,7 @@
           <DataColumn
             field="id"
             header="ID"
-            style="width: 4%"
+            class="col-shrink"
           />
           <DataColumn
             field="name"
@@ -74,11 +70,11 @@
           <DataColumn
             field="parsed.created_at"
             header="Date"
-            style="width: 14%"
+            class="col-shrink"
           />
           <DataColumn
             header="Actions"
-            style="width: 5%"
+            class="col-shrink"
           >
             <template #body="slotProps">
               <i
@@ -124,9 +120,8 @@
             </div>
           </template>
         </DataTable>
-      </div>
     </div>
-    <div class="col-span-2">
+    <div class="list-form-wrap">
       <rule-group-form
         :rulegroup="selectedRuleGroup"
         @update-rule-group="onUpdateRuleGroup"
@@ -401,40 +396,18 @@ export default {
 </script>
 
 <style scoped>
-.table tr.is-selected {
-  background-color: #4e726d;
-}
-#date {
-  width: 170px;
-}
-
-table {
+.p-inputtext {
   width: 100%;
-}
-
-td {
-  font-size: 13px;
-}
-
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-right {
-  float: right;
 }
 
 i.pi-style-action {
-  font-size: 1.2rem;
-  color: #00d1b2;
+  font-size: 1.1rem;
+  color: var(--p-primary-500);
+  cursor: pointer;
+  transition: color 0.15s ease;
 }
 
 i.pi-style-action:hover {
-  color: #00f5d4;
-}
-
-.p-inputtext {
-  width: 100%;
+  color: var(--p-primary-700);
 }
 </style>

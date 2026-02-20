@@ -37,29 +37,30 @@
           />
         </div>
 
-        <br>
-
-        <input
-          v-if="!scriptMode"
-          type="file"
-          @change="handleFileUpload"
-        >
-        <div v-if="scriptMode">
-          <label class="label">Content Script</label>
-          <codemirror
-            v-model="localContent.script"
-            :style="{ height: '400px' }"
-            :extensions="extensions"
-          />
+        <div class="mt-3">
+          <input
+            v-if="!scriptMode"
+            type="file"
+            @change="handleFileUpload"
+          >
+          <div v-if="scriptMode">
+            <label class="label">Content Script</label>
+            <codemirror
+              v-model="localContent.script"
+              :style="{ height: '400px' }"
+              :extensions="extensions"
+            />
+          </div>
         </div>
 
-        <br>
-        <br>
-        <PrimeButton
-          severity="secondary"
-          :label="scriptMode ? 'Exit script Mode' : 'Enter script mode'"
-          @click="scriptMode = !scriptMode"
-        />
+        <div class="mt-3">
+          <PrimeButton
+            severity="secondary"
+            :label="scriptMode ? 'Exit Script Mode' : 'Enter Script Mode'"
+            :icon="scriptMode ? 'pi pi-times' : 'pi pi-code'"
+            @click="scriptMode = !scriptMode"
+          />
+        </div>
       </template>
     </InfoCard>
 
@@ -134,50 +135,27 @@
         </div>
       </template>
     </InfoCard>
-    <br>
-
-    <div class="button-group">
+    <div class="flex gap-2 mt-3">
       <PrimeButton
         :label="localContent.id > 0 ? 'Submit' : 'Add'"
-        @click.prevent="submitForm()
-        "
+        icon="pi pi-check"
+        @click.prevent="submitForm()"
       />
-      &nbsp;
       <PrimeButton
         severity="secondary"
         label="New"
+        icon="pi pi-plus"
         @click="resetForm()"
       />
-      &nbsp;
       <PrimeButton
         severity="danger"
         label="Delete"
+        icon="pi pi-trash"
         @click="requireConfirmation($event)"
       />
     </div>
   </div>
-  <ConfirmPopup group="headless">
-    <template #container="{ message, acceptCallback, rejectCallback }">
-      <div class="bg-gray-900 text-white border-round p-3">
-        <span>{{ message.message }}</span>
-        <div class="flex align-items-center gap-2 mt-3">
-          <PrimeButton
-            icon="pi pi-check"
-            label="Save"
-            class="p-button-sm p-button-outlined"
-            @click="acceptCallback"
-          />
-          <PrimeButton
-            label="Cancel"
-            severity="secondary"
-            outlined
-            class="p-button-sm p-button-text"
-            @click="rejectCallback"
-          />
-        </div>
-      </div>
-    </template>
-  </ConfirmPopup>
+  <ConfirmPopup />
 </template>
 
 <script>
@@ -295,7 +273,6 @@ export default {
       }
       this.$confirm.require({
         target: event.currentTarget,
-        group: "headless",
         message: "Are you sure? You cannot undo this.",
         accept: () => {
           if (this.localContent.id) {

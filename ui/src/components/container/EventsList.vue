@@ -1,10 +1,6 @@
 <template>
-  <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div
-      class="col-span-3"
-      style="mleft"
-    >
-      <div class="rounded overflow-hidden shadow-lg">
+  <div class="list-layout">
+    <div class="list-table-wrap">
         <DataTable
           v-model:selection="selectedEvent"
           :value="events"
@@ -33,7 +29,7 @@
           <DataColumn
             field="parsed.first_seen_at"
             header="First Seen"
-            style="width: 16%"
+            class="col-shrink"
           />
           <DataColumn
             field="type"
@@ -97,36 +93,6 @@
             header="Details"
           />
           <DataColumn
-            field="source"
-            header="Source"
-            style="width: 5%"
-          >
-            <template #body="slotProps">
-              <span
-                class="pointer filter-cell"
-                @click="handleFieldClick($event, 'source', slotProps.data.source)"
-              >
-                {{ slotProps.data.source }}
-                <i v-if="altPressed && !shiftPressed" class="pi pi-search-plus filter-icon" />
-                <i v-if="altPressed && shiftPressed" class="pi pi-search-minus filter-icon filter-icon-exclude" />
-              </span>
-            </template>
-          </DataColumn>
-          <DataColumn
-            header="Source ref"
-            style="width: 7%"
-          >
-            <template #body="slotProps">
-              <span v-if="slotProps.data.source_ref_type == config.ipEventSourceRefRuleId">
-                <a :href="config.rulesLink + '?q=id:' + slotProps.data.source_ref">{{ slotProps.data.source_ref }}</a>
-              </span>
-              <span v-else-if="slotProps.data.source_ref_type == config.ipEventSourceRefDownloadId">
-                <a :href="config.downloadsLink + '?q=vt_file_analysis_id:' + slotProps.data.source_ref">analysis</a>
-              </span>
-              <span v-else>{{ slotProps.data.source_ref }}</span>
-            </template>
-          </DataColumn>
-          <DataColumn
             field="count"
             header="Count"
             style="width: 4%"
@@ -180,11 +146,8 @@
             </div>
           </template>
         </DataTable>
-      </div>
     </div>
-
-
-    <div class="col-span-2">
+    <div class="list-form-wrap">
       <events-form
         :event="selectedEvent"
         @update-query="onUpdateEvent"
@@ -413,51 +376,7 @@ export default {
 </script>
 
 <style scoped>
-#date {
-  width: 170px;
-}
-.table tr.is-selected {
-  background-color: #4e726d;
-}
-table {
-  width: 100%;
-}
-
-td {
-  font-size: 13px;
-}
-
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-right {
-  float: right;
-}
-
 .p-inputtext {
   width: 100%;
-}
-
-.pointer {
-  cursor: pointer;
-}
-
-.filter-icon {
-  position: absolute;
-  right: -10px;
-  top: -3px;
-  font-size: 0.7rem;
-  color: #00d1b2;
-}
-
-.filter-icon-exclude {
-  color: #e57373;
-}
-
-.filter-cell {
-  position: relative;
-  display: block;
 }
 </style>

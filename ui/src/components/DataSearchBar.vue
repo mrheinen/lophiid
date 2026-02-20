@@ -1,25 +1,28 @@
 <template>
-  <span style="width: 100%">
+  <div class="search-bar">
     <form
-      style="display: flex"
+      class="search-bar-form"
       @submit.prevent="performNewSearch()"
     >
-      <IconField icon-position="left">
-        <InputIcon
-          ref="icon"
-          :class="iconClass"
-          @click="showPopover"
+      <div class="search-bar-input-wrap">
+        <IconField icon-position="left">
+          <InputIcon
+            ref="icon"
+            :class="iconClass"
+            @click="showPopover"
+          />
+          <InputText
+            v-model="localQuery"
+            placeholder="Search (press Enter to submit)"
+            class="search-input"
+          />
+        </IconField>
+        <SearchPopover
+          ref="spop"
+          :options="options"
+          :modelname="modelname"
         />
-        <InputText
-          v-model="localQuery"
-          placeholder="Search"
-        />
-      </IconField>
-      <SearchPopover
-        ref="spop"
-        :options="options"
-        :modelname="modelname"
-      />
+      </div>
       <FormSelect
         v-if="showage"
         ref="ageSelector"
@@ -27,10 +30,23 @@
         :options="ageOptions"
         option-label="name"
         option-value="value"
-        placeholder="Months back"
+        placeholder="Time range"
+        class="search-age-select"
+      />
+      <PrimeButton
+        type="submit"
+        icon="pi pi-search"
+        severity="secondary"
+        v-tooltip.bottom="'Search'"
+        class="search-btn"
       />
     </form>
-  </span>
+    <ProgressBar
+      v-if="isloading"
+      mode="indeterminate"
+      class="search-progress"
+    />
+  </div>
 </template>
 
 <script>
@@ -86,7 +102,7 @@ export default {
     iconClass() {
       return (
         "pi pi-info-circle search-info-icon pointer" +
-        (this.isloading ? " pi-spin bold" : "")
+        (this.isloading ? " pi-spin" : "")
       );
     },
   },
@@ -114,23 +130,49 @@ export default {
 </script>
 
 <style scoped>
-.p-inputtext {
+.search-bar {
   width: 100%;
 }
 
-.p-iconfield {
+.search-bar-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.search-bar-input-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-bar-input-wrap .p-iconfield {
   width: 100%;
 }
 
-.bold {
-  font-weight: bold !important;
+.search-input {
+  width: 100% !important;
 }
+
+.search-age-select {
+  width: 10rem;
+  flex-shrink: 0;
+}
+
+.search-btn {
+  flex-shrink: 0;
+}
+
+.search-progress {
+  height: 3px !important;
+  margin-top: 2px;
+}
+
 span.search-info-icon {
-  color: black;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
 }
 
 span.search-info-icon:hover {
-  color: black;
-  font-weight: bold !important;
+  color: var(--p-text-color);
 }
 </style>

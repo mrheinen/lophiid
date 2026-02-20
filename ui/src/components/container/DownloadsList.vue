@@ -1,10 +1,6 @@
 <template>
-  <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div
-      class="col-span-3"
-      style="mleft"
-    >
-      <div class="rounded overflow-hidden shadow-lg">
+  <div class="list-layout">
+    <div class="list-table-wrap">
         <DataTable
           v-model:selection="selectedDownload"
           :value="downloads"
@@ -36,14 +32,6 @@
             style="width: 4%"
           />
           <DataColumn
-            header="First RID"
-            style="width: 5%"
-          >
-            <template #body="slotProps">
-              <a :href="config.requestsLink + '?q=id:' + slotProps.data.request_id">{{ slotProps.data.request_id }}</a>
-            </template>
-          </DataColumn>
-          <DataColumn
             header="Last RID"
             style="width: 5%"
           >
@@ -55,27 +43,21 @@
           <DataColumn
             field="parsed.original_url"
             header="Orig URL"
-            style="width: 30%"
-          />
-          <DataColumn
-            field="content_type"
-            header="Content type"
-            style="width: 15%"
           />
           <DataColumn
             field="times_seen"
             header="# seen"
-            style="width: 6%"
+            class="col-shrink"
           />
           <DataColumn
             field="parsed.last_seen_at"
             header="Last seen"
-            style="width: 14%"
+            class="col-shrink"
           />
 
           <DataColumn
             header="Actions"
-            style="width: 10%"
+            class="col-shrink"
           >
             <template #body="slotProps">
               <a
@@ -138,11 +120,8 @@
             </div>
           </template>
         </DataTable>
-      </div>
     </div>
-    <div
-      class="col-span-2"
-    >
+    <div class="list-form-wrap">
       <downloads-form
         :whois="selectedWhois"
         :download="selectedDownload"
@@ -365,29 +344,6 @@ export default {
 </script>
 
 <style scoped>
-#date {
-  width: 170px;
-}
-.table tr.is-selected {
-  background-color: #4e726d;
-}
-table {
-  width: 100%;
-}
-
-td {
-  font-size: 13px;
-}
-
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-right {
-  float: right;
-}
-
 .p-inputtext {
   width: 100%;
 }
