@@ -180,10 +180,10 @@ func main() {
 
 		app := models.Application{
 			Name:    *appName,
-			Version: *appVersion,
-			Vendor:  *appVendor,
-			Link:    *appLink,
-			OS:      *appOS,
+			Version: appVersion,
+			Vendor:  appVendor,
+			Link:    appLink,
+			OS:      appOS,
 		}
 
 		newApp, err := appAPI.UpsertDataModel(app)
