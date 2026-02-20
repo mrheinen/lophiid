@@ -199,7 +199,7 @@ export default {
   gap: 0.5rem;
   text-decoration: none !important;
   color: var(--p-text-color) !important;
-  font-size: 1.05rem;
+  font-size: 1.6rem;
   font-weight: 500;
   padding: 0.625rem 0.75rem;
   border-radius: var(--p-border-radius);
@@ -216,7 +216,7 @@ export default {
 }
 
 .submenu-icon {
-  font-size: 0.85rem;
+  font-size: 1.3rem;
   margin-left: 0.25rem;
   color: var(--p-text-muted-color);
 }
@@ -236,7 +236,7 @@ export default {
   border-radius: 50%;
   color: var(--p-text-muted-color) !important;
   transition: background-color 0.15s ease, color 0.15s ease;
-  font-size: 1.25rem;
+  font-size: 1.9rem;
 }
 
 .navbar-github:hover {
