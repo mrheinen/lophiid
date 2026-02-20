@@ -1,10 +1,6 @@
 <template>
-  <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div
-      class="col-span-3"
-      style="mleft"
-    >
-      <div class="rounded overflow-hidden shadow-lg">
+  <div class="list-layout">
+    <div class="list-table-wrap">
         <DataTable
           v-model:selection="selectedHoneypot"
           :value="honeypots"
@@ -52,12 +48,12 @@
           <DataColumn
             field="parsed.created_at"
             header="First seen"
-            style="width: 14%"
+            class="col-shrink"
           />
           <DataColumn
             field="parsed.last_checkin"
             header="Last seen"
-            style="width: 14%"
+            class="col-shrink"
           />
           <DataColumn
             field="default_content_id"
@@ -105,9 +101,8 @@
             </div>
           </template>
         </DataTable>
-      </div>
     </div>
-    <div class="col-span-2">
+    <div class="list-form-wrap">
       <honey-form
         :honeypot="selectedHoneypot"
         @update-honeypot="onUpdateHoneypot"
@@ -292,29 +287,6 @@ export default {
 </script>
 
 <style scoped>
-#date {
-  width: 170px;
-}
-
-table {
-  width: 100%;
-}
-.table tr.is-selected {
-  background-color: #4e726d;
-}
-td {
-  font-size: 13px;
-}
-
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-right {
-  float: right;
-}
-
 .p-inputtext {
   width: 100%;
 }

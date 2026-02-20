@@ -1,10 +1,6 @@
 <template>
-  <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div
-      class="col-span-3"
-      style="mleft"
-    >
-      <div class="rounded overflow-hidden shadow-lg">
+  <div class="list-layout">
+    <div class="list-table-wrap">
         <DataTable
           v-model:selection="selectedRequest"
           :value="requests"
@@ -34,7 +30,7 @@
           <DataColumn
             field="parsed.received_at"
             header="Date"
-            style="width: 14%"
+            class="col-shrink"
           />
 
           <DataColumn
@@ -157,9 +153,8 @@
             </div>
           </template>
         </DataTable>
-      </div>
     </div>
-    <div class="col-span-2">
+    <div class="list-form-wrap">
       <request-view
         v-if="selectedRequest"
         :request="selectedRequest"
@@ -517,117 +512,8 @@ export default {
 };
 </script>
 
-<style>
-.mytag {
-  font-size: 0.65rem;
-  display: inline-block;
-  background-color: #d7e7dc;
-  padding-right: 3px;
-  padding-left: 3px;
-  border-radius: 5px;
-  margin-left: 10px;
-}
-.date {
-  width: 170px;
-  white-space: nowrap;
-}
-
-.method {
-  white-space: nowrap;
-}
-
-.honeypot {
-  width: 140px;
-}
-
-.sourceip {
-  width: 100px;
-}
-
-.uri {
-  width: 80%;
-}
-
-.pointer {
-  cursor: pointer;
-}
-
-.filter-icon {
-  position: absolute;
-  right: -10px;
-  top: -3px;
-  font-size: 0.7rem;
-  color: #00d1b2;
-}
-
-.filter-icon-exclude {
-  color: #e57373;
-}
-
-.filter-cell {
-  position: relative;
-  display: block;
-}
-
-table {
-  width: 100%;
-}
-
-.p-datatable-tbody > tr > td {
-  padding-top: 5px !important;
-  padding-bottom: 5px !important;
-  padding-left: 13px !important;
-  padding-right: 13px !important;
-}
-#p-datatable-table tr {
-  font-size: 12px;
-}
-span.search-info-icon {
-  color: black;
-}
-
-span.search-info-icon:hover {
-  color: black;
-  font-weight: bold !important;
-}
-
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-disabled {
-  font-size: 2rem;
-  color: #616060;
-}
-
-i.pi-style-right {
-  float: right;
-}
-
-.restricted-width {
-  width: 700px;
-}
-
+<style scoped>
 .p-inputtext {
   width: 100%;
-}
-
-.starred {
-  color: red;
-}
-
-input.p-select-label {
-  width: 40px;
-}
-.justify-between {
-  justify-content: space-between;
-}
-
-.items-center {
-  align-items: center;
-}
-.flex {
-  display: flex;
 }
 </style>

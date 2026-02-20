@@ -1,10 +1,6 @@
 <template>
-  <div class="grid grid-rows-1 grid-cols-5 gap-4">
-    <div
-      class="col-span-3"
-      style="mleft"
-    >
-      <div class="rounded overflow-hidden shadow-lg">
+  <div class="list-layout">
+    <div class="list-table-wrap">
         <DataTable
           v-model:selection="selectedContent"
           :value="contents"
@@ -51,17 +47,17 @@
           <DataColumn
             field="content_type"
             header="Content Type"
-            style="width: 25%"
+            class="col-shrink"
           />
           <DataColumn
             field="server"
             header="Server"
-            style="width: 20%"
+            class="col-shrink"
           />
           <DataColumn
             field="parsed.updated_at"
             header="Last update"
-            style="width: 25%"
+            class="col-shrink"
           />
 
           <DataColumn
@@ -121,9 +117,8 @@
             </div>
           </template>
         </DataTable>
-      </div>
     </div>
-    <div class="col-span-2">
+    <div class="list-form-wrap">
       <content-form
         :content="selectedContent"
         @update-content="onUpdateContent"
@@ -318,42 +313,7 @@ export default {
 </script>
 
 <style scoped>
-.restrict-width {
-  width: 700px;
-}
-.table tr.is-selected {
-  background-color: #4e726d;
-}
-
-#date {
-  width: 170px;
-}
-
-table {
-  width: 100%;
-}
-
-td {
-  font-size: 13px;
-}
-
-i.pi-style {
-  font-size: 2rem;
-  color: #00d1b2;
-}
-
-i.pi-style-right {
-  float: right;
-}
-
 .p-inputtext {
   width: 100%;
 }
-
-.default {
-  font-weight: bold;
-  font-size: 9px;
-  color: #ab5a54;
-}
-
 </style>

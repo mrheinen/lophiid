@@ -89,63 +89,42 @@
             />
           </div>
 
-          <br>
-
-          <PrimeButton
-            :label="localApp.id > 0 ? 'Submit' : 'Add'"
-            @click="submitForm()"
-          />
-    &nbsp;
-          <PrimeButton
-            severity="secondary"
-            label="New"
-            @click="resetForm()"
-          />
-    &nbsp;
-          <PrimeButton
-            severity="danger"
-            label="Delete"
-            @click="requireConfirmation($event)"
-          />
-    &nbsp;
-          <PrimeButton
-            severity="secondary"
-            label="Export"
-            @click="exportApp(localApp.id)"
-          />
-
-    &nbsp;
-          <PrimeButton
-            severity="secondary"
-            label="Import"
-            @click="showImportForm()"
-          />
+          <div class="flex gap-2 mt-3 flex-wrap">
+            <PrimeButton
+              :label="localApp.id > 0 ? 'Submit' : 'Add'"
+              icon="pi pi-check"
+              @click="submitForm()"
+            />
+            <PrimeButton
+              severity="secondary"
+              label="New"
+              icon="pi pi-plus"
+              @click="resetForm()"
+            />
+            <PrimeButton
+              severity="danger"
+              label="Delete"
+              icon="pi pi-trash"
+              @click="requireConfirmation($event)"
+            />
+            <PrimeButton
+              severity="secondary"
+              label="Export"
+              icon="pi pi-upload"
+              @click="exportApp(localApp.id)"
+            />
+            <PrimeButton
+              severity="secondary"
+              label="Import"
+              icon="pi pi-download"
+              @click="showImportForm()"
+            />
+          </div>
         </template>
       </InfoCard>
     </div>
 
-    <ConfirmPopup group="headless">
-      <template #container="{ message, acceptCallback, rejectCallback }">
-        <div class="bg-gray-900 text-white border-round p-3">
-          <span>{{ message.message }}</span>
-          <div class="flex align-items-center gap-2 mt-3">
-            <PrimeButton
-              icon="pi pi-check"
-              label="Save"
-              class="p-button-sm p-button-outlined"
-              @click="acceptCallback"
-            />
-            <PrimeButton
-              label="Cancel"
-              severity="secondary"
-              outlined
-              class="p-button-sm p-button-text"
-              @click="rejectCallback"
-            />
-          </div>
-        </div>
-      </template>
-    </ConfirmPopup>
+    <ConfirmPopup />
   </div>
 </template>
 
@@ -199,7 +178,6 @@ export default {
     requireConfirmation(event) {
       this.$confirm.require({
         target: event.currentTarget,
-        group: "headless",
         message: "Are you sure? You cannot undo this.",
         accept: () => {
           if (this.localApp.id) {
@@ -351,5 +329,10 @@ export default {
 .description {
   width: 100%;
   height: 140px;
+}
+
+:deep(.p-inputtext),
+:deep(.p-select) {
+  width: 100%;
 }
 </style>

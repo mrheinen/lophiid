@@ -238,49 +238,30 @@
               </table>
             </div>
           </div>
-          <br>
-          <PrimeButton
-            :label="localRule.id > 0 ? 'Submit' : 'Add'"
-            @click="submitForm()"
-          />
-        &nbsp;
-          <PrimeButton
-            severity="secondary"
-            label="New"
-            @click="resetForm()"
-          />
-        &nbsp;
-          <PrimeButton
-            severity="danger"
-            label="Delete"
-            @click="requireConfirmation($event)"
-          />
+          <div class="flex gap-2 mt-3">
+            <PrimeButton
+              :label="localRule.id > 0 ? 'Submit' : 'Add'"
+              icon="pi pi-check"
+              @click="submitForm()"
+            />
+            <PrimeButton
+              severity="secondary"
+              label="New"
+              icon="pi pi-plus"
+              @click="resetForm()"
+            />
+            <PrimeButton
+              severity="danger"
+              label="Delete"
+              icon="pi pi-trash"
+              @click="requireConfirmation($event)"
+            />
+          </div>
         </template>
       </InfoCard>
     </div>
 
-    <ConfirmPopup group="headless">
-      <template #container="{ message, acceptCallback, rejectCallback }">
-        <div class="bg-gray-900 text-white border-round p-3">
-          <span>{{ message.message }}</span>
-          <div class="flex align-items-center gap-2 mt-3">
-            <PrimeButton
-              icon="pi pi-check"
-              label="Save"
-              class="p-button-sm p-button-outlined"
-              @click="acceptCallback"
-            />
-            <PrimeButton
-              label="Cancel"
-              severity="secondary"
-              outlined
-              class="p-button-sm p-button-text"
-              @click="rejectCallback"
-            />
-          </div>
-        </div>
-      </template>
-    </ConfirmPopup>
+    <ConfirmPopup />
   </div>
 </template>
 
@@ -370,7 +351,6 @@ export default {
     requireConfirmation(event) {
       this.$confirm.require({
         target: event.currentTarget,
-        group: "headless",
         message: "Are you sure? You cannot undo this.",
         accept: () => {
           if (this.localRule.id) {
@@ -550,7 +530,6 @@ export default {
 <style scoped>
 textarea {
   width: 100%;
-  height: 400px;
 }
 
 .p-multiselect {
@@ -559,9 +538,5 @@ textarea {
 
 .p-select {
   width: 100%;
-}
-
-.pointer {
-  cursor: pointer;
 }
 </style>

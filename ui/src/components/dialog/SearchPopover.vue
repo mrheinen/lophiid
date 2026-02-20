@@ -1,31 +1,33 @@
 <template>
   <PopOver ref="op">
-    For detailed information on building queries, see the
-    <a
-      href="https://github.com/mrheinen/lophiid/blob/main/SEARCH.md"
-      target="_blank"
-    >documentation</a>. <br><br>
-    Below are the keywords specific for this page:
-    <br><br>
-    <table>
-      <thead>
-        <tr class="tabletr">
-          <th>Keyword</th>
-          <th>Description</th>
-          <th>Type</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="[keyword, entry] in options"
-          :key="keyword"
-        >
-          <th>{{ keyword }}</th>
-          <td>{{ entry.field_doc }}</td>
-          <td>{{ entry.field_type }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="popover-content">
+      <p class="popover-hint">
+        See the
+        <a
+          href="https://github.com/mrheinen/lophiid/blob/main/SEARCH.md"
+          target="_blank"
+        >documentation</a> for query syntax. Keywords for this page:
+      </p>
+      <table class="popover-table">
+        <thead>
+          <tr>
+            <th>Keyword</th>
+            <th>Description</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="[keyword, entry] in options"
+            :key="keyword"
+          >
+            <td class="popover-keyword">{{ keyword }}</td>
+            <td>{{ entry.field_doc }}</td>
+            <td class="popover-type">{{ entry.field_type }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </PopOver>
 </template>
 
@@ -85,7 +87,51 @@ export default {
 </script>
 
 <style scoped>
-.tabletr {
-  background-color: lightgray;
+.popover-content {
+  max-width: 600px;
+  max-height: 400px;
+  overflow: auto;
+}
+
+.popover-hint {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  color: var(--p-text-muted-color);
+}
+
+.popover-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.popover-table thead th {
+  background: var(--p-surface-100);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.popover-table tbody td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--p-surface-100);
+}
+
+.popover-table tbody tr:hover {
+  background: var(--p-surface-50);
+}
+
+.popover-keyword {
+  font-weight: 600;
+  font-family: monospace;
+  color: var(--p-primary-600);
+  white-space: nowrap;
+}
+
+.popover-type {
+  color: var(--p-text-muted-color);
+  font-style: italic;
+  white-space: nowrap;
 }
 </style>

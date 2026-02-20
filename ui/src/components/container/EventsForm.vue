@@ -30,6 +30,22 @@
                 <th>Details</th>
                 <td>{{ localEvent.details }}</td>
               </tr>
+              <tr v-if="localEvent.source">
+                <th>Source</th>
+                <td>{{ localEvent.source }}</td>
+              </tr>
+              <tr v-if="localEvent.source_ref">
+                <th>Source ref</th>
+                <td>
+                  <span v-if="localEvent.source_ref_type == config.ipEventSourceRefRuleId">
+                    <a :href="config.rulesLink + '?q=id:' + localEvent.source_ref">{{ localEvent.source_ref }}</a>
+                  </span>
+                  <span v-else-if="localEvent.source_ref_type == config.ipEventSourceRefDownloadId">
+                    <a :href="config.downloadsLink + '?q=vt_file_analysis_id:' + localEvent.source_ref">analysis</a>
+                  </span>
+                  <span v-else>{{ localEvent.source_ref }}</span>
+                </td>
+              </tr>
               <tr v-if="localEvent.request_id">
                 <th>Request ID</th>
                 <td>{{ localEvent.request_id }}</td>

@@ -90,16 +90,6 @@ table {
 
 th,
 td {
-  padding-top: 2px;
-  padding-bottom: 2px;
-  padding-right: 8px;
-}
-
-th {
-  color: #616060;
-}
-
-.pointer {
-  cursor: pointer;
+  padding: 0.25rem 0.75rem 0.25rem 0;
 }
 </style>

@@ -429,42 +429,18 @@ export default {
 
 <style scoped>
 code.hljs {
-  height: 400px;
-  width: 700px;
+  max-height: 400px;
+  max-width: 100%;
   overflow: auto;
-}
-
-.mytag {
-  font-size: 0.8rem;
-  display: inline-block;
-  padding-right: 3px;
-  padding-left: 3px;
-  border-radius: 5px;
-  margin-left: 10px;
+  border-radius: var(--p-border-radius);
 }
 
 table {
   border-collapse: collapse;
 }
 
-pre.whois {
-  max-height: 400px;
-  max-width: 640px;
-  overflow: auto;
-  background-color: #eeeeee;
-  word-break: normal !important;
-  word-wrap: normal !important;
-  white-space: pre !important;
-}
-
 th,
 td {
-  padding-top: 2px;
-  padding-bottom: 2px;
-  padding-right: 8px;
-}
-
-th {
-  color: #616060;
+  padding: 0.25rem 0.75rem 0.25rem 0;
 }
 </style>

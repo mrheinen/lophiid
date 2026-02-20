@@ -1,23 +1,34 @@
 <template>
-  <div class="rounded overflow-hidden shadow-lg">
-    <FieldSet
-      legend="Import app with rules"
-      :toggleable="false"
-    >
-      <p>Select a yaml file to import an app with all it's rules and contents.</p>
-      <p>You should only import trusted files and verify them manually before importing them.</p>
-      <br>
-      <input
-        type="file"
-        accept=".yaml,.yml"
-        @change="handleFileUpload"
-      >
-    </FieldSet>
-
-    <PrimeButton
-      label="Import"
-      @click="submitForm()"
-    />
+  <div>
+    <InfoCard mylabel="Import app with rules">
+      <template #default>
+        <p style="margin-bottom: 0.75rem;">
+          Select a YAML file to import an app with all its rules and contents.
+          Only import trusted files and verify them manually before importing.
+        </p>
+        <input
+          ref="fileInput"
+          type="file"
+          accept=".yaml,.yml"
+          class="file-input-hidden"
+          @change="handleFileUpload"
+        >
+        <PrimeButton
+          :label="selectedFile ? selectedFile.name : 'Choose YAML file...'"
+          icon="pi pi-file"
+          severity="secondary"
+          outlined
+          @click="$refs.fileInput.click()"
+        />
+        <div class="flex gap-2 mt-3">
+          <PrimeButton
+            label="Import"
+            icon="pi pi-download"
+            @click="submitForm()"
+          />
+        </div>
+      </template>
+    </InfoCard>
   </div>
 </template>
 
@@ -75,3 +86,9 @@
   }
 
 </script>
+
+<style scoped>
+.file-input-hidden {
+  display: none;
+}
+</style>

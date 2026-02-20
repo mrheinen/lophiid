@@ -26,9 +26,19 @@
                 <th>Size byte</th>
                 <td>{{ localDownload.size }}</td>
               </tr>
+              <tr v-if="localDownload.content_type">
+                <th>Content type</th>
+                <td>{{ localDownload.content_type }}</td>
+              </tr>
               <tr v-if="localDownload.detected_content_type">
                 <th>Detected mime</th>
                 <td>{{ localDownload.detected_content_type }}</td>
+              </tr>
+              <tr v-if="localDownload.request_id">
+                <th>First RID</th>
+                <td>
+                  <a :href="config.requestsLink + '?q=id:' + localDownload.request_id">{{ localDownload.request_id }}</a>
+                </td>
               </tr>
               <tr>
                 <th>URL Original</th>
@@ -91,55 +101,51 @@
   <div v-if="localDownload.vt_file_analysis_submitted">
     <InfoCard mylabel="VirusTotal details">
       <template #default>
-        <div>
-          <div class="grid grid-cols-2">
-            <div>
-              Scan results
-              <br>
-              <table class="slightlylow">
-                <tbody>
-                  <tr>
-                    <th>Malicious</th>
-                    <td style="color: red">
-                      {{ localDownload.vt_analysis_malicious }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Harmless</th>
-                    <td>
-                      {{ localDownload.vt_analysis_harmless }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Suspicious</th>
-                    <td>
-                      {{ localDownload.vt_analysis_suspicious }}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Undetected</th>
-                    <td>
-                      {{ localDownload.vt_analysis_undetected }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div v-if="localDownload.vt_file_analysis_result">
-              Scanner samples
-              <br>
-              <table class="slightlylow">
-                <tbody>
-                  <tr
-                    v-for="res in localDownload.parsed.vt_file_analysis_result"
-                    :key="res"
-                  >
-                    <th>{{ res.engine }}</th>
-                    <td>{{ res.result }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <h4 class="vt-section-title">Scan Results</h4>
+            <table>
+              <tbody>
+                <tr>
+                  <th>Malicious</th>
+                  <td class="vt-malicious">
+                    {{ localDownload.vt_analysis_malicious }}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Harmless</th>
+                  <td>
+                    {{ localDownload.vt_analysis_harmless }}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Suspicious</th>
+                  <td>
+                    {{ localDownload.vt_analysis_suspicious }}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Undetected</th>
+                  <td>
+                    {{ localDownload.vt_analysis_undetected }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="localDownload.vt_file_analysis_result">
+            <h4 class="vt-section-title">Scanner Samples</h4>
+            <table>
+              <tbody>
+                <tr
+                  v-for="res in localDownload.parsed.vt_file_analysis_result"
+                  :key="res"
+                >
+                  <th>{{ res.engine }}</th>
+                  <td>{{ res.result }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </template>
@@ -230,28 +236,7 @@
       />
     </template>
   </InfoCard>
-  <ConfirmPopup group="headless">
-    <template #container="{ message, acceptCallback, rejectCallback }">
-      <div class="bg-gray-900 text-white border-round p-3">
-        <span>{{ message.message }}</span>
-        <div class="flex align-items-center gap-2 mt-3">
-          <PrimeButton
-            icon="pi pi-check"
-            label="Yes please!"
-            class="p-button-sm p-button-outlined"
-            @click="acceptCallback"
-          />
-          <PrimeButton
-            label="Cancel"
-            severity="secondary"
-            outlined
-            class="p-button-sm p-button-text"
-            @click="rejectCallback"
-          />
-        </div>
-      </div>
-    </template>
-  </ConfirmPopup>
+  <ConfirmPopup />
 </template>
 
 <script>
@@ -317,7 +302,6 @@ export default {
       }
       this.$confirm.require({
         target: event.currentTarget,
-        group: "headless",
         message: "Rescan with yara rules ?",
         accept: () => {
           this.setDownloadToPending();
@@ -432,53 +416,38 @@ export default {
 };
 </script>
 
-<style>
-.p-fieldset-legend {
-  width: 100% !important;
-}
-
-legend > a {
-  float: left;
-  padding: 0.75rem;
-}
-
-pre.whois {
-  max-height: 400px;
-  max-width: 700px;
-  overflow: auto;
-  background-color: #eeeeee;
-  word-break: normal !important;
-  word-wrap: normal !important;
-  white-space: pre !important;
-}
-
-.slightlylow {
-  margin-top: 10px;
-}
-
-.app {
-  width: 100%;
-  height: 400px;
-}
-
-.description {
-  width: 100%;
-  height: 140px;
-}
-
+<style scoped>
 #aisummary {
-  padding-bottom: 20px;
-}
-
-.pointer {
-  cursor: pointer;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: var(--p-surface-50);
+  border-radius: var(--p-border-radius);
+  border-left: 3px solid var(--p-primary-400);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 table th {
-  padding-right: 13px;
+  padding-right: 0.75rem;
   width: 140px;
+  white-space: nowrap;
 }
+
 table td {
-  padding-right: 13px;
+  padding-right: 0.75rem;
+}
+
+.vt-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--p-text-muted-color);
+  margin: 0 0 0.5rem 0;
+}
+
+.vt-malicious {
+  color: var(--p-red-500);
+  font-weight: 600;
 }
 </style>

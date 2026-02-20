@@ -618,7 +618,7 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	if rb.Name == "" || rb.Version == "" {
+	if rb.Name == "" || rb.Version == nil || *rb.Version == "" {
 		a.sendStatus(w, "App name and version are required", ResultError, nil)
 		return
 	}
@@ -1302,9 +1302,9 @@ type AppExport struct {
 }
 
 type AppYamlExport struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Vendor  string `json:"vendor"`
+	Name    string  `json:"name"`
+	Version *string `json:"version"`
+	Vendor  *string `json:"vendor"`
 	Yaml    string `json:"yaml"`
 }
 

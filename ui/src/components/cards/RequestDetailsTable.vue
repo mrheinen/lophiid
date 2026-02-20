@@ -51,25 +51,29 @@
       <tr>
         <th>Base Hash</th>
         <td>
-          {{ request.base_hash }}
-          <a :href="'/requests?q=base_hash:' + request.base_hash">
-            <i
-              class="pi pi-search"
-              title="find similar requests"
-            />
-          </a>
+          <span class="hash-cell">
+            <span class="hash-text" :title="request.base_hash">{{ request.base_hash }}</span>
+            <a :href="'/requests?q=base_hash:' + request.base_hash">
+              <i
+                class="pi pi-search"
+                title="find similar requests"
+              />
+            </a>
+          </span>
         </td>
       </tr>
       <tr>
         <th>Cmp Hash</th>
         <td>
-          {{ request.cmp_hash }}
-          <a :href="'/requests?q=cmp_hash:' + request.cmp_hash">
-            <i
-              class="pi pi-search"
-              title="find the same requests across hosts"
-            />
-          </a>
+          <span class="hash-cell">
+            <span class="hash-text" :title="request.cmp_hash">{{ request.cmp_hash }}</span>
+            <a :href="'/requests?q=cmp_hash:' + request.cmp_hash">
+              <i
+                class="pi pi-search"
+                title="find the same requests across hosts"
+              />
+            </a>
+          </span>
         </td>
       </tr>
 
@@ -155,5 +159,18 @@ export default {
 <style scoped>
 th {
   width: 140px;
+}
+
+.hash-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hash-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 </style>
