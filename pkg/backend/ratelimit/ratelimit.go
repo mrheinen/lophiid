@@ -33,6 +33,15 @@ var (
 
 	ErrURIBucketLimitExceeded = errors.New("URI bucket limit exceeded")
 	ErrURIWindowLimitExceeded = errors.New("URI window limit exceeded")
+
+	ErrAIShellBucketLimitExceeded = errors.New("AI shell bucket limit exceeded")
+	ErrAIShellWindowLimitExceeded = errors.New("AI shell window limit exceeded")
+	ErrAICodeBucketLimitExceeded  = errors.New("AI code bucket limit exceeded")
+	ErrAICodeWindowLimitExceeded  = errors.New("AI code window limit exceeded")
+	ErrAIFileBucketLimitExceeded  = errors.New("AI file bucket limit exceeded")
+	ErrAIFileWindowLimitExceeded  = errors.New("AI file window limit exceeded")
+	ErrAISqlBucketLimitExceeded   = errors.New("AI sql bucket limit exceeded")
+	ErrAISqlWindowLimitExceeded   = errors.New("AI sql window limit exceeded")
 )
 
 type RateLimiter interface {

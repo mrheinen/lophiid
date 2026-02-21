@@ -155,20 +155,24 @@ type Config struct {
 			LLMConfig string `fig:"llm_config"`
 		} `fig:"llm_responder"`
 		ShellEmulation struct {
-			Enable    bool   `fig:"enable" default:"0"`
-			LLMConfig string `fig:"llm_config"`
+			Enable    bool              `fig:"enable" default:"0"`
+			LLMConfig string            `fig:"llm_config"`
+			RateLimit AIRateLimitConfig `fig:"rate_limit"`
 		} `fig:"shell_emulation"`
 		CodeEmulation struct {
-			Enable    bool   `fig:"enable" default:"0"`
-			LLMConfig string `fig:"llm_config"`
+			Enable    bool              `fig:"enable" default:"0"`
+			LLMConfig string            `fig:"llm_config"`
+			RateLimit AIRateLimitConfig `fig:"rate_limit"`
 		} `fig:"code_emulation"`
 		FileEmulation struct {
-			Enable    bool   `fig:"enable" default:"0"`
-			LLMConfig string `fig:"llm_config"`
+			Enable    bool              `fig:"enable" default:"0"`
+			LLMConfig string            `fig:"llm_config"`
+			RateLimit AIRateLimitConfig `fig:"rate_limit"`
 		} `fig:"file_emulation"`
 		SqlEmulation struct {
-			Enable    bool   `fig:"enable" default:"0"`
-			LLMConfig string `fig:"llm_config"`
+			Enable    bool              `fig:"enable" default:"0"`
+			LLMConfig string            `fig:"llm_config"`
+			RateLimit AIRateLimitConfig `fig:"rate_limit"`
 		} `fig:"sql_emulation"`
 		CodeInterpreter struct {
 			Enable    bool   `fig:"enable" default:"0"`
@@ -190,6 +194,14 @@ type Config struct {
 			} `fig:"preprocess"`
 		} `fig:"triage"`
 	} `fig:"ai"`
+}
+
+// AIRateLimitConfig holds rate limiting configuration for an AI emulation function.
+type AIRateLimitConfig struct {
+	RateWindow           time.Duration `fig:"rate_window" default:"1h"`
+	BucketDuration       time.Duration `fig:"bucket_duration" default:"1m"`
+	MaxRequestsPerWindow int           `fig:"max_requests_per_window" default:"100"`
+	MaxRequestsPerBucket int           `fig:"max_requests_per_bucket" default:"20"`
 }
 
 // NamedLLMConfig wraps an LLMManagerConfig with a name for referencing.

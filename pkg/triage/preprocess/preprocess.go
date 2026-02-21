@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/code"
@@ -41,8 +42,12 @@ const (
 	llmResultFailed  = "failed"
 )
 
-// Error returned when the request is not going to be processed.
-var ErrNotProcessed = errors.New("is not processed")
+var (
+	// ErrNotProcessed is returned when the request is not going to be processed.
+	ErrNotProcessed = errors.New("is not processed")
+	// ErrAIRateLimited is returned when an AI emulation call is blocked by its rate limiter.
+	ErrAIRateLimited = errors.New("AI rate limited")
+)
 
 type PreProcessInterface interface {
 	MaybeProcess(req *models.Request) (*PreProcessResult, *PayloadProcessingResult, error)
@@ -55,6 +60,7 @@ type PreProcess struct {
 	codeEmu          code.CodeSnippetEmulatorInterface
 	fileEmu          file.FileAccessEmulatorInterface
 	sqlEmu           sql.SqlInjectionEmulatorInterface
+	aiRateLimiters   map[string]ratelimit.RateLimiter
 	metrics          *PreprocessMetrics
 }
 
@@ -111,9 +117,11 @@ func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, *Pay
 	return f.ResultToReturn, f.PayloadResult, f.ErrorToReturn
 }
 
-func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, metrics *PreprocessMetrics) *PreProcess {
+// NewPreProcess creates a new PreProcess instance. The aiRateLimiters map is
+// keyed by TriagePayloadType constants and limits per-source-IP AI calls.
+func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, aiRateLimiters map[string]ratelimit.RateLimiter, metrics *PreprocessMetrics) *PreProcess {
 	triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information")
-	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, metrics: metrics}
+	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, aiRateLimiters: aiRateLimiters, metrics: metrics}
 }
 
 // Case-sensitive patterns to detect potentially malicious payloads.
@@ -191,6 +199,9 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 		if p.shellClient == nil {
 			return nil, nil, nil
 		}
+		if allowed, rlErr := p.checkAIRateLimit(req, constants.TriagePayloadTypeShellCommand); !allowed {
+			return res, nil, rlErr
+		}
 		slog.Debug("Running shell command", slog.String("command", res.Payload))
 		shellStartTime := time.Now()
 		ctx, err := p.shellClient.RunCommand(req, res.Payload)
@@ -204,6 +215,9 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 	case constants.TriagePayloadTypeFileAccess:
 		if p.fileEmu == nil {
 			return nil, nil, nil
+		}
+		if allowed, rlErr := p.checkAIRateLimit(req, constants.TriagePayloadTypeFileAccess); !allowed {
+			return res, nil, rlErr
 		}
 		slog.Debug("Running file emulator", slog.String("file", res.Payload))
 		fileStartTime := time.Now()
@@ -221,6 +235,9 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 		if p.codeEmu == nil {
 			return nil, nil, nil
 		}
+		if allowed, rlErr := p.checkAIRateLimit(req, constants.TriagePayloadTypeCodeExec); !allowed {
+			return res, nil, rlErr
+		}
 
 		slog.Debug("Running code emulator", slog.String("code", res.Payload))
 		emuStartTime := time.Now()
@@ -236,6 +253,9 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 		if p.sqlEmu == nil {
 			slog.Error("sql emulator disabled")
 			return nil, nil, nil
+		}
+		if allowed, rlErr := p.checkAIRateLimit(req, constants.TriagePayloadTypeSqlInjection); !allowed {
+			return res, nil, rlErr
 		}
 		slog.Debug("Running sql emulator", slog.Int64("request_id", req.ID), slog.String("payload", res.Payload))
 		sqlStartTime := time.Now()
@@ -307,6 +327,29 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 	}
 
 	return res, nil, nil
+}
+
+// checkAIRateLimit checks whether the given AI function is rate limited for the
+// request's source IP. Returns (true, nil) if the request is allowed, or
+// (false, ErrAIRateLimited) if blocked.
+func (p *PreProcess) checkAIRateLimit(req *models.Request, payloadType string) (bool, error) {
+	if p.aiRateLimiters == nil {
+		return true, nil
+	}
+
+	limiter, ok := p.aiRateLimiters[payloadType]
+	if !ok {
+		return true, nil
+	}
+
+	allowed, err := limiter.AllowRequest(req)
+	if !allowed {
+		slog.Info("AI rate limited", slog.String("function", payloadType), slog.String("source_ip", req.SourceIP), slog.String("error", err.Error()))
+		p.metrics.aiRateLimitRejects.WithLabelValues(payloadType).Inc()
+		return false, ErrAIRateLimited
+	}
+
+	return true, nil
 }
 
 func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {

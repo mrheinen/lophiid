@@ -45,6 +45,7 @@ import (
 	"lophiid/pkg/triage/describer"
 	"lophiid/pkg/triage/preprocess"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"lophiid/pkg/vt"
 	"lophiid/pkg/whois"
 	"net"
@@ -308,8 +309,75 @@ func main() {
 		codeInterpreter = interpreter.NewCodeInterpreter(llm.GetLLMManager(interLLMCfg, llmMetrics), shellClient, dbc)
 	}
 
+	// Create AI rate limiters for each emulation function that is enabled.
+	aiRateLimiters := make(map[string]ratelimit.RateLimiter)
+
+	if cfg.AI.ShellEmulation.Enable && cfg.AI.ShellEmulation.RateLimit.MaxRequestsPerWindow > 0 {
+		rl := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
+			Name:                 "ai_shell",
+			RateWindow:           cfg.AI.ShellEmulation.RateLimit.RateWindow,
+			BucketDuration:       cfg.AI.ShellEmulation.RateLimit.BucketDuration,
+			MaxRequestsPerWindow: cfg.AI.ShellEmulation.RateLimit.MaxRequestsPerWindow,
+			MaxRequestPerBucket:  cfg.AI.ShellEmulation.RateLimit.MaxRequestsPerBucket,
+			Metrics:              rMetrics,
+			KeyFunc:              ratelimit.SourceIPKeyFunc,
+			BucketExceededErr:    ratelimit.ErrAIShellBucketLimitExceeded,
+			WindowExceededErr:    ratelimit.ErrAIShellWindowLimitExceeded,
+		})
+		rl.Start()
+		aiRateLimiters[constants.TriagePayloadTypeShellCommand] = rl
+	}
+
+	if cfg.AI.CodeEmulation.Enable && cfg.AI.CodeEmulation.RateLimit.MaxRequestsPerWindow > 0 {
+		rl := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
+			Name:                 "ai_code",
+			RateWindow:           cfg.AI.CodeEmulation.RateLimit.RateWindow,
+			BucketDuration:       cfg.AI.CodeEmulation.RateLimit.BucketDuration,
+			MaxRequestsPerWindow: cfg.AI.CodeEmulation.RateLimit.MaxRequestsPerWindow,
+			MaxRequestPerBucket:  cfg.AI.CodeEmulation.RateLimit.MaxRequestsPerBucket,
+			Metrics:              rMetrics,
+			KeyFunc:              ratelimit.SourceIPKeyFunc,
+			BucketExceededErr:    ratelimit.ErrAICodeBucketLimitExceeded,
+			WindowExceededErr:    ratelimit.ErrAICodeWindowLimitExceeded,
+		})
+		rl.Start()
+		aiRateLimiters[constants.TriagePayloadTypeCodeExec] = rl
+	}
+
+	if cfg.AI.FileEmulation.Enable && cfg.AI.FileEmulation.RateLimit.MaxRequestsPerWindow > 0 {
+		rl := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
+			Name:                 "ai_file",
+			RateWindow:           cfg.AI.FileEmulation.RateLimit.RateWindow,
+			BucketDuration:       cfg.AI.FileEmulation.RateLimit.BucketDuration,
+			MaxRequestsPerWindow: cfg.AI.FileEmulation.RateLimit.MaxRequestsPerWindow,
+			MaxRequestPerBucket:  cfg.AI.FileEmulation.RateLimit.MaxRequestsPerBucket,
+			Metrics:              rMetrics,
+			KeyFunc:              ratelimit.SourceIPKeyFunc,
+			BucketExceededErr:    ratelimit.ErrAIFileBucketLimitExceeded,
+			WindowExceededErr:    ratelimit.ErrAIFileWindowLimitExceeded,
+		})
+		rl.Start()
+		aiRateLimiters[constants.TriagePayloadTypeFileAccess] = rl
+	}
+
+	if cfg.AI.SqlEmulation.Enable && cfg.AI.SqlEmulation.RateLimit.MaxRequestsPerWindow > 0 {
+		rl := ratelimit.NewWindowRateLimiter(ratelimit.WindowRateLimiterConfig{
+			Name:                 "ai_sql",
+			RateWindow:           cfg.AI.SqlEmulation.RateLimit.RateWindow,
+			BucketDuration:       cfg.AI.SqlEmulation.RateLimit.BucketDuration,
+			MaxRequestsPerWindow: cfg.AI.SqlEmulation.RateLimit.MaxRequestsPerWindow,
+			MaxRequestPerBucket:  cfg.AI.SqlEmulation.RateLimit.MaxRequestsPerBucket,
+			Metrics:              rMetrics,
+			KeyFunc:              ratelimit.SourceIPKeyFunc,
+			BucketExceededErr:    ratelimit.ErrAISqlBucketLimitExceeded,
+			WindowExceededErr:    ratelimit.ErrAISqlWindowLimitExceeded,
+		})
+		rl.Start()
+		aiRateLimiters[constants.TriagePayloadTypeSqlInjection] = rl
+	}
+
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
-	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, preprocMetric)
+	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, aiRateLimiters, preprocMetric)
 
 	bs := backend.NewBackendServer(dbc, bMetrics, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter, sourceIPRateLimiter}, cfg, backend.WithJavascriptRunner(jRunner), backend.WithAlertManager(alertMgr), backend.WithVTManager(vtMgr), backend.WithWhoisManager(whoisManager), backend.WithQueryRunner(queryRunner), backend.WithIpEventManager(ipEventManager), backend.WithResponder(llmResponder), backend.WithSessionManager(sessionMgr), backend.WithDescriber(desClient), backend.WithPreprocessor(preproc), backend.WithCodeInterpreter(codeInterpreter))
 	if err = bs.Start(); err != nil {
