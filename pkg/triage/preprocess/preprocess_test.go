@@ -19,6 +19,7 @@ package preprocess
 import (
 	"encoding/json"
 	"errors"
+	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/llm/code"
@@ -58,7 +59,7 @@ func TestProcess_NoPayload(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -119,7 +120,7 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -182,7 +183,7 @@ func TestProcess_SqlInjectionPayload(t *testing.T) {
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -250,7 +251,7 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 	mockLLM.ErrorToReturn = nil
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -308,7 +309,7 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -354,7 +355,7 @@ func TestProcess_LLMError(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -391,7 +392,7 @@ func TestProcess_InvalidJSON(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -439,7 +440,7 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -496,7 +497,7 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        1,
@@ -548,7 +549,7 @@ func TestProcess_FileUploadPayload(t *testing.T) {
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	req := &models.Request{
 		ID:        42,
@@ -603,7 +604,7 @@ func TestProcess_FileUploadInvalidFilename(t *testing.T) {
 			mockLLM.CompletionToReturn = string(jsonResult)
 			mockLLM.ErrorToReturn = nil
 
-			preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+			preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 			req := &models.Request{
 				ID:        1,
@@ -639,7 +640,7 @@ func TestComplete_HostHeaderRemoval(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, metrics)
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
 
 	reqRaw := "GET / HTTP/1.1\nHost: example.com\nUser-Agent: TestBot\n\n"
 	req := &models.Request{
@@ -667,4 +668,95 @@ func TestComplete_HostHeaderRemoval(t *testing.T) {
 	if !strings.Contains(mockLLM.LastReceivedPrompt, "GET / HTTP/1.1") {
 		t.Error("Expected request line to be preserved in prompt")
 	}
+}
+
+func TestProcess_ShellCommandRateLimited(t *testing.T) {
+	mockLLM := &llm.MockLLMManager{}
+	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	metrics := createTestMetrics()
+
+	preprocessResult := PreProcessResult{
+		HasPayload:  true,
+		PayloadType: "SHELL_COMMAND",
+		Payload:     "echo 'hello'",
+	}
+
+	jsonResult, _ := json.Marshal(preprocessResult)
+	mockLLM.CompletionToReturn = string(jsonResult)
+	mockLLM.ErrorToReturn = nil
+
+	fakeShell.ContextToReturn = &models.SessionExecutionContext{Output: "hello"}
+	fakeShell.ErrorToReturn = nil
+
+	// Create a rate limiter that rejects all requests.
+	fakeLimiter := &ratelimit.FakeRateLimiter{
+		BoolToReturn:  false,
+		ErrorToReturn: ratelimit.ErrAIShellBucketLimitExceeded,
+	}
+	aiRateLimiters := map[string]ratelimit.RateLimiter{
+		constants.TriagePayloadTypeShellCommand: fakeLimiter,
+	}
+
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, aiRateLimiters, metrics)
+
+	req := &models.Request{
+		ID:        1,
+		SessionID: 100,
+		SourceIP:  "10.0.0.1",
+		Raw:       []byte("GET /?cmd=echo+hello HTTP/1.1\r\nHost: example.com\r\n\r\n"),
+	}
+
+	result, pRes, err := preprocess.Process(req)
+
+	// Should return the PreProcessResult, nil payload response, and ErrAIRateLimited.
+	require.ErrorIs(t, err, ErrAIRateLimited)
+	require.NotNil(t, result)
+	assert.True(t, result.HasPayload)
+	assert.Equal(t, "SHELL_COMMAND", result.PayloadType)
+	assert.Nil(t, pRes)
+}
+
+func TestProcess_ShellCommandNotRateLimitedWhenNoLimiter(t *testing.T) {
+	mockLLM := &llm.MockLLMManager{}
+	fakeShell := &shell.FakeShellClient{}
+	fakeCodeEmu := &code.FakeCodeSnippetEmulator{}
+	fakeFileEmu := &file.FakeFileAccessEmulator{}
+	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
+	metrics := createTestMetrics()
+
+	preprocessResult := PreProcessResult{
+		HasPayload:  true,
+		PayloadType: "SHELL_COMMAND",
+		Payload:     "echo 'hello'",
+	}
+
+	jsonResult, _ := json.Marshal(preprocessResult)
+	mockLLM.CompletionToReturn = string(jsonResult)
+	mockLLM.ErrorToReturn = nil
+
+	fakeShell.ContextToReturn = &models.SessionExecutionContext{Output: "hello"}
+	fakeShell.ErrorToReturn = nil
+
+	// Empty map — no limiters configured, should allow all.
+	aiRateLimiters := map[string]ratelimit.RateLimiter{}
+
+	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, aiRateLimiters, metrics)
+
+	req := &models.Request{
+		ID:        1,
+		SessionID: 100,
+		SourceIP:  "10.0.0.1",
+		Raw:       []byte("GET /?cmd=echo+hello HTTP/1.1\r\nHost: example.com\r\n\r\n"),
+	}
+
+	result, pRes, err := preprocess.Process(req)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.HasPayload)
+	require.NotNil(t, pRes)
+	assert.Equal(t, "hello", pRes.Output)
 }

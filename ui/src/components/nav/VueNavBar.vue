@@ -10,8 +10,7 @@
       <div class="navbar-brand">
         <img
           src="@/assets/logo.png"
-          width="112"
-          height="28"
+          width="180"
           class="navbar-logo"
         >
       </div>
