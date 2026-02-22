@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"fmt"
+	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
@@ -205,31 +206,22 @@ func TestIpEventManagerSendsAlertOnMatchingEvent(t *testing.T) {
 		util.GenerateAlertEventKey(constants.IpEventSessionInfo, constants.IpEventSubTypeSuccessivePayload): true,
 	}
 
+	fakeDb := &database.FakeDatabaseClient{}
 	reg := prometheus.NewRegistry()
 	metrics := CreateAnalysisMetrics(reg)
-	// Use a very short cache duration so entries expire immediately.
-	im := NewIpEventManagerImpl(nil, 100, time.Millisecond, time.Minute, time.Minute, metrics, alerter, alertEvents)
+	im := NewIpEventManagerImpl(fakeDb, 100, time.Minute, time.Minute, time.Minute, metrics, alerter, alertEvents)
 
-	// Add an event that should trigger an alert.
-	im.ipCache.Store("test-key", models.IpEvent{
+	evt := models.IpEvent{
 		IP:      "1.1.1.1",
 		Type:    constants.IpEventSessionInfo,
 		Subtype: constants.IpEventSubTypeSuccessivePayload,
-	})
+	}
 
-	// Wait for cache entry to expire.
-	time.Sleep(time.Millisecond * 5)
+	// Call handleExpiredEvent directly to test alerting logic.
+	im.handleExpiredEvent(evt)
 
-	// Trigger cache cleanup with callback that mimics MonitorQueue logic.
-	im.ipCache.CleanExpiredWithCallback(func(evt models.IpEvent) bool {
-		if im.alerter != nil && len(im.alertEvents) > 0 {
-			key := util.GenerateAlertEventKey(evt.Type, evt.Subtype)
-			if im.alertEvents[key] {
-				im.alerter.SendMessage(fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP))
-			}
-		}
-		return true
-	})
+	// Allow goroutine to complete.
+	time.Sleep(time.Millisecond * 10)
 
 	if len(alerter.Messages) != 1 {
 		t.Errorf("expected 1 alert message, got %d", len(alerter.Messages))
@@ -242,31 +234,22 @@ func TestIpEventManagerNoAlertOnNonMatchingEvent(t *testing.T) {
 		util.GenerateAlertEventKey(constants.IpEventSessionInfo, constants.IpEventSubTypeSuccessivePayload): true,
 	}
 
+	fakeDb := &database.FakeDatabaseClient{}
 	reg := prometheus.NewRegistry()
 	metrics := CreateAnalysisMetrics(reg)
-	// Use a very short cache duration so entries expire immediately.
-	im := NewIpEventManagerImpl(nil, 100, time.Millisecond, time.Minute, time.Minute, metrics, alerter, alertEvents)
+	im := NewIpEventManagerImpl(fakeDb, 100, time.Minute, time.Minute, time.Minute, metrics, alerter, alertEvents)
 
-	// Add an event that should NOT trigger an alert.
-	im.ipCache.Store("test-key", models.IpEvent{
+	evt := models.IpEvent{
 		IP:      "1.1.1.1",
 		Type:    constants.IpEventHostC2,
 		Subtype: constants.IpEventSubTypeNone,
-	})
+	}
 
-	// Wait for cache entry to expire.
-	time.Sleep(time.Millisecond * 5)
+	// Call handleExpiredEvent directly to test alerting logic.
+	im.handleExpiredEvent(evt)
 
-	// Trigger cache cleanup with callback that mimics MonitorQueue logic.
-	im.ipCache.CleanExpiredWithCallback(func(evt models.IpEvent) bool {
-		if im.alerter != nil && len(im.alertEvents) > 0 {
-			key := util.GenerateAlertEventKey(evt.Type, evt.Subtype)
-			if im.alertEvents[key] {
-				im.alerter.SendMessage(fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP))
-			}
-		}
-		return true
-	})
+	// Allow goroutine to complete (if any).
+	time.Sleep(time.Millisecond * 10)
 
 	if len(alerter.Messages) != 0 {
 		t.Errorf("expected 0 alert messages, got %d", len(alerter.Messages))

@@ -111,27 +111,29 @@ func (i *IpEventManagerImpl) MonitorQueue() {
 		case <-ticker.C:
 			i.scanCache.CleanExpired()
 			i.metrics.eventQueueGauge.Set(float64(len(i.eventQueue)))
-			i.ipCache.CleanExpiredWithCallback(func(evt models.IpEvent) bool {
-				_, err := i.dbClient.Insert(&evt)
-				if err != nil {
-					slog.Error("unable to store event",
-						slog.String("error", err.Error()),
-						slog.String("event", fmt.Sprintf("%+v", evt)))
-					return false
-				}
-
-				// Send alert if this event type/subtype combination is configured.
-				if i.alerter != nil && len(i.alertEvents) > 0 {
-					key := util.GenerateAlertEventKey(evt.Type, evt.Subtype)
-					if i.alertEvents[key] {
-						go i.alerter.SendMessage(fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP))
-					}
-				}
-
-				return true
-			})
+			i.ipCache.CleanExpiredWithCallback(i.handleExpiredEvent)
 		}
 	}
+}
+
+func (i *IpEventManagerImpl) handleExpiredEvent(evt models.IpEvent) bool {
+	_, err := i.dbClient.Insert(&evt)
+	if err != nil {
+		slog.Error("unable to store event",
+			slog.String("error", err.Error()),
+			slog.String("event", fmt.Sprintf("%+v", evt)))
+		return false
+	}
+
+	// Send alert if this event type/subtype combination is configured.
+	if i.alerter != nil && len(i.alertEvents) > 0 {
+		key := util.GenerateAlertEventKey(evt.Type, evt.Subtype)
+		if i.alertEvents[key] {
+			go i.alerter.SendMessage(fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP))
+		}
+	}
+
+	return true
 }
 
 func (i *IpEventManagerImpl) CreateScanEvents() int {
