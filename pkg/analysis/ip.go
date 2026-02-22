@@ -19,6 +19,7 @@ package analysis
 import (
 	"fmt"
 	"log/slog"
+	"lophiid/pkg/alerting"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
@@ -41,6 +42,8 @@ type IpEventManagerImpl struct {
 	metrics             *AnalysisMetrics
 	scanMonitorInterval time.Duration
 	aggregateScanWindow time.Duration
+	alerter             alerting.AlertManagerInterface
+	alertEvents         map[string]bool
 }
 
 // FakeIpEventManager is used in tests
@@ -52,7 +55,10 @@ func (f *FakeIpEventManager) AddEvent(evt *models.IpEvent) {
 	f.Events = append(f.Events, *evt)
 }
 
-func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, scanMonitorWindow time.Duration, aggregateScanWindow time.Duration, metrics *AnalysisMetrics) *IpEventManagerImpl {
+// NewIpEventManagerImpl creates a new IpEventManagerImpl. The alerter and
+// alertEvents parameters are optional and can be nil/empty if alerting is not
+// needed.
+func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, scanMonitorWindow time.Duration, aggregateScanWindow time.Duration, metrics *AnalysisMetrics, alerter alerting.AlertManagerInterface, alertEvents map[string]bool) *IpEventManagerImpl {
 	ipCache := util.NewStringMapCache[models.IpEvent]("Analysis - IP event cache", ipCacheDuration)
 	scanCache := util.NewStringMapCache[models.IpEvent]("Analysis - IP scan cache", ipCacheDuration*2)
 
@@ -65,6 +71,8 @@ func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, 
 		metrics:             metrics,
 		scanMonitorInterval: scanMonitorWindow,
 		aggregateScanWindow: aggregateScanWindow,
+		alerter:             alerter,
+		alertEvents:         alertEvents,
 	}
 }
 
@@ -109,9 +117,18 @@ func (i *IpEventManagerImpl) MonitorQueue() {
 					slog.Error("unable to store event",
 						slog.String("error", err.Error()),
 						slog.String("event", fmt.Sprintf("%+v", evt)))
+					return false
 				}
 
-				return err == nil
+				// Send alert if this event type/subtype combination is configured.
+				if i.alerter != nil && len(i.alertEvents) > 0 {
+					key := util.GenerateAlertEventKey(evt.Type, evt.Subtype)
+					if i.alertEvents[key] {
+						i.alerter.SendMessage(fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP))
+					}
+				}
+
+				return true
 			})
 		}
 	}

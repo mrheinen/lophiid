@@ -119,6 +119,7 @@ type Config struct {
 	Alerting struct {
 		Interval            time.Duration `fig:"interval" default:"2m"`
 		WebInterfaceAddress string        `fig:"web_interface_address" default:""`
+		AlertEvents         []string      `fig:"alert_events"`
 		Telegram            struct {
 			ApiKey    string `fig:"api_key"`
 			ChannelID int    `fig:"channel_id"`
