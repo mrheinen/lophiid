@@ -144,7 +144,15 @@ func main() {
 	vtHttpClient := &http.Client{Transport: secureHttpTransport, Timeout: cfg.VirusTotal.HttpClientTimeout}
 
 	analysisMetrics := analysis.CreateAnalysisMetrics(metricsRegistry)
-	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, cfg.Analysis.ScanMonitorInterval, cfg.Analysis.AggregateScanWindow, analysisMetrics)
+
+	// Parse alert events configuration for IP event alerting.
+	alertEvents, err := util.ParseAlertEventConfig(cfg.Alerting.AlertEvents)
+	if err != nil {
+		slog.Error("Error parsing alert events config", slog.String("error", err.Error()))
+		return
+	}
+
+	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, cfg.Analysis.ScanMonitorInterval, cfg.Analysis.AggregateScanWindow, analysisMetrics, alertMgr, alertEvents)
 	ipEventManager.Start()
 
 	var vtMgr vt.VTManager

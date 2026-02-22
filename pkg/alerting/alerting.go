@@ -40,6 +40,12 @@ type Alerter interface {
 	SendMessage(mesg string) error
 }
 
+// AlertManagerInterface is an interface for sending alert messages. This is
+// satisfied by *AlertManager.
+type AlertManagerInterface interface {
+	SendMessage(mesg string)
+}
+
 type AlertManager struct {
 	alerters      []Alerter
 	alertInterval time.Duration

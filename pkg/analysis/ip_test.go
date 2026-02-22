@@ -2,7 +2,9 @@ package analysis
 
 import (
 	"fmt"
+	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
+	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"testing"
 	"time"
@@ -10,11 +12,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// FakeAlerter is a mock alerter for testing that implements Alerter.
+type FakeAlerter struct {
+	Messages []string
+}
+
+func (f *FakeAlerter) SendMessage(mesg string) {
+	f.Messages = append(f.Messages, mesg)
+}
+
 func TestIpEventManagerStoresOnceOk(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateAnalysisMetrics(reg)
 
-	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
+	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics, nil, nil)
 
 	testIp := "1.1.1.1"
 	testEvtName := "boof"
@@ -39,7 +50,7 @@ func TestIpEventManagerStoresTwiceOk(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateAnalysisMetrics(reg)
 
-	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
+	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics, nil, nil)
 
 	testIp := "1.1.1.1"
 	testEvtName := "boof"
@@ -138,7 +149,7 @@ func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 		t.Run(test.description, func(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			metrics := CreateAnalysisMetrics(reg)
-			im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
+			im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics, nil, nil)
 
 			for _, evt := range test.events {
 				im.ProcessNewEvent(&evt)
@@ -158,7 +169,7 @@ func TestIpEventManagerCreatesScanEvents(t *testing.T) {
 func TestIpEventManagerCreatesNoDuplicateScanEvents(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateAnalysisMetrics(reg)
-	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics)
+	im := NewIpEventManagerImpl(nil, 100, 10, time.Minute, time.Minute, metrics, nil, nil)
 
 	im.ProcessNewEvent(&models.IpEvent{
 		IP:      "1.1.1.1",
@@ -186,5 +197,61 @@ func TestIpEventManagerCreatesNoDuplicateScanEvents(t *testing.T) {
 	numberEvents = im.CreateScanEvents()
 	if numberEvents != 0 {
 		t.Errorf("expected 0 scan event, got %d", numberEvents)
+	}
+}
+
+func TestIpEventManagerSendsAlertOnMatchingEvent(t *testing.T) {
+	alerter := &FakeAlerter{}
+	alertEvents := map[string]bool{
+		util.GenerateAlertEventKey(constants.IpEventSessionInfo, constants.IpEventSubTypeSuccessivePayload): true,
+	}
+
+	fakeDb := &database.FakeDatabaseClient{}
+	reg := prometheus.NewRegistry()
+	metrics := CreateAnalysisMetrics(reg)
+	im := NewIpEventManagerImpl(fakeDb, 100, time.Minute, time.Minute, time.Minute, metrics, alerter, alertEvents)
+
+	evt := models.IpEvent{
+		IP:      "1.1.1.1",
+		Type:    constants.IpEventSessionInfo,
+		Subtype: constants.IpEventSubTypeSuccessivePayload,
+	}
+
+	// Call handleExpiredEvent directly to test alerting logic.
+	im.handleExpiredEvent(evt)
+
+	// Allow goroutine to complete.
+	time.Sleep(time.Millisecond * 10)
+
+	if len(alerter.Messages) != 1 {
+		t.Errorf("expected 1 alert message, got %d", len(alerter.Messages))
+	}
+}
+
+func TestIpEventManagerNoAlertOnNonMatchingEvent(t *testing.T) {
+	alerter := &FakeAlerter{}
+	alertEvents := map[string]bool{
+		util.GenerateAlertEventKey(constants.IpEventSessionInfo, constants.IpEventSubTypeSuccessivePayload): true,
+	}
+
+	fakeDb := &database.FakeDatabaseClient{}
+	reg := prometheus.NewRegistry()
+	metrics := CreateAnalysisMetrics(reg)
+	im := NewIpEventManagerImpl(fakeDb, 100, time.Minute, time.Minute, time.Minute, metrics, alerter, alertEvents)
+
+	evt := models.IpEvent{
+		IP:      "1.1.1.1",
+		Type:    constants.IpEventHostC2,
+		Subtype: constants.IpEventSubTypeNone,
+	}
+
+	// Call handleExpiredEvent directly to test alerting logic.
+	im.handleExpiredEvent(evt)
+
+	// Allow goroutine to complete (if any).
+	time.Sleep(time.Millisecond * 10)
+
+	if len(alerter.Messages) != 0 {
+		t.Errorf("expected 0 alert messages, got %d", len(alerter.Messages))
 	}
 }
