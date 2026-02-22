@@ -52,7 +52,11 @@
         <th>Base Hash</th>
         <td>
           <span class="hash-cell">
-            <span class="hash-text" :title="request.base_hash">{{ request.base_hash }}</span>
+            <span
+              class="hash-text"
+              :title="request.base_hash"
+              @click="copyHash($event, request.base_hash)"
+            >{{ truncateHash(request.base_hash) }}</span>
             <a :href="'/requests?q=base_hash:' + request.base_hash">
               <i
                 class="pi pi-search"
@@ -66,7 +70,11 @@
         <th>Cmp Hash</th>
         <td>
           <span class="hash-cell">
-            <span class="hash-text" :title="request.cmp_hash">{{ request.cmp_hash }}</span>
+            <span
+              class="hash-text"
+              :title="request.cmp_hash"
+              @click="copyHash($event, request.cmp_hash)"
+            >{{ truncateHash(request.cmp_hash) }}</span>
             <a :href="'/requests?q=cmp_hash:' + request.cmp_hash">
               <i
                 class="pi pi-search"
@@ -138,6 +146,7 @@ export default {
     return {
       calculatedUptimeDays: 0,
       calculatedUptimeAndHours: 0,
+      copyTimeout: null,
     };
   },
 
@@ -153,6 +162,25 @@ export default {
       }
     },
   },
+
+  methods: {
+    truncateHash(hash) {
+      if (!hash || hash.length <= 10) return hash;
+      return hash.slice(0, 10) + '\u2026';
+    },
+    copyHash(event, hash) {
+      if (!hash) return;
+      const el = event.currentTarget;
+      navigator.clipboard.writeText(hash).then(() => {
+        el.textContent = '\u2713 Copied';
+        clearTimeout(this.copyTimeout);
+        this.copyTimeout = setTimeout(() => { el.textContent = this.truncateHash(hash); }, 1200);
+      });
+    },
+  },
+  beforeUnmount() {
+    clearTimeout(this.copyTimeout);
+  },
 };
 </script>
 
@@ -165,12 +193,19 @@ th {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .hash-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+  font-family: monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: all;
+  color: var(--p-text-muted-color);
+  transition: color 0.15s ease;
+}
+
+.hash-text:hover {
+  color: var(--p-text-color);
 }
 </style>

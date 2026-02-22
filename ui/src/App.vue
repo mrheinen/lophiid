@@ -122,9 +122,15 @@ body {
 
 .app-main {
   flex: 1;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 0.75rem;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+@media (min-width: 768px) {
+  .app-main {
+    padding: 1.25rem 1.5rem;
+  }
 }
 
 /* ===== Auth Dialog ===== */
@@ -296,8 +302,14 @@ i.pi-style-right {
 /* ===== List Page Layout ===== */
 .list-layout {
   display: grid;
-  grid-template-columns: 3fr 2fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .list-layout {
+    grid-template-columns: 3fr 2fr;
+  }
 }
 
 .list-table-wrap {

@@ -138,6 +138,13 @@ export default {
   display: flex;
   gap: 0.5rem;
   align-items: stretch;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .search-age-select {
+    width: 100%;
+  }
 }
 
 .search-bar-input-wrap {
