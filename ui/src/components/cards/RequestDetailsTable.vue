@@ -146,6 +146,7 @@ export default {
     return {
       calculatedUptimeDays: 0,
       calculatedUptimeAndHours: 0,
+      copyTimeout: null,
     };
   },
 
@@ -172,9 +173,13 @@ export default {
       const el = event.currentTarget;
       navigator.clipboard.writeText(hash).then(() => {
         el.textContent = '\u2713 Copied';
-        setTimeout(() => { el.textContent = this.truncateHash(hash); }, 1200);
+        clearTimeout(this.copyTimeout);
+        this.copyTimeout = setTimeout(() => { el.textContent = this.truncateHash(hash); }, 1200);
       });
     },
+  },
+  beforeUnmount() {
+    clearTimeout(this.copyTimeout);
   },
 };
 </script>
