@@ -963,7 +963,7 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 				Type:          constants.IpEventRateLimited,
 				Subtype:       constants.IpEventSubTypeRateAI,
 				Details:       "AI ratelimited",
-				Source:        constants.IpEventSourceAI,
+				Source:        constants.IpEventSourceAnalysis,
 				SourceRef:     fmt.Sprintf("%d", sReq.ID),
 				SourceRefType: constants.IpEventRefTypeRequestId,
 				RequestID:     sReq.ID,
