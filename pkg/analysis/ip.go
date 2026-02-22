@@ -124,7 +124,7 @@ func (i *IpEventManagerImpl) MonitorQueue() {
 				if i.alerter != nil && len(i.alertEvents) > 0 {
 					key := util.GenerateAlertEventKey(evt.Type, evt.Subtype)
 					if i.alertEvents[key] {
-						i.alerter.SendMessage(fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP))
+						go i.alerter.SendMessage(fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP))
 					}
 				}
 
