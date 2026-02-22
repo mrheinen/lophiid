@@ -944,16 +944,6 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 			// the request matches certain characters (e.g. if has /bin/sh in the
 			// body).
 			preRes, payloadResponse, err = s.preprocessor.MaybeProcess(sReq)
-			if err != nil {
-
-				if errors.Is(err, preprocess.ErrNotProcessed) {
-					s.metrics.firstTriageSelection.WithLabelValues("filter_reject").Inc()
-					return nil, preprocess.ErrNotProcessed
-				} else {
-					s.metrics.firstTriageSelection.WithLabelValues("preprocess_error").Inc()
-					return nil, fmt.Errorf("not preprocess error: %w", err)
-				}
-			}
 			s.metrics.firstTriageSelection.WithLabelValues("filter_accept").Inc()
 		}
 	} else {
@@ -962,8 +952,28 @@ func (s *BackendServer) GetPreProcessResponse(sReq *models.Request, filter bool)
 	}
 
 	if err != nil {
-		s.metrics.firstTriageResult.WithLabelValues("error").Inc()
-		return nil, fmt.Errorf("error pre-processing: %s", err)
+		switch {
+		case errors.Is(err, preprocess.ErrNotProcessed):
+			s.metrics.firstTriageSelection.WithLabelValues("filter_reject").Inc()
+			return nil, err
+		case errors.Is(err, preprocess.ErrAIRateLimited):
+			s.metrics.firstTriageSelection.WithLabelValues("ratelimited").Inc()
+			s.ipEventManager.AddEvent(&models.IpEvent{
+				IP:            sReq.SourceIP,
+				Type:          constants.IpEventRateLimited,
+				Subtype:       constants.IpEventSubTypeRateAI,
+				Details:       "AI ratelimited",
+				Source:        constants.IpEventSourceAnalysis,
+				SourceRef:     fmt.Sprintf("%d", sReq.ID),
+				SourceRefType: constants.IpEventRefTypeRequestId,
+				RequestID:     sReq.ID,
+				HoneypotIP:    sReq.HoneypotIP,
+			})
+			return nil, err
+		default:
+			s.metrics.firstTriageSelection.WithLabelValues("preprocess_error").Inc()
+			return nil, fmt.Errorf("preprocess error: %w", err)
+		}
 	}
 
 	if preRes == nil {
@@ -1024,7 +1034,8 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		if !errors.Is(err, preprocess.ErrNotProcessed) {
 			return fmt.Errorf("error pre-processing: %w", err)
 		}
-		return nil
+
+		return err
 	}
 
 	if payloadResponse.SqlDelayMs > 0 {

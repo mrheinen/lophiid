@@ -66,6 +66,11 @@ const (
 	IpEventSubTypeRateURIWindow = "URI_RATE_WINDOW"
 	IpEventSubTypeRateURIBucket = "URI_RATE_BUCKET"
 
+	IpEventSubTypeRateAIWindow = "AI_RATE_WINDOW"
+	IpEventSubTypeRateAIBucket = "AI_RATE_BUCKET"
+
+	IpEventSubTypeRateAI       = "AI_RATE"
+
 	IpEventSubTypeTrafficClassScanned   = "TC_SCANNED"
 	IpEventSubTypeTrafficClassAttacked  = "TC_ATTACKED"
 	IpEventSubTypeTrafficClassRecon     = "TC_RECONNED"
