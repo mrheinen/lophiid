@@ -1034,7 +1034,8 @@ func (s *BackendServer) handlePreProcess(sReq *models.Request, content *models.C
 		if !errors.Is(err, preprocess.ErrNotProcessed) {
 			return fmt.Errorf("error pre-processing: %w", err)
 		}
-		return nil
+
+		return err
 	}
 
 	if payloadResponse.SqlDelayMs > 0 {
