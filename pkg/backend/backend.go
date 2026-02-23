@@ -1332,7 +1332,9 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 			if matchedRule.Responder == constants.ResponderTypeAuto {
 				err := s.handlePreProcess(sReq, &content, res, &finalHeaders, rpcStartTime, false)
 				if err != nil {
-					slog.Error("error handling pre-process", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+					if !errors.Is(err, preprocess.ErrNotProcessed) {
+						slog.Error("error handling pre-process", slog.Int64("request_id", sReq.ID), slog.Int64("session_id", sReq.SessionID), slog.String("error", err.Error()))
+					}
 					if content.HasCode {
 						// We wouldn't want to return the code itself.
 						res.Body = []byte(FallbackContent)
