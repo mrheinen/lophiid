@@ -46,6 +46,30 @@ type IpEventManagerImpl struct {
 	alertEvents         map[string]bool
 }
 
+// IpEventManagerOption is a functional option for IpEventManagerImpl.
+type IpEventManagerOption func(*IpEventManagerImpl)
+
+// WithAlerter sets the alerter for the IpEventManagerImpl.
+func WithAlerter(a alerting.AlertManagerInterface) IpEventManagerOption {
+	return func(i *IpEventManagerImpl) {
+		i.alerter = a
+	}
+}
+
+// WithMetrics sets the metrics for the IpEventManagerImpl.
+func WithMetrics(m *AnalysisMetrics) IpEventManagerOption {
+	return func(i *IpEventManagerImpl) {
+		i.metrics = m
+	}
+}
+
+// WithAlertEvents sets the alert events map for the IpEventManagerImpl.
+func WithAlertEvents(events map[string]bool) IpEventManagerOption {
+	return func(i *IpEventManagerImpl) {
+		i.alertEvents = events
+	}
+}
+
 // FakeIpEventManager is used in tests
 type FakeIpEventManager struct {
 	Events []models.IpEvent
@@ -55,25 +79,27 @@ func (f *FakeIpEventManager) AddEvent(evt *models.IpEvent) {
 	f.Events = append(f.Events, *evt)
 }
 
-// NewIpEventManagerImpl creates a new IpEventManagerImpl. The alerter and
-// alertEvents parameters are optional and can be nil/empty if alerting is not
-// needed.
-func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, scanMonitorWindow time.Duration, aggregateScanWindow time.Duration, metrics *AnalysisMetrics, alerter alerting.AlertManagerInterface, alertEvents map[string]bool) *IpEventManagerImpl {
+// NewIpEventManagerImpl creates a new IpEventManagerImpl. Optional alerter and
+// alert events can be configured via IpEventManagerOption functions.
+func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, ipCacheDuration time.Duration, scanMonitorWindow time.Duration, aggregateScanWindow time.Duration, opts ...IpEventManagerOption) *IpEventManagerImpl {
 	ipCache := util.NewStringMapCache[models.IpEvent]("Analysis - IP event cache", ipCacheDuration)
 	scanCache := util.NewStringMapCache[models.IpEvent]("Analysis - IP scan cache", ipCacheDuration*2)
 
-	return &IpEventManagerImpl{
+	im := &IpEventManagerImpl{
 		dbClient:            dbClient,
 		eventQueue:          make(chan *models.IpEvent, ipQueueSize),
 		controlChan:         make(chan bool),
 		ipCache:             ipCache,
 		scanCache:           scanCache,
-		metrics:             metrics,
 		scanMonitorInterval: scanMonitorWindow,
 		aggregateScanWindow: aggregateScanWindow,
-		alerter:             alerter,
-		alertEvents:         alertEvents,
 	}
+
+	for _, opt := range opts {
+		opt(im)
+	}
+
+	return im
 }
 
 func (i *IpEventManagerImpl) AddEvent(evt *models.IpEvent) {
@@ -110,7 +136,9 @@ func (i *IpEventManagerImpl) MonitorQueue() {
 			i.CreateScanEvents()
 		case <-ticker.C:
 			i.scanCache.CleanExpired()
-			i.metrics.eventQueueGauge.Set(float64(len(i.eventQueue)))
+			if i.metrics != nil {
+				i.metrics.eventQueueGauge.Set(float64(len(i.eventQueue)))
+			}
 			i.ipCache.CleanExpiredWithCallback(i.handleExpiredEvent)
 		}
 	}

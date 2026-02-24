@@ -152,7 +152,7 @@ func main() {
 		return
 	}
 
-	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, cfg.Analysis.ScanMonitorInterval, cfg.Analysis.AggregateScanWindow, analysisMetrics, alertMgr, alertEvents)
+	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, cfg.Analysis.ScanMonitorInterval, cfg.Analysis.AggregateScanWindow, analysis.WithMetrics(analysisMetrics), analysis.WithAlerter(alertMgr), analysis.WithAlertEvents(alertEvents))
 	ipEventManager.Start()
 
 	var vtMgr vt.VTManager
