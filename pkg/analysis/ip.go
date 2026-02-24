@@ -107,6 +107,10 @@ func NewIpEventManagerImpl(dbClient database.DatabaseClient, ipQueueSize int64, 
 		opt(im)
 	}
 
+	if im.alertEvents == nil {
+		im.alertEvents = map[string]bool{}
+	}
+
 	return im
 }
 
