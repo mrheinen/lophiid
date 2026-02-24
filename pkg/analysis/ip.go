@@ -44,6 +44,7 @@ type IpEventManagerImpl struct {
 	aggregateScanWindow time.Duration
 	alerter             alerting.AlertManagerInterface
 	alertEvents         map[string]bool
+	WebInterfaceAddress *string
 }
 
 // IpEventManagerOption is a functional option for IpEventManagerImpl.
@@ -60,6 +61,13 @@ func WithAlerter(a alerting.AlertManagerInterface) IpEventManagerOption {
 func WithMetrics(m *AnalysisMetrics) IpEventManagerOption {
 	return func(i *IpEventManagerImpl) {
 		i.metrics = m
+	}
+}
+
+// WithWebInterfaceAddress sets the web interface address for the IpEventManagerImpl.
+func WithWebInterfaceAddress(addr string) IpEventManagerOption {
+	return func(i *IpEventManagerImpl) {
+		i.WebInterfaceAddress = &addr
 	}
 }
 
@@ -157,7 +165,14 @@ func (i *IpEventManagerImpl) handleExpiredEvent(evt models.IpEvent) bool {
 	if i.alerter != nil && len(i.alertEvents) > 0 {
 		key := util.GenerateAlertEventKey(evt.Type, evt.Subtype)
 		if i.alertEvents[key] {
-			go i.alerter.SendMessage(fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP))
+			var message string
+			if i.WebInterfaceAddress != nil {
+				message = fmt.Sprintf("IP Event: %s %s for %s\n%s/requests?id:%d", evt.Type, evt.Subtype, evt.IP, *i.WebInterfaceAddress, evt.RequestID)
+			} else {
+				message = fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP)
+			}
+
+			go i.alerter.SendMessage(message)
 		}
 	}
 
