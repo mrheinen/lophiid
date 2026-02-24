@@ -95,8 +95,7 @@ func main() {
 		return
 	}
 	dbc := database.NewKSQLClient(&db)
-	analysisMetrics := analysis.CreateAnalysisMetrics(metricsRegistry)
-	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, cfg.Analysis.ScanMonitorInterval, cfg.Analysis.AggregateScanWindow, analysisMetrics, nil, nil)
+	ipEventManager := analysis.NewIpEventManagerImpl(dbc, int64(cfg.Analysis.IpEventQueueSize), cfg.Analysis.IpCacheDuration, cfg.Analysis.ScanMonitorInterval, cfg.Analysis.AggregateScanWindow)
 	ipEventManager.Start()
 	deMtrics := describer.CreateDescriberMetrics(metricsRegistry)
 	var myDescriber *describer.CachedDescriptionManager

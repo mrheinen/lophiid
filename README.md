@@ -16,12 +16,6 @@ The design of lophiid is that one backend controls multiple honeypot sensors
 agents across the web. Each honeypot can be configured individually but the
 backend is able to track interactions with attackers across all of them.
 
-Say an attacker scans for / across the internet and it hits 50 lophiid
-honeypots. The backend can make sure that during each individual interaction
-with a honeypot a different response is sent to the attacker and with that
-increases the chance that the attacker gets something they are looking for which
-can result in further interaction.
-
 While you can configure Lophiid with static content and rules, you can also make
 use of the AI triage and responsing of requests. In that case, AI will determine
 what kind of attack is happening and will then involve the right "responder"
@@ -33,7 +27,7 @@ Key features:
 - Highly scalable
 - Static, scripted (Javascript) and AI supported response handling
 - Alerting possible (Telegram, extensible)
-- UI with comprehensive search
+- Desktop and mobile UI with comprehensive search
 - AI analysis of attacks
 - Automatic tagging of requests and attacks to help triage
 - Automatically malware collection and storage
