@@ -169,7 +169,7 @@ func main() {
 		pinger = agent.NewProbingPingRunner(cfg.Pinger.PingTimeout)
 	}
 
-	agent := agent.NewAgent(
+	localAgent := agent.NewAgent(
 		agent.WithBackendClient(c),
 		agent.WithHttpServers(httpServers),
 		agent.WithHttpClient(downloadHttpClient),
@@ -179,7 +179,7 @@ func main() {
 		agent.WithContextInterval(cfg.P0f.SendInterval),
 		agent.WithReportIP(cfg.General.PublicIP),
 	)
-	agent.Start()
+	localAgent.Start()
 
 	// Sleep some time to let the HTTP servers initialize.
 	time.Sleep(2 * time.Second)
