@@ -154,12 +154,12 @@ func main() {
 		}
 
 		slog.Info("Opening p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation))
-		p0fclient := p0fclient.NewP0fClient(cfg.P0f.SocketLocation)
+		p0fcli := p0fclient.NewP0fClient(cfg.P0f.SocketLocation)
 
-		if err := p0fclient.Connect(); err != nil {
+		if err := p0fcli.Connect(); err != nil {
 			slog.Warn("Failed to connect to p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation), slog.String("error", err.Error()))
 		}
-		p0fRunner = agent.NewP0fRunnerImpl(p0fclient)
+		p0fRunner = agent.NewP0fRunnerImpl(p0fcli)
 	}
 
 	var pinger agent.PingRunner
