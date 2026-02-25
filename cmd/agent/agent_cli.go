@@ -145,19 +145,21 @@ func main() {
 
 	if cfg.P0f.Enable {
 		p0fRunner = nil
-		if cfg.P0f.SocketLocation != "" {
-			if _, err := os.Stat(cfg.P0f.SocketLocation); errors.Is(err, os.ErrNotExist) {
-				log.Fatal("p0f socket location does not exist. Make sure p0f is running")
-			}
-
-			slog.Info("Opening p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation))
-			p0fclient := p0fclient.NewP0fClient(cfg.P0f.SocketLocation)
-
-			if err := p0fclient.Connect(); err != nil {
-				slog.Warn("Failed to connect to p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation), slog.String("error", err.Error()))
-			}
-			p0fRunner = agent.NewP0fRunnerImpl(p0fclient)
+		if cfg.P0f.SocketLocation == "" {
+			slog.Error("p0f socket location not set")
+			return
 		}
+		if _, err := os.Stat(cfg.P0f.SocketLocation); errors.Is(err, os.ErrNotExist) {
+			log.Fatal("p0f socket location does not exist. Make sure p0f is running")
+		}
+
+		slog.Info("Opening p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation))
+		p0fclient := p0fclient.NewP0fClient(cfg.P0f.SocketLocation)
+
+		if err := p0fclient.Connect(); err != nil {
+			slog.Warn("Failed to connect to p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation), slog.String("error", err.Error()))
+		}
+		p0fRunner = agent.NewP0fRunnerImpl(p0fclient)
 	}
 
 	var pinger agent.PingRunner
