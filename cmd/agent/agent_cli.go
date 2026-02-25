@@ -144,7 +144,6 @@ func main() {
 	var p0fRunner *agent.P0fRunnerImpl = nil
 
 	if cfg.P0f.Enable {
-		p0fRunner = nil
 		if cfg.P0f.SocketLocation == "" {
 			slog.Error("p0f socket location not set")
 			return
