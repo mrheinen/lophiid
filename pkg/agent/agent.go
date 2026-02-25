@@ -131,15 +131,6 @@ func NewAgent(opts ...AgentOption) *Agent {
 		opt(a)
 	}
 
-	// Set default values if not specified.
-	if a.contextInterval == 0 {
-		a.contextInterval = time.Hour
-	}
-
-	if a.statusInterval == 0 {
-		a.statusInterval = time.Minute * 10
-	}
-
 	return a
 }
 
