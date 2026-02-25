@@ -57,10 +57,12 @@ type Config struct {
 		HttpClientTimeout time.Duration `fig:"http_client_timeout" default:"10m"`
 	} `fig:"downloader"`
 	P0f struct {
+		Enable         bool          `fig:"enable" default:"true"`
 		SocketLocation string        `fig:"socket_location"`
 		SendInterval   time.Duration `fig:"send_interval" default:"1m"`
 	} `fig:"p0f"`
 	Pinger struct {
+		Enable      bool          `fig:"enable" default:"true"`
 		PingTimeout time.Duration `fig:"ping_timeout" default:"1m"`
 	} `fig:"pinger"`
 	BackendClient struct {
@@ -139,24 +141,42 @@ func main() {
 
 	downloadHttpClient := &http.Client{Transport: insecureHttpTransport, Timeout: cfg.Downloader.HttpClientTimeout}
 
-	var p0fRunner *agent.P0fRunnerImpl
-	p0fRunner = nil
-	if cfg.P0f.SocketLocation != "" {
-		if _, err := os.Stat(cfg.P0f.SocketLocation); errors.Is(err, os.ErrNotExist) {
-			log.Fatal("p0f socket location does not exist")
-		}
+	var p0fRunner *agent.P0fRunnerImpl = nil
 
-		slog.Info("Opening p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation))
-		p0fclient := p0fclient.NewP0fClient(cfg.P0f.SocketLocation)
+	if cfg.P0f.Enable {
+		p0fRunner = nil
+		if cfg.P0f.SocketLocation != "" {
+			if _, err := os.Stat(cfg.P0f.SocketLocation); errors.Is(err, os.ErrNotExist) {
+				log.Fatal("p0f socket location does not exist. Make sure p0f is running")
+			}
 
-		if err := p0fclient.Connect(); err != nil {
-			slog.Warn("Failed to connect to p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation), slog.String("error", err.Error()))
+			slog.Info("Opening p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation))
+			p0fclient := p0fclient.NewP0fClient(cfg.P0f.SocketLocation)
+
+			if err := p0fclient.Connect(); err != nil {
+				slog.Warn("Failed to connect to p0f socket", slog.String("socket_file", cfg.P0f.SocketLocation), slog.String("error", err.Error()))
+			}
+			p0fRunner = agent.NewP0fRunnerImpl(p0fclient)
 		}
-		p0fRunner = agent.NewP0fRunnerImpl(p0fclient)
 	}
 
-	pinger := agent.NewProbingPingRunner(cfg.Pinger.PingTimeout)
-	agent := agent.NewAgent(c, httpServers, downloadHttpClient, p0fRunner, pinger, cfg.BackendClient.StatusInterval, cfg.P0f.SendInterval, cfg.Pinger.PingTimeout, cfg.General.PublicIP)
+	var pinger agent.PingRunner
+
+	if cfg.Pinger.Enable {
+		slog.Info("Pinger enabled")
+		pinger = agent.NewProbingPingRunner(cfg.Pinger.PingTimeout)
+	}
+
+	agent := agent.NewAgent(
+		agent.WithBackendClient(c),
+		agent.WithHttpServers(httpServers),
+		agent.WithHttpClient(downloadHttpClient),
+		agent.WithP0fRunner(p0fRunner),
+		agent.WithPingRunner(pinger),
+		agent.WithStatusInterval(cfg.BackendClient.StatusInterval),
+		agent.WithContextInterval(cfg.P0f.SendInterval),
+		agent.WithReportIP(cfg.General.PublicIP),
+	)
 	agent.Start()
 
 	// Sleep some time to let the HTTP servers initialize.
