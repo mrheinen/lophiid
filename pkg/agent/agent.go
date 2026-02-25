@@ -54,27 +54,84 @@ type Agent struct {
 	sslPorts        []int64
 }
 
-func NewAgent(backendClient backend.BackendClient, httpServers []*HttpServer, httpClient *http.Client, p0fRunner P0fRunner, pRunner PingRunner, statusInterval time.Duration, contextInterval time.Duration, pingTimeout time.Duration, reportIP string) *Agent {
+// AgentOption is a functional option for configuring an Agent.
+type AgentOption func(*Agent)
 
+// WithBackendClient sets the backend client for the Agent.
+func WithBackendClient(c backend.BackendClient) AgentOption {
+	return func(a *Agent) {
+		a.backendClient = c
+	}
+}
+
+// WithHttpServers sets the HTTP servers for the Agent.
+func WithHttpServers(servers []*HttpServer) AgentOption {
+	return func(a *Agent) {
+		a.httpServers = servers
+	}
+}
+
+// WithHttpClient sets the HTTP client used for downloading files.
+func WithHttpClient(client *http.Client) AgentOption {
+	return func(a *Agent) {
+		a.httpClient = client
+	}
+}
+
+// WithP0fRunner sets the p0f runner for OS fingerprinting.
+func WithP0fRunner(runner P0fRunner) AgentOption {
+	return func(a *Agent) {
+		a.p0fRunner = runner
+	}
+}
+
+// WithPingRunner sets the ping runner for the Agent.
+func WithPingRunner(runner PingRunner) AgentOption {
+	return func(a *Agent) {
+		a.pinger = runner
+	}
+}
+
+// WithStatusInterval sets the interval at which status updates are sent to the backend.
+func WithStatusInterval(d time.Duration) AgentOption {
+	return func(a *Agent) {
+		a.statusInterval = d
+	}
+}
+
+// WithContextInterval sets the interval at which source context (e.g. p0f data) is sent to the backend.
+func WithContextInterval(d time.Duration) AgentOption {
+	return func(a *Agent) {
+		a.contextInterval = d
+	}
+}
+
+// WithReportIP sets the public IP address that the Agent reports to the backend.
+func WithReportIP(ip string) AgentOption {
+	return func(a *Agent) {
+		a.reportIP = ip
+	}
+}
+
+// NewAgent creates a new Agent configured by the provided options.
+func NewAgent(opts ...AgentOption) *Agent {
 	mi, _ := magicmime.NewDecoder(magicmime.MAGIC_MIME_TYPE)
 	ipCache := util.NewStringMapCache[bool]("IP cache", time.Hour*2)
 	ipCache.Start()
 
-	return &Agent{
-		backendClient:   backendClient,
-		httpServers:     httpServers,
-		reportIP:        reportIP,
-		httpClient:      httpClient,
-		statusLoopChan:  make(chan bool),
-		statusRunChan:   make(chan bool, 10),
-		statusInterval:  statusInterval,
-		contextChan:     make(chan bool),
-		contextInterval: contextInterval,
-		pinger:          pRunner,
-		mimeInstance:    mi,
-		ipCache:         ipCache,
-		p0fRunner:       p0fRunner,
+	a := &Agent{
+		statusLoopChan: make(chan bool),
+		statusRunChan:  make(chan bool, 10),
+		contextChan:    make(chan bool),
+		mimeInstance:   mi,
+		ipCache:        ipCache,
 	}
+
+	for _, opt := range opts {
+		opt(a)
+	}
+
+	return a
 }
 
 func (a *Agent) Start() error {
@@ -347,6 +404,12 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 		case *backend_service.Command_PingCmd:
 			go func(dCmd *backend_service.CommandPingAddress) {
 				slog.Info("Ping Command", slog.String("command", fmt.Sprintf("%+v", dCmd)))
+
+				if a.pinger == nil {
+					slog.Error("No ping runner configured")
+					return
+				}
+
 				res, err := a.pinger.Ping(c.PingCmd.Address, c.PingCmd.Count)
 				if err != nil {
 					slog.Error("Error pinging address", slog.String("address", c.PingCmd.Address), slog.String("error", err.Error()))
