@@ -171,7 +171,7 @@ func (i *IpEventManagerImpl) handleExpiredEvent(evt models.IpEvent) bool {
 		if i.alertEvents[key] {
 			var message string
 			if i.WebInterfaceAddress != nil {
-				message = fmt.Sprintf("IP Event: %s %s for %s\n%s/requests?id:%d", evt.Type, evt.Subtype, evt.IP, *i.WebInterfaceAddress, evt.RequestID)
+				message = fmt.Sprintf("IP Event: %s %s for %s\n%s/requests?q=id:%d", evt.Type, evt.Subtype, evt.IP, *i.WebInterfaceAddress, evt.RequestID)
 			} else {
 				message = fmt.Sprintf("IP Event: %s %s for %s", evt.Type, evt.Subtype, evt.IP)
 			}
