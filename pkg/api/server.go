@@ -205,6 +205,31 @@ func (a *ApiServer) HandleGetGlobalStatistics(w http.ResponseWriter, req *http.R
 	a.sendStatus(w, "", ResultSuccess, a.globalStats)
 }
 
+// HandleGetURIStatistics returns on-the-fly statistics for a URI, cmp_hash or base_hash.
+// An optional honeypot_ip query parameter narrows the results to a single honeypot.
+func (a *ApiServer) HandleGetURIStatistics(w http.ResponseWriter, req *http.Request) {
+	lookupType := req.URL.Query().Get("lookup_type")
+	if lookupType == "" {
+		lookupType = "uri"
+	}
+
+	lookupValue := req.URL.Query().Get("lookup_value")
+	if lookupValue == "" {
+		a.sendStatus(w, "lookup_value is required", ResultError, nil)
+		return
+	}
+
+	honeypotIP := req.URL.Query().Get("honeypot_ip")
+
+	result, err := GetURIStatistics(a.dbc, lookupType, lookupValue, honeypotIP)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "", ResultSuccess, result)
+}
+
 func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *http.Request) {
 	var rb models.ContentRule
 	rb.ID = 0
@@ -1305,7 +1330,7 @@ type AppYamlExport struct {
 	Name    string  `json:"name"`
 	Version *string `json:"version"`
 	Vendor  *string `json:"vendor"`
-	Yaml    string `json:"yaml"`
+	Yaml    string  `json:"yaml"`
 }
 
 func (a *ApiServer) ExportAppWithContentAndRule(w http.ResponseWriter, req *http.Request) {
