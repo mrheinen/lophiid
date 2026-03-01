@@ -308,7 +308,7 @@ i.pi-style-right {
 
 @media (min-width: 1024px) {
   .list-layout {
-    grid-template-columns: 3fr 2fr;
+    grid-template-columns: 4fr 2fr;
   }
 }
 

@@ -19,6 +19,7 @@ package api
 import (
 	"fmt"
 	"lophiid/pkg/database"
+	"time"
 )
 
 type RequestsPerMonthResult struct {
@@ -58,6 +59,11 @@ type Top10URI struct {
 	URI           string `ksql:"uri" json:"uri"`
 }
 
+type TriagePayloadTypeCount struct {
+	TotalRequests     int    `ksql:"total_requests" json:"total_requests"`
+	TriagePayloadType string `ksql:"triage_payload_type" json:"triage_payload_type"`
+}
+
 type MalwareCountResult struct {
 	TotalEntries int    `ksql:"total_entries" json:"total_entries"`
 	Type         string `ksql:"type" json:"type"`
@@ -71,7 +77,78 @@ type GlobalStatisticsResult struct {
 	MethodsLast24Hours        []MethodCountResult      `json:"methods_last_24_hours"`
 	Top10SourceIPsLast24Hours []Top10SourceIPs         `json:"top_10_source_ips_last_24_hours"`
 	Top10URIsLast24Hours      []Top10URI               `json:"top_10_uris_last_24_hours"`
+	Top10URIsCodeExecution    []Top10URI               `json:"top_10_uris_code_execution"`
+	Top10URIsShellCommand     []Top10URI               `json:"top_10_uris_shell_command"`
+	TriagePayloadTypeCounts   []TriagePayloadTypeCount `json:"triage_payload_type_counts"`
 	MalwareLast24Hours        []MalwareCountResult     `json:"malware_last_24_hours"`
+}
+
+// URIStatsSummary holds the first/last seen times, first requester IP and total count.
+type URIStatsSummary struct {
+	FirstSeen        time.Time `ksql:"first_seen" json:"first_seen"`
+	LastSeen         time.Time `ksql:"last_seen" json:"last_seen"`
+	FirstRequesterIP string    `ksql:"first_requester_ip" json:"first_requester_ip"`
+	TotalRequests    int       `ksql:"total_requests" json:"total_requests"`
+}
+
+// URIStatsPerMonth holds the request count for a single month.
+type URIStatsPerMonth struct {
+	Month        string `ksql:"month" json:"month"`
+	TotalEntries int    `ksql:"total_entries" json:"total_entries"`
+}
+
+// URIStatsResult combines the summary and the per-month breakdown.
+type URIStatsResult struct {
+	LookupType  string             `json:"lookup_type"`
+	LookupValue string             `json:"lookup_value"`
+	HoneypotIP  string             `json:"honeypot_ip"`
+	Summary     URIStatsSummary    `json:"summary"`
+	PerMonth    []URIStatsPerMonth `json:"per_month"`
+}
+
+// validLookupColumns is the allowlist of column names accepted for URI stats lookups.
+var validLookupColumns = map[string]bool{
+	"uri":       true,
+	"cmp_hash":  true,
+	"base_hash": true,
+}
+
+// GetURIStatistics computes on-the-fly stats for the given lookup column and value.
+// When honeypotIP is non-empty the results are narrowed to that honeypot only.
+func GetURIStatistics(dbc database.DatabaseClient, lookupType string, lookupValue string, honeypotIP string) (URIStatsResult, error) {
+	result := URIStatsResult{
+		LookupType:  lookupType,
+		LookupValue: lookupValue,
+		HoneypotIP:  honeypotIP,
+	}
+
+	if !validLookupColumns[lookupType] {
+		return result, fmt.Errorf("invalid lookup_type %q: must be uri, cmp_hash, or base_hash", lookupType)
+	}
+
+	// Build optional honeypot clause and params list.
+	honeypotClause := ""
+	params := []any{lookupValue}
+	if honeypotIP != "" {
+		honeypotClause = " AND honeypot_ip = $2"
+		params = append(params, honeypotIP)
+	}
+
+	summaryQuery := fmt.Sprintf(database.QueryURIStatsSummaryTemplate, lookupType, honeypotClause, lookupType, honeypotClause)
+	var summaryRows []URIStatsSummary
+	if _, err := dbc.ParameterizedQuery(summaryQuery, &summaryRows, params...); err != nil {
+		return result, fmt.Errorf("failed to get URI stats summary: %w", err)
+	}
+	if len(summaryRows) > 0 {
+		result.Summary = summaryRows[0]
+	}
+
+	perMonthQuery := fmt.Sprintf(database.QueryURIStatsPerMonthTemplate, lookupType, honeypotClause)
+	if _, err := dbc.ParameterizedQuery(perMonthQuery, &result.PerMonth, params...); err != nil {
+		return result, fmt.Errorf("failed to get URI stats per month: %w", err)
+	}
+
+	return result, nil
 }
 
 func GetGlobalStatistics(dbc database.DatabaseClient) (GlobalStatisticsResult, error) {
@@ -110,6 +187,21 @@ func GetGlobalStatistics(dbc database.DatabaseClient) (GlobalStatisticsResult, e
 	_, err = dbc.SimpleQuery(database.QueryTop10URILastDay, &finalResult.Top10URIsLast24Hours)
 	if err != nil {
 		return finalResult, fmt.Errorf("failed to get top 10 URIs count last 24 hours: %w", err)
+	}
+
+	_, err = dbc.SimpleQuery(database.QueryTop10URIsCodeExecutionLastDay, &finalResult.Top10URIsCodeExecution)
+	if err != nil {
+		return finalResult, fmt.Errorf("failed to get top 10 code execution URIs: %w", err)
+	}
+
+	_, err = dbc.SimpleQuery(database.QueryTop10URIsShellCommandLastDay, &finalResult.Top10URIsShellCommand)
+	if err != nil {
+		return finalResult, fmt.Errorf("failed to get top 10 shell command URIs: %w", err)
+	}
+
+	_, err = dbc.SimpleQuery(database.QueryTriagePayloadTypeCounts, &finalResult.TriagePayloadTypeCounts)
+	if err != nil {
+		return finalResult, fmt.Errorf("failed to get triage payload type counts: %w", err)
 	}
 
 	return finalResult, nil

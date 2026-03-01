@@ -92,6 +92,7 @@ type DatabaseClient interface {
 	ReplaceAppsForGroup(groupID int64, appIDs []int64) error
 	GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error)
 	SimpleQuery(query string, result any) (any, error)
+	ParameterizedQuery(query string, result any, params ...any) (any, error)
 }
 
 // Helper function to get database field names.
@@ -275,6 +276,12 @@ func (d *KSQLClient) GetRequestByID(id int64) (models.Request, error) {
 
 func (d *KSQLClient) SimpleQuery(query string, result any) (any, error) {
 	err := d.db.Query(d.ctx, result, query)
+	return result, err
+}
+
+// ParameterizedQuery executes a SQL query with positional parameters ($1, $2, …).
+func (d *KSQLClient) ParameterizedQuery(query string, result any, params ...any) (any, error) {
+	err := d.db.Query(d.ctx, result, query, params...)
 	return result, err
 }
 

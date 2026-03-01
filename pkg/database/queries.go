@@ -96,3 +96,59 @@ GROUP BY uri
 ORDER BY total_requests DESC
 LIMIT 10;
 `
+
+const QueryTop10URIsCodeExecutionLastDay = `
+SELECT
+    uri, COUNT(*) AS total_requests
+FROM public.request
+WHERE triage_payload_type = 'CODE_EXECUTION'
+    AND created_at >= NOW() - INTERVAL '24 hours'
+GROUP BY uri
+ORDER BY total_requests DESC
+LIMIT 10;
+`
+
+const QueryTop10URIsShellCommandLastDay = `
+SELECT
+    uri, COUNT(*) AS total_requests
+FROM public.request
+WHERE triage_payload_type = 'SHELL_COMMAND'
+    AND created_at >= NOW() - INTERVAL '24 hours'
+GROUP BY uri
+ORDER BY total_requests DESC
+LIMIT 10;
+`
+
+const QueryTriagePayloadTypeCounts = `
+SELECT
+    triage_payload_type, COUNT(*) AS total_requests
+FROM public.request
+WHERE created_at >= NOW() - INTERVAL '24 hours'
+GROUP BY triage_payload_type
+ORDER BY total_requests DESC;
+`
+
+// QueryURIStatsSummaryTemplate returns first_seen, last_seen, first_requester_ip and total_requests
+// for a given column value. The %s placeholder must be replaced with a validated column name
+// (uri, cmp_hash, or base_hash) before use.
+const QueryURIStatsSummaryTemplate = `
+SELECT
+    MIN(created_at) AS first_seen,
+    MAX(created_at) AS last_seen,
+    (SELECT source_ip FROM public.request WHERE %s = $1%s ORDER BY created_at ASC LIMIT 1) AS first_requester_ip,
+    COUNT(*) AS total_requests
+FROM public.request
+WHERE %s = $1%s;
+`
+
+// QueryURIStatsPerMonthTemplate returns per-month request counts for a given column value.
+// The %s placeholder must be replaced with a validated column name before use.
+const QueryURIStatsPerMonthTemplate = `
+SELECT
+    TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month,
+    COUNT(*) AS total_entries
+FROM public.request
+WHERE %s = $1%s
+GROUP BY month
+ORDER BY month ASC;
+`

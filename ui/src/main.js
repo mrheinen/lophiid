@@ -21,6 +21,7 @@ import TagList from './components/container/TagList.vue';
 import YaraList from './components/container/YaraList.vue';
 import RuleGroupList from './components/container/RuleGroupList.vue';
 import GlobalStats from './components/container/GlobalStats.vue';
+import UriStats from './components/container/UriStats.vue';
 import InfoCard from './components/cards/InfoCard.vue';
 
 import PrimeVue from 'primevue/config';
@@ -139,6 +140,7 @@ const router = createRouter({
     { path: Config.ruleGroupsLink, component: RuleGroupList },
     { path: Config.ruleGroupsSegmentLink, component: RuleGroupList },
     { path: Config.statsLink, component: GlobalStats },
+    { path: Config.uriStatsLink, component: UriStats },
   ]
 });
 
