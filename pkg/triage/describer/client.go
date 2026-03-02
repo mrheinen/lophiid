@@ -64,7 +64,8 @@ func (b *CachedDescriberClient) MaybeAddNewHash(hash string, req *models.Request
 	}
 
 	// Next check the database
-	res, err := b.dbClient.SearchRequestDescription(0, 1, fmt.Sprintf("cmp_hash:%s", hash))
+	sixMonthsAgo := time.Now().AddDate(0, -6, 0).Format("01/02/2006")
+	res, err := b.dbClient.SearchRequestDescription(0, 1, fmt.Sprintf("cmp_hash:%s created_at>%s", hash, sixMonthsAgo))
 	if err != nil {
 		return fmt.Errorf("failed to check database for request description %s: %w", hash, err)
 	}
