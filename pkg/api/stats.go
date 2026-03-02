@@ -106,11 +106,11 @@ type URIStatsResult struct {
 	PerMonth    []URIStatsPerMonth `json:"per_month"`
 }
 
-// validLookupColumns is the allowlist of column names accepted for URI stats lookups.
-var validLookupColumns = map[string]bool{
-	"uri":       true,
-	"cmp_hash":  true,
-	"base_hash": true,
+// validLookupColumns maps accepted lookup_type values to their trusted SQL column identifiers.
+var validLookupColumns = map[string]string{
+	"uri":       "uri",
+	"cmp_hash":  "cmp_hash",
+	"base_hash": "base_hash",
 }
 
 // GetURIStatistics computes on-the-fly stats for the given lookup column and value.
@@ -122,7 +122,8 @@ func GetURIStatistics(dbc database.DatabaseClient, lookupType string, lookupValu
 		HoneypotIP:  honeypotIP,
 	}
 
-	if !validLookupColumns[lookupType] {
+	columnName, ok := validLookupColumns[lookupType]
+	if !ok {
 		return result, fmt.Errorf("invalid lookup_type %q: must be uri, cmp_hash, or base_hash", lookupType)
 	}
 
@@ -134,7 +135,7 @@ func GetURIStatistics(dbc database.DatabaseClient, lookupType string, lookupValu
 		params = append(params, honeypotIP)
 	}
 
-	summaryQuery := fmt.Sprintf(database.QueryURIStatsSummaryTemplate, lookupType, honeypotClause, lookupType, honeypotClause)
+	summaryQuery := fmt.Sprintf(database.QueryURIStatsSummaryTemplate, columnName, honeypotClause, columnName, honeypotClause)
 	var summaryRows []URIStatsSummary
 	if _, err := dbc.ParameterizedQuery(summaryQuery, &summaryRows, params...); err != nil {
 		return result, fmt.Errorf("failed to get URI stats summary: %w", err)
@@ -143,7 +144,7 @@ func GetURIStatistics(dbc database.DatabaseClient, lookupType string, lookupValu
 		result.Summary = summaryRows[0]
 	}
 
-	perMonthQuery := fmt.Sprintf(database.QueryURIStatsPerMonthTemplate, lookupType, honeypotClause)
+	perMonthQuery := fmt.Sprintf(database.QueryURIStatsPerMonthTemplate, columnName, honeypotClause)
 	if _, err := dbc.ParameterizedQuery(perMonthQuery, &result.PerMonth, params...); err != nil {
 		return result, fmt.Errorf("failed to get URI stats per month: %w", err)
 	}
