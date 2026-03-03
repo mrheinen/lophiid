@@ -2,6 +2,7 @@ package shell
 
 import (
 	"lophiid/pkg/util"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -100,6 +101,18 @@ done`),
 
 		})
 	}
+}
+
+func TestExpandChunkOversizedVarValue(t *testing.T) {
+	hugeValue := strings.Repeat("A", maxVarValueLen+1)
+	chunk := "MYVAR=" + hugeValue
+
+	exp := NewExpander()
+	result := exp.ExpandChunk(chunk)
+
+	assert.Equal(t, chunk, result, "chunk should be returned unchanged")
+	_, stored := exp.varMap["MYVAR"]
+	assert.False(t, stored, "oversized variable value must not be stored in varMap")
 }
 
 func TestGetCommandOutput(t *testing.T) {

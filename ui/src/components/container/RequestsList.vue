@@ -72,7 +72,7 @@
           <DataColumn
             field="source_ip"
             header="Source"
-            style="width: 12%"
+            style="width: 11%"
           >
             <template #body="slotProps">
               <a
@@ -92,7 +92,7 @@
           </DataColumn>
           <DataColumn
             header="Actions"
-            style="width: 5%"
+            style="width: 4%; white-space: nowrap"
           >
             <template #body="slotProps">
               <a
@@ -107,6 +107,19 @@
                 <i
                   title="create a rule for this"
                   class="pi pi-arrow-circle-right"
+                />
+              </a>
+              &nbsp;
+              <a
+                :href="
+                  config.uriStatsLink +
+                    '?lookup_type=uri&lookup_value=' +
+                    encodeURIComponent(slotProps.data.uri)
+                "
+              >
+                <i
+                  title="view URI stats"
+                  class="pi pi-chart-bar"
                 />
               </a>
               &nbsp;

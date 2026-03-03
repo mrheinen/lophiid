@@ -117,8 +117,104 @@
                 :key="stat.uri"
               >
                 <td>
-                  <a :href="'/requests?q=uri:' + encodeURIComponent(stat.uri)">{{ stat.uri }}</a>
+                  <a :href="'/requests?q=uri:' + encodeURIComponent(stat.uri)" :title="stat.uri">{{ truncateUri(stat.uri) }}</a>
                 </td>
+                <td>{{ stat.total_requests }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top URIs - Code Execution -->
+      <div
+        v-if="stats"
+        class="stats-card"
+      >
+        <div class="stats-card-header">
+          <i class="pi pi-code" />
+          <span>Top URIs – Code Execution (24h)</span>
+        </div>
+        <div class="stats-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>URI</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="stat in stats.top_10_uris_code_execution"
+                :key="stat.uri"
+              >
+                <td>
+                  <a :href="'/requests?q=triage_payload_type:CODE_EXECUTION%20uri:' + encodeURIComponent(stat.uri)" :title="stat.uri">{{ truncateUri(stat.uri) }}</a>
+                </td>
+                <td>{{ stat.total_requests }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top URIs - Shell Command -->
+      <div
+        v-if="stats"
+        class="stats-card"
+      >
+        <div class="stats-card-header">
+          <i class="pi pi-terminal" />
+          <span>Top URIs – Shell Command (24h)</span>
+        </div>
+        <div class="stats-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>URI</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="stat in stats.top_10_uris_shell_command"
+                :key="stat.uri"
+              >
+                <td>
+                  <a :href="'/requests?q=triage_payload_type:SHELL_COMMAND%20uri:' + encodeURIComponent(stat.uri)" :title="stat.uri">{{ truncateUri(stat.uri) }}</a>
+                </td>
+                <td>{{ stat.total_requests }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Triage Payload Types -->
+      <div
+        v-if="stats"
+        class="stats-card"
+      >
+        <div class="stats-card-header">
+          <i class="pi pi-tag" />
+          <span>Triage Payload Types (24h)</span>
+        </div>
+        <div class="stats-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Payload Type</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="stat in stats.triage_payload_type_counts"
+                :key="stat.triage_payload_type"
+              >
+                <td><a :href="'/requests?q=triage_payload_type:' +
+                    encodeURIComponent(stat.triage_payload_type)">{{
+                    stat.triage_payload_type }}</a></td>
                 <td>{{ stat.total_requests }}</td>
               </tr>
             </tbody>
@@ -195,6 +291,9 @@ export default {
     this.pieChartOptions = this.setPieChartOptions();
   },
   methods: {
+    truncateUri(uri) {
+      return uri.length > 40 ? uri.substring(0, 40) + '…' : uri;
+    },
     loadStats() {
       this.isLoading = true;
       var url = this.config.backendAddress + "/stats/global";

@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+// maxVarValueLen is the maximum number of bytes a variable value may occupy in
+// varMap. Values exceeding this limit are silently dropped to prevent OOM when
+// strings.ReplaceAll uses the value as a replacement string.
+const maxVarValueLen = 4096
+
 type Expander struct {
 	compiledVarRegex *regexp.Regexp
 	varMap           map[string]string
@@ -103,12 +108,20 @@ func (n *Expander) ExpandChunk(chunk string) string {
 		if strings.HasPrefix(match[2], "$(") {
 			output, err := getCommandOutput(match[2])
 			if err != nil {
-				n.varMap[match[1]] = CleanupVariableValue(match[2])
+				val := CleanupVariableValue(match[2])
+				if len(val) <= maxVarValueLen {
+					n.varMap[match[1]] = val
+				}
 			} else {
-				n.varMap[match[1]] = output
+				if len(output) <= maxVarValueLen {
+					n.varMap[match[1]] = output
+				}
 			}
 		} else {
-			n.varMap[match[1]] = CleanupVariableValue(match[2])
+			val := CleanupVariableValue(match[2])
+			if len(val) <= maxVarValueLen {
+				n.varMap[match[1]] = val
+			}
 		}
 	}
 
@@ -155,6 +168,9 @@ func (n *Expander) Expand(reader Iterator) []string {
 				}
 
 				for _, val := range strings.Split(variableValues, " ") {
+					if len(val) > maxVarValueLen {
+						continue
+					}
 					n.varMap[variableName] = val
 
 					updatedChunk := n.ExpandChunk(nextChunk)

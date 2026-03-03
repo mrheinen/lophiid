@@ -25,6 +25,11 @@ type Iterator interface {
 	Next() (string, bool)
 }
 
+// maxChunkLen is the maximum number of bytes returned by a single Next() call.
+// Chunks larger than this are truncated to avoid feeding huge binary blobs into
+// the variable expander.
+const maxChunkLen = 64 * 1024
+
 type ScriptIterator struct {
 	fileData []byte
 	index    int
@@ -48,7 +53,6 @@ func (f *ScriptIterator) FromBuffer(buffer []byte) error {
 	f.fileData = buffer
 	return nil
 }
-
 
 func (f *ScriptIterator) Next() (string, bool) {
 	if f.fileData == nil {
@@ -84,12 +88,18 @@ func (f *ScriptIterator) Next() (string, bool) {
 		if ch == '\n' {
 			retString = string(f.fileData[:i])
 			f.fileData = f.fileData[i+1:]
+			if len(retString) > maxChunkLen {
+				retString = retString[:maxChunkLen]
+			}
 			return retString, true
 		}
 
 		if ch == ';' && !inQuote {
 			retString = string(f.fileData[:i])
 			f.fileData = f.fileData[i+1:]
+			if len(retString) > maxChunkLen {
+				retString = retString[:maxChunkLen]
+			}
 			return retString, true
 		}
 	}
@@ -97,5 +107,8 @@ func (f *ScriptIterator) Next() (string, bool) {
 	// Handle the last line (when no newline at the end)
 	retString = string(f.fileData)
 	f.fileData = nil // Mark as done
+	if len(retString) > maxChunkLen {
+		retString = retString[:maxChunkLen]
+	}
 	return retString, false
 }

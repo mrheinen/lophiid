@@ -56,9 +56,10 @@ type FakeDatabaseClient struct {
 	MetadataToReturn                []models.RequestMetadata
 	YarasToReturn                   []models.Yara
 	SimpleQueryResult               any
+	ParameterizedQueryResult        any
 	SessionExecutionContextToReturn []models.SessionExecutionContext
 	TagsPerRuleToReturn             []models.TagPerRule
-	AppPerGroupToReturn            []models.AppPerGroup
+	AppPerGroupToReturn             []models.AppPerGroup
 	RuleGroupToReturn               []models.RuleGroup
 	AppPerGroupJoinToReturn         []models.AppPerGroupJoin
 	ContentRulesByAppIDToReturn     map[int64][]models.ContentRule
@@ -182,6 +183,9 @@ func (f *FakeDatabaseClient) SearchTagPerRule(offset int64, limit int64, query s
 }
 func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) {
 	return f.SimpleQueryResult, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) ParameterizedQuery(query string, result any, params ...any) (any, error) {
+	return f.ParameterizedQueryResult, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error) {
 	return f.AppPerGroupToReturn, f.ErrorToReturn

@@ -20,6 +20,7 @@ export default {
   ruleGroupsSegmentLink: '/rulegroups/:offset/:limit',
   tagsLink: '/tag',
   statsLink: '/stats',
+  uriStatsLink: '/uristats',
   datamodelDocLink: '/datamodel/doc',
   tagsSegmentLink: '/tag/:offset/:limit',
   requestsSegmentLink: '/requests/:offset/:limit',

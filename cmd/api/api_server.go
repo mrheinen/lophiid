@@ -173,6 +173,7 @@ func main() {
 	r.HandleFunc("/yara/segment", as.HandleSearchYara).Methods("GET")
 
 	r.HandleFunc("/stats/global", as.HandleGetGlobalStatistics).Methods("GET")
+	r.HandleFunc("/stats/uri", as.HandleGetURIStatistics).Methods("GET")
 
 	r.HandleFunc("/rulegroup/segment", as.HandleSearchRuleGroups).Methods("GET")
 	r.HandleFunc("/rulegroup/upsert", as.HandleUpsertRuleGroup).Methods("POST")

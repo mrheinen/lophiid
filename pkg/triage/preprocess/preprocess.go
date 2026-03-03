@@ -140,6 +140,35 @@ var caseInsensitivePatterns = []string{
 	"where", "sleep", "benchmark", "waitfor", "delay",
 }
 
+// A bunch of strings that are likely to match on a regex that checks if the
+// file was successfully uploaded.
+// TODO : consider moving this to the config or make it an AI response.
+const fileUploadedResponse = `
+Upload successful
+Upload complete
+File uploaded successfully
+File Uploaded Successfully
+Asset uploaded and verified
+Thank you
+Successfully uploaded
+Success!
+Done uploading
+installed successfully
+Form submitted successfully
+Your file has been successfully uploaded
+done
+saved
+added
+completed
+Redirecting
+Document successfully submitted to the server
+Transmission successful
+success: true
+uploaded: true
+filename
+attachement
+`
+
 // requestContainsAnyPattern checks if the request body or URI contains any of
 // the suspicious patterns. It pre-computes the lowercase versions to avoid
 // repeated allocations.
@@ -304,10 +333,10 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 				ExtUuid:     uuid.NewString(),
 			},
 			Rule: models.ContentRule{
-				Uri:          fileName,
-				UriMatching:  constants.MatchingTypeContains,
-				BodyMatching: constants.MatchingTypeNone,
-				Enabled:      true,
+				Uri:              fileName,
+				UriMatching:      constants.MatchingTypeContains,
+				BodyMatching:     constants.MatchingTypeNone,
+				Enabled:          true,
 				AllowFromNet:     &net,
 				AppID:            constants.DefaultUploadAppID,
 				Method:           constants.HTTPMethodAny,
@@ -319,7 +348,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 			},
 		}
 
-		return res, &PayloadProcessingResult{TmpContentRule: &tmpContentRule}, nil
+		return res, &PayloadProcessingResult{Output: fileUploadedResponse, TmpContentRule: &tmpContentRule}, nil
 
 	default:
 		slog.Debug("Unknown payload type", slog.Int64("request_id", req.ID), slog.Int64("session_id", req.SessionID), slog.String("type", res.PayloadType), slog.String("payload", res.Payload))
