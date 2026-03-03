@@ -65,6 +65,7 @@ import (
 // User agent to use for downloading.
 const userAgent = "Wget/1.13.4 (linux-gnu)"
 const maxUrlsToExtractForDownload = 15
+const maxPayloadSizeForExpansion = 1024 * 1024
 const maxPingsToExtract = 5
 const maxSqlDelayMs = 10000
 
@@ -654,22 +655,22 @@ func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo m
 		return false
 	}
 
-	// Expand the file if possible.
-	exp := shell.NewExpander()
-	itr := shell.ScriptIterator{}
-	itr.FromBuffer(fileContent)
-
-	expandedContent := exp.Expand(&itr)
-
 	linksMap := make(map[string]struct{})
 	lx := extractors.NewURLExtractor(linksMap)
 	lx.ParseString(string(fileContent))
+	// Skip expansion for very large files; legitimate shell scripts are small.
+	var expandedContent []string
+	if len(fileContent) <= maxPayloadSizeForExpansion {
+		exp := shell.NewExpander()
+		itr := shell.ScriptIterator{}
+		itr.FromBuffer(fileContent)
+		expandedContent = exp.Expand(&itr)
+		beforeLen := len(linksMap)
+		lx.ParseString(strings.Join(expandedContent, "\n"))
 
-	beforeLen := len(linksMap)
-	lx.ParseString(strings.Join(expandedContent, "\n"))
-
-	if len(linksMap) > beforeLen {
-		slog.Debug("extracted more links from expanded payload", slog.Int("before", beforeLen), slog.Int("after", len(linksMap)))
+		if len(linksMap) > beforeLen {
+			slog.Debug("extracted more links from expanded payload", slog.Int("before", beforeLen), slog.Int("after", len(linksMap)))
+		}
 	}
 
 	if len(linksMap) > maxUrlsToExtractForDownload {
