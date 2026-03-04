@@ -81,15 +81,16 @@ That was the request. Now the following information was found in the base64 enco
 
 `
 
-func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, eventManager analysis.IpEventManager, metrics *DescriberMetrics) *CachedDescriptionManager {
-
-	llmManager.SetResponseSchemaFromObject(LLMResult{}, "security_information")
+func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, eventManager analysis.IpEventManager, metrics *DescriberMetrics) (*CachedDescriptionManager, error) {
+	if err := llmManager.SetResponseSchemaFromObject(LLMResult{}, "security_information"); err != nil {
+		return nil, fmt.Errorf("error setting response schema: %w", err)
+	}
 	return &CachedDescriptionManager{
 		dbClient:     dbClient,
 		llmManager:   llmManager,
 		metrics:      metrics,
 		eventManager: eventManager,
-	}
+	}, nil
 }
 
 func (b *CachedDescriptionManager) MarkDescriptionFailed(desc *models.RequestDescription) {

@@ -23,6 +23,8 @@ import (
 	"lophiid/pkg/llm"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestRunCommand_NoExistingCommands(t *testing.T) {
@@ -38,7 +40,8 @@ func TestRunCommand_NoExistingCommands(t *testing.T) {
 	}
 
 	// Create shell client
-	shellClient := NewShellClient(mockLLM, fakeDB)
+	shellClient, err := NewShellClient(mockLLM, fakeDB)
+	require.NoError(t, err)
 
 	// Create test request
 	req := &models.Request{
@@ -143,7 +146,8 @@ func TestRunCommand_WithExistingCommands(t *testing.T) {
 	}
 
 	// Create shell client
-	shellClient := NewShellClient(mockLLM, fakeDB)
+	shellClient, err := NewShellClient(mockLLM, fakeDB)
+	require.NoError(t, err)
 
 	// Create test request
 	req := &models.Request{
@@ -200,7 +204,8 @@ func TestRunCommand_LLMCompletionError(t *testing.T) {
 	}
 
 	// Create shell client
-	shellClient := NewShellClient(mockLLM, fakeDB)
+	shellClient, err := NewShellClient(mockLLM, fakeDB)
+	require.NoError(t, err)
 
 	// Create test request
 	req := &models.Request{
@@ -240,7 +245,8 @@ func TestRunCommand_JSONUnmarshalError(t *testing.T) {
 	}
 
 	// Create shell client
-	shellClient := NewShellClient(mockLLM, fakeDB)
+	shellClient, err := NewShellClient(mockLLM, fakeDB)
+	require.NoError(t, err)
 
 	// Create test request
 	req := &models.Request{
@@ -275,7 +281,8 @@ func TestRunCommand_DatabaseInsertError(t *testing.T) {
 	}
 
 	// Create shell client
-	shellClient := NewShellClient(mockLLM, fakeDB)
+	shellClient, err := NewShellClient(mockLLM, fakeDB)
+	require.NoError(t, err)
 
 	// Create test request
 	req := &models.Request{

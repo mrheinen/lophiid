@@ -59,7 +59,8 @@ func TestProcess_NoPayload(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -120,7 +121,8 @@ func TestProcess_ShellCommandPayload(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -183,7 +185,8 @@ func TestProcess_SqlInjectionPayload(t *testing.T) {
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -251,7 +254,8 @@ func TestProcess_FileAccessPayload(t *testing.T) {
 	mockLLM.ErrorToReturn = nil
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -309,7 +313,8 @@ func TestProcess_UnknownPayloadType(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -355,7 +360,8 @@ func TestProcess_LLMError(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -392,7 +398,8 @@ func TestProcess_InvalidJSON(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -440,7 +447,8 @@ func TestProcess_ShellCommandError(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -497,7 +505,8 @@ func TestProcess_MultipleShellCommands(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -549,7 +558,8 @@ func TestProcess_FileUploadPayload(t *testing.T) {
 	mockLLM.CompletionToReturn = string(jsonResult)
 	mockLLM.ErrorToReturn = nil
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        42,
@@ -604,7 +614,8 @@ func TestProcess_FileUploadInvalidFilename(t *testing.T) {
 			mockLLM.CompletionToReturn = string(jsonResult)
 			mockLLM.ErrorToReturn = nil
 
-			preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+			preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+			require.NoError(t, err)
 
 			req := &models.Request{
 				ID:        1,
@@ -640,7 +651,8 @@ func TestComplete_HostHeaderRemoval(t *testing.T) {
 	fakeFileEmu := &file.FakeFileAccessEmulator{}
 
 	fakeSqlEmu := &sql.FakeSqlInjectionEmulator{}
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, nil, metrics)
+	require.NoError(t, err)
 
 	reqRaw := "GET / HTTP/1.1\nHost: example.com\nUser-Agent: TestBot\n\n"
 	req := &models.Request{
@@ -650,7 +662,7 @@ func TestComplete_HostHeaderRemoval(t *testing.T) {
 	}
 
 	// Execute
-	_, err := preprocess.Complete(req)
+	_, err = preprocess.Complete(req)
 
 	// Verify
 	if err != nil {
@@ -700,7 +712,8 @@ func TestProcess_ShellCommandRateLimited(t *testing.T) {
 		constants.TriagePayloadTypeShellCommand: fakeLimiter,
 	}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, aiRateLimiters, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, aiRateLimiters, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,
@@ -743,7 +756,8 @@ func TestProcess_ShellCommandNotRateLimitedWhenNoLimiter(t *testing.T) {
 	// Empty map — no limiters configured, should allow all.
 	aiRateLimiters := map[string]ratelimit.RateLimiter{}
 
-	preprocess := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, aiRateLimiters, metrics)
+	preprocess, err := NewPreProcess(mockLLM, fakeShell, fakeCodeEmu, fakeFileEmu, fakeSqlEmu, aiRateLimiters, metrics)
+	require.NoError(t, err)
 
 	req := &models.Request{
 		ID:        1,

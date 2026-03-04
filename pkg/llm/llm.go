@@ -27,7 +27,7 @@ type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
 	CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error)
 	CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error)
-	SetResponseSchemaFromObject(obj any, title string)
+	SetResponseSchemaFromObject(obj any, title string) error
 	LoadedModel() string
 	EnableDebug(enabled bool)
 }
@@ -67,7 +67,8 @@ func (m *MockLLMClient) LoadedModel() string {
 	return "gpt-3.5-turbo"
 }
 
-func (m *MockLLMClient) SetResponseSchemaFromObject(obj any, title string) {
+func (m *MockLLMClient) SetResponseSchemaFromObject(obj any, title string) error {
+	return nil
 }
 
 func (m *MockLLMClient) EnableDebug(enabled bool) {
@@ -88,7 +89,6 @@ func GenerateSchema[T any]() any {
 }
 
 func NewLLMClient(cfg LLMConfig, systemPrompt string) LLMClient {
-	// OpenAI
 	switch cfg.ApiType {
 	case "openai":
 		if cfg.Model == "" {
@@ -96,6 +96,8 @@ func NewLLMClient(cfg LLMConfig, systemPrompt string) LLMClient {
 		} else {
 			return NewOpenAILLMClientWithModel(cfg, systemPrompt)
 		}
+	case "google":
+		return NewGoogleLLMClient(cfg, systemPrompt)
 	default:
 		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))
 		return nil

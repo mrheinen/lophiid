@@ -132,6 +132,17 @@ ai:
           api_key: YOUR_API_KEY_HERE
           model: your-model-name
 
+    # Example using the native Google Gemini API (api_type: google)
+    # - name: gemini
+    #   config:
+    #     cache_expiration_time: 24h
+    #     completion_timeout: 60s
+    #     concurrent_requests: 5
+    #     primary_llm:
+    #       api_type: google
+    #       api_key: YOUR_GEMINI_API_KEY_HERE
+    #       model: gemini-2.5-flash
+
     # Example of a fast model for high-volume tasks
     - name: fast
       config:

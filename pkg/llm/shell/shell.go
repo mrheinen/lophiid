@@ -77,12 +77,14 @@ type LLMCommandOutput struct {
 	Username      string `json:"username" jsonschema_description:"The username for the command"`
 }
 
-func NewShellClient(llmManager llm.LLMManagerInterface, dbClient database.DatabaseClient) *ShellClient {
-	llmManager.SetResponseSchemaFromObject(LLMCommandOutput{}, "The command output and environment variables")
+func NewShellClient(llmManager llm.LLMManagerInterface, dbClient database.DatabaseClient) (*ShellClient, error) {
+	if err := llmManager.SetResponseSchemaFromObject(LLMCommandOutput{}, "The command output and environment variables"); err != nil {
+		return nil, fmt.Errorf("error setting response schema: %w", err)
+	}
 	return &ShellClient{
 		llmManager: llmManager,
 		dbClient:   dbClient,
-	}
+	}, nil
 }
 
 func (s *ShellClient) StoreCommandOutput(cmdOutput CommandOutput, req *models.Request, cmd string) (*models.SessionExecutionContext, error) {

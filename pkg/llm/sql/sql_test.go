@@ -6,6 +6,8 @@ import (
 	"lophiid/pkg/llm"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestEmulate_IncludesRequestInPrompt(t *testing.T) {
@@ -13,13 +15,14 @@ func TestEmulate_IncludesRequestInPrompt(t *testing.T) {
 		CompletionToReturn: `{"output": "result", "is_blind": false, "delay_ms": 0}`,
 	}
 
-	emulator := NewSqlInjectionEmulator(mockLLM)
+	emulator, err := NewSqlInjectionEmulator(mockLLM)
+	require.NoError(t, err)
 	req := &models.Request{
 		Raw: []byte("GET /?id=1 HTTP/1.1\r\nHost: example.com\r\n\r\n"),
 	}
 	payload := "' OR 1=1 --"
 
-	_, err := emulator.Emulate(req, payload)
+	_, err = emulator.Emulate(req, payload)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -44,7 +47,8 @@ func TestEmulate_ParsesResponse(t *testing.T) {
 		CompletionToReturn: jsonOutput,
 	}
 
-	emulator := NewSqlInjectionEmulator(mockLLM)
+	emulator, err := NewSqlInjectionEmulator(mockLLM)
+	require.NoError(t, err)
 	req := &models.Request{}
 	payload := "payload"
 

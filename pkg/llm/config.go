@@ -21,7 +21,7 @@ import "time"
 // Config for the LLM (primary and secondary). Used in config below and to
 // initiate LLM instances.
 type LLMConfig struct {
-	// ApiType can be "openai" or "gemini"
+	// ApiType can be "openai" or "google"
 	ApiType                   string   `fig:"api_type" default:"openai"`
 	ApiLocation               string   `fig:"api_location" default:"http://localhost:8000/v1"`
 	ApiKey                    string   `fig:"api_key"`

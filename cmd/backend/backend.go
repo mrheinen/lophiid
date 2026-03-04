@@ -249,7 +249,11 @@ func main() {
 			return
 		}
 		llmManager := llm.GetLLMManager(shellLLMCfg, llmMetrics)
-		shellClient = shell.NewShellClient(llmManager, dbc)
+		shellClient, err = shell.NewShellClient(llmManager, dbc)
+		if err != nil {
+			slog.Error("error creating shell client", slog.String("error", err.Error()))
+			return
+		}
 	}
 
 	jRunner := javascript.NewGojaJavascriptRunner(dbc, shellClient, cfg.Scripting.AllowedCommands, cfg.Scripting.CommandTimeout, llmResponder, javascript.CreateGoJaMetrics(metricsRegistry))
@@ -290,7 +294,11 @@ func main() {
 			return
 		}
 		codeLLMManager := llm.GetLLMManager(codeLLMCfg, llmMetrics)
-		codeEmu = code.NewCodeSnippetEmulator(codeLLMManager, shellClient, dbc)
+		codeEmu, err = code.NewCodeSnippetEmulator(codeLLMManager, shellClient, dbc)
+		if err != nil {
+			slog.Error("error creating code emulator", slog.String("error", err.Error()))
+			return
+		}
 	}
 
 	var fileEmu file.FileAccessEmulatorInterface
@@ -301,7 +309,11 @@ func main() {
 			return
 		}
 		fileLLMManager := llm.GetLLMManager(fileLLMCfg, llmMetrics)
-		fileEmu = file.NewFileAccessEmulator(fileLLMManager)
+		fileEmu, err = file.NewFileAccessEmulator(fileLLMManager)
+		if err != nil {
+			slog.Error("error creating file emulator", slog.String("error", err.Error()))
+			return
+		}
 	}
 
 	var sqlEmu sql.SqlInjectionEmulatorInterface
@@ -312,7 +324,11 @@ func main() {
 			return
 		}
 		sqlLLMManager := llm.GetLLMManager(sqlLLMCfg, llmMetrics)
-		sqlEmu = sql.NewSqlInjectionEmulator(sqlLLMManager)
+		sqlEmu, err = sql.NewSqlInjectionEmulator(sqlLLMManager)
+		if err != nil {
+			slog.Error("error creating SQL emulator", slog.String("error", err.Error()))
+			return
+		}
 	}
 
 	var codeInterpreter interpreter.CodeInterpreterInterface
@@ -322,7 +338,11 @@ func main() {
 			slog.Error("error getting code interpreter LLM config", slog.String("error", err.Error()))
 			return
 		}
-		codeInterpreter = interpreter.NewCodeInterpreter(llm.GetLLMManager(interLLMCfg, llmMetrics), shellClient, dbc)
+		codeInterpreter, err = interpreter.NewCodeInterpreter(llm.GetLLMManager(interLLMCfg, llmMetrics), shellClient, dbc)
+		if err != nil {
+			slog.Error("error creating code interpreter", slog.String("error", err.Error()))
+			return
+		}
 	}
 
 	// Create AI rate limiters for each emulation function that is enabled.
@@ -393,7 +413,11 @@ func main() {
 	}
 
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
-	preproc := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, aiRateLimiters, preprocMetric)
+	preproc, err := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, aiRateLimiters, preprocMetric)
+	if err != nil {
+		slog.Error("error creating preprocessor", slog.String("error", err.Error()))
+		return
+	}
 
 	bs := backend.NewBackendServer(dbc, bMetrics, []ratelimit.RateLimiter{ipRateLimiter, uriRateLimiter, sourceIPRateLimiter}, cfg, backend.WithJavascriptRunner(jRunner), backend.WithAlertManager(alertMgr), backend.WithVTManager(vtMgr), backend.WithWhoisManager(whoisManager), backend.WithQueryRunner(queryRunner), backend.WithIpEventManager(ipEventManager), backend.WithResponder(llmResponder), backend.WithSessionManager(sessionMgr), backend.WithDescriber(desClient), backend.WithPreprocessor(preproc), backend.WithCodeInterpreter(codeInterpreter))
 	if err = bs.Start(); err != nil {

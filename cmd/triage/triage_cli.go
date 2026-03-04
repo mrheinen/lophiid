@@ -108,7 +108,12 @@ func main() {
 	}
 	llmManager := llm.GetLLMManager(describerLLMCfg, llmMetrics)
 
-	myDescriber = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics)
+	var describerErr error
+	myDescriber, describerErr = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics)
+	if describerErr != nil {
+		slog.Error("error creating description manager", slog.String("error", describerErr.Error()))
+		return
+	}
 
 	for {
 		cnt, err := myDescriber.GenerateLLMDescriptions(*batchSize)

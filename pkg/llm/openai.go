@@ -146,7 +146,7 @@ func (l *OpenAILLMClient) EnableDebug(enabled bool) {
 	l.debugEnabled = enabled
 }
 
-func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) {
+func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) error {
 	reflector := jsonschema.Reflector{
 		AllowAdditionalProperties: false,
 		DoNotReference:            true,
@@ -159,6 +159,7 @@ func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) {
 		Schema:      schema,
 		Strict:      openai.Bool(true),
 	}
+	return nil
 }
 
 // SelectModel queries the OpenAI API for models and selects the first model.
