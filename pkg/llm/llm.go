@@ -18,7 +18,7 @@ package llm
 
 import (
 	"context"
-	"log/slog"
+	"fmt"
 
 	"github.com/invopop/jsonschema"
 )
@@ -88,19 +88,20 @@ func GenerateSchema[T any]() any {
 	return reflector.Reflect(v)
 }
 
-func NewLLMClient(cfg LLMConfig, systemPrompt string) LLMClient {
+// NewLLMClient creates an LLMClient for the given config. It returns an error
+// for unknown api_type values so callers fail fast instead of receiving a nil
+// client that panics on first use.
+func NewLLMClient(cfg LLMConfig, systemPrompt string) (LLMClient, error) {
 	switch cfg.ApiType {
 	case "openai":
 		if cfg.Model == "" {
-			return NewOpenAILLMClient(cfg, systemPrompt)
-		} else {
-			return NewOpenAILLMClientWithModel(cfg, systemPrompt)
+			return NewOpenAILLMClient(cfg, systemPrompt), nil
 		}
+		return NewOpenAILLMClientWithModel(cfg, systemPrompt), nil
 	case "google":
-		return NewGoogleLLMClient(cfg, systemPrompt)
+		return NewGoogleLLMClient(cfg, systemPrompt), nil
 	default:
-		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))
-		return nil
+		return nil, fmt.Errorf("unknown LLM api_type %q", cfg.ApiType)
 	}
 }
 
