@@ -146,7 +146,7 @@ func (l *OpenAILLMClient) EnableDebug(enabled bool) {
 	l.debugEnabled = enabled
 }
 
-func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) {
+func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) error {
 	reflector := jsonschema.Reflector{
 		AllowAdditionalProperties: false,
 		DoNotReference:            true,
@@ -159,6 +159,7 @@ func (l *OpenAILLMClient) SetResponseSchemaFromObject(obj any, title string) {
 		Schema:      schema,
 		Strict:      openai.Bool(true),
 	}
+	return nil
 }
 
 // SelectModel queries the OpenAI API for models and selects the first model.
@@ -444,17 +445,8 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 				// Add the tool result to the conversation
 				param.Messages = append(param.Messages, openai.ToolMessage(result, toolCall.ID))
 			}
-			// Remove tools from params for the next iteration
-			// and add response schema if configured
-			param.Tools = nil
-			if l.schema != nil {
-				param.ResponseFormat = openai.ChatCompletionNewParamsResponseFormatUnion{
-					OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
-						JSONSchema: *l.schema,
-					},
-				}
-			}
-			// Continue the loop to get the final response
+			// Continue the loop; tools remain active so the model can make
+			// further tool calls if needed.
 			continue
 		}
 

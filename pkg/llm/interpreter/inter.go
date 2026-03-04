@@ -72,13 +72,15 @@ type CodeInterpreter struct {
 }
 
 // NewCodeInterpreter creates a new CodeSnippetEmulator.
-func NewCodeInterpreter(llmManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, dbClient database.DatabaseClient) *CodeInterpreter {
-	llmManager.SetResponseSchemaFromObject(InterOutput{}, "The code output")
+func NewCodeInterpreter(llmManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, dbClient database.DatabaseClient) (*CodeInterpreter, error) {
+	if err := llmManager.SetResponseSchemaFromObject(InterOutput{}, "The code output"); err != nil {
+		return nil, fmt.Errorf("error setting response schema: %w", err)
+	}
 	return &CodeInterpreter{
 		llmManager: llmManager,
 		dbClient:   dbClient,
 		toolSet:    tools.NewCodeToolSet(shellClient),
-	}
+	}, nil
 }
 
 func (c *CodeInterpreter) Interpret(req *models.Request, content *models.Content) (*models.LLMCodeExecution, error) {

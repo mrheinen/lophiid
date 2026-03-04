@@ -40,7 +40,7 @@ type LLMManagerInterface interface {
 	CompleteMultiple(prompts []string, cacheResult bool) (map[string]LLMResult, error)
 	CompleteWithMessages(msgs []LLMMessage, cacheResult bool) (LLMResult, error)
 	CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error)
-	SetResponseSchemaFromObject(obj any, title string)
+	SetResponseSchemaFromObject(obj any, title string) error
 	LoadedModel() string
 }
 
@@ -95,8 +95,8 @@ func (l *LLMManager) LoadedModel() string {
 	return l.client.LoadedModel()
 }
 
-func (l *LLMManager) SetResponseSchemaFromObject(obj any, title string) {
-	l.client.SetResponseSchemaFromObject(obj, title)
+func (l *LLMManager) SetResponseSchemaFromObject(obj any, title string) error {
+	return l.client.SetResponseSchemaFromObject(obj, title)
 }
 
 // CompleteMultiple completes multiple prompts in parallel. It will return a map
@@ -246,9 +246,11 @@ func NewDualLLMManager(primary, secondary LLMManagerInterface, fallbackInterval 
 	}
 }
 
-func (d *DualLLMManager) SetResponseSchemaFromObject(obj any, title string) {
-	d.primary.SetResponseSchemaFromObject(obj, title)
-	d.secondary.SetResponseSchemaFromObject(obj, title)
+func (d *DualLLMManager) SetResponseSchemaFromObject(obj any, title string) error {
+	if err := d.primary.SetResponseSchemaFromObject(obj, title); err != nil {
+		return err
+	}
+	return d.secondary.SetResponseSchemaFromObject(obj, title)
 }
 
 // Complete attempts to complete a single prompt using the primary client, falls back to secondary on error

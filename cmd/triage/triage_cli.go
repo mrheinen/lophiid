@@ -106,9 +106,18 @@ func main() {
 		slog.Error("error getting describer LLM config", slog.String("error", err.Error()))
 		return
 	}
-	llmManager := llm.GetLLMManager(describerLLMCfg, llmMetrics)
+	llmManager, err := llm.GetLLMManager(describerLLMCfg, llmMetrics)
+	if err != nil {
+		slog.Error("error creating LLM manager", slog.String("error", err.Error()))
+		return
+	}
 
-	myDescriber = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics)
+	var describerErr error
+	myDescriber, describerErr = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics)
+	if describerErr != nil {
+		slog.Error("error creating description manager", slog.String("error", describerErr.Error()))
+		return
+	}
 
 	for {
 		cnt, err := myDescriber.GenerateLLMDescriptions(*batchSize)

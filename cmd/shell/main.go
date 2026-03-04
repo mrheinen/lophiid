@@ -69,9 +69,17 @@ func main() {
 		return
 	}
 	slog.Info("Using model", slog.String("model", shellLLMCfg.PrimaryLLM.Model))
-	primaryManager := llm.GetLLMManager(shellLLMCfg, llmMetrics)
+	primaryManager, err := llm.GetLLMManager(shellLLMCfg, llmMetrics)
+	if err != nil {
+		slog.Error("error creating LLM manager", slog.String("error", err.Error()))
+		return
+	}
 
-	shc := shell.NewShellClient(primaryManager, dbc)
+	shc, err := shell.NewShellClient(primaryManager, dbc)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating shell client: %v\n", err)
+		return
+	}
 
 	fakeRequest := models.Request{
 		ID:        42,

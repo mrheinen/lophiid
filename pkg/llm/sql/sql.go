@@ -50,11 +50,13 @@ type SqlInjectionEmulator struct {
 	llmManager llm.LLMManagerInterface
 }
 
-func NewSqlInjectionEmulator(llmManager llm.LLMManagerInterface) *SqlInjectionEmulator {
-	llmManager.SetResponseSchemaFromObject(SqlInjectionOutput{}, "The SQL injection result")
+func NewSqlInjectionEmulator(llmManager llm.LLMManagerInterface) (*SqlInjectionEmulator, error) {
+	if err := llmManager.SetResponseSchemaFromObject(SqlInjectionOutput{}, "The SQL injection result"); err != nil {
+		return nil, fmt.Errorf("error setting response schema: %w", err)
+	}
 	return &SqlInjectionEmulator{
 		llmManager: llmManager,
-	}
+	}, nil
 }
 
 func (s *SqlInjectionEmulator) Emulate(req *models.Request, payload string) (*SqlInjectionOutput, error) {

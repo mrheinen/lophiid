@@ -119,9 +119,11 @@ func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, *Pay
 
 // NewPreProcess creates a new PreProcess instance. The aiRateLimiters map is
 // keyed by TriagePayloadType constants and limits per-source-IP AI calls.
-func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, aiRateLimiters map[string]ratelimit.RateLimiter, metrics *PreprocessMetrics) *PreProcess {
-	triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information")
-	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, aiRateLimiters: aiRateLimiters, metrics: metrics}
+func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, aiRateLimiters map[string]ratelimit.RateLimiter, metrics *PreprocessMetrics) (*PreProcess, error) {
+	if err := triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information"); err != nil {
+		return nil, fmt.Errorf("error setting response schema: %w", err)
+	}
+	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, aiRateLimiters: aiRateLimiters, metrics: metrics}, nil
 }
 
 // Case-sensitive patterns to detect potentially malicious payloads.

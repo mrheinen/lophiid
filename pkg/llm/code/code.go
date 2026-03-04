@@ -60,21 +60,22 @@ func (f *FakeCodeSnippetEmulator) Emulate(req *models.Request, code string) (*mo
 }
 
 type CodeSnippetEmulator struct {
-	dbClient    database.DatabaseClient
-	llmManager  llm.LLMManagerInterface
-	toolSet     *tools.CodeToolSet
+	dbClient   database.DatabaseClient
+	llmManager llm.LLMManagerInterface
+	toolSet    *tools.CodeToolSet
 }
 
 // NewCodeSnippetEmulator creates a new CodeSnippetEmulator.
-func NewCodeSnippetEmulator(llmManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, dbClient database.DatabaseClient) *CodeSnippetEmulator {
-	llmManager.SetResponseSchemaFromObject(CodeOutput{}, "The code output")
-	return &CodeSnippetEmulator{
-		llmManager:  llmManager,
-		dbClient:    dbClient,
-		toolSet:     tools.NewCodeToolSet(shellClient),
+func NewCodeSnippetEmulator(llmManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, dbClient database.DatabaseClient) (*CodeSnippetEmulator, error) {
+	if err := llmManager.SetResponseSchemaFromObject(CodeOutput{}, "The code output"); err != nil {
+		return nil, fmt.Errorf("error setting response schema: %w", err)
 	}
+	return &CodeSnippetEmulator{
+		llmManager: llmManager,
+		dbClient:   dbClient,
+		toolSet:    tools.NewCodeToolSet(shellClient),
+	}, nil
 }
-
 
 func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models.LLMCodeExecution, error) {
 	tools := c.toolSet.BuildTools(req)

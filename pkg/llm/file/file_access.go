@@ -59,11 +59,13 @@ type FileAccessEmulator struct {
 	llmManager llm.LLMManagerInterface
 }
 
-func NewFileAccessEmulator(llmManager llm.LLMManagerInterface) *FileAccessEmulator {
-	llmManager.SetResponseSchemaFromObject(FileAccessOutput{}, "The file content")
+func NewFileAccessEmulator(llmManager llm.LLMManagerInterface) (*FileAccessEmulator, error) {
+	if err := llmManager.SetResponseSchemaFromObject(FileAccessOutput{}, "The file content"); err != nil {
+		return nil, fmt.Errorf("error setting response schema: %w", err)
+	}
 	return &FileAccessEmulator{
 		llmManager: llmManager,
-	}
+	}, nil
 }
 
 func (f *FileAccessEmulator) Emulate(req *models.Request, filename string) (string, error) {

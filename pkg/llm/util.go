@@ -18,25 +18,33 @@
 package llm
 
 import (
+	"fmt"
 	"log/slog"
 	"lophiid/pkg/util"
 )
 
-// GetLLMManager returns the LLM manager configured in the config
-func GetLLMManager(cfg LLMManagerConfig, llmMetrics *LLMMetrics) LLMManagerInterface {
+// GetLLMManager returns the LLM manager configured in the config. It returns
+// an error if the primary or secondary LLM api_type is unknown.
+func GetLLMManager(cfg LLMManagerConfig, llmMetrics *LLMMetrics) (LLMManagerInterface, error) {
 	pCache := util.NewStringMapCache[string]("LLM prompt cache", cfg.CacheExpirationTime)
-	primaryLLMClient := NewLLMClient(cfg.PrimaryLLM, "")
+	primaryLLMClient, err := NewLLMClient(cfg.PrimaryLLM, "")
+	if err != nil {
+		return nil, fmt.Errorf("primary LLM: %w", err)
+	}
 	primaryManager := NewLLMManager(primaryLLMClient, pCache, llmMetrics, cfg.CompletionTimeout, cfg.ConcurrentRequests, true, cfg.PromptPrefix, cfg.PromptSuffix)
 
 	// Check if secondary LLM is configured (non-empty API key indicates configuration)
 	if cfg.SecondaryLLM.ApiKey == "" {
 		slog.Info("Using single LLM manager")
-		return primaryManager
+		return primaryManager, nil
 	}
 
 	slog.Info("Secondary LLM configured, using DualLLMManager")
-	secondaryLLMClient := NewLLMClient(cfg.SecondaryLLM, "")
+	secondaryLLMClient, err := NewLLMClient(cfg.SecondaryLLM, "")
+	if err != nil {
+		return nil, fmt.Errorf("secondary LLM: %w", err)
+	}
 	secondaryManager := NewLLMManager(secondaryLLMClient, pCache, llmMetrics, cfg.CompletionTimeout, cfg.ConcurrentRequests, true, cfg.PromptPrefix, cfg.PromptSuffix)
 
-	return NewDualLLMManager(primaryManager, secondaryManager, cfg.FallbackInterval)
+	return NewDualLLMManager(primaryManager, secondaryManager, cfg.FallbackInterval), nil
 }

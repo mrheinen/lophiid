@@ -47,8 +47,8 @@ func (m *MockLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, c
 	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }
 
-func (m *MockLLMManager) SetResponseSchemaFromObject(obj any, title string) {
-	// No-op for testing
+func (m *MockLLMManager) SetResponseSchemaFromObject(obj any, title string) error {
+	return nil
 }
 
 func (m *MockLLMManager) LoadedModel() string {

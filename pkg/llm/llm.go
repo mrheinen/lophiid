@@ -18,7 +18,7 @@ package llm
 
 import (
 	"context"
-	"log/slog"
+	"fmt"
 
 	"github.com/invopop/jsonschema"
 )
@@ -27,7 +27,7 @@ type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
 	CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error)
 	CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error)
-	SetResponseSchemaFromObject(obj any, title string)
+	SetResponseSchemaFromObject(obj any, title string) error
 	LoadedModel() string
 	EnableDebug(enabled bool)
 }
@@ -67,7 +67,8 @@ func (m *MockLLMClient) LoadedModel() string {
 	return "gpt-3.5-turbo"
 }
 
-func (m *MockLLMClient) SetResponseSchemaFromObject(obj any, title string) {
+func (m *MockLLMClient) SetResponseSchemaFromObject(obj any, title string) error {
+	return nil
 }
 
 func (m *MockLLMClient) EnableDebug(enabled bool) {
@@ -87,18 +88,20 @@ func GenerateSchema[T any]() any {
 	return reflector.Reflect(v)
 }
 
-func NewLLMClient(cfg LLMConfig, systemPrompt string) LLMClient {
-	// OpenAI
+// NewLLMClient creates an LLMClient for the given config. It returns an error
+// for unknown api_type values so callers fail fast instead of receiving a nil
+// client that panics on first use.
+func NewLLMClient(cfg LLMConfig, systemPrompt string) (LLMClient, error) {
 	switch cfg.ApiType {
 	case "openai":
 		if cfg.Model == "" {
-			return NewOpenAILLMClient(cfg, systemPrompt)
-		} else {
-			return NewOpenAILLMClientWithModel(cfg, systemPrompt)
+			return NewOpenAILLMClient(cfg, systemPrompt), nil
 		}
+		return NewOpenAILLMClientWithModel(cfg, systemPrompt), nil
+	case "google":
+		return NewGoogleLLMClient(cfg, systemPrompt), nil
 	default:
-		slog.Error("unknown LLM type", slog.String("type", cfg.ApiType))
-		return nil
+		return nil, fmt.Errorf("unknown LLM api_type %q", cfg.ApiType)
 	}
 }
 
