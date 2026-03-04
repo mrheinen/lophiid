@@ -202,7 +202,188 @@ func (g *GoogleLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 	return text, nil
 }
 
-// CompleteWithTools is not yet implemented for GoogleLLMClient.
+// CompleteWithTools sends a sequence of messages to the Gemini API with function
+// calling support. It runs a loop (up to 10 iterations) dispatching tool calls
+// made by the model until the model produces a plain-text final response.
 func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
-	return "", fmt.Errorf("CompleteWithTools not yet implemented for GoogleLLMClient")
+	if len(msgs) == 0 {
+		return "", fmt.Errorf("messages must not be empty")
+	}
+
+	lastMessage := &msgs[len(msgs)-1]
+	if lastMessage.Role != constants.LLMClientMessageUser {
+		return "", fmt.Errorf("last message must be user")
+	}
+
+	config := &genai.GenerateContentConfig{}
+
+	if g.temperature >= 0 {
+		temp := float32(g.temperature)
+		config.Temperature = &temp
+	}
+	if g.topP >= 0 {
+		topP := float32(g.topP)
+		config.TopP = &topP
+	}
+
+	if g.systemPrompt != "" {
+		config.SystemInstruction = &genai.Content{
+			Parts: []*genai.Part{{Text: g.systemPrompt}},
+		}
+	}
+
+	var contents []*genai.Content
+	for i := range msgs {
+		switch msgs[i].Role {
+		case constants.LLMClientMessageSystem:
+			config.SystemInstruction = &genai.Content{
+				Parts: []*genai.Part{{Text: msgs[i].Content}},
+			}
+		case constants.LLMClientMessageUser:
+			contents = append(contents, &genai.Content{
+				Role:  "user",
+				Parts: []*genai.Part{{Text: msgs[i].Content}},
+			})
+		case constants.LLMClientMessageAssistant, constants.LLMClientMessageModel:
+			contents = append(contents, &genai.Content{
+				Role:  "model",
+				Parts: []*genai.Part{{Text: msgs[i].Content}},
+			})
+		default:
+			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
+		}
+	}
+
+	// Build FunctionDeclarations from the provided tools.
+	if len(tools) > 0 {
+		var decls []*genai.FunctionDeclaration
+		for _, t := range tools {
+			decls = append(decls, &genai.FunctionDeclaration{
+				Name:                 t.Name,
+				Description:          t.Description,
+				ParametersJsonSchema: t.Parameters,
+			})
+		}
+		config.Tools = []*genai.Tool{{FunctionDeclarations: decls}}
+	}
+
+	// Schema (if set) is deferred until after all tool calls complete so that
+	// it is never active at the same time as the tool declarations.
+
+	maxIterations := 10
+	for iteration := range maxIterations {
+		slog.Debug("GoogleLLMClient tool calling iteration",
+			slog.String("model", g.model),
+			slog.Int("iteration", iteration),
+			slog.Int("message_count", len(contents)))
+
+		result, err := g.client.Models.GenerateContent(ctx, g.model, contents, config)
+		if err != nil {
+			return "", fmt.Errorf("GenerateContent error: %w", err)
+		}
+
+		if len(result.Candidates) == 0 {
+			return "", fmt.Errorf("GenerateContent returned no candidates")
+		}
+
+		modelContent := result.Candidates[0].Content
+
+		// Collect all function calls from the model's response parts.
+		var funcCalls []*genai.FunctionCall
+		for _, part := range modelContent.Parts {
+			if part.FunctionCall != nil {
+				funcCalls = append(funcCalls, part.FunctionCall)
+			}
+		}
+
+		if len(funcCalls) > 0 {
+			slog.Debug("GoogleLLMClient processing tool calls", slog.Int("count", len(funcCalls)))
+
+			// Append the model turn so the conversation history is complete.
+			contents = append(contents, modelContent)
+
+			// Execute each function call and collect the response parts.
+			var responseParts []*genai.Part
+			for _, fc := range funcCalls {
+				argsJSON, err := json.Marshal(fc.Args)
+				if err != nil {
+					slog.Error("error marshaling tool args",
+						slog.String("tool", fc.Name),
+						slog.String("error", err.Error()))
+					argsJSON = []byte("{}")
+				}
+
+				slog.Debug("GoogleLLMClient executing tool",
+					slog.String("tool", fc.Name),
+					slog.String("args", string(argsJSON)))
+
+				var toolFunc func(args string) (string, error)
+				for _, t := range tools {
+					if t.Name == fc.Name {
+						toolFunc = t.Function
+						break
+					}
+				}
+
+				var toolResult string
+				if toolFunc == nil {
+					slog.Error("tool not found", slog.String("tool", fc.Name))
+					toolResult = "tool not found"
+				} else {
+					toolResult, err = toolFunc(string(argsJSON))
+					if err != nil {
+						slog.Error("error executing tool",
+							slog.String("tool", fc.Name),
+							slog.String("error", err.Error()))
+						toolResult = "could not run tool successfully"
+					}
+				}
+
+				slog.Debug("GoogleLLMClient tool result",
+					slog.String("tool", fc.Name),
+					slog.String("result", toolResult))
+
+				responseParts = append(responseParts, &genai.Part{
+					FunctionResponse: &genai.FunctionResponse{
+						Name:     fc.Name,
+						Response: map[string]any{"output": toolResult},
+					},
+				})
+			}
+
+			// Append the tool results as a user turn.
+			contents = append(contents, &genai.Content{
+				Role:  "user",
+				Parts: responseParts,
+			})
+
+			// Tools are no longer needed; apply schema for the final answer.
+			config.Tools = nil
+			if g.schema != nil {
+				config.ResponseMIMEType = "application/json"
+				config.ResponseJsonSchema = g.schema
+			}
+			continue
+		}
+
+		// No function calls in this iteration.
+		// If tools were still active and a schema is required, drop tools and
+		// apply the schema so the model produces structured output.
+		if config.Tools != nil && g.schema != nil {
+			slog.Debug("GoogleLLMClient no tools called but schema required, applying schema")
+			contents = append(contents, modelContent)
+			config.Tools = nil
+			config.ResponseMIMEType = "application/json"
+			config.ResponseJsonSchema = g.schema
+			continue
+		}
+
+		text := result.Text()
+		if text == "" {
+			return "", fmt.Errorf("GenerateContent returned empty response")
+		}
+		return text, nil
+	}
+
+	return "", fmt.Errorf("exceeded maximum tool call iterations")
 }
