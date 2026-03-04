@@ -356,13 +356,6 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 				Role:  "user",
 				Parts: responseParts,
 			})
-
-			// Tools are no longer needed; apply schema for the final answer.
-			config.Tools = nil
-			if g.schema != nil {
-				config.ResponseMIMEType = "application/json"
-				config.ResponseJsonSchema = g.schema
-			}
 			continue
 		}
 
