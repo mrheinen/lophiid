@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-//
-package tcp
+package network
 
 import (
 	"fmt"
@@ -24,10 +23,13 @@ import (
 )
 
 // The max amount of bytes to read from a TCP connection.
-var MaxTcpReadBufferSize = 1024 * 8
+var MaxTcpReadBufferSize = 1024 * 25
 
-// ReadDataFromIPAddress reads data from a TCP connection at the specified IP address and port.
-func ReadDataFromIPAddress(address string, port string, timeout time.Duration) ([]byte, error) {
+// The max amount of bytes to read from a UDP connection.
+var MaxUdpReadBufferSize = 1024 * 25
+
+// ReadDataFromTcp reads data from a TCP connection at the specified IP address and port.
+func ReadDataFromTcp(address string, port string, timeout time.Duration) ([]byte, error) {
 	tcpAddr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(address, port))
 	if err != nil {
 		return nil, fmt.Errorf("resolving tcp address: %w", err)
@@ -46,6 +48,34 @@ func ReadDataFromIPAddress(address string, port string, timeout time.Duration) (
 
 	// Read data from the connection
 	data := make([]byte, MaxTcpReadBufferSize)
+	n, err := conn.Read(data)
+	if err != nil {
+		return nil, fmt.Errorf("reading data: %w", err)
+	}
+
+	return data[:n], nil
+}
+
+// ReadDataFromUdp reads data from a UDP connection at the specified IP address and port.
+func ReadDataFromUdp(address string, port string, timeout time.Duration) ([]byte, error) {
+	udpAddr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(address, port))
+	if err != nil {
+		return nil, fmt.Errorf("resolving udp address: %w", err)
+	}
+
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return nil, fmt.Errorf("connecting: %w", err)
+	}
+	defer conn.Close()
+
+	err = conn.SetDeadline(time.Now().Add(timeout))
+	if err != nil {
+		return nil, fmt.Errorf("setting deadline: %w", err)
+	}
+
+	// Read data from the connection
+	data := make([]byte, MaxUdpReadBufferSize)
 	n, err := conn.Read(data)
 	if err != nil {
 		return nil, fmt.Errorf("reading data: %w", err)
