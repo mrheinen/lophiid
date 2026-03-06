@@ -181,6 +181,70 @@ func (l *OpenAILLMClient) SelectModel() error {
 	return nil
 }
 
+// buildRequestOptions constructs the per-request option slice from the client
+// configuration (debug logging, OpenRouter provider hints, reasoning effort).
+func (l *OpenAILLMClient) buildRequestOptions() []option.RequestOption {
+	var opts []option.RequestOption
+	if l.debugEnabled {
+		opts = append(opts, option.WithDebugLog(nil))
+	}
+	if len(l.OrProviders) > 0 {
+		opts = append(opts, option.WithJSONSet("provider", map[string]any{
+			"require_parameters": true,
+			"order":              l.OrProviders,
+			"allow_fallbacks":    true,
+		}))
+	}
+	// We only add this when it's explicitly set. Like with other openrouter
+	// parameters, it might be that some models do not support it.
+	if l.OrReasoningEffort != "" && l.OrReasoningEffort != "none" {
+		opts = append(opts, option.WithJSONSet("reasoning", map[string]any{
+			"effort":  l.OrReasoningEffort,
+			"enabled": true,
+		}))
+	}
+	return opts
+}
+
+// buildMessages converts []LLMMessage to OpenAI message params, injecting the
+// struct-level system prompt when no explicit system message is present in msgs.
+func (l *OpenAILLMClient) buildMessages(msgs []LLMMessage) ([]openai.ChatCompletionMessageParamUnion, error) {
+	var result []openai.ChatCompletionMessageParamUnion
+	if l.systemPrompt != "" && msgs[0].Role != constants.LLMClientMessageSystem {
+		result = append(result, openai.SystemMessage(l.systemPrompt))
+	}
+	for i := range msgs {
+		switch msgs[i].Role {
+		case constants.LLMClientMessageUser:
+			result = append(result, openai.UserMessage(msgs[i].Content))
+		case constants.LLMClientMessageAssistant:
+			result = append(result, openai.AssistantMessage(msgs[i].Content))
+		case constants.LLMClientMessageSystem:
+			for _, m := range result {
+				if *m.GetRole() == constants.LLMClientMessageSystem {
+					return nil, fmt.Errorf("duplicate system message")
+				}
+			}
+			result = append(result, openai.SystemMessage(msgs[i].Content))
+		default:
+			return nil, fmt.Errorf("unknown role: %s", msgs[i].Role)
+		}
+	}
+	return result, nil
+}
+
+// findAndCallTool looks up a tool by name and invokes it with the provided JSON
+// args string. Returns the result string, or an error if the tool is not found
+// or the invocation fails.
+func findAndCallTool(toolName, toolArgs string, tools []LLMTool) (string, error) {
+	for _, t := range tools {
+		if t.Name == toolName {
+			return t.Function(toolArgs)
+		}
+	}
+	return "", fmt.Errorf("tool %q not found", toolName)
+}
+
 // Complete complete a single LLM prompt
 func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, error) {
 	truncatedPrompt := truncatePrompt(prompt, int64(l.maxContextSize))
@@ -205,13 +269,17 @@ func (l *OpenAILLMClient) Complete(ctx context.Context, prompt string) (string, 
 // CompleteWithMessages complete a sequence of LLM messages. The last message
 // needs to be a user message.
 func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error) {
-	lastMessage := &msgs[len(msgs)-1]
-	if lastMessage.Role != constants.LLMClientMessageUser {
+	if msgs[len(msgs)-1].Role != constants.LLMClientMessageUser {
 		return "", fmt.Errorf("last message must be user")
 	}
 
+	messages, err := l.buildMessages(msgs)
+	if err != nil {
+		return "", err
+	}
+
 	param := openai.ChatCompletionNewParams{
-		Messages: []openai.ChatCompletionMessageParamUnion{},
+		Messages: messages,
 		Model:    l.Model,
 	}
 
@@ -220,29 +288,6 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 	}
 	if l.topP >= 0 {
 		param.TopP = openai.Float(l.topP)
-	}
-
-	if l.systemPrompt != "" && msgs[0].Role != constants.LLMClientMessageSystem {
-		param.Messages = append(param.Messages, openai.SystemMessage(l.systemPrompt))
-	}
-
-	for i := range msgs {
-		switch msgs[i].Role {
-		case constants.LLMClientMessageUser:
-			param.Messages = append(param.Messages, openai.UserMessage(msgs[i].Content))
-		case constants.LLMClientMessageAssistant:
-			param.Messages = append(param.Messages, openai.AssistantMessage(msgs[i].Content))
-		case constants.LLMClientMessageSystem:
-			for i := range param.Messages {
-				if *param.Messages[i].GetRole() == constants.LLMClientMessageSystem {
-					return "", fmt.Errorf("duplicate system message")
-				}
-			}
-			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
-
-		default:
-			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
-		}
 	}
 
 	if l.schema != nil {
@@ -254,30 +299,7 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 		}
 	}
 
-	var opts []option.RequestOption
-	if l.debugEnabled {
-		opts = append(opts, option.WithDebugLog(nil))
-	}
-
-	if len(l.OrProviders) > 0 {
-		opts = append(opts, option.WithJSONSet("provider", map[string]any{
-			"require_parameters": true,
-			"order":              l.OrProviders,
-			"allow_fallbacks":    true,
-		}))
-	}
-
-	// We only add this when it's explicitly set. Like with other openrouter
-	// parameters, it might be that some models do not support it.
-	if l.OrReasoningEffort != "" && l.OrReasoningEffort != "none" {
-		opts = append(opts, option.WithJSONSet("reasoning", map[string]any{
-			"effort":  l.OrReasoningEffort,
-			"enabled": true,
-		}))
-	}
-
-	resp, err := l.client.Chat.Completions.New(ctx, param, opts...)
-
+	resp, err := l.client.Chat.Completions.New(ctx, param, l.buildRequestOptions()...)
 	if err != nil {
 		return "", fmt.Errorf("chat completion error: %v", err)
 	}
@@ -290,14 +312,24 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 }
 
 // CompleteWithTools completes a sequence of LLM messages with tool support.
+// It runs a loop (up to 10 iterations) dispatching tool calls made by the model
+// until the model produces a final response with no tool calls.
 func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
-	lastMessage := &msgs[len(msgs)-1]
-	if lastMessage.Role != constants.LLMClientMessageUser {
+	if msgs[len(msgs)-1].Role != constants.LLMClientMessageUser {
 		return "", fmt.Errorf("last message must be user")
 	}
 
+	if len(tools) == 0 {
+		return "", fmt.Errorf("CompleteWithTools requires at least one tool")
+	}
+
+	messages, err := l.buildMessages(msgs)
+	if err != nil {
+		return "", err
+	}
+
 	param := openai.ChatCompletionNewParams{
-		Messages: []openai.ChatCompletionMessageParamUnion{},
+		Messages: messages,
 		Model:    l.Model,
 	}
 
@@ -308,89 +340,36 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 		param.TopP = openai.Float(l.topP)
 	}
 
-	if l.systemPrompt != "" && msgs[0].Role != constants.LLMClientMessageSystem {
-		param.Messages = append(param.Messages, openai.SystemMessage(l.systemPrompt))
-	}
-
-	for i := range msgs {
-		switch msgs[i].Role {
-		case constants.LLMClientMessageUser:
-			param.Messages = append(param.Messages, openai.UserMessage(msgs[i].Content))
-		case constants.LLMClientMessageAssistant:
-			param.Messages = append(param.Messages, openai.AssistantMessage(msgs[i].Content))
-		case constants.LLMClientMessageSystem:
-			for i := range param.Messages {
-				if *param.Messages[i].GetRole() == constants.LLMClientMessageSystem {
-					return "", fmt.Errorf("duplicate system message")
-				}
-			}
-			param.Messages = append(param.Messages, openai.SystemMessage(msgs[i].Content))
-		default:
-			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
-		}
-	}
-
-	// Add tools to the parameters
-	if len(tools) > 0 {
-		openaiTools := []openai.ChatCompletionToolUnionParam{}
-		for _, tool := range tools {
-			// Convert tool.Parameters to openai.FunctionParameters
-			var funcParams openai.FunctionParameters
-			if tool.Parameters != nil {
-				if params, ok := tool.Parameters.(map[string]interface{}); ok {
-					funcParams = openai.FunctionParameters(params)
-				}
-			}
-
-			openaiTools = append(openaiTools, openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
-				Name:        tool.Name,
-				Description: openai.String(tool.Description),
-				Parameters:  funcParams,
-			}))
-		}
-		param.Tools = openaiTools
-	}
-
+	// Add tools to the parameters.
 	// Note: Response schema is NOT set initially when tools are present
 	// because OpenAI doesn't support using both simultaneously.
 	// The schema will be applied after all tool calls are complete.
+	var openaiTools []openai.ChatCompletionToolUnionParam
+	for _, tool := range tools {
+		var funcParams openai.FunctionParameters
+		if tool.Parameters != nil {
+			if params, ok := tool.Parameters.(map[string]interface{}); ok {
+				funcParams = openai.FunctionParameters(params)
+			}
+		}
+		openaiTools = append(openaiTools, openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+			Name:        tool.Name,
+			Description: openai.String(tool.Description),
+			Parameters:  funcParams,
+		}))
+	}
+	param.Tools = openaiTools
 
-	var resp *openai.ChatCompletion
-	var err error
+	opts := l.buildRequestOptions()
 
-	// Loop to handle tool calls
 	maxIterations := 10
 	for iteration := range maxIterations {
 		slog.Debug("tool calling iteration", slog.Int("iteration", iteration), slog.Int("message_count", len(param.Messages)))
 
-		var opts []option.RequestOption
-		if l.debugEnabled {
-			opts = append(opts, option.WithDebugLog(nil))
-		}
-
-		if len(l.OrProviders) > 0 {
-			opts = append(opts, option.WithJSONSet("provider", map[string]any{
-				"require_parameters": true,
-				"order":              l.OrProviders,
-				"allow_fallbacks":    true,
-			}))
-		}
-
-		// We only add this when it's explicitly set. Like with other openrouter
-		// parameters, it might be that some models do not support it.
-		if l.OrReasoningEffort != "" && l.OrReasoningEffort != "none" {
-			opts = append(opts, option.WithJSONSet("reasoning", map[string]any{
-				"effort":  l.OrReasoningEffort,
-				"enabled": true,
-			}))
-		}
-
-		resp, err = l.client.Chat.Completions.New(ctx, param, opts...)
-
+		resp, err := l.client.Chat.Completions.New(ctx, param, opts...)
 		if err != nil {
 			return "", fmt.Errorf("chat completion error: %v", err)
 		}
-
 		if len(resp.Choices) == 0 {
 			return "", fmt.Errorf("chat returned nothing")
 		}
@@ -401,44 +380,26 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 			slog.Int("tool_calls_count", len(choice.Message.ToolCalls)),
 			slog.String("content", choice.Message.Content))
 
-		// Check if the model wants to call a tool
 		if len(choice.Message.ToolCalls) > 0 {
 			slog.Debug("processing tool calls", slog.Int("count", len(choice.Message.ToolCalls)))
-			// Add the assistant's message with tool calls to the conversation
 			param.Messages = append(param.Messages, choice.Message.ToParam())
 
-			// Execute each tool call
 			for _, toolCall := range choice.Message.ToolCalls {
-				toolName := toolCall.Function.Name
-				toolArgs := toolCall.Function.Arguments
-
 				slog.Debug("executing tool",
-					slog.String("tool", toolName),
+					slog.String("tool", toolCall.Function.Name),
 					slog.String("tool_call_id", toolCall.ID),
-					slog.String("args", toolArgs))
+					slog.String("args", toolCall.Function.Arguments))
 
-				// Find the corresponding tool function
-				var toolFunc func(args string) (string, error)
-				for _, t := range tools {
-					if t.Name == toolName {
-						toolFunc = t.Function
-						break
-					}
-				}
-
-				if toolFunc == nil {
-					slog.Error("tool not found", slog.String("tool", toolName))
-					continue
-				}
-
-				result, err := toolFunc(toolArgs)
+				result, err := findAndCallTool(toolCall.Function.Name, toolCall.Function.Arguments, tools)
 				if err != nil {
-					slog.Error("error executing tool", slog.String("tool", toolName), slog.String("error", err.Error()))
+					slog.Error("tool call failed",
+						slog.String("tool", toolCall.Function.Name),
+						slog.String("error", err.Error()))
 					result = "could not run tool successfully for you"
 				}
 
 				slog.Debug("tool result",
-					slog.String("tool", toolName),
+					slog.String("tool", toolCall.Function.Name),
 					slog.String("tool_call_id", toolCall.ID),
 					slog.String("result", result))
 
@@ -450,14 +411,12 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 			continue
 		}
 
-		// No tool calls in this iteration
+		// No tool calls in this iteration.
 		// If tools were available but not used, and schema is set, we need to
-		// apply the schema and make another call to get formatted output
+		// apply the schema and make another call to get formatted output.
 		if param.Tools != nil && l.schema != nil {
 			slog.Debug("no tools called but schema required, applying schema for next iteration")
-			// Add the assistant's message to conversation
 			param.Messages = append(param.Messages, choice.Message.ToParam())
-			// Remove tools and add schema
 			param.Tools = nil
 			param.ResponseFormat = openai.ChatCompletionNewParamsResponseFormatUnion{
 				OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
@@ -467,7 +426,6 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 			continue
 		}
 
-		// No more tool calls, return the final response
 		slog.Debug("no tool calls, returning final response", slog.String("content", choice.Message.Content))
 		return choice.Message.Content, nil
 	}
