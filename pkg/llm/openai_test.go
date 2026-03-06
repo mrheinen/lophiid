@@ -111,24 +111,12 @@ func testMessages() []LLMMessage {
 }
 
 func TestCompleteWithTools_NoTools(t *testing.T) {
-	callCount := 0
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		callCount++
-		assert.Equal(t, "/chat/completions", r.URL.Path)
-		
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(chatCompletionResponse("final response", nil)))
-	}
-
-	client := testClient(t, handler)
+	client := testClient(t, nil)
 	ctx := context.Background()
 	msgs := testMessages()
 
-	result, err := client.CompleteWithTools(ctx, msgs, nil)
-	assert.NoError(t, err)
-	assert.Equal(t, "final response", result)
-	assert.Equal(t, 1, callCount)
+	_, err := client.CompleteWithTools(ctx, msgs, nil)
+	assert.ErrorContains(t, err, "CompleteWithTools requires at least one tool")
 }
 
 func TestCompleteWithTools_ToolError(t *testing.T) {
@@ -245,7 +233,7 @@ func TestCompleteWithTools_MaxIterationsExceeded(t *testing.T) {
 	}
 
 	result, err := client.CompleteWithTools(ctx, msgs, tools)
-	
+
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "exceeded maximum tool call iterations")
 	assert.Empty(t, result)

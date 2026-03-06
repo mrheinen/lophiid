@@ -104,6 +104,90 @@ func (g *GoogleLLMClient) SetResponseSchemaFromObject(obj any, title string) err
 	return nil
 }
 
+// buildBaseConfig creates a GenerateContentConfig populated with temperature,
+// topP, and the struct-level system prompt.
+func (g *GoogleLLMClient) buildBaseConfig() *genai.GenerateContentConfig {
+	config := &genai.GenerateContentConfig{}
+	if g.temperature >= 0 {
+		temp := float32(g.temperature)
+		config.Temperature = &temp
+	}
+	if g.topP >= 0 {
+		topP := float32(g.topP)
+		config.TopP = &topP
+	}
+	if g.systemPrompt != "" {
+		config.SystemInstruction = &genai.Content{
+			Parts: []*genai.Part{{Text: g.systemPrompt}},
+		}
+	}
+	return config
+}
+
+// buildContents converts []LLMMessage to a slice of genai.Content for the
+// conversation turns. Any system message in msgs overrides the system
+// instruction already set on config.
+func (g *GoogleLLMClient) buildContents(msgs []LLMMessage, config *genai.GenerateContentConfig) ([]*genai.Content, error) {
+	var contents []*genai.Content
+	for i := range msgs {
+		switch msgs[i].Role {
+		case constants.LLMClientMessageSystem:
+			config.SystemInstruction = &genai.Content{
+				Parts: []*genai.Part{{Text: msgs[i].Content}},
+			}
+		case constants.LLMClientMessageUser:
+			contents = append(contents, &genai.Content{
+				Role:  "user",
+				Parts: []*genai.Part{{Text: msgs[i].Content}},
+			})
+		case constants.LLMClientMessageAssistant, constants.LLMClientMessageModel:
+			contents = append(contents, &genai.Content{
+				Role:  "model",
+				Parts: []*genai.Part{{Text: msgs[i].Content}},
+			})
+		default:
+			return nil, fmt.Errorf("unknown role: %s", msgs[i].Role)
+		}
+	}
+	return contents, nil
+}
+
+// dispatchFunctionCall marshals the function call arguments, invokes the
+// matching tool via findAndCallTool, logs the outcome, and returns a
+// genai.Part carrying the FunctionResponse to send back to the model.
+func (g *GoogleLLMClient) dispatchFunctionCall(fc *genai.FunctionCall, tools []LLMTool) *genai.Part {
+	argsJSON, err := json.Marshal(fc.Args)
+	if err != nil {
+		slog.Error("error marshaling tool args",
+			slog.String("tool", fc.Name),
+			slog.String("error", err.Error()))
+		argsJSON = []byte("{}")
+	}
+
+	slog.Debug("GoogleLLMClient executing tool",
+		slog.String("tool", fc.Name),
+		slog.String("args", string(argsJSON)))
+
+	toolResult, err := findAndCallTool(fc.Name, string(argsJSON), tools)
+	if err != nil {
+		slog.Error("tool call failed",
+			slog.String("tool", fc.Name),
+			slog.String("error", err.Error()))
+		toolResult = "could not run tool successfully"
+	}
+
+	slog.Debug("GoogleLLMClient tool result",
+		slog.String("tool", fc.Name),
+		slog.String("result", toolResult))
+
+	return &genai.Part{
+		FunctionResponse: &genai.FunctionResponse{
+			Name:     fc.Name,
+			Response: map[string]any{"output": toolResult},
+		},
+	}
+}
+
 // Complete sends a single prompt to the Gemini API and returns the response.
 func (g *GoogleLLMClient) Complete(ctx context.Context, prompt string) (string, error) {
 	truncatedPrompt := truncatePrompt(prompt, g.maxContextSize)
@@ -130,56 +214,19 @@ func (g *GoogleLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 	if len(msgs) == 0 {
 		return "", fmt.Errorf("messages must not be empty")
 	}
-
-	lastMessage := &msgs[len(msgs)-1]
-	if lastMessage.Role != constants.LLMClientMessageUser {
+	if msgs[len(msgs)-1].Role != constants.LLMClientMessageUser {
 		return "", fmt.Errorf("last message must be user")
 	}
 
-	config := &genai.GenerateContentConfig{}
-
-	if g.temperature >= 0 {
-		temp := float32(g.temperature)
-		config.Temperature = &temp
-	}
-	if g.topP >= 0 {
-		topP := float32(g.topP)
-		config.TopP = &topP
-	}
-
+	config := g.buildBaseConfig()
 	if g.schema != nil {
 		config.ResponseMIMEType = "application/json"
 		config.ResponseJsonSchema = g.schema
 	}
 
-	// If a struct-level system prompt is set and no message overrides it, apply it.
-	if g.systemPrompt != "" {
-		config.SystemInstruction = &genai.Content{
-			Parts: []*genai.Part{{Text: g.systemPrompt}},
-		}
-	}
-
-	var contents []*genai.Content
-	for i := range msgs {
-		switch msgs[i].Role {
-		case constants.LLMClientMessageSystem:
-			// System messages override the struct-level systemPrompt.
-			config.SystemInstruction = &genai.Content{
-				Parts: []*genai.Part{{Text: msgs[i].Content}},
-			}
-		case constants.LLMClientMessageUser:
-			contents = append(contents, &genai.Content{
-				Role:  "user",
-				Parts: []*genai.Part{{Text: msgs[i].Content}},
-			})
-		case constants.LLMClientMessageAssistant, constants.LLMClientMessageModel:
-			contents = append(contents, &genai.Content{
-				Role:  "model",
-				Parts: []*genai.Part{{Text: msgs[i].Content}},
-			})
-		default:
-			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
-		}
+	contents, err := g.buildContents(msgs, config)
+	if err != nil {
+		return "", err
 	}
 
 	if g.debugEnabled {
@@ -209,66 +256,31 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 	if len(msgs) == 0 {
 		return "", fmt.Errorf("messages must not be empty")
 	}
-
-	lastMessage := &msgs[len(msgs)-1]
-	if lastMessage.Role != constants.LLMClientMessageUser {
+	if msgs[len(msgs)-1].Role != constants.LLMClientMessageUser {
 		return "", fmt.Errorf("last message must be user")
 	}
-
-	config := &genai.GenerateContentConfig{}
-
-	if g.temperature >= 0 {
-		temp := float32(g.temperature)
-		config.Temperature = &temp
-	}
-	if g.topP >= 0 {
-		topP := float32(g.topP)
-		config.TopP = &topP
+	if len(tools) == 0 {
+		return "", fmt.Errorf("CompleteWithTools requires at least one tool")
 	}
 
-	if g.systemPrompt != "" {
-		config.SystemInstruction = &genai.Content{
-			Parts: []*genai.Part{{Text: g.systemPrompt}},
-		}
-	}
-
-	var contents []*genai.Content
-	for i := range msgs {
-		switch msgs[i].Role {
-		case constants.LLMClientMessageSystem:
-			config.SystemInstruction = &genai.Content{
-				Parts: []*genai.Part{{Text: msgs[i].Content}},
-			}
-		case constants.LLMClientMessageUser:
-			contents = append(contents, &genai.Content{
-				Role:  "user",
-				Parts: []*genai.Part{{Text: msgs[i].Content}},
-			})
-		case constants.LLMClientMessageAssistant, constants.LLMClientMessageModel:
-			contents = append(contents, &genai.Content{
-				Role:  "model",
-				Parts: []*genai.Part{{Text: msgs[i].Content}},
-			})
-		default:
-			return "", fmt.Errorf("unknown role: %s", msgs[i].Role)
-		}
+	config := g.buildBaseConfig()
+	contents, err := g.buildContents(msgs, config)
+	if err != nil {
+		return "", err
 	}
 
 	// Build FunctionDeclarations from the provided tools.
-	if len(tools) > 0 {
-		var decls []*genai.FunctionDeclaration
-		for _, t := range tools {
-			decls = append(decls, &genai.FunctionDeclaration{
-				Name:                 t.Name,
-				Description:          t.Description,
-				ParametersJsonSchema: t.Parameters,
-			})
-		}
-		config.Tools = []*genai.Tool{{FunctionDeclarations: decls}}
-	}
-
 	// Schema (if set) is deferred until after all tool calls complete so that
 	// it is never active at the same time as the tool declarations.
+	var decls []*genai.FunctionDeclaration
+	for _, t := range tools {
+		decls = append(decls, &genai.FunctionDeclaration{
+			Name:                 t.Name,
+			Description:          t.Description,
+			ParametersJsonSchema: t.Parameters,
+		})
+	}
+	config.Tools = []*genai.Tool{{FunctionDeclarations: decls}}
 
 	maxIterations := 10
 	for iteration := range maxIterations {
@@ -281,7 +293,6 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 		if err != nil {
 			return "", fmt.Errorf("GenerateContent error: %w", err)
 		}
-
 		if len(result.Candidates) == 0 {
 			return "", fmt.Errorf("GenerateContent returned no candidates")
 		}
@@ -298,57 +309,11 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 
 		if len(funcCalls) > 0 {
 			slog.Debug("GoogleLLMClient processing tool calls", slog.Int("count", len(funcCalls)))
-
-			// Append the model turn so the conversation history is complete.
 			contents = append(contents, modelContent)
 
-			// Execute each function call and collect the response parts.
 			var responseParts []*genai.Part
 			for _, fc := range funcCalls {
-				argsJSON, err := json.Marshal(fc.Args)
-				if err != nil {
-					slog.Error("error marshaling tool args",
-						slog.String("tool", fc.Name),
-						slog.String("error", err.Error()))
-					argsJSON = []byte("{}")
-				}
-
-				slog.Debug("GoogleLLMClient executing tool",
-					slog.String("tool", fc.Name),
-					slog.String("args", string(argsJSON)))
-
-				var toolFunc func(args string) (string, error)
-				for _, t := range tools {
-					if t.Name == fc.Name {
-						toolFunc = t.Function
-						break
-					}
-				}
-
-				var toolResult string
-				if toolFunc == nil {
-					slog.Error("tool not found", slog.String("tool", fc.Name))
-					toolResult = "tool not found"
-				} else {
-					toolResult, err = toolFunc(string(argsJSON))
-					if err != nil {
-						slog.Error("error executing tool",
-							slog.String("tool", fc.Name),
-							slog.String("error", err.Error()))
-						toolResult = "could not run tool successfully"
-					}
-				}
-
-				slog.Debug("GoogleLLMClient tool result",
-					slog.String("tool", fc.Name),
-					slog.String("result", toolResult))
-
-				responseParts = append(responseParts, &genai.Part{
-					FunctionResponse: &genai.FunctionResponse{
-						Name:     fc.Name,
-						Response: map[string]any{"output": toolResult},
-					},
-				})
+				responseParts = append(responseParts, g.dispatchFunctionCall(fc, tools))
 			}
 
 			// Append the tool results as a user turn.
@@ -362,6 +327,7 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 		// No function calls in this iteration.
 		// If tools were still active and a schema is required, drop tools and
 		// apply the schema so the model produces structured output.
+		// Effectively this is like saying: "Here's what you just wrote — now reformat it as JSON matching this schema."
 		if config.Tools != nil && g.schema != nil {
 			slog.Debug("GoogleLLMClient no tools called but schema required, applying schema")
 			contents = append(contents, modelContent)
