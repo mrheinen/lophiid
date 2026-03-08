@@ -95,7 +95,7 @@ enum NetworkError {
 }
 
 message CommandNetworkFetch {
-  string address = 1;
+  string ip_address = 1;
   int64 port = 2;
   NetworkProtocol protocol = 3;
   int64 request_id = 4;
@@ -201,7 +201,7 @@ message HandleNetworkStatusRequest {
   bytes data = 1;
   NetworkError error = 2;
   int64 request_id = 3;
-  string address = 4;
+  string ip_address = 4;
   int64 port = 5;
   NetworkProtocol protocol = 6;
   string source_ip = 7;

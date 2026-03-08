@@ -442,7 +442,7 @@ func (s *BackendServer) ScheduleNetworkFetch(sourceIP string, honeypotIP string,
 
 	s.networkFetchQueueMu.Lock()
 	s.networkFetchQueue[honeypotIP] = append(s.networkFetchQueue[honeypotIP], backend_service.CommandNetworkFetch{
-		Address:   address,
+		IpAddress: address,
 		Port:      port,
 		Protocol:  protocol,
 		RequestId: requestID,
@@ -570,11 +570,11 @@ func (s *BackendServer) HandleNetworkStatus(ctx context.Context, req *backend_se
 		return nil, status.Error(codes.Unauthenticated, "no authentication found")
 	}
 
-	slog.Info("network fetch status", slog.Int64("request_id", req.GetRequestId()), slog.String("address", req.GetAddress()), slog.Int64("port", req.GetPort()), slog.String("error", req.GetError().String()))
+	slog.Info("network fetch status", slog.Int64("request_id", req.GetRequestId()), slog.String("address", req.GetIpAddress()), slog.Int64("port", req.GetPort()), slog.String("error", req.GetError().String()))
 
 	if req.GetError() != backend_service.NetworkError_NETWORK_ERROR_NONE {
 		evt := &models.IpEvent{
-			IP:            req.GetAddress(),
+			IP:            req.GetIpAddress(),
 			Type:          constants.IpEventNetworkFetch,
 			Subtype:       constants.IpEventSubTypeFailure,
 			Details:       fmt.Sprintf("network fetch failed: %s", req.GetError().String()),
@@ -588,11 +588,11 @@ func (s *BackendServer) HandleNetworkStatus(ctx context.Context, req *backend_se
 		return &backend_service.HandleNetworkStatusResponse{}, nil
 	}
 
-	originalURL := fmt.Sprintf("%s:%d", req.GetAddress(), req.GetPort())
+	originalURL := fmt.Sprintf("%s:%d", req.GetIpAddress(), req.GetPort())
 	dInfo := models.Download{
 		OriginalUrl:   originalURL,
 		UsedUrl:       originalURL,
-		IP:            req.GetAddress(),
+		IP:            req.GetIpAddress(),
 		SourceIP:      req.GetSourceIp(),
 		HoneypotIP:    hp.IP,
 		RequestID:     req.GetRequestId(),
@@ -603,10 +603,10 @@ func (s *BackendServer) HandleNetworkStatus(ctx context.Context, req *backend_se
 		ContentType:   "application/octet-stream",
 	}
 
-	s.whoisMgr.LookupIP(req.GetAddress())
+	s.whoisMgr.LookupIP(req.GetIpAddress())
 
 	if err := s.storeDownload(req.GetData(), dInfo, false); err != nil {
-		slog.Warn("could not store network fetch data", slog.String("error", err.Error()), slog.String("address", req.GetAddress()))
+		slog.Warn("could not store network fetch data", slog.String("error", err.Error()), slog.String("address", req.GetIpAddress()))
 		s.metrics.handleNetworkStatusRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
 		return &backend_service.HandleNetworkStatusResponse{}, status.Errorf(codes.Internal, "could not store network fetch data: %s", err)
 	}
@@ -704,7 +704,7 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 	if ok && len(nfcmds) > 0 {
 		ret := &backend_service.StatusResponse{}
 		for idx := range nfcmds {
-			slog.Debug("sending network fetch command", slog.String("address", nfcmds[idx].GetAddress()), slog.Int64("port", nfcmds[idx].GetPort()))
+			slog.Debug("sending network fetch command", slog.String("address", nfcmds[idx].GetIpAddress()), slog.Int64("port", nfcmds[idx].GetPort()))
 			ret.Command = append(ret.Command, &backend_service.Command{
 				Command: &backend_service.Command_NetworkCmd{
 					NetworkCmd: &nfcmds[idx],

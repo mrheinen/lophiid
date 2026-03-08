@@ -457,14 +457,14 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 
 				handleNetworkRequest := backend_service.HandleNetworkStatusRequest{
 					RequestId: nCmd.RequestId,
-					Address:   nCmd.Address,
+					IpAddress: nCmd.IpAddress,
 					Port:      nCmd.Port,
 					Protocol:  nCmd.Protocol,
 					SourceIp:  nCmd.SourceIp,
 				}
 				switch nCmd.Protocol {
 				case backend_service.NetworkProtocol_PROTOCOL_TCP:
-					data, err := network.ReadDataFromTcp(nCmd.Address, nCmd.Port, time.Minute)
+					data, err := network.ReadDataFromTcp(nCmd.IpAddress, nCmd.Port, time.Minute)
 					handleNetworkRequest.Error = errorToNetworkError(err)
 
 					if err == nil {
@@ -473,7 +473,7 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 					}
 
 				case backend_service.NetworkProtocol_PROTOCOL_UDP:
-					data, err := network.ReadDataFromUdp(nCmd.Address, nCmd.Port, time.Minute)
+					data, err := network.ReadDataFromUdp(nCmd.IpAddress, nCmd.Port, time.Minute)
 					handleNetworkRequest.Error = errorToNetworkError(err)
 
 					if err == nil {
@@ -488,7 +488,7 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 
 				_, err := a.backendClient.HandleNetworkStatus(&handleNetworkRequest)
 				if err != nil {
-					slog.Error("Error sending network status", slog.String("address", nCmd.Address), slog.String("error", err.Error()))
+					slog.Error("Error sending network status", slog.String("address", nCmd.IpAddress), slog.String("error", err.Error()))
 				}
 			}(c.NetworkCmd)
 

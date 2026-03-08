@@ -2342,7 +2342,7 @@ func TestScheduleNetworkFetch_FirstFetch(t *testing.T) {
 	b.networkFetchQueueMu.Unlock()
 
 	require.Len(t, cmds, 1)
-	assert.Equal(t, "evil.com", cmds[0].Address)
+	assert.Equal(t, "evil.com", cmds[0].IpAddress)
 	assert.Equal(t, int64(4444), cmds[0].Port)
 	assert.Equal(t, "1.2.3.4", cmds[0].SourceIp)
 	assert.Equal(t, int64(99), cmds[0].RequestId)
@@ -2380,7 +2380,7 @@ func TestSendStatus_EmitsNetworkFetch(t *testing.T) {
 
 	testHoneypotIP := "10.0.0.1"
 	b.networkFetchQueue[testHoneypotIP] = []backend_service.CommandNetworkFetch{
-		{Address: "evil.com", Port: 9999, Protocol: backend_service.NetworkProtocol_PROTOCOL_TCP, RequestId: 55, SourceIp: "1.2.3.4"},
+		{IpAddress: "evil.com", Port: 9999, Protocol: backend_service.NetworkProtocol_PROTOCOL_TCP, RequestId: 55, SourceIp: "1.2.3.4"},
 	}
 
 	resp, err := b.SendStatus(context.Background(), &backend_service.StatusRequest{
@@ -2392,7 +2392,7 @@ func TestSendStatus_EmitsNetworkFetch(t *testing.T) {
 
 	nCmd := resp.GetCommand()[0].GetNetworkCmd()
 	require.NotNil(t, nCmd)
-	assert.Equal(t, "evil.com", nCmd.Address)
+	assert.Equal(t, "evil.com", nCmd.IpAddress)
 	assert.Equal(t, int64(9999), nCmd.Port)
 	assert.Equal(t, int64(55), nCmd.RequestId)
 }
@@ -2402,9 +2402,9 @@ func TestHandleNetworkStatus_Unauthenticated(t *testing.T) {
 	b := newTestBackendServer(t, fdbc)
 
 	_, err := b.HandleNetworkStatus(context.Background(), &backend_service.HandleNetworkStatusRequest{
-		Address: "evil.com",
-		Port:    4444,
-		Error:   backend_service.NetworkError_NETWORK_ERROR_NONE,
+		IpAddress: "evil.com",
+		Port:      4444,
+		Error:     backend_service.NetworkError_NETWORK_ERROR_NONE,
 	})
 	require.Error(t, err)
 	assert.Equal(t, codes.Unauthenticated, status.Code(err))
@@ -2420,7 +2420,7 @@ func TestHandleNetworkStatus_Success(t *testing.T) {
 	ctx := GetContextWithAuthMetadata()
 	_, err := b.HandleNetworkStatus(ctx, &backend_service.HandleNetworkStatusRequest{
 		RequestId: 42,
-		Address:   "evil.com",
+		IpAddress: "evil.com",
 		Port:      4444,
 		Protocol:  backend_service.NetworkProtocol_PROTOCOL_TCP,
 		SourceIp:  "1.2.3.4",
@@ -2459,7 +2459,7 @@ func TestHandleNetworkStatus_Error(t *testing.T) {
 	ctx := GetContextWithAuthMetadata()
 	_, err := b.HandleNetworkStatus(ctx, &backend_service.HandleNetworkStatusRequest{
 		RequestId: 10,
-		Address:   "evil.com",
+		IpAddress: "evil.com",
 		Port:      4444,
 		Error:     backend_service.NetworkError_NETWORK_ERROR_DIAL,
 	})
@@ -2484,7 +2484,7 @@ func TestHandleNetworkStatus_Dedup(t *testing.T) {
 	ctx := GetContextWithAuthMetadata()
 	_, err := b.HandleNetworkStatus(ctx, &backend_service.HandleNetworkStatusRequest{
 		RequestId: 42,
-		Address:   "evil.com",
+		IpAddress: "evil.com",
 		Port:      4444,
 		Protocol:  backend_service.NetworkProtocol_PROTOCOL_TCP,
 		SourceIp:  "1.2.3.4",
@@ -2513,7 +2513,7 @@ func TestIterateMetadata_Netcat(t *testing.T) {
 	b.networkFetchQueueMu.Unlock()
 
 	require.Len(t, cmds, 1)
-	assert.Equal(t, "5.6.7.8", cmds[0].Address)
+	assert.Equal(t, "5.6.7.8", cmds[0].IpAddress)
 	assert.Equal(t, int64(4444), cmds[0].Port)
 	assert.Equal(t, backend_service.NetworkProtocol_PROTOCOL_TCP, cmds[0].Protocol)
 }
@@ -2533,7 +2533,7 @@ func TestIterateMetadata_TcpLink(t *testing.T) {
 	b.networkFetchQueueMu.Unlock()
 
 	require.Len(t, cmds, 1)
-	assert.Equal(t, "5.6.7.8", cmds[0].Address)
+	assert.Equal(t, "5.6.7.8", cmds[0].IpAddress)
 	assert.Equal(t, int64(9999), cmds[0].Port)
 	assert.Equal(t, backend_service.NetworkProtocol_PROTOCOL_TCP, cmds[0].Protocol)
 }
