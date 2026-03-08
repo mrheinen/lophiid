@@ -8,6 +8,7 @@ service BackendService {
   rpc SendSourceContext(SendSourceContextRequest) returns (SendSourceContextResponse) {}
   rpc HandleUploadFile(UploadFileRequest) returns (UploadFileResponse) {}
   rpc SendPingStatus(SendPingStatusRequest) returns (SendPingStatusResponse) {}
+  rpc HandleNetworkStatus(HandleNetworkStatusRequest) returns (HandleNetworkStatusResponse) {}
 }
 
 // Stores 1:N
@@ -79,6 +80,28 @@ message CommandPingAddress {
   int64 request_id = 3;
 }
 
+enum NetworkProtocol {
+  PROTOCOL_UNKNOWN = 0;
+  PROTOCOL_TCP = 1;
+  PROTOCOL_UDP = 2;
+}
+
+enum NetworkError {
+  NETWORK_ERROR_NONE = 0;
+  NETWORK_ERROR_UNKNOWN = 1;
+  NETWORK_ERROR_READ = 2;
+  NETWORK_ERROR_RESOLVE = 3;
+  NETWORK_ERROR_DIAL = 4;
+}
+
+message CommandNetworkFetch {
+  string address = 1;
+  int64 port = 2;
+  NetworkProtocol protocol = 3;
+  int64 request_id = 4;
+  string source_ip = 5;
+}
+
 message CommandBlockURL {}
 
 message Command {
@@ -86,6 +109,7 @@ message Command {
     CommandDownloadFile download_cmd = 1;
     CommandBlockURL block_url_cmd = 2;
     CommandPingAddress ping_cmd = 3;
+    CommandNetworkFetch network_cmd = 4;
   }
 }
 
@@ -172,6 +196,19 @@ message SendPingStatusRequest {
 }
 
 message SendPingStatusResponse {}
+
+message HandleNetworkStatusRequest {
+  bytes data = 1;
+  NetworkError error = 2;
+  int64 request_id = 3;
+  string address = 4;
+  int64 port = 5;
+  NetworkProtocol protocol = 6;
+  string source_ip = 7;
+}
+
+message HandleNetworkStatusResponse {}
+
 
 message HandleProbeRequest {
   string request_uri = 1;

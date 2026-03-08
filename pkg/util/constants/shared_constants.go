@@ -41,6 +41,7 @@ const (
 	IpEventHostC2        = "HOST_C2"
 	IpEventRateLimited   = "RATELIMITED"
 	IpEventPing          = "PING"
+	IpEventNetworkFetch  = "NETWORK_FETCH"
 	IpEventSessionInfo   = "SESSION_INFO"
 	IpEventPayload       = "PAYLOAD"
 	IpEventRule          = "RULE"
@@ -69,7 +70,7 @@ const (
 	IpEventSubTypeRateAIWindow = "AI_RATE_WINDOW"
 	IpEventSubTypeRateAIBucket = "AI_RATE_BUCKET"
 
-	IpEventSubTypeRateAI       = "AI_RATE"
+	IpEventSubTypeRateAI = "AI_RATE"
 
 	IpEventSubTypeTrafficClassScanned   = "TC_SCANNED"
 	IpEventSubTypeTrafficClassAttacked  = "TC_ATTACKED"
@@ -109,6 +110,7 @@ const (
 	ExtractorTypeLink    = "PAYLOAD_LINK"
 	ExtractorTypePing    = "PAYLOAD_PING"
 	ExtractorTypeTcpLink = "PAYLOAD_TCP_LINK"
+	ExtractorTypeNetcat  = "PAYLOAD_NETCAT"
 )
 
 // This needs to be kept in sync with RESPONDER_TYPE in the database.

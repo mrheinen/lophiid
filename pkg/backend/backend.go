@@ -67,6 +67,7 @@ const userAgent = "Wget/1.13.4 (linux-gnu)"
 const maxUrlsToExtractForDownload = 15
 const maxPayloadSizeForExpansion = 1024 * 1024
 const maxPingsToExtract = 5
+const maxNetworkFetchesToExtract = 3
 const maxSqlDelayMs = 10000
 
 // Debug header names for requests from debug IPs.
@@ -163,6 +164,8 @@ type BackendCaches struct {
 	downloadsIPCounts       *util.StringMapCache[int64]
 	uploadsIPCounts         *util.StringMapCache[int64]
 	pingsCache              *util.StringMapCache[time.Time]
+	networkFetchCache       *util.StringMapCache[time.Time]
+	networkFetchIPCounts    *util.StringMapCache[int64]
 	hCache                  *util.StringMapCache[models.Honeypot]
 	payloadCmpHashCache     *util.StringMapCache[struct{}]
 	consecutivePayloadCache *util.StringMapCache[map[string]string]
@@ -182,6 +185,11 @@ func NewBackendCaches(config Config) *BackendCaches {
 
 	pCache := util.NewStringMapCache[time.Time]("ping_cache", config.Backend.Advanced.PingCacheDuration)
 
+	nfCache := util.NewStringMapCache[time.Time]("network_fetch_cache", config.Backend.Advanced.NetworkFetchCacheDuration)
+
+	nfIPCount := util.NewStringMapCache[int64]("network_fetch_ip_counters", config.Backend.Advanced.NetworkFetchCacheDuration)
+	nfIPCount.Start()
+
 	hCache := util.NewStringMapCache[models.Honeypot]("honeypot_cache", config.Backend.Advanced.HoneypotCacheDuration)
 	hCache.Start()
 
@@ -197,6 +205,8 @@ func NewBackendCaches(config Config) *BackendCaches {
 		downloadsIPCounts:       dIPCount,
 		uploadsIPCounts:         uIPCount,
 		pingsCache:              pCache,
+		networkFetchCache:       nfCache,
+		networkFetchIPCounts:    nfIPCount,
 		hCache:                  hCache,
 		payloadCmpHashCache:     plCache,
 		consecutivePayloadCache: cpCache,
@@ -211,38 +221,43 @@ type ReqQueueEntry struct {
 
 type BackendServer struct {
 	backend_service.BackendServiceServer
-	dbClient            database.DatabaseClient
-	jRunner             javascript.JavascriptRunner
-	qRunner             QueryRunner
-	qRunnerChan         chan bool
-	vtMgr               vt.VTManager
-	whoisMgr            whois.RdapManager
-	alertMgr            *alerting.AlertManager
-	safeRules           *SafeRules
-	maintenanceChan     chan bool
-	reqsProcessChan     chan bool
-	reqsQueue           chan ReqQueueEntry
-	sessionCache        *util.StringMapCache[models.ContentRule]
-	downloadQueue       map[string][]backend_service.CommandDownloadFile
-	downloadQueueMu     sync.Mutex
-	downloadsCache      *util.StringMapCache[time.Time]
-	downloadsIPCounts   *util.StringMapCache[int64]
-	downloadsIPCountsMu sync.Mutex
-	uploadsIPCounts     *util.StringMapCache[int64]
-	pingQueue           map[string][]backend_service.CommandPingAddress
-	pingQueueMu         sync.Mutex
-	pingsCache          *util.StringMapCache[time.Time]
-	metrics             *BackendMetrics
-	rateLimiters        []ratelimit.RateLimiter
-	ipEventManager      analysis.IpEventManager
-	config              Config
-	llmResponder        responder.Responder
-	sessionMgr          session.SessionManager
-	describer           describer.DescriberClient
-	preprocessor        preprocess.PreProcessInterface
-	codeInterpreter     interpreter.CodeInterpreterInterface
-	hCache              *util.StringMapCache[models.Honeypot]
-	HpDefaultContentID  int
+	dbClient               database.DatabaseClient
+	jRunner                javascript.JavascriptRunner
+	qRunner                QueryRunner
+	qRunnerChan            chan bool
+	vtMgr                  vt.VTManager
+	whoisMgr               whois.RdapManager
+	alertMgr               *alerting.AlertManager
+	safeRules              *SafeRules
+	maintenanceChan        chan bool
+	reqsProcessChan        chan bool
+	reqsQueue              chan ReqQueueEntry
+	sessionCache           *util.StringMapCache[models.ContentRule]
+	downloadQueue          map[string][]backend_service.CommandDownloadFile
+	downloadQueueMu        sync.Mutex
+	downloadsCache         *util.StringMapCache[time.Time]
+	downloadsIPCounts      *util.StringMapCache[int64]
+	downloadsIPCountsMu    sync.Mutex
+	uploadsIPCounts        *util.StringMapCache[int64]
+	pingQueue              map[string][]backend_service.CommandPingAddress
+	pingQueueMu            sync.Mutex
+	pingsCache             *util.StringMapCache[time.Time]
+	networkFetchQueue      map[string][]backend_service.CommandNetworkFetch
+	networkFetchQueueMu    sync.Mutex
+	networkFetchCache      *util.StringMapCache[time.Time]
+	networkFetchIPCounts   *util.StringMapCache[int64]
+	networkFetchIPCountsMu sync.Mutex
+	metrics                *BackendMetrics
+	rateLimiters           []ratelimit.RateLimiter
+	ipEventManager         analysis.IpEventManager
+	config                 Config
+	llmResponder           responder.Responder
+	sessionMgr             session.SessionManager
+	describer              describer.DescriberClient
+	preprocessor           preprocess.PreProcessInterface
+	codeInterpreter        interpreter.CodeInterpreterInterface
+	hCache                 *util.StringMapCache[models.Honeypot]
+	HpDefaultContentID     int
 	// payloadCmpHashCache is used to cache cmp_hash for requests to allow similar
 	// requests to be handled by the triage process.
 	payloadCmpHashCache *util.StringMapCache[struct{}]
@@ -257,27 +272,30 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, rateLi
 	caches := NewBackendCaches(config)
 
 	be := &BackendServer{
-		dbClient:            c,
-		qRunnerChan:         make(chan bool),
-		safeRules:           &SafeRules{},
-		maintenanceChan:     make(chan bool),
-		reqsProcessChan:     make(chan bool),
-		reqsQueue:           make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
-		downloadQueue:       make(map[string][]backend_service.CommandDownloadFile),
-		downloadsCache:      caches.downloadsCache,
-		uploadsIPCounts:     caches.uploadsIPCounts,
-		downloadsIPCounts:   caches.downloadsIPCounts,
-		downloadsIPCountsMu: sync.Mutex{},
-		pingQueue:           make(map[string][]backend_service.CommandPingAddress),
-		pingsCache:          caches.pingsCache,
-		sessionCache:        caches.sessionCache,
-		metrics:             metrics,
-		config:              config,
-		rateLimiters:        rateLimiters,
-		hCache:              caches.hCache,
-		HpDefaultContentID:  config.Backend.Advanced.HoneypotDefaultContentID,
-		payloadCmpHashCache: caches.payloadCmpHashCache,
-		payloadSessionCache: caches.consecutivePayloadCache,
+		dbClient:             c,
+		qRunnerChan:          make(chan bool),
+		safeRules:            &SafeRules{},
+		maintenanceChan:      make(chan bool),
+		reqsProcessChan:      make(chan bool),
+		reqsQueue:            make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
+		downloadQueue:        make(map[string][]backend_service.CommandDownloadFile),
+		downloadsCache:       caches.downloadsCache,
+		uploadsIPCounts:      caches.uploadsIPCounts,
+		downloadsIPCounts:    caches.downloadsIPCounts,
+		downloadsIPCountsMu:  sync.Mutex{},
+		pingQueue:            make(map[string][]backend_service.CommandPingAddress),
+		pingsCache:           caches.pingsCache,
+		networkFetchQueue:    make(map[string][]backend_service.CommandNetworkFetch),
+		networkFetchCache:    caches.networkFetchCache,
+		networkFetchIPCounts: caches.networkFetchIPCounts,
+		sessionCache:         caches.sessionCache,
+		metrics:              metrics,
+		config:               config,
+		rateLimiters:         rateLimiters,
+		hCache:               caches.hCache,
+		HpDefaultContentID:   config.Backend.Advanced.HoneypotDefaultContentID,
+		payloadCmpHashCache:  caches.payloadCmpHashCache,
+		payloadSessionCache:  caches.consecutivePayloadCache,
 	}
 
 	for _, opt := range opts {
@@ -365,6 +383,48 @@ func (s *BackendServer) SchedulePingOfAddress(honeypotIP string, address string,
 		Count:     count,
 	})
 	s.pingQueueMu.Unlock()
+	return true
+}
+
+// ScheduleNetworkFetch queues a network fetch command for the agent identified
+// by honeypotIP. Returns false if the fetch is deduplicated by the cache or
+// if the source IP has exceeded the per-IP limit.
+func (s *BackendServer) ScheduleNetworkFetch(sourceIP string, honeypotIP string, address string, port int64, protocol backend_service.NetworkProtocol, requestID int64) bool {
+	cacheKey := fmt.Sprintf("%s:%d:%s", address, port, protocol.String())
+
+	_, err := s.networkFetchCache.Get(cacheKey)
+	if err == nil {
+		slog.Debug("skipping network fetch as it is in the cache", slog.Int64("request_id", requestID), slog.String("address", address), slog.Int64("port", port))
+		return false
+	}
+
+	s.networkFetchIPCountsMu.Lock()
+	defer s.networkFetchIPCountsMu.Unlock()
+
+	val, err := s.networkFetchIPCounts.Get(sourceIP)
+	if err != nil {
+		s.networkFetchIPCounts.Store(sourceIP, 1)
+	} else {
+		*val = *val + 1
+		s.networkFetchIPCounts.Replace(sourceIP, *val)
+		if *val > int64(s.config.Backend.Advanced.MaxNetworkFetchesPerIP) {
+			slog.Debug("skipping network fetch as source IP is over the limit", slog.Int64("request_id", requestID), slog.String("source_ip", sourceIP))
+			return false
+		}
+	}
+
+	slog.Debug("scheduling network fetch", slog.Int64("request_id", requestID), slog.String("honeypot_ip", honeypotIP), slog.String("address", address), slog.Int64("port", port))
+	s.networkFetchCache.Store(cacheKey, time.Now())
+
+	s.networkFetchQueueMu.Lock()
+	s.networkFetchQueue[honeypotIP] = append(s.networkFetchQueue[honeypotIP], backend_service.CommandNetworkFetch{
+		Address:   address,
+		Port:      port,
+		Protocol:  protocol,
+		RequestId: requestID,
+		SourceIp:  sourceIP,
+	})
+	s.networkFetchQueueMu.Unlock()
 	return true
 }
 
@@ -477,6 +537,60 @@ func (s *BackendServer) SendPingStatus(ctx context.Context, req *backend_service
 	return &backend_service.SendPingStatusResponse{}, nil
 }
 
+// HandleNetworkStatus is called by the agent to report the result of a network
+// fetch command. On success the received data is stored as a download record.
+func (s *BackendServer) HandleNetworkStatus(ctx context.Context, req *backend_service.HandleNetworkStatusRequest) (*backend_service.HandleNetworkStatusResponse, error) {
+	rpcStartTime := time.Now()
+	hp, ok := auth.GetHoneypotMetadata(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "no authentication found")
+	}
+
+	slog.Info("network fetch status", slog.Int64("request_id", req.GetRequestId()), slog.String("address", req.GetAddress()), slog.Int64("port", req.GetPort()), slog.String("error", req.GetError().String()))
+
+	if req.GetError() != backend_service.NetworkError_NETWORK_ERROR_NONE {
+		evt := &models.IpEvent{
+			IP:            req.GetAddress(),
+			Type:          constants.IpEventNetworkFetch,
+			Subtype:       constants.IpEventSubTypeFailure,
+			Details:       fmt.Sprintf("network fetch failed: %s", req.GetError().String()),
+			Source:        constants.IpEventSourceAgent,
+			RequestID:     req.GetRequestId(),
+			HoneypotIP:    hp.IP,
+			SourceRefType: constants.IpEventRefTypeNone,
+		}
+		s.ipEventManager.AddEvent(evt)
+		s.metrics.handleNetworkStatusRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
+		return &backend_service.HandleNetworkStatusResponse{}, nil
+	}
+
+	originalURL := fmt.Sprintf("%s:%d", req.GetAddress(), req.GetPort())
+	dInfo := models.Download{
+		OriginalUrl:   originalURL,
+		UsedUrl:       originalURL,
+		IP:            req.GetAddress(),
+		SourceIP:      req.GetSourceIp(),
+		HoneypotIP:    hp.IP,
+		RequestID:     req.GetRequestId(),
+		LastRequestID: req.GetRequestId(),
+		TimesSeen:     1,
+		LastSeenAt:    time.Now(),
+		YaraStatus:    constants.YaraStatusTypePending,
+		ContentType:   "application/octet-stream",
+	}
+
+	s.whoisMgr.LookupIP(req.GetAddress())
+
+	if err := s.storeDownload(req.GetData(), dInfo, false); err != nil {
+		slog.Warn("could not store network fetch data", slog.String("error", err.Error()), slog.String("address", req.GetAddress()))
+		s.metrics.handleNetworkStatusRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
+		return &backend_service.HandleNetworkStatusResponse{}, status.Errorf(codes.Internal, "could not store network fetch data: %s", err)
+	}
+
+	s.metrics.handleNetworkStatusRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
+	return &backend_service.HandleNetworkStatusResponse{}, nil
+}
+
 // SendStatus receives status information from honeypots and sends commands back
 // in response. This is not authenticated!
 func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.StatusRequest) (*backend_service.StatusResponse, error) {
@@ -556,6 +670,25 @@ func (s *BackendServer) SendStatus(ctx context.Context, req *backend_service.Sta
 		}
 
 		delete(s.pingQueue, req.GetIp())
+		return ret, nil
+	}
+
+	// Check if there are any network fetch commands scheduled for this honeypot.
+	s.networkFetchQueueMu.Lock()
+	defer s.networkFetchQueueMu.Unlock()
+	nfcmds, ok := s.networkFetchQueue[req.GetIp()]
+	if ok && len(nfcmds) > 0 {
+		ret := &backend_service.StatusResponse{}
+		for idx := range nfcmds {
+			slog.Debug("sending network fetch command", slog.String("address", nfcmds[idx].GetAddress()), slog.Int64("port", nfcmds[idx].GetPort()))
+			ret.Command = append(ret.Command, &backend_service.Command{
+				Command: &backend_service.Command_NetworkCmd{
+					NetworkCmd: &nfcmds[idx],
+				},
+			})
+		}
+
+		delete(s.networkFetchQueue, req.GetIp())
 		return ret, nil
 	}
 
@@ -710,6 +843,91 @@ func (s *BackendServer) MaybeExtractLinksFromPayload(fileContent []byte, dInfo m
 	return true
 }
 
+// storeDownload saves download data to disk, deduplicates by SHA256, and inserts
+// or updates the models.Download record. If queueVTURL is true, the original URL
+// is queued for VT URL analysis (callers that store non-HTTP data should pass
+// false). The dInfo.SHA256sum field is computed and set by this function.
+func (s *BackendServer) storeDownload(data []byte, dInfo models.Download, queueVTURL bool) error {
+	dInfo.SHA256sum = fmt.Sprintf("%x", sha256.Sum256(data))
+
+	dms, err := s.dbClient.SearchDownloads(0, 1, fmt.Sprintf("sha256sum:%s", dInfo.SHA256sum))
+	if len(dms) == 1 {
+		dm := dms[0]
+		dm.TimesSeen = dm.TimesSeen + 1
+		dm.LastRequestID = dInfo.RequestID
+		dm.LastSeenAt = time.Now()
+
+		if dInfo.RawHttpResponse != "" {
+			dm.RawHttpResponse = dInfo.RawHttpResponse
+		}
+
+		if err = s.dbClient.Update(&dm); err != nil {
+			slog.Warn("could not update", slog.String("error", err.Error()), slog.String("url", dInfo.OriginalUrl))
+		}
+
+		// If the existing file was found malicious, generate events for the IPs
+		// involved in the current exchange.
+		if dm.VTAnalysisMalicious > 0 || dm.VTAnalysisSuspicious > 0 {
+			for _, evt := range s.vtMgr.GetEventsForDownload(&dm, false) {
+				s.ipEventManager.AddEvent(&evt)
+			}
+		}
+
+		if queueVTURL && s.vtMgr != nil && len(dm.VTURLAnalysisID) == 0 {
+			slog.Warn("URL analysis ID is not set!")
+			s.vtMgr.QueueURL(dInfo.OriginalUrl)
+		}
+
+		s.MaybeExtractLinksFromPayload(data, dInfo)
+		slog.Debug("Updated existing entry for download", slog.Int64("request_id", dInfo.RequestID), slog.String("url", dInfo.OriginalUrl))
+		return nil
+	}
+
+	if err != nil && !errors.Is(err, ksql.ErrRecordNotFound) {
+		return fmt.Errorf("unexpected database error: %w", err)
+	}
+
+	targetDir := fmt.Sprintf("%s/%d", s.config.Backend.Downloader.MalwareDownloadDir, dInfo.RequestID)
+	if _, err = os.Stat(targetDir); os.IsNotExist(err) {
+		// Due to concurrency, it is possible that between the check for whether the
+		// directory exists and creating one, the directory is already created.
+		// Therefore we double check here that any error during creation is no
+		// ErrExist which we'll allow.
+		if err = os.Mkdir(targetDir, 0755); err != nil && !os.IsExist(err) {
+			return fmt.Errorf("creating dir: %w", err)
+		}
+	}
+
+	targetFile := fmt.Sprintf("%s/%d", targetDir, rand.Intn(100000))
+	outFileHandle, err := os.Create(targetFile)
+	if err != nil {
+		return fmt.Errorf("creating file: %w", err)
+	}
+	defer outFileHandle.Close()
+
+	bytesWritten, err := io.Copy(outFileHandle, bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("writing file: %w", err)
+	}
+
+	dInfo.Size = bytesWritten
+	dInfo.FileLocation = targetFile
+	_, err = s.dbClient.Insert(&dInfo)
+	if err != nil {
+		return fmt.Errorf("unexpected database error on insert: %w", err)
+	}
+
+	slog.Debug("Added entry for download", slog.Int64("request_id", dInfo.RequestID), slog.String("url", dInfo.OriginalUrl))
+
+	if queueVTURL && s.vtMgr != nil {
+		slog.Debug("Adding URL to VT queue", slog.Int64("request_id", dInfo.RequestID), slog.String("url", dInfo.OriginalUrl))
+		s.vtMgr.QueueURL(dInfo.OriginalUrl)
+	}
+
+	s.MaybeExtractLinksFromPayload(data, dInfo)
+	return nil
+}
+
 func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_service.UploadFileRequest) (*backend_service.UploadFileResponse, error) {
 	_, ok := auth.GetHoneypotMetadata(ctx)
 	if !ok {
@@ -717,112 +935,32 @@ func (s *BackendServer) HandleUploadFile(ctx context.Context, req *backend_servi
 	}
 
 	rpcStartTime := time.Now()
-	retResponse := &backend_service.UploadFileResponse{}
 
 	slog.Debug("Got upload from URL", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
-	// Store the download information in the database.
-	dInfo := models.Download{}
-	dInfo.SHA256sum = fmt.Sprintf("%x", sha256.Sum256(req.GetInfo().GetData()))
-	dInfo.UsedUrl = req.GetInfo().GetUrl()
-	dInfo.Host = req.GetInfo().GetHostHeader()
-	dInfo.ContentType = req.GetInfo().GetContentType()
-	dInfo.DetectedContentType = req.GetInfo().GetDetectedContentType()
-	dInfo.OriginalUrl = req.GetInfo().GetOriginalUrl()
-	dInfo.RequestID = req.RequestId
-	dInfo.SourceIP = req.GetInfo().GetSourceIp()
-	dInfo.IP = req.GetInfo().GetIp()
-	dInfo.HoneypotIP = req.GetInfo().GetHoneypotIp()
-	dInfo.LastRequestID = req.RequestId
-	dInfo.TimesSeen = 1
-	dInfo.LastSeenAt = time.Now()
-	dInfo.YaraStatus = "PENDING"
-	dInfo.RawHttpResponse = req.GetInfo().GetRawHttpResponse()
+	dInfo := models.Download{
+		UsedUrl:             req.GetInfo().GetUrl(),
+		Host:                req.GetInfo().GetHostHeader(),
+		ContentType:         req.GetInfo().GetContentType(),
+		DetectedContentType: req.GetInfo().GetDetectedContentType(),
+		OriginalUrl:         req.GetInfo().GetOriginalUrl(),
+		RequestID:           req.RequestId,
+		SourceIP:            req.GetInfo().GetSourceIp(),
+		IP:                  req.GetInfo().GetIp(),
+		HoneypotIP:          req.GetInfo().GetHoneypotIp(),
+		LastRequestID:       req.RequestId,
+		TimesSeen:           1,
+		LastSeenAt:          time.Now(),
+		YaraStatus:          "PENDING",
+		RawHttpResponse:     req.GetInfo().GetRawHttpResponse(),
+	}
 
 	s.metrics.downloadResponseTime.Observe(req.GetInfo().GetDurationSec())
-
-	dms, err := s.dbClient.SearchDownloads(0, 1, fmt.Sprintf("sha256sum:%s", dInfo.SHA256sum))
-	if len(dms) == 1 {
-		dm := dms[0]
-		dm.TimesSeen = dm.TimesSeen + 1
-		dm.LastRequestID = req.RequestId
-		dm.LastSeenAt = time.Now()
-		// Set to the latest HTTP response.
-
-		if req.GetInfo().GetRawHttpResponse() != "" {
-			dm.RawHttpResponse = req.GetInfo().GetRawHttpResponse()
-		} else {
-			slog.Debug("No HTTP response found for URL upload", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()), slog.String("honeypot_ip", req.GetInfo().GetHoneypotIp()))
-		}
-
-		if err = s.dbClient.Update(&dm); err != nil {
-			slog.Warn("could not update", slog.String("error", err.Error()), slog.String("url", req.GetInfo().GetOriginalUrl()))
-		}
-
-		// If the existing uploaded file was found malicious then we will generate
-		// events for the IPs involved in the current exchange.
-		if dm.VTAnalysisMalicious > 0 || dm.VTAnalysisSuspicious > 0 {
-			for _, evt := range s.vtMgr.GetEventsForDownload(&dm, false) {
-				s.ipEventManager.AddEvent(&evt)
-			}
-		}
-
-		if s.vtMgr != nil && len(dm.VTURLAnalysisID) == 0 {
-			slog.Warn("URL analysis ID is not set!")
-			s.vtMgr.QueueURL(dInfo.OriginalUrl)
-		}
-
-		s.MaybeExtractLinksFromPayload(req.GetInfo().GetData(), dInfo)
-		slog.Debug("Updated existing entry for URL upload", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
-		s.metrics.fileUploadRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
-		return &backend_service.UploadFileResponse{}, nil
-	}
-
-	if err != nil && !errors.Is(err, ksql.ErrRecordNotFound) {
-		slog.Warn("unexpected database error", slog.String("error", err.Error()))
-		return &backend_service.UploadFileResponse{}, status.Errorf(codes.Internal, "unexpected database error: %s", err)
-	}
-
 	s.whoisMgr.LookupIP(req.GetInfo().GetIp())
 
-	targetDir := fmt.Sprintf("%s/%d", s.config.Backend.Downloader.MalwareDownloadDir, req.RequestId)
-	if _, err = os.Stat(targetDir); os.IsNotExist(err) {
-		// Due to concurrency, it is possible that between the check for whether the
-		// directory exists and creating one, the directory is already created.
-		// Therefore we double check here that any error during creation is no
-		// ErrExist which we'll allow.
-		if err = os.Mkdir(targetDir, 0755); err != nil && !os.IsExist(err) {
-			return retResponse, status.Errorf(codes.Internal, "creating dir: %s", err)
-		}
+	if err := s.storeDownload(req.GetInfo().GetData(), dInfo, true); err != nil {
+		slog.Warn("could not store download", slog.String("error", err.Error()), slog.String("url", req.GetInfo().GetOriginalUrl()))
+		return &backend_service.UploadFileResponse{}, status.Errorf(codes.Internal, "could not store download: %s", err)
 	}
-
-	targetFile := fmt.Sprintf("%s/%d", targetDir, rand.Intn(100000))
-	outFileHandle, err := os.Create(targetFile)
-	if err != nil {
-		return retResponse, status.Errorf(codes.Internal, "creating file: %s", err)
-	}
-
-	defer outFileHandle.Close()
-
-	bytesWritten, err := io.Copy(outFileHandle, bytes.NewReader(req.GetInfo().GetData()))
-	if err != nil {
-		return retResponse, status.Errorf(codes.Internal, "writing file: %s", err)
-	}
-
-	dInfo.Size = bytesWritten
-	dInfo.FileLocation = targetFile
-	_, err = s.dbClient.Insert(&dInfo)
-	if err != nil {
-		slog.Warn("error on insert", slog.String("error", err.Error()))
-		return &backend_service.UploadFileResponse{}, status.Errorf(codes.Internal, "unexpected database error on insert: %s", err)
-	}
-
-	slog.Debug("Added entry for URL upload", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
-	if s.vtMgr != nil {
-		slog.Debug("Adding URL to VT queue", slog.Int64("request_id", req.RequestId), slog.String("url", req.GetInfo().GetOriginalUrl()))
-		s.vtMgr.QueueURL(dInfo.OriginalUrl)
-	}
-
-	s.MaybeExtractLinksFromPayload(req.GetInfo().GetData(), dInfo)
 
 	s.metrics.fileUploadRpcResponseTime.Observe(time.Since(rpcStartTime).Seconds())
 	return &backend_service.UploadFileResponse{}, nil
@@ -1561,6 +1699,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 
 	downloadsScheduled := 0
 	pingsScheduled := 0
+	networkFetchesScheduled := 0
 
 	eCollector.IterateMetadata(req.ID, func(m *models.RequestMetadata) error {
 
@@ -1595,6 +1734,44 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 
 			} else {
 				logutil.Warn("skipping ping due to excessive amount", req, slog.String("ping", m.Data))
+			}
+
+		case constants.ExtractorTypeNetcat:
+			if networkFetchesScheduled <= maxNetworkFetchesToExtract {
+				parts := strings.Split(m.Data, " ")
+				if len(parts) != 2 {
+					logutil.Error("invalid netcat metadata", req, slog.String("data", m.Data))
+				} else {
+					port, err := strconv.ParseInt(parts[1], 10, 64)
+					if err != nil {
+						logutil.Error("invalid netcat port", req, slog.String("data", m.Data))
+					} else {
+						s.ScheduleNetworkFetch(req.SourceIP, req.HoneypotIP, parts[0], port, backend_service.NetworkProtocol_PROTOCOL_TCP, m.RequestID)
+						networkFetchesScheduled++
+					}
+				}
+			} else {
+				logutil.Warn("skipping network fetch due to excessive amount", req, slog.String("data", m.Data))
+			}
+
+		case constants.ExtractorTypeTcpLink:
+			if networkFetchesScheduled <= maxNetworkFetchesToExtract {
+				// Data format: /dev/tcp/<address>/<port>
+				trimmed := strings.TrimPrefix(m.Data, "/dev/tcp/")
+				parts := strings.Split(trimmed, "/")
+				if len(parts) != 2 {
+					logutil.Error("invalid tcp link metadata", req, slog.String("data", m.Data))
+				} else {
+					port, err := strconv.ParseInt(parts[1], 10, 64)
+					if err != nil {
+						logutil.Error("invalid tcp link port", req, slog.String("data", m.Data))
+					} else {
+						s.ScheduleNetworkFetch(req.SourceIP, req.HoneypotIP, parts[0], port, backend_service.NetworkProtocol_PROTOCOL_TCP, m.RequestID)
+						networkFetchesScheduled++
+					}
+				}
+			} else {
+				logutil.Warn("skipping network fetch due to excessive amount", req, slog.String("data", m.Data))
 			}
 		}
 
@@ -1663,6 +1840,8 @@ func (s *BackendServer) Start() error {
 				s.sessionCache.CleanExpired()
 				s.downloadsCache.CleanExpired()
 				s.pingsCache.CleanExpired()
+				s.networkFetchCache.CleanExpired()
+				s.networkFetchIPCounts.CleanExpired()
 
 				// Reload the rules.
 				cl := len(s.safeRules.Get())

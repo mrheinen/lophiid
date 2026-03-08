@@ -17,6 +17,7 @@
 package network
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -28,16 +29,23 @@ var MaxTcpReadBufferSize = 1024 * 25
 // The max amount of bytes to read from a UDP connection.
 var MaxUdpReadBufferSize = 1024 * 25
 
+var (
+	ErrResolve    = errors.New("resolve error")
+	ErrRead       = errors.New("read error")
+	ErrConnection = errors.New("connection error")
+	ErrDial       = errors.New("dial error")
+)
+
 // ReadDataFromTcp reads data from a TCP connection at the specified IP address and port.
-func ReadDataFromTcp(address string, port string, timeout time.Duration) ([]byte, error) {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(address, port))
+func ReadDataFromTcp(address string, port int64, timeout time.Duration) ([]byte, error) {
+	tcpAddr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(address, fmt.Sprintf("%d", port)))
 	if err != nil {
-		return nil, fmt.Errorf("resolving tcp address: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrResolve, err)
 	}
 
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return nil, fmt.Errorf("connecting: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrDial, err)
 	}
 	defer conn.Close()
 
@@ -50,22 +58,22 @@ func ReadDataFromTcp(address string, port string, timeout time.Duration) ([]byte
 	data := make([]byte, MaxTcpReadBufferSize)
 	n, err := conn.Read(data)
 	if err != nil {
-		return nil, fmt.Errorf("reading data: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrRead, err)
 	}
 
 	return data[:n], nil
 }
 
 // ReadDataFromUdp reads data from a UDP connection at the specified IP address and port.
-func ReadDataFromUdp(address string, port string, timeout time.Duration) ([]byte, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(address, port))
+func ReadDataFromUdp(address string, port int64, timeout time.Duration) ([]byte, error) {
+	udpAddr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(address, fmt.Sprintf("%d", port)))
 	if err != nil {
-		return nil, fmt.Errorf("resolving udp address: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrResolve, err)
 	}
 
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
-		return nil, fmt.Errorf("connecting: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrDial, err)
 	}
 	defer conn.Close()
 
@@ -78,7 +86,7 @@ func ReadDataFromUdp(address string, port string, timeout time.Duration) ([]byte
 	data := make([]byte, MaxUdpReadBufferSize)
 	n, err := conn.Read(data)
 	if err != nil {
-		return nil, fmt.Errorf("reading data: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrRead, err)
 	}
 
 	return data[:n], nil
