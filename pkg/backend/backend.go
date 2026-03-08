@@ -221,43 +221,42 @@ type ReqQueueEntry struct {
 
 type BackendServer struct {
 	backend_service.BackendServiceServer
-	dbClient               database.DatabaseClient
-	jRunner                javascript.JavascriptRunner
-	qRunner                QueryRunner
-	qRunnerChan            chan bool
-	vtMgr                  vt.VTManager
-	whoisMgr               whois.RdapManager
-	alertMgr               *alerting.AlertManager
-	safeRules              *SafeRules
-	maintenanceChan        chan bool
-	reqsProcessChan        chan bool
-	reqsQueue              chan ReqQueueEntry
-	sessionCache           *util.StringMapCache[models.ContentRule]
-	downloadQueue          map[string][]backend_service.CommandDownloadFile
-	downloadQueueMu        sync.Mutex
-	downloadsCache         *util.StringMapCache[time.Time]
-	downloadsIPCounts      *util.StringMapCache[int64]
-	downloadsIPCountsMu    sync.Mutex
-	uploadsIPCounts        *util.StringMapCache[int64]
-	pingQueue              map[string][]backend_service.CommandPingAddress
-	pingQueueMu            sync.Mutex
-	pingsCache             *util.StringMapCache[time.Time]
-	networkFetchQueue      map[string][]backend_service.CommandNetworkFetch
-	networkFetchQueueMu    sync.Mutex
-	networkFetchCache      *util.StringMapCache[time.Time]
-	networkFetchIPCounts   *util.StringMapCache[int64]
-	networkFetchIPCountsMu sync.Mutex
-	metrics                *BackendMetrics
-	rateLimiters           []ratelimit.RateLimiter
-	ipEventManager         analysis.IpEventManager
-	config                 Config
-	llmResponder           responder.Responder
-	sessionMgr             session.SessionManager
-	describer              describer.DescriberClient
-	preprocessor           preprocess.PreProcessInterface
-	codeInterpreter        interpreter.CodeInterpreterInterface
-	hCache                 *util.StringMapCache[models.Honeypot]
-	HpDefaultContentID     int
+	dbClient             database.DatabaseClient
+	jRunner              javascript.JavascriptRunner
+	qRunner              QueryRunner
+	qRunnerChan          chan bool
+	vtMgr                vt.VTManager
+	whoisMgr             whois.RdapManager
+	alertMgr             *alerting.AlertManager
+	safeRules            *SafeRules
+	maintenanceChan      chan bool
+	reqsProcessChan      chan bool
+	reqsQueue            chan ReqQueueEntry
+	sessionCache         *util.StringMapCache[models.ContentRule]
+	downloadQueue        map[string][]backend_service.CommandDownloadFile
+	downloadQueueMu      sync.Mutex
+	downloadsCache       *util.StringMapCache[time.Time]
+	downloadsIPCounts    *util.StringMapCache[int64]
+	downloadsIPCountsMu  sync.Mutex
+	uploadsIPCounts      *util.StringMapCache[int64]
+	pingQueue            map[string][]backend_service.CommandPingAddress
+	pingQueueMu          sync.Mutex
+	pingsCache           *util.StringMapCache[time.Time]
+	networkFetchQueue    map[string][]backend_service.CommandNetworkFetch
+	networkFetchQueueMu  sync.Mutex
+	networkFetchCache    *util.StringMapCache[time.Time]
+	networkFetchIPCounts *util.StringMapCache[int64]
+	metrics              *BackendMetrics
+	rateLimiters         []ratelimit.RateLimiter
+	ipEventManager       analysis.IpEventManager
+	config               Config
+	llmResponder         responder.Responder
+	sessionMgr           session.SessionManager
+	describer            describer.DescriberClient
+	preprocessor         preprocess.PreProcessInterface
+	codeInterpreter      interpreter.CodeInterpreterInterface
+	hCache               *util.StringMapCache[models.Honeypot]
+	HpDefaultContentID   int
 	// payloadCmpHashCache is used to cache cmp_hash for requests to allow similar
 	// requests to be handled by the triage process.
 	payloadCmpHashCache *util.StringMapCache[struct{}]
@@ -410,29 +409,36 @@ func resolveToIP(address string) string {
 func (s *BackendServer) ScheduleNetworkFetch(sourceIP string, honeypotIP string, address string, port int64, protocol backend_service.NetworkProtocol, requestID int64) bool {
 	cacheKey := fmt.Sprintf("%s:%d:%s", address, port, protocol.String())
 
-	_, err := s.networkFetchCache.Get(cacheKey)
-	if err == nil {
+	// Atomically check-and-insert into the dedup cache to eliminate the
+	// Get+Store TOCTOU race: concurrent goroutines can no longer both pass the
+	// miss check and enqueue the same fetch.
+	isNew := false
+	s.networkFetchCache.GetOrCreate(cacheKey,
+		func() time.Time { isNew = true; return time.Now() },
+		func(*time.Time) {},
+	)
+	if !isNew {
 		slog.Debug("skipping network fetch as it is in the cache", slog.Int64("request_id", requestID), slog.String("address", address), slog.Int64("port", port))
 		return false
 	}
 
-	s.networkFetchIPCountsMu.Lock()
-	defer s.networkFetchIPCountsMu.Unlock()
-
-	val, err := s.networkFetchIPCounts.Get(sourceIP)
-	if err != nil {
-		s.networkFetchIPCounts.Store(sourceIP, 1)
-	} else {
-		*val = *val + 1
-		s.networkFetchIPCounts.Replace(sourceIP, *val)
-		if *val > int64(s.config.Backend.Advanced.MaxNetworkFetchesPerIP) {
-			slog.Debug("skipping network fetch as source IP is over the limit", slog.Int64("request_id", requestID), slog.String("source_ip", sourceIP))
-			return false
-		}
+	// Atomically increment and check the per-source-IP rate limit.
+	overLimit := false
+	s.networkFetchIPCounts.GetOrCreate(sourceIP,
+		func() int64 { return 0 },
+		func(val *int64) {
+			*val++
+			if *val > int64(s.config.Backend.Advanced.MaxNetworkFetchesPerIP) {
+				overLimit = true
+			}
+		},
+	)
+	if overLimit {
+		slog.Debug("skipping network fetch as source IP is over the limit", slog.Int64("request_id", requestID), slog.String("source_ip", sourceIP))
+		return false
 	}
 
 	slog.Debug("scheduling network fetch", slog.Int64("request_id", requestID), slog.String("honeypot_ip", honeypotIP), slog.String("address", address), slog.Int64("port", port))
-	s.networkFetchCache.Store(cacheKey, time.Now())
 
 	s.networkFetchQueueMu.Lock()
 	s.networkFetchQueue[honeypotIP] = append(s.networkFetchQueue[honeypotIP], backend_service.CommandNetworkFetch{
