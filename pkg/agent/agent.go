@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"lophiid/backend_service"
 	"lophiid/pkg/backend"
+	"lophiid/pkg/network"
 	"lophiid/pkg/util"
 	"lophiid/pkg/util/constants"
 	"net/http"
@@ -383,6 +384,23 @@ func (a *Agent) DownloadFileAndSubmit(request *backend_service.CommandDownloadFi
 	return nil
 }
 
+func errorToNetworkError(err error) backend_service.NetworkError {
+	if err == nil {
+		return backend_service.NetworkError_NETWORK_ERROR_NONE
+	}
+
+	switch {
+	case errors.Is(err, network.ErrDial):
+		return backend_service.NetworkError_NETWORK_ERROR_DIAL
+	case errors.Is(err, network.ErrResolve):
+		return backend_service.NetworkError_NETWORK_ERROR_RESOLVE
+	case errors.Is(err, network.ErrRead):
+		return backend_service.NetworkError_NETWORK_ERROR_READ
+	default:
+		return backend_service.NetworkError_NETWORK_ERROR_UNKNOWN
+	}
+}
+
 func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse) error {
 	if len(resp.Command) == 0 {
 		return nil
@@ -432,6 +450,47 @@ func (a *Agent) HandleCommandsFromResponse(resp *backend_service.StatusResponse)
 				}
 
 			}(c.PingCmd)
+
+		case *backend_service.Command_NetworkCmd:
+			go func(nCmd *backend_service.CommandNetworkFetch) {
+				slog.Info("Network Command", slog.String("command", fmt.Sprintf("%+v", nCmd)))
+
+				handleNetworkRequest := backend_service.HandleNetworkStatusRequest{
+					RequestId: nCmd.RequestId,
+					IpAddress: nCmd.IpAddress,
+					Port:      nCmd.Port,
+					Protocol:  nCmd.Protocol,
+					SourceIp:  nCmd.SourceIp,
+				}
+				switch nCmd.Protocol {
+				case backend_service.NetworkProtocol_PROTOCOL_TCP:
+					data, err := network.ReadDataFromTcp(nCmd.IpAddress, nCmd.Port, time.Minute)
+					handleNetworkRequest.Error = errorToNetworkError(err)
+
+					if err == nil {
+						handleNetworkRequest.Data = data
+						handleNetworkRequest.Error = backend_service.NetworkError_NETWORK_ERROR_NONE
+					}
+
+				case backend_service.NetworkProtocol_PROTOCOL_UDP:
+					data, err := network.ReadDataFromUdp(nCmd.IpAddress, nCmd.Port, time.Minute)
+					handleNetworkRequest.Error = errorToNetworkError(err)
+
+					if err == nil {
+						handleNetworkRequest.Data = data
+						handleNetworkRequest.Error = backend_service.NetworkError_NETWORK_ERROR_NONE
+					}
+
+				default:
+					handleNetworkRequest.Error = backend_service.NetworkError_NETWORK_ERROR_UNKNOWN
+					slog.Error("Unknown protocol", slog.String("protocol", nCmd.Protocol.String()))
+				}
+
+				_, err := a.backendClient.HandleNetworkStatus(&handleNetworkRequest)
+				if err != nil {
+					slog.Error("Error sending network status", slog.String("address", nCmd.IpAddress), slog.String("error", err.Error()))
+				}
+			}(c.NetworkCmd)
 
 		case nil:
 			return nil

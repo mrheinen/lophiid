@@ -182,6 +182,7 @@ CREATE TYPE public.ip_event_type AS ENUM (
     'BRUTEFORCED',
     'HOSTED_MALWARE',
     'HOST_C2',
+    'NETWORK_FETCH',
     'RATELIMITED',
     'HOSTED_NEW_MALWARE',
     'SENT_MALWARE',

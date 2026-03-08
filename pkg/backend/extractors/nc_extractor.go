@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"lophiid/pkg/database/models"
+	"lophiid/pkg/util/constants"
 	"lophiid/pkg/util/decoding"
 	"regexp"
 	"strconv"
@@ -39,7 +40,7 @@ type NCExtractor struct {
 func NewNCExtractor(result map[string]int) *NCExtractor {
 	return &NCExtractor{
 		result:   result,
-		metaType: "PAYLOAD_NETCAT",
+		metaType: constants.ExtractorTypeNetcat,
 	}
 }
 

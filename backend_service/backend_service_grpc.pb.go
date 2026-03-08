@@ -22,6 +22,7 @@ type BackendServiceClient interface {
 	SendSourceContext(ctx context.Context, in *SendSourceContextRequest, opts ...grpc.CallOption) (*SendSourceContextResponse, error)
 	HandleUploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error)
 	SendPingStatus(ctx context.Context, in *SendPingStatusRequest, opts ...grpc.CallOption) (*SendPingStatusResponse, error)
+	HandleNetworkStatus(ctx context.Context, in *HandleNetworkStatusRequest, opts ...grpc.CallOption) (*HandleNetworkStatusResponse, error)
 }
 
 type backendServiceClient struct {
@@ -77,6 +78,15 @@ func (c *backendServiceClient) SendPingStatus(ctx context.Context, in *SendPingS
 	return out, nil
 }
 
+func (c *backendServiceClient) HandleNetworkStatus(ctx context.Context, in *HandleNetworkStatusRequest, opts ...grpc.CallOption) (*HandleNetworkStatusResponse, error) {
+	out := new(HandleNetworkStatusResponse)
+	err := c.cc.Invoke(ctx, "/BackendService/HandleNetworkStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BackendServiceServer is the server API for BackendService service.
 // All implementations must embed UnimplementedBackendServiceServer
 // for forward compatibility
@@ -86,6 +96,7 @@ type BackendServiceServer interface {
 	SendSourceContext(context.Context, *SendSourceContextRequest) (*SendSourceContextResponse, error)
 	HandleUploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error)
 	SendPingStatus(context.Context, *SendPingStatusRequest) (*SendPingStatusResponse, error)
+	HandleNetworkStatus(context.Context, *HandleNetworkStatusRequest) (*HandleNetworkStatusResponse, error)
 	mustEmbedUnimplementedBackendServiceServer()
 }
 
@@ -107,6 +118,9 @@ func (UnimplementedBackendServiceServer) HandleUploadFile(context.Context, *Uplo
 }
 func (UnimplementedBackendServiceServer) SendPingStatus(context.Context, *SendPingStatusRequest) (*SendPingStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendPingStatus not implemented")
+}
+func (UnimplementedBackendServiceServer) HandleNetworkStatus(context.Context, *HandleNetworkStatusRequest) (*HandleNetworkStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HandleNetworkStatus not implemented")
 }
 func (UnimplementedBackendServiceServer) mustEmbedUnimplementedBackendServiceServer() {}
 
@@ -211,6 +225,24 @@ func _BackendService_SendPingStatus_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BackendService_HandleNetworkStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HandleNetworkStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BackendServiceServer).HandleNetworkStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/BackendService/HandleNetworkStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BackendServiceServer).HandleNetworkStatus(ctx, req.(*HandleNetworkStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _BackendService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "BackendService",
 	HandlerType: (*BackendServiceServer)(nil),
@@ -234,6 +266,10 @@ var _BackendService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendPingStatus",
 			Handler:    _BackendService_SendPingStatus_Handler,
+		},
+		{
+			MethodName: "HandleNetworkStatus",
+			Handler:    _BackendService_HandleNetworkStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

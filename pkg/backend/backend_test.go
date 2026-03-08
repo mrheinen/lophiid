@@ -63,6 +63,8 @@ func GetDefaultBackendConfig() Config {
 	cfg.Backend.Advanced.DownloadIPCountersDuration = time.Minute * 5
 	cfg.Backend.Advanced.MaxUploadsPerIPWindow = time.Minute * 30
 	cfg.Backend.Advanced.PingCacheDuration = time.Minute * 5
+	cfg.Backend.Advanced.NetworkFetchCacheDuration = time.Minute * 5
+	cfg.Backend.Advanced.MaxNetworkFetchesPerIP = 10
 	cfg.Backend.Advanced.HoneypotCacheDuration = time.Minute * 15
 	cfg.Backend.Advanced.PayloadCmpHashDuration = time.Minute * 45
 	cfg.Backend.Advanced.ConsecutivePayloadDuration = time.Minute * 20
@@ -1815,7 +1817,7 @@ func TestHandlePreProcessUploadIPLimit(t *testing.T) {
 	fakeDescriber := describer.FakeDescriberClient{}
 	allowNet := "192.168.1.0/24"
 
-  backendConfig := GetDefaultBackendConfig()
+	backendConfig := GetDefaultBackendConfig()
 
 	for _, test := range []struct {
 		description       string
@@ -1910,14 +1912,14 @@ func TestHandlePreProcessAppPerGroup(t *testing.T) {
 	backendConfig := GetDefaultBackendConfig()
 
 	for _, test := range []struct {
-		description        string
-		honeypotToReturn   models.Honeypot
-		honeypotError      error
-		appPerGroupReturn  []models.AppPerGroup
-		expectError        bool
-		expectErrorString  string
-		expectedGroupID    int64
-		expectInsert       bool
+		description       string
+		honeypotToReturn  models.Honeypot
+		honeypotError     error
+		appPerGroupReturn []models.AppPerGroup
+		expectError       bool
+		expectErrorString string
+		expectedGroupID   int64
+		expectInsert      bool
 	}{
 		{
 			description:       "Inserts AppPerGroup when none exists",
@@ -2191,12 +2193,12 @@ func TestCheckForConsecutivePayloads(t *testing.T) {
 
 func TestLoadRules(t *testing.T) {
 	for _, test := range []struct {
-		description        string
-		appPerGroupJoin    []models.AppPerGroupJoin
-		rulesByAppID       map[int64][]models.ContentRule
-		dbError            error
-		expectError        bool
-		expectedGroups     map[int64][]int64 // groupID -> list of rule IDs
+		description     string
+		appPerGroupJoin []models.AppPerGroupJoin
+		rulesByAppID    map[int64][]models.ContentRule
+		dbError         error
+		expectError     bool
+		expectedGroups  map[int64][]int64 // groupID -> list of rule IDs
 	}{
 		{
 			description:     "empty rules",
@@ -2273,9 +2275,9 @@ func TestLoadRules(t *testing.T) {
 	} {
 		t.Run(test.description, func(t *testing.T) {
 			fakeDB := &database.FakeDatabaseClient{
-				AppPerGroupJoinToReturn:    test.appPerGroupJoin,
+				AppPerGroupJoinToReturn:     test.appPerGroupJoin,
 				ContentRulesByAppIDToReturn: test.rulesByAppID,
-				ErrorToReturn:              test.dbError,
+				ErrorToReturn:               test.dbError,
 			}
 
 			b := &BackendServer{
@@ -2307,4 +2309,231 @@ func TestLoadRules(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newTestBackendServer(t *testing.T, fdbc database.DatabaseClient) *BackendServer {
+	t.Helper()
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{ErrorToReturn: nil}
+	fakeLimiter := ratelimit.FakeRateLimiter{BoolToReturn: true, ErrorToReturn: nil}
+	fIpMgr := analysis.FakeIpEventManager{}
+	fakeRes := &responder.FakeResponder{}
+	sMetrics := session.CreateSessionMetrics(reg)
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
+	fakePreprocessor := preprocess.FakePreProcessor{}
+	fakeInter := &interpreter.FakeCodeInterpreter{}
+	return NewBackendServer(fdbc, bMetrics, []ratelimit.RateLimiter{&fakeLimiter}, GetDefaultBackendConfig(), WithJavascriptRunner(&fakeJrunner), WithAlertManager(alertManager), WithVTManager(&vt.FakeVTManager{}), WithWhoisManager(&whoisManager), WithQueryRunner(&queryRunner), WithIpEventManager(&fIpMgr), WithResponder(fakeRes), WithSessionManager(fSessionMgr), WithDescriber(&fakeDescriber), WithPreprocessor(&fakePreprocessor), WithCodeInterpreter(fakeInter))
+}
+
+func TestScheduleNetworkFetch_FirstFetch(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	b := newTestBackendServer(t, fdbc)
+
+	ok := b.ScheduleNetworkFetch("1.2.3.4", "10.0.0.1", "evil.com", 4444, backend_service.NetworkProtocol_PROTOCOL_TCP, 99)
+	require.True(t, ok)
+
+	b.networkFetchQueueMu.Lock()
+	cmds := b.networkFetchQueue["10.0.0.1"]
+	b.networkFetchQueueMu.Unlock()
+
+	require.Len(t, cmds, 1)
+	assert.Equal(t, "evil.com", cmds[0].IpAddress)
+	assert.Equal(t, int64(4444), cmds[0].Port)
+	assert.Equal(t, "1.2.3.4", cmds[0].SourceIp)
+	assert.Equal(t, int64(99), cmds[0].RequestId)
+}
+
+func TestScheduleNetworkFetch_Deduplicated(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	b := newTestBackendServer(t, fdbc)
+
+	ok1 := b.ScheduleNetworkFetch("1.2.3.4", "10.0.0.1", "evil.com", 4444, backend_service.NetworkProtocol_PROTOCOL_TCP, 1)
+	require.True(t, ok1)
+
+	ok2 := b.ScheduleNetworkFetch("1.2.3.4", "10.0.0.1", "evil.com", 4444, backend_service.NetworkProtocol_PROTOCOL_TCP, 2)
+	require.False(t, ok2, "second request for same address:port:protocol should be deduplicated")
+}
+
+func TestScheduleNetworkFetch_IPLimitExceeded(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	b := newTestBackendServer(t, fdbc)
+	b.config.Backend.Advanced.MaxNetworkFetchesPerIP = 2
+
+	scheduledCount := 0
+	for i := 0; i < 10; i++ {
+		if b.ScheduleNetworkFetch("1.2.3.4", "10.0.0.1", fmt.Sprintf("host%d.com", i), int64(4000+i), backend_service.NetworkProtocol_PROTOCOL_TCP, int64(i)) {
+			scheduledCount++
+		}
+	}
+
+	assert.LessOrEqual(t, scheduledCount, 3, "should not exceed MaxNetworkFetchesPerIP+1 scheduled fetches")
+}
+
+func TestSendStatus_EmitsNetworkFetch(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	b := newTestBackendServer(t, fdbc)
+
+	testHoneypotIP := "10.0.0.1"
+	b.networkFetchQueue[testHoneypotIP] = []backend_service.CommandNetworkFetch{
+		{IpAddress: "evil.com", Port: 9999, Protocol: backend_service.NetworkProtocol_PROTOCOL_TCP, RequestId: 55, SourceIp: "1.2.3.4"},
+	}
+
+	resp, err := b.SendStatus(context.Background(), &backend_service.StatusRequest{
+		Ip:      testHoneypotIP,
+		Version: constants.LophiidVersion,
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.GetCommand(), 1)
+
+	nCmd := resp.GetCommand()[0].GetNetworkCmd()
+	require.NotNil(t, nCmd)
+	assert.Equal(t, "evil.com", nCmd.IpAddress)
+	assert.Equal(t, int64(9999), nCmd.Port)
+	assert.Equal(t, int64(55), nCmd.RequestId)
+}
+
+func TestHandleNetworkStatus_Unauthenticated(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	b := newTestBackendServer(t, fdbc)
+
+	_, err := b.HandleNetworkStatus(context.Background(), &backend_service.HandleNetworkStatusRequest{
+		IpAddress: "evil.com",
+		Port:      4444,
+		Error:     backend_service.NetworkError_NETWORK_ERROR_NONE,
+	})
+	require.Error(t, err)
+	assert.Equal(t, codes.Unauthenticated, status.Code(err))
+}
+
+func TestHandleNetworkStatus_Success(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{
+		DownloadsToReturn: []models.Download{},
+	}
+	b := newTestBackendServer(t, fdbc)
+	b.config.Backend.Downloader.MalwareDownloadDir = t.TempDir()
+
+	ctx := GetContextWithAuthMetadata()
+	_, err := b.HandleNetworkStatus(ctx, &backend_service.HandleNetworkStatusRequest{
+		RequestId: 42,
+		IpAddress: "evil.com",
+		Port:      4444,
+		Protocol:  backend_service.NetworkProtocol_PROTOCOL_TCP,
+		SourceIp:  "1.2.3.4",
+		Error:     backend_service.NetworkError_NETWORK_ERROR_NONE,
+		Data:      []byte("some payload data"),
+	})
+	require.NoError(t, err)
+
+	inserted, ok := fdbc.LastDataModelSeen.(*models.Download)
+	require.True(t, ok, "expected a models.Download to be inserted")
+	assert.Equal(t, "evil.com:4444", inserted.OriginalUrl)
+	assert.Equal(t, "evil.com", inserted.IP)
+	assert.Equal(t, "1.2.3.4", inserted.SourceIP)
+	assert.Equal(t, int64(42), inserted.RequestID)
+}
+
+func TestHandleNetworkStatus_Error(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	fIpMgr := &analysis.FakeIpEventManager{}
+
+	reg := prometheus.NewRegistry()
+	bMetrics := CreateBackendMetrics(reg)
+	fakeJrunner := javascript.FakeJavascriptRunner{}
+	alertManager := alerting.NewAlertManager(42)
+	whoisManager := whois.FakeRdapManager{}
+	queryRunner := FakeQueryRunner{ErrorToReturn: nil}
+	fakeLimiter := ratelimit.FakeRateLimiter{BoolToReturn: true, ErrorToReturn: nil}
+	fakeRes := &responder.FakeResponder{}
+	sMetrics := session.CreateSessionMetrics(reg)
+	fSessionMgr := session.NewDatabaseSessionManager(fdbc, time.Hour, sMetrics)
+	fakeDescriber := describer.FakeDescriberClient{ErrorToReturn: nil}
+	fakePreprocessor := preprocess.FakePreProcessor{}
+	fakeInter := &interpreter.FakeCodeInterpreter{}
+	b := NewBackendServer(fdbc, bMetrics, []ratelimit.RateLimiter{&fakeLimiter}, GetDefaultBackendConfig(), WithJavascriptRunner(&fakeJrunner), WithAlertManager(alertManager), WithVTManager(&vt.FakeVTManager{}), WithWhoisManager(&whoisManager), WithQueryRunner(&queryRunner), WithIpEventManager(fIpMgr), WithResponder(fakeRes), WithSessionManager(fSessionMgr), WithDescriber(&fakeDescriber), WithPreprocessor(&fakePreprocessor), WithCodeInterpreter(fakeInter))
+
+	ctx := GetContextWithAuthMetadata()
+	_, err := b.HandleNetworkStatus(ctx, &backend_service.HandleNetworkStatusRequest{
+		RequestId: 10,
+		IpAddress: "evil.com",
+		Port:      4444,
+		Error:     backend_service.NetworkError_NETWORK_ERROR_DIAL,
+	})
+	require.NoError(t, err)
+
+	require.Len(t, fIpMgr.Events, 1)
+	assert.Equal(t, constants.IpEventNetworkFetch, fIpMgr.Events[0].Type)
+	assert.Equal(t, constants.IpEventSubTypeFailure, fIpMgr.Events[0].Subtype)
+	assert.Equal(t, "evil.com", fIpMgr.Events[0].IP)
+}
+
+func TestHandleNetworkStatus_Dedup(t *testing.T) {
+	existingDownload := models.Download{
+		ID:        77,
+		TimesSeen: 1,
+	}
+	fdbc := &database.FakeDatabaseClient{
+		DownloadsToReturn: []models.Download{existingDownload},
+	}
+	b := newTestBackendServer(t, fdbc)
+
+	ctx := GetContextWithAuthMetadata()
+	_, err := b.HandleNetworkStatus(ctx, &backend_service.HandleNetworkStatusRequest{
+		RequestId: 42,
+		IpAddress: "evil.com",
+		Port:      4444,
+		Protocol:  backend_service.NetworkProtocol_PROTOCOL_TCP,
+		SourceIp:  "1.2.3.4",
+		Error:     backend_service.NetworkError_NETWORK_ERROR_NONE,
+		Data:      []byte("some payload data"),
+	})
+	require.NoError(t, err)
+
+	updated, ok := fdbc.LastDataModelSeen.(*models.Download)
+	require.True(t, ok, "expected a models.Download to be updated")
+	assert.Equal(t, int64(2), updated.TimesSeen)
+}
+
+func TestIterateMetadata_Netcat(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	b := newTestBackendServer(t, fdbc)
+
+	req := &models.Request{ID: 1, HoneypotIP: "10.0.0.1", SourceIP: "1.2.3.4", Body: []byte("nc 5.6.7.8 4444")}
+	eCol := extractors.NewExtractorCollection(true)
+	eCol.ParseRequest(req)
+	err := b.ProcessRequest(req, models.ContentRule{Enabled: true, ID: 1}, eCol)
+	require.NoError(t, err)
+
+	b.networkFetchQueueMu.Lock()
+	cmds := b.networkFetchQueue["10.0.0.1"]
+	b.networkFetchQueueMu.Unlock()
+
+	require.Len(t, cmds, 1)
+	assert.Equal(t, "5.6.7.8", cmds[0].IpAddress)
+	assert.Equal(t, int64(4444), cmds[0].Port)
+	assert.Equal(t, backend_service.NetworkProtocol_PROTOCOL_TCP, cmds[0].Protocol)
+}
+
+func TestIterateMetadata_TcpLink(t *testing.T) {
+	fdbc := &database.FakeDatabaseClient{}
+	b := newTestBackendServer(t, fdbc)
+
+	req := &models.Request{ID: 1, HoneypotIP: "10.0.0.1", SourceIP: "1.2.3.4", Body: []byte("/dev/tcp/5.6.7.8/9999")}
+	eCol := extractors.NewExtractorCollection(true)
+	eCol.ParseRequest(req)
+	err := b.ProcessRequest(req, models.ContentRule{Enabled: true, ID: 1}, eCol)
+	require.NoError(t, err)
+
+	b.networkFetchQueueMu.Lock()
+	cmds := b.networkFetchQueue["10.0.0.1"]
+	b.networkFetchQueueMu.Unlock()
+
+	require.Len(t, cmds, 1)
+	assert.Equal(t, "5.6.7.8", cmds[0].IpAddress)
+	assert.Equal(t, int64(9999), cmds[0].Port)
+	assert.Equal(t, backend_service.NetworkProtocol_PROTOCOL_TCP, cmds[0].Protocol)
 }

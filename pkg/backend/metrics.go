@@ -30,20 +30,21 @@ var (
 )
 
 type BackendMetrics struct {
-	reqsQueueGauge            prometheus.Gauge
-	rpcResponseTime           prometheus.Histogram
-	fileUploadRpcResponseTime prometheus.Histogram
-	reqsQueueResponseTime     prometheus.Histogram
-	downloadResponseTime      prometheus.Histogram
-	qRunnerResponseTime       prometheus.Histogram
-	honeypotRequests          *prometheus.CounterVec
-	methodPerRequest          *prometheus.CounterVec
-	requestsPerPort           *prometheus.CounterVec
-	firstTriageResult         *prometheus.CounterVec
-	firstTriageSelection      *prometheus.CounterVec
-	firstTriagePayloadType    *prometheus.CounterVec
-	firstTriageTotal          *prometheus.CounterVec
-	requestsBlocked           prometheus.Counter
+	reqsQueueGauge                     prometheus.Gauge
+	rpcResponseTime                    prometheus.Histogram
+	fileUploadRpcResponseTime          prometheus.Histogram
+	reqsQueueResponseTime              prometheus.Histogram
+	downloadResponseTime               prometheus.Histogram
+	handleNetworkStatusRpcResponseTime prometheus.Histogram
+	qRunnerResponseTime                prometheus.Histogram
+	honeypotRequests                   *prometheus.CounterVec
+	methodPerRequest                   *prometheus.CounterVec
+	requestsPerPort                    *prometheus.CounterVec
+	firstTriageResult                  *prometheus.CounterVec
+	firstTriageSelection               *prometheus.CounterVec
+	firstTriagePayloadType             *prometheus.CounterVec
+	firstTriageTotal                   *prometheus.CounterVec
+	requestsBlocked                    prometheus.Counter
 }
 
 // Register Metrics
@@ -78,6 +79,12 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 				Name:    "lophiid_backend_agent_reported_download_response_time",
 				Help:    "Total time for downloads",
 				Buckets: metrics.SlowResponseTimebuckets},
+		),
+		handleNetworkStatusRpcResponseTime: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "lophiid_backend_handle_network_status_rpc_response_time",
+				Help:    "Response time for the HandleNetworkStatus RPC",
+				Buckets: metrics.FastResponseTimebuckets},
 		),
 		qRunnerResponseTime: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
@@ -137,6 +144,7 @@ func CreateBackendMetrics(reg prometheus.Registerer) *BackendMetrics {
 	reg.MustRegister(m.rpcResponseTime)
 	reg.MustRegister(m.reqsQueueResponseTime)
 	reg.MustRegister(m.downloadResponseTime)
+	reg.MustRegister(m.handleNetworkStatusRpcResponseTime)
 	reg.MustRegister(m.honeypotRequests)
 	reg.MustRegister(m.qRunnerResponseTime)
 	reg.MustRegister(m.methodPerRequest)
