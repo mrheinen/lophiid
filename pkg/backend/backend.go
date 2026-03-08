@@ -386,6 +386,24 @@ func (s *BackendServer) SchedulePingOfAddress(honeypotIP string, address string,
 	return true
 }
 
+// resolveToIP resolves a hostname to its first IP address. If address is
+// already a valid IP it is returned unchanged. On resolution failure the
+// original value is returned so the caller can still attempt the fetch.
+func resolveToIP(address string) string {
+	if net.ParseIP(address) != nil {
+		return address
+	}
+	addrs, err := net.LookupHost(address)
+	if err != nil {
+		slog.Warn("could not resolve hostname", slog.String("address", address), slog.String("error", err.Error()))
+		return address
+	}
+	if len(addrs) == 0 {
+		return address
+	}
+	return addrs[0]
+}
+
 // ScheduleNetworkFetch queues a network fetch command for the agent identified
 // by honeypotIP. Returns false if the fetch is deduplicated by the cache or
 // if the source IP has exceeded the per-IP limit.
@@ -1746,7 +1764,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 					if err != nil {
 						logutil.Error("invalid netcat port", req, slog.String("data", m.Data))
 					} else {
-						s.ScheduleNetworkFetch(req.SourceIP, req.HoneypotIP, parts[0], port, backend_service.NetworkProtocol_PROTOCOL_TCP, m.RequestID)
+						s.ScheduleNetworkFetch(req.SourceIP, req.HoneypotIP, resolveToIP(parts[0]), port, backend_service.NetworkProtocol_PROTOCOL_TCP, m.RequestID)
 						networkFetchesScheduled++
 					}
 				}
@@ -1766,7 +1784,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 					if err != nil {
 						logutil.Error("invalid tcp link port", req, slog.String("data", m.Data))
 					} else {
-						s.ScheduleNetworkFetch(req.SourceIP, req.HoneypotIP, parts[0], port, backend_service.NetworkProtocol_PROTOCOL_TCP, m.RequestID)
+						s.ScheduleNetworkFetch(req.SourceIP, req.HoneypotIP, resolveToIP(parts[0]), port, backend_service.NetworkProtocol_PROTOCOL_TCP, m.RequestID)
 						networkFetchesScheduled++
 					}
 				}
