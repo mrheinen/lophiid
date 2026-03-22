@@ -365,6 +365,20 @@ func TestParseQuery(t *testing.T) {
 			result:        [][]SearchRequestsParam{},
 		},
 		{
+			description:   "keyword without separator",
+			queryString:   "field",
+			errorContains: "missing separator after keyword",
+			validFields:   []string{"field"},
+			result:        [][]SearchRequestsParam{},
+		},
+		{
+			description:   "negated keyword without separator",
+			queryString:   "!field",
+			errorContains: "missing separator after keyword",
+			validFields:   []string{"field"},
+			result:        [][]SearchRequestsParam{},
+		},
+		{
 			description:   "special characters in quoted value",
 			queryString:   "field:'!@#$%^&*()'",
 			errorContains: "",

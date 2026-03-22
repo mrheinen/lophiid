@@ -120,6 +120,10 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 			keyword.WriteByte(q[i])
 		}
 
+		if i >= len(q) {
+			return ret, fmt.Errorf("missing separator after keyword %q", keyword.String())
+		}
+
 		if !slices.Contains(validFields, keyword.String()) {
 			return ret, fmt.Errorf("unknown search keyword: %s", keyword.String())
 		}
