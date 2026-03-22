@@ -27,7 +27,7 @@ require (
 	github.com/vingarcia/ksql v1.12.3
 	github.com/vingarcia/ksql/adapters/kpgx5 v1.12.3
 	golang.org/x/net v0.47.0
-	google.golang.org/grpc v1.75.3
+	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.9
 	gopkg.in/yaml.v3 v3.0.1
 	mvdan.cc/xurls/v2 v2.5.0
