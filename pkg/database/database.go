@@ -54,6 +54,8 @@ var CodeEmuTable = ksql.NewTable("llm_code_execution")
 var TagPerRuleTable = ksql.NewTable("tag_per_rule")
 var AppPerGroupTable = ksql.NewTable("app_per_group")
 var RuleGroupTable = ksql.NewTable("rule_group")
+var CampaignTable = ksql.NewTable("campaign")
+var CampaignRequestTable = ksql.NewTable("campaign_request")
 
 type DatabaseClient interface {
 	Close()
@@ -67,6 +69,7 @@ type DatabaseClient interface {
 	SearchApps(offset int64, limit int64, query string) ([]models.Application, error)
 	GetContentByID(id int64) (models.Content, error)
 	GetP0fResultByIP(ip string, querySuffix string) (models.P0fResult, error)
+	SearchP0fResult(offset int64, limit int64, query string) ([]models.P0fResult, error)
 	GetRequestByID(id int64) (models.Request, error)
 	SearchEvents(offset int64, limit int64, query string) ([]models.IpEvent, error)
 	SearchRequests(offset int64, limit int64, query string) ([]models.Request, error)
@@ -79,6 +82,7 @@ type DatabaseClient interface {
 	SearchSession(offset int64, limit int64, query string) ([]models.Session, error)
 	SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error)
 	SearchSessionExecutionContext(offset int64, limit int64, query string) ([]models.SessionExecutionContext, error)
+	CampaignGetUnassignedRequestsWithDescriptions(isMalicious bool, startTime, endTime time.Time) ([]models.RequestWithDescription, error)
 	SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]models.Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
@@ -86,6 +90,9 @@ type DatabaseClient interface {
 	SearchTagPerRequest(offset int64, limit int64, query string) ([]models.TagPerRequest, error)
 	SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error)
 	SearchRuleGroup(offset int64, limit int64, query string) ([]models.RuleGroup, error)
+	SearchCampaigns(offset int64, limit int64, query string) ([]models.Campaign, error)
+	SearchCampaignRequests(offset int64, limit int64, query string) ([]models.CampaignRequest, error)
+	GetCampaignByID(id int64) (models.Campaign, error)
 	GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error)
 	GetAppPerGroupJoin() ([]models.AppPerGroupJoin, error)
@@ -197,6 +204,8 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["TagPerRule"] = &TagPerRuleTable
 	sqlTable["AppPerGroup"] = &AppPerGroupTable
 	sqlTable["RuleGroup"] = &RuleGroupTable
+	sqlTable["Campaign"] = &CampaignTable
+	sqlTable["CampaignRequest"] = &CampaignRequestTable
 
 	table, ok := sqlTable[name]
 	if !ok {
@@ -260,6 +269,12 @@ func (d *KSQLClient) GetP0fResultByIP(ip string, querySuffix string) (models.P0f
 	hp := models.P0fResult{}
 	err := d.db.QueryOne(d.ctx, &hp, fmt.Sprintf("FROM p0f_result WHERE ip = $1 %s", querySuffix), ip)
 	return hp, err
+}
+
+func (d *KSQLClient) SearchP0fResult(offset int64, limit int64, query string) ([]models.P0fResult, error) {
+	var result []models.P0fResult
+	err := d.Search(offset, limit, query, p0fResultConfig, &result)
+	return result, err
 }
 
 func (d *KSQLClient) GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error) {
@@ -536,6 +551,17 @@ func (d *KSQLClient) SearchRuleGroup(offset int64, limit int64, query string) ([
 	return result, err
 }
 
+func (d *KSQLClient) CampaignGetUnassignedRequestsWithDescriptions(isMalicious bool, startTime, endTime time.Time) ([]models.RequestWithDescription, error) {
+	var rds []models.RequestWithDescription
+	var err error
+	if isMalicious {
+		err = d.db.Query(d.ctx, &rds, "FROM request JOIN request_description ON request.cmp_hash = request_description.cmp_hash AND request.campaign_id IS NULL AND ai_malicious = 'yes' AND request.time_received BETWEEN $1 AND $2", startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
+	} else {
+		err = d.db.Query(d.ctx, &rds, "FROM request JOIN request_description ON request.cmp_hash = request_description.cmp_hash AND request.campaign_id IS NULL AND ai_malicious != 'yes' AND request.time_received BETWEEN $1 AND $2", startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
+	}
+	return rds, err
+}
+
 func (d *KSQLClient) GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error) {
 	var md []models.TagPerRequestFull
 	err := d.db.Query(d.ctx, &md, "FROM tag_per_request JOIN tag ON tag.id = tag_per_request.tag_id AND tag_per_request.request_id = $1", id)
@@ -568,6 +594,27 @@ func (d *KSQLClient) ReplaceAppsForGroup(groupID int64, appIDs []int64) error {
 
 		return nil
 	})
+}
+
+// SearchCampaigns searches for campaigns based on the query.
+func (d *KSQLClient) SearchCampaigns(offset int64, limit int64, query string) ([]models.Campaign, error) {
+	var result []models.Campaign
+	err := d.Search(offset, limit, query, campaignConfig, &result)
+	return result, err
+}
+
+// SearchCampaignRequests searches for campaign request links based on the query.
+func (d *KSQLClient) SearchCampaignRequests(offset int64, limit int64, query string) ([]models.CampaignRequest, error) {
+	var result []models.CampaignRequest
+	err := d.Search(offset, limit, query, campaignRequestConfig, &result)
+	return result, err
+}
+
+// GetCampaignByID returns a single campaign by its ID.
+func (d *KSQLClient) GetCampaignByID(id int64) (models.Campaign, error) {
+	var c models.Campaign
+	err := d.db.QueryOne(d.ctx, &c, "FROM campaign WHERE id = $1", id)
+	return c, err
 }
 
 func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error) {

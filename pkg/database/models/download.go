@@ -46,7 +46,7 @@ type Download struct {
 	VTFileAnalysisID        string                   `ksql:"vt_file_analysis_id" json:"vt_file_analysis_id" doc:"The virus total file analysis ID"`
 	VTFileAnalysisSubmitted bool                     `ksql:"vt_file_analysis_submitted" json:"vt_file_analysis_submitted"`
 	VTFileAnalysisDone      bool                     `ksql:"vt_file_analysis_done" json:"vt_file_analysis_done"`
-	VTFileAnalysisResult    pgtype.FlatArray[string] `ksql:"vt_file_analysis_result" json:"vt_file_analysis_result"`
+	VTFileAnalysisResult    pgtype.FlatArray[string] `ksql:"vt_file_analysis_result" json:"vt_file_analysis_result" doc:"Virus total scanner results"`
 	VTAnalysisHarmless      int64                    `ksql:"vt_analysis_harmless" json:"vt_analysis_harmless" doc:"Virus total results marked harmless"`
 	VTAnalysisMalicious     int64                    `ksql:"vt_analysis_malicious" json:"vt_analysis_malicious" doc:"Virus total results marked malicious"`
 	VTAnalysisSuspicious    int64                    `ksql:"vt_analysis_suspicious" json:"vt_analysis_suspicious" doc:"Virus total results marked suspicious"`

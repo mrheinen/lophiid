@@ -17,7 +17,6 @@
 package backend
 
 import (
-	"fmt"
 	"lophiid/pkg/llm"
 	"time"
 )
@@ -151,7 +150,7 @@ type Config struct {
 		MaxInputCharacters int `fig:"max_input_characters" default:"10000"`
 
 		// LLMConfigs holds named LLM configurations that can be referenced by other settings.
-		LLMConfigs []NamedLLMConfig `fig:"llm_configs"`
+		LLMConfigs []llm.NamedLLMConfig `fig:"llm_configs"`
 
 		Responder struct {
 			Enable    bool   `fig:"enable" default:"0"`
@@ -207,22 +206,8 @@ type AIRateLimitConfig struct {
 	MaxRequestsPerBucket int           `fig:"max_requests_per_bucket" default:"20"`
 }
 
-// NamedLLMConfig wraps an LLMManagerConfig with a name for referencing.
-type NamedLLMConfig struct {
-	Name   string               `fig:"name"`
-	Config llm.LLMManagerConfig `fig:"config"`
-}
-
 // GetLLMConfig returns the LLM configuration for the given name.
 // Returns an error if the configuration is not found.
 func (c *Config) GetLLMConfig(name string) (llm.LLMManagerConfig, error) {
-	if len(c.AI.LLMConfigs) == 0 {
-		return llm.LLMManagerConfig{}, fmt.Errorf("no LLM configs defined")
-	}
-	for _, cfg := range c.AI.LLMConfigs {
-		if cfg.Name == name {
-			return cfg.Config, nil
-		}
-	}
-	return llm.LLMManagerConfig{}, fmt.Errorf("LLM config %q not found", name)
+	return llm.FindNamedLLMConfig(c.AI.LLMConfigs, name)
 }

@@ -182,6 +182,9 @@ func main() {
 	r.HandleFunc("/apppergroup/segment", as.HandleSearchAppPerGroup).Methods("GET")
 	r.HandleFunc("/apppergroup/join", as.HandleGetAppsPerGroup).Methods("GET")
 	r.HandleFunc("/apppergroup/update", as.HandleUpdateAppsForGroup).Methods("POST")
+
+	r.HandleFunc("/campaign/segment", as.HandleSearchCampaigns).Methods("GET")
+	r.HandleFunc("/campaign/single", as.HandleGetSingleCampaign).Methods("GET")
 	r.Use(as.AuthMW)
 
 	origins := make([]string, 0)

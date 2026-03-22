@@ -106,6 +106,13 @@ var tagsConfig = SearchConfig{
 	OrderBy:       "updated_at DESC",
 }
 
+var p0fResultConfig = SearchConfig{
+	Table:         &P0fResultTable,
+	TableName:     "p0f_result",
+	AllowedFields: getDatamodelDatabaseFields(models.P0fResult{}),
+	OrderBy:       "last_seen_time DESC",
+}
+
 var whoisConfig = SearchConfig{
 	Table:         &WhoisTable,
 	TableName:     "whois",
@@ -146,4 +153,18 @@ var ruleGroupConfig = SearchConfig{
 	TableName:     "rule_group",
 	AllowedFields: getDatamodelDatabaseFields(models.RuleGroup{}),
 	OrderBy:       "id ASC",
+}
+
+var campaignConfig = SearchConfig{
+	Table:         &CampaignTable,
+	TableName:     "campaign",
+	AllowedFields: getDatamodelDatabaseFields(models.Campaign{}),
+	OrderBy:       "last_seen_at DESC",
+}
+
+var campaignRequestConfig = SearchConfig{
+	Table:         &CampaignRequestTable,
+	TableName:     "campaign_request",
+	AllowedFields: getDatamodelDatabaseFields(models.CampaignRequest{}),
+	OrderBy:       "added_at DESC",
 }

@@ -84,6 +84,13 @@ export default {
           },
         },
         {
+          label: "Campaigns",
+          icon: "pi pi-flag",
+          command: () => {
+            this.$router.push(this.config.campaignsLink);
+          },
+        },
+        {
           label: "Simulate",
           icon: "pi pi-link",
           items: [

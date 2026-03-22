@@ -225,11 +225,55 @@ func TestParseQuery(t *testing.T) {
 			result:        [][]SearchRequestsParam{},
 		},
 		{
-			description:   "empty value after colon",
+			description:   "empty value after colon at end of string",
 			queryString:   "field:",
-			errorContains: "unexpected end of query",
+			errorContains: "",
 			validFields:   []string{"field"},
-			result:        [][]SearchRequestsParam{},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "",
+						matching: IS_NULL,
+					},
+				},
+			},
+		},
+		{
+			description:   "empty value after colon mid-query",
+			queryString:   "campaign_id: status:ACTIVE",
+			errorContains: "",
+			validFields:   []string{"campaign_id", "status"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "campaign_id",
+						value:    "",
+						matching: IS_NULL,
+					},
+					{
+						key:      "status",
+						value:    "ACTIVE",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "negated empty value is NOT NULL",
+			queryString:   "!field:",
+			errorContains: "",
+			validFields:   []string{"field"},
+			result: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "",
+						matching: IS_NULL,
+						not:      true,
+					},
+				},
+			},
 		},
 		{
 			description:   "empty value with quotes",
@@ -503,6 +547,44 @@ func TestBuildComposedQuery(t *testing.T) {
 						key:      "port",
 						value:    "80",
 						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "IS_NULL produces no parameter",
+			errorContains: "",
+			queryPrefix:   "SELECT * FROM table",
+			querySuffix:   "LIMIT 10",
+			resultQuery:   "SELECT * FROM table WHERE (campaign_id IS NULL AND status = $1) LIMIT 10",
+			params: [][]SearchRequestsParam{
+				{
+					{
+						key:      "campaign_id",
+						value:    "",
+						matching: IS_NULL,
+					},
+					{
+						key:      "status",
+						value:    "ACTIVE",
+						matching: IS,
+					},
+				},
+			},
+		},
+		{
+			description:   "IS NOT NULL",
+			errorContains: "",
+			queryPrefix:   "SELECT * FROM table",
+			querySuffix:   "LIMIT 10",
+			resultQuery:   "SELECT * FROM table WHERE (field IS NOT NULL) LIMIT 10",
+			params: [][]SearchRequestsParam{
+				{
+					{
+						key:      "field",
+						value:    "",
+						matching: IS_NULL,
+						not:      true,
 					},
 				},
 			},

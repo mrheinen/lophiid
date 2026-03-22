@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2023-2026 Niels Heinen
+// Copyright (C) 2025 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -16,24 +16,14 @@
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package models
 
-type DataModel interface {
-	ModelID() int64
+import "time"
+
+type CampaignRequest struct {
+	ID         int64     `ksql:"id,skipInserts" json:"id" doc:"The ID of the campaign request link"`
+	CampaignID int64     `ksql:"campaign_id" json:"campaign_id" doc:"The campaign this request belongs to"`
+	RequestID  int64     `ksql:"request_id" json:"request_id" doc:"The request associated with the campaign"`
+	Role       string    `ksql:"role" json:"role" doc:"Role of the request: seed (malicious) or correlated (non-malicious)"`
+	AddedAt    time.Time `ksql:"added_at,skipUpdates" json:"added_at" doc:"When the request was associated with this campaign"`
 }
 
-type ExternalDataModel interface {
-	ModelID() int64
-	ExternalVersion() int64
-	ExternalUuid() string
-	SetExternalUuid(uuid string)
-	SetModelID(id int64)
-}
-
-type TagPerRequestFull struct {
-	TagPerRequest TagPerRequest `tablename:"tag_per_request" json:"tag_per_request"`
-	Tag           Tag           `tablename:"tag" json:"tag"`
-}
-
-type RequestWithDescription struct {
-	Request Request `tablename:"request" json:"request"`
-	Description RequestDescription `tablename:"request_description" json:"description"`
-}
+func (c *CampaignRequest) ModelID() int64 { return c.ID }

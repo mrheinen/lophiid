@@ -91,6 +91,20 @@
             </template>
           </DataColumn>
           <DataColumn
+            header="Campaign"
+            style="width: 5%"
+          >
+            <template #body="slotProps">
+              <a
+                v-if="slotProps.data.campaign_id"
+                :href="config.campaignViewLink + '?id=' + slotProps.data.campaign_id"
+              >
+                #{{ slotProps.data.campaign_id }}
+              </a>
+              <span v-else>-</span>
+            </template>
+          </DataColumn>
+          <DataColumn
             header="Actions"
             style="width: 4%; white-space: nowrap"
           >
