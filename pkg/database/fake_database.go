@@ -21,48 +21,54 @@ import (
 	"lophiid/pkg/database/models"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // FakeDatabaseClient is a struct specifically for testing users of the
 // DatabaseClient interface
 type FakeDatabaseClient struct {
-	ContentIDToReturn               int64
-	ContentsToReturn                map[int64]models.Content
-	ErrorToReturn                   error
-	UpdateErrorToReturn             error
-	ContentRuleIDToReturn           int64
-	ContentRulesToReturn            []models.ContentRule
-	RequestsToReturn                []models.Request
-	RequestToReturn                 models.Request
-	DownloadsToReturn               []models.Download
-	ApplicationToReturn             models.Application
-	AppErrorToReturn                error
-	HoneypotToReturn                models.Honeypot
-	HoneypotErrorToReturn           error
-	QueriesToReturn                 []models.StoredQuery
-	QueriesToReturnError            error
-	TagPerQueryReturn               []models.TagPerQuery
-	TagPerQueryReturnError          error
-	WhoisModelsToReturn             []models.Whois
-	WhoisErrorToReturn              error
-	LastDataModelSeen               any
-	LastExternalDataModelSeen       any
-	P0fResultToReturn               models.P0fResult
-	P0fErrorToReturn                error
-	IpEventToReturn                 models.IpEvent
-	DataModelToReturn               models.DataModel
-	SessionToReturn                 models.Session
-	RequestDescriptionsToReturn     []models.RequestDescription
-	MetadataToReturn                []models.RequestMetadata
-	YarasToReturn                   []models.Yara
-	SimpleQueryResult               any
-	ParameterizedQueryResult        any
-	SessionExecutionContextToReturn []models.SessionExecutionContext
-	TagsPerRuleToReturn             []models.TagPerRule
-	AppPerGroupToReturn             []models.AppPerGroup
-	RuleGroupToReturn               []models.RuleGroup
-	AppPerGroupJoinToReturn         []models.AppPerGroupJoin
-	ContentRulesByAppIDToReturn     map[int64][]models.ContentRule
+	ContentIDToReturn                int64
+	ContentsToReturn                 map[int64]models.Content
+	ErrorToReturn                    error
+	UpdateErrorToReturn              error
+	ContentRuleIDToReturn            int64
+	ContentRulesToReturn             []models.ContentRule
+	RequestsToReturn                 []models.Request
+	RequestToReturn                  models.Request
+	DownloadsToReturn                []models.Download
+	ApplicationToReturn              models.Application
+	AppErrorToReturn                 error
+	HoneypotToReturn                 models.Honeypot
+	HoneypotErrorToReturn            error
+	QueriesToReturn                  []models.StoredQuery
+	QueriesToReturnError             error
+	TagPerQueryReturn                []models.TagPerQuery
+	TagPerQueryReturnError           error
+	WhoisModelsToReturn              []models.Whois
+	WhoisErrorToReturn               error
+	LastDataModelSeen                any
+	LastExternalDataModelSeen        any
+	P0fResultToReturn                models.P0fResult
+	P0fResultsToReturn               []models.P0fResult
+	P0fErrorToReturn                 error
+	IpEventToReturn                  models.IpEvent
+	DataModelToReturn                models.DataModel
+	SessionToReturn                  models.Session
+	RequestDescriptionsToReturn      []models.RequestDescription
+	MetadataToReturn                 []models.RequestMetadata
+	YarasToReturn                    []models.Yara
+	SimpleQueryResult                any
+	ParameterizedQueryResult         any
+	SessionExecutionContextToReturn  []models.SessionExecutionContext
+	TagsPerRuleToReturn              []models.TagPerRule
+	AppPerGroupToReturn              []models.AppPerGroup
+	RuleGroupToReturn                []models.RuleGroup
+	AppPerGroupJoinToReturn          []models.AppPerGroupJoin
+	ContentRulesByAppIDToReturn      map[int64][]models.ContentRule
+	CampaignsToReturn                []models.Campaign
+	CampaignRequestsToReturn         []models.CampaignRequest
+	CampaignToReturn                 models.Campaign
+	RequestsWithDescriptionsToReturn []models.RequestWithDescription
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -169,6 +175,9 @@ func (f *FakeDatabaseClient) GetTagPerRequestFullForRequest(id int64) ([]models.
 func (f *FakeDatabaseClient) GetP0fResultByIP(ip string, querySuffix string) (models.P0fResult, error) {
 	return f.P0fResultToReturn, f.P0fErrorToReturn
 }
+func (f *FakeDatabaseClient) SearchP0fResult(offset int64, limit int64, query string) ([]models.P0fResult, error) {
+	return f.P0fResultsToReturn, f.P0fErrorToReturn
+}
 func (f *FakeDatabaseClient) GetRequestByID(id int64) (models.Request, error) {
 	return f.RequestToReturn, f.ErrorToReturn
 }
@@ -181,15 +190,33 @@ func (f *FakeDatabaseClient) SearchRequestDescription(offset int64, limit int64,
 func (f *FakeDatabaseClient) SearchTagPerRule(offset int64, limit int64, query string) ([]models.TagPerRule, error) {
 	return f.TagsPerRuleToReturn, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) CampaignGetUnassignedRequestsWithDescriptions(isMalicious bool, startTime, endTime time.Time) ([]models.RequestWithDescription, error) {
+	return f.RequestsWithDescriptionsToReturn, f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) {
 	return f.SimpleQueryResult, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) ParameterizedQuery(query string, result any, params ...any) (any, error) {
 	return f.ParameterizedQueryResult, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) ExecStatement(query string, params ...any) error {
+	return f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) InsertBatch(dms []models.DataModel) error {
+	return f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error) {
 	return f.AppPerGroupToReturn, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) SearchRuleGroup(offset int64, limit int64, query string) ([]models.RuleGroup, error) {
 	return f.RuleGroupToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchCampaigns(offset int64, limit int64, query string) ([]models.Campaign, error) {
+	return f.CampaignsToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchCampaignRequests(offset int64, limit int64, query string) ([]models.CampaignRequest, error) {
+	return f.CampaignRequestsToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) GetCampaignByID(id int64) (models.Campaign, error) {
+	return f.CampaignToReturn, f.ErrorToReturn
 }

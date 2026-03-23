@@ -54,10 +54,13 @@ var CodeEmuTable = ksql.NewTable("llm_code_execution")
 var TagPerRuleTable = ksql.NewTable("tag_per_rule")
 var AppPerGroupTable = ksql.NewTable("app_per_group")
 var RuleGroupTable = ksql.NewTable("rule_group")
+var CampaignTable = ksql.NewTable("campaign")
+var CampaignRequestTable = ksql.NewTable("campaign_request")
 
 type DatabaseClient interface {
 	Close()
 	Insert(dm models.DataModel) (models.DataModel, error)
+	InsertBatch(dms []models.DataModel) error
 	InsertExternalModel(dm models.ExternalDataModel) (models.DataModel, error)
 
 	Update(dm models.DataModel) error
@@ -67,6 +70,7 @@ type DatabaseClient interface {
 	SearchApps(offset int64, limit int64, query string) ([]models.Application, error)
 	GetContentByID(id int64) (models.Content, error)
 	GetP0fResultByIP(ip string, querySuffix string) (models.P0fResult, error)
+	SearchP0fResult(offset int64, limit int64, query string) ([]models.P0fResult, error)
 	GetRequestByID(id int64) (models.Request, error)
 	SearchEvents(offset int64, limit int64, query string) ([]models.IpEvent, error)
 	SearchRequests(offset int64, limit int64, query string) ([]models.Request, error)
@@ -79,6 +83,7 @@ type DatabaseClient interface {
 	SearchSession(offset int64, limit int64, query string) ([]models.Session, error)
 	SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error)
 	SearchSessionExecutionContext(offset int64, limit int64, query string) ([]models.SessionExecutionContext, error)
+	CampaignGetUnassignedRequestsWithDescriptions(isMalicious bool, startTime, endTime time.Time) ([]models.RequestWithDescription, error)
 	SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]models.Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
@@ -86,6 +91,9 @@ type DatabaseClient interface {
 	SearchTagPerRequest(offset int64, limit int64, query string) ([]models.TagPerRequest, error)
 	SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error)
 	SearchRuleGroup(offset int64, limit int64, query string) ([]models.RuleGroup, error)
+	SearchCampaigns(offset int64, limit int64, query string) ([]models.Campaign, error)
+	SearchCampaignRequests(offset int64, limit int64, query string) ([]models.CampaignRequest, error)
+	GetCampaignByID(id int64) (models.Campaign, error)
 	GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error)
 	GetAppPerGroupJoin() ([]models.AppPerGroupJoin, error)
@@ -93,6 +101,7 @@ type DatabaseClient interface {
 	GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error)
 	SimpleQuery(query string, result any) (any, error)
 	ParameterizedQuery(query string, result any, params ...any) (any, error)
+	ExecStatement(query string, params ...any) error
 }
 
 // Helper function to get database field names.
@@ -197,6 +206,8 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["TagPerRule"] = &TagPerRuleTable
 	sqlTable["AppPerGroup"] = &AppPerGroupTable
 	sqlTable["RuleGroup"] = &RuleGroupTable
+	sqlTable["Campaign"] = &CampaignTable
+	sqlTable["CampaignRequest"] = &CampaignRequestTable
 
 	table, ok := sqlTable[name]
 	if !ok {
@@ -205,6 +216,166 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	}
 
 	return table
+}
+
+// getTableNameForModel returns the SQL table name string for a DataModel.
+func (d *KSQLClient) getTableNameForModel(dm models.DataModel) string {
+	name := util.GetStructName(dm)
+	tableNames := map[string]string{
+		"Application":             "app",
+		"Request":                 "request",
+		"Content":                 "content",
+		"ContentRule":             "content_rule",
+		"RequestMetadata":         "request_metadata",
+		"Download":                "downloads",
+		"Honeypot":                "honeypot",
+		"Whois":                   "whois",
+		"StoredQuery":             "stored_query",
+		"Tag":                     "tag",
+		"TagPerQuery":             "tag_per_query",
+		"TagPerRequest":           "tag_per_request",
+		"P0fResult":               "p0f_result",
+		"IpEvent":                 "ip_event",
+		"Session":                 "session",
+		"RequestDescription":      "request_description",
+		"Yara":                    "yara",
+		"SessionExecutionContext": "session_execution_context",
+		"LLMCodeExecution":        "llm_code_execution",
+		"TagPerRule":              "tag_per_rule",
+		"AppPerGroup":             "app_per_group",
+		"RuleGroup":               "rule_group",
+		"Campaign":                "campaign",
+		"CampaignRequest":         "campaign_request",
+	}
+	if tn, ok := tableNames[name]; ok {
+		return tn
+	}
+	return ""
+}
+
+// insertFieldInfo holds metadata for a single struct field used in batch inserts.
+type insertFieldInfo struct {
+	columnName string
+	fieldIndex int
+	timeNowUTC bool
+}
+
+// parseInsertFields extracts column names and field indices from a DataModel
+// type, skipping fields tagged with skipInserts.
+func parseInsertFields(dm models.DataModel) []insertFieldInfo {
+	val := reflect.TypeOf(dm)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	var fields []insertFieldInfo
+	for i := range val.NumField() {
+		tag := val.Field(i).Tag.Get("ksql")
+		if tag == "" {
+			continue
+		}
+		parts := strings.Split(tag, ",")
+		colName := parts[0]
+		skip := false
+		timeNow := false
+		for _, p := range parts[1:] {
+			switch p {
+			case "skipInserts":
+				skip = true
+			case "timeNowUTC":
+				timeNow = true
+			case "skipUpdates":
+				// Known modifier, not relevant for inserts.
+			default:
+				slog.Error("unknown ksql tag modifier",
+					slog.String("modifier", p),
+					slog.String("field", val.Field(i).Name),
+				)
+			}
+		}
+		if skip {
+			continue
+		}
+		fields = append(fields, insertFieldInfo{
+			columnName: colName,
+			fieldIndex: i,
+			timeNowUTC: timeNow,
+		})
+	}
+	return fields
+}
+
+// BuildBatchInsertQuery constructs a parameterized INSERT statement and its
+// corresponding parameter slice for a batch of DataModel rows. The tableName
+// identifies the target table and all models must be of the same concrete type.
+func BuildBatchInsertQuery(tableName string, dms []models.DataModel) (string, []any, error) {
+	if len(dms) == 0 {
+		return "", nil, fmt.Errorf("empty model slice")
+	}
+
+	fields := parseInsertFields(dms[0])
+	if len(fields) == 0 {
+		return "", nil, fmt.Errorf("no insertable fields for model")
+	}
+
+	// Build column list.
+	cols := make([]string, len(fields))
+	for i, f := range fields {
+		cols[i] = f.columnName
+	}
+
+	// Build VALUES placeholders and collect params.
+	now := time.Now().UTC()
+	colCount := len(fields)
+	params := make([]any, 0, colCount*len(dms))
+	valueClauses := make([]string, 0, len(dms))
+
+	for rowIdx, dm := range dms {
+		placeholders := make([]string, colCount)
+		rv := reflect.ValueOf(dm)
+		if rv.Kind() == reflect.Ptr {
+			rv = rv.Elem()
+		}
+		for colIdx, f := range fields {
+			paramIdx := rowIdx*colCount + colIdx + 1
+			placeholders[colIdx] = fmt.Sprintf("$%d", paramIdx)
+			if f.timeNowUTC {
+				params = append(params, now)
+			} else {
+				params = append(params, rv.Field(f.fieldIndex).Interface())
+			}
+		}
+		valueClauses = append(valueClauses, "("+strings.Join(placeholders, ", ")+")")
+	}
+
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES %s",
+		tableName,
+		strings.Join(cols, ", "),
+		strings.Join(valueClauses, ", "),
+	)
+
+	return query, params, nil
+}
+
+// InsertBatch inserts multiple DataModel rows in a single INSERT statement.
+// All models in the slice must be of the same concrete type.
+func (d *KSQLClient) InsertBatch(dms []models.DataModel) error {
+	if len(dms) == 0 {
+		return nil
+	}
+
+	tableName := d.getTableNameForModel(dms[0])
+	if tableName == "" {
+		return fmt.Errorf("unknown datamodel: %v", dms[0])
+	}
+
+	query, params, err := BuildBatchInsertQuery(tableName, dms)
+	if err != nil {
+		return fmt.Errorf("building batch insert query: %w", err)
+	}
+
+	_, err = d.db.Exec(d.ctx, query, params...)
+	return err
 }
 
 func (d *KSQLClient) Insert(dm models.DataModel) (models.DataModel, error) {
@@ -262,6 +433,12 @@ func (d *KSQLClient) GetP0fResultByIP(ip string, querySuffix string) (models.P0f
 	return hp, err
 }
 
+func (d *KSQLClient) SearchP0fResult(offset int64, limit int64, query string) ([]models.P0fResult, error) {
+	var result []models.P0fResult
+	err := d.Search(offset, limit, query, p0fResultConfig, &result)
+	return result, err
+}
+
 func (d *KSQLClient) GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error) {
 	var tags []models.TagPerRequest
 	err := d.db.Query(d.ctx, &tags, "FROM tag_per_request WHERE request_id = $1", id)
@@ -283,6 +460,13 @@ func (d *KSQLClient) SimpleQuery(query string, result any) (any, error) {
 func (d *KSQLClient) ParameterizedQuery(query string, result any, params ...any) (any, error) {
 	err := d.db.Query(d.ctx, result, query, params...)
 	return result, err
+}
+
+// ExecStatement executes a SQL statement (UPDATE, DELETE, etc.) that does not
+// return rows. Use this instead of ParameterizedQuery for bulk mutations.
+func (d *KSQLClient) ExecStatement(query string, params ...any) error {
+	_, err := d.db.Exec(d.ctx, query, params...)
+	return err
 }
 
 // Search performs a generic search operation using the provided configuration
@@ -536,6 +720,17 @@ func (d *KSQLClient) SearchRuleGroup(offset int64, limit int64, query string) ([
 	return result, err
 }
 
+func (d *KSQLClient) CampaignGetUnassignedRequestsWithDescriptions(isMalicious bool, startTime, endTime time.Time) ([]models.RequestWithDescription, error) {
+	var rds []models.RequestWithDescription
+	var err error
+	if isMalicious {
+		err = d.db.Query(d.ctx, &rds, "FROM request JOIN request_description ON request.cmp_hash = request_description.cmp_hash AND request.campaign_id IS NULL AND ai_malicious = 'yes' AND request.time_received BETWEEN $1 AND $2", startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
+	} else {
+		err = d.db.Query(d.ctx, &rds, "FROM request JOIN request_description ON request.cmp_hash = request_description.cmp_hash AND request.campaign_id IS NULL AND ai_malicious != 'yes' AND request.time_received BETWEEN $1 AND $2", startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
+	}
+	return rds, err
+}
+
 func (d *KSQLClient) GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error) {
 	var md []models.TagPerRequestFull
 	err := d.db.Query(d.ctx, &md, "FROM tag_per_request JOIN tag ON tag.id = tag_per_request.tag_id AND tag_per_request.request_id = $1", id)
@@ -568,6 +763,27 @@ func (d *KSQLClient) ReplaceAppsForGroup(groupID int64, appIDs []int64) error {
 
 		return nil
 	})
+}
+
+// SearchCampaigns searches for campaigns based on the query.
+func (d *KSQLClient) SearchCampaigns(offset int64, limit int64, query string) ([]models.Campaign, error) {
+	var result []models.Campaign
+	err := d.Search(offset, limit, query, campaignConfig, &result)
+	return result, err
+}
+
+// SearchCampaignRequests searches for campaign request links based on the query.
+func (d *KSQLClient) SearchCampaignRequests(offset int64, limit int64, query string) ([]models.CampaignRequest, error) {
+	var result []models.CampaignRequest
+	err := d.Search(offset, limit, query, campaignRequestConfig, &result)
+	return result, err
+}
+
+// GetCampaignByID returns a single campaign by its ID.
+func (d *KSQLClient) GetCampaignByID(id int64) (models.Campaign, error) {
+	var c models.Campaign
+	err := d.db.QueryOne(d.ctx, &c, "FROM campaign WHERE id = $1", id)
+	return c, err
 }
 
 func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error) {

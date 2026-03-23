@@ -182,6 +182,7 @@ CREATE TYPE public.ip_event_type AS ENUM (
     'BRUTEFORCED',
     'HOSTED_MALWARE',
     'HOST_C2',
+    'NETWORK_FETCH',
     'RATELIMITED',
     'HOSTED_NEW_MALWARE',
     'SENT_MALWARE',
@@ -403,6 +404,43 @@ CREATE TYPE public.yara_status_type AS ENUM (
 
 
 ALTER TYPE public.yara_status_type OWNER TO postgres;
+
+--
+-- Name: campaign_status; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.campaign_status AS ENUM (
+    'ACTIVE',
+    'DORMANT',
+    'CLOSED',
+    'MERGED'
+);
+
+ALTER TYPE public.campaign_status OWNER TO postgres;
+
+--
+-- Name: campaign_severity; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.campaign_severity AS ENUM (
+    'LOW',
+    'MEDIUM',
+    'HIGH',
+    'CRITICAL'
+);
+
+ALTER TYPE public.campaign_severity OWNER TO postgres;
+
+--
+-- Name: campaign_request_role; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.campaign_request_role AS ENUM (
+    'seed',
+    'correlated'
+);
+
+ALTER TYPE public.campaign_request_role OWNER TO postgres;
 
 --
 -- Name: sync_request_refs(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -956,7 +994,8 @@ CREATE TABLE public.request (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
-    triage_target_parameter character varying(2048)
+    triage_target_parameter character varying(2048),
+    campaign_id integer
 )
 PARTITION BY RANGE (created_at);
 
@@ -2543,6 +2582,93 @@ ALTER SEQUENCE public.yara_id_seq OWNED BY public.yara.id;
 
 
 --
+-- Name: campaign; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.campaign (
+    id integer NOT NULL,
+    name character varying(512) DEFAULT ''::character varying,
+    summary text DEFAULT ''::text,
+    severity public.campaign_severity DEFAULT 'LOW'::public.campaign_severity,
+    status public.campaign_status DEFAULT 'ACTIVE'::public.campaign_status,
+    merged_into_id integer,
+    first_seen_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    last_seen_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    source_asns character varying(256)[],
+    source_countries character varying(8)[],
+    targeted_apps character varying(256)[],
+    targeted_cves character varying(64)[],
+    request_count integer DEFAULT 0,
+    fingerprint jsonb DEFAULT '{}'::jsonb,
+    aggregation_state jsonb DEFAULT '{}'::jsonb,
+    enabled_sources character varying(128)[],
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+
+ALTER TABLE public.campaign OWNER TO postgres;
+
+--
+-- Name: campaign_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.campaign_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.campaign_id_seq OWNER TO postgres;
+
+--
+-- Name: campaign_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.campaign_id_seq OWNED BY public.campaign.id;
+
+
+--
+-- Name: campaign_request; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.campaign_request (
+    id integer NOT NULL,
+    campaign_id integer NOT NULL,
+    request_id integer NOT NULL,
+    role public.campaign_request_role DEFAULT 'seed'::public.campaign_request_role,
+    added_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+
+ALTER TABLE public.campaign_request OWNER TO postgres;
+
+--
+-- Name: campaign_request_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.campaign_request_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.campaign_request_id_seq OWNER TO postgres;
+
+--
+-- Name: campaign_request_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.campaign_request_id_seq OWNED BY public.campaign_request.id;
+
+
+--
 -- Name: request_historical; Type: TABLE ATTACH; Schema: public; Owner: postgres
 --
 
@@ -2858,6 +2984,20 @@ ALTER TABLE ONLY public.whois ALTER COLUMN id SET DEFAULT nextval('public.whois_
 --
 
 ALTER TABLE ONLY public.yara ALTER COLUMN id SET DEFAULT nextval('public.yara_id_seq'::regclass);
+
+
+--
+-- Name: campaign id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.campaign ALTER COLUMN id SET DEFAULT nextval('public.campaign_id_seq'::regclass);
+
+
+--
+-- Name: campaign_request id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.campaign_request ALTER COLUMN id SET DEFAULT nextval('public.campaign_request_id_seq'::regclass);
 
 
 --
@@ -3215,6 +3355,50 @@ ALTER TABLE ONLY public.whois
 
 ALTER TABLE ONLY public.yara
     ADD CONSTRAINT yara_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: campaign campaign_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.campaign
+    ADD CONSTRAINT campaign_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: campaign_request campaign_request_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.campaign_request
+    ADD CONSTRAINT campaign_request_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_campaign_request_campaign_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_campaign_request_campaign_id ON public.campaign_request USING btree (campaign_id);
+
+
+--
+-- Name: idx_campaign_request_request_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_campaign_request_request_id ON public.campaign_request USING btree (request_id);
+
+
+--
+-- Name: idx_campaign_request_unique; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX idx_campaign_request_unique ON public.campaign_request (campaign_id, request_id);
+
+
+--
+-- Name: idx_request_campaign_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_request_campaign_id ON ONLY public.request USING btree (campaign_id);
 
 
 --
@@ -8462,6 +8646,30 @@ ALTER TABLE ONLY public.tag_per_request
 
 
 --
+-- Name: campaign_request campaign_request_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.campaign_request
+    ADD CONSTRAINT campaign_request_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.campaign(id) ON DELETE CASCADE;
+
+
+--
+-- Name: campaign_request campaign_request_request_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.campaign_request
+    ADD CONSTRAINT campaign_request_request_id_fkey FOREIGN KEY (request_id) REFERENCES public.request_refs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: campaign campaign_merged_into_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.campaign
+    ADD CONSTRAINT campaign_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES public.campaign(id) ON DELETE SET NULL;
+
+
+--
 -- Name: TABLE app; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -8805,6 +9013,34 @@ GRANT ALL ON TABLE public.yara TO lo;
 --
 
 GRANT ALL ON SEQUENCE public.yara_id_seq TO lo;
+
+
+--
+-- Name: TABLE campaign; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.campaign TO lo;
+
+
+--
+-- Name: SEQUENCE campaign_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.campaign_id_seq TO lo;
+
+
+--
+-- Name: TABLE campaign_request; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.campaign_request TO lo;
+
+
+--
+-- Name: SEQUENCE campaign_request_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.campaign_request_id_seq TO lo;
 
 
 --

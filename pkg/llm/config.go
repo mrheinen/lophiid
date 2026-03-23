@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2025 Niels Heinen
+// Copyright (C) 2023-2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -16,7 +16,10 @@
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package llm
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Config for the LLM (primary and secondary). Used in config below and to
 // initiate LLM instances.
@@ -33,6 +36,12 @@ type LLMConfig struct {
 	OpenRouterReasoningEffort string   `fig:"openrouter_reasoning_effort" default:"none"`
 }
 
+// NamedLLMConfig wraps an LLMManagerConfig with a name for referencing.
+type NamedLLMConfig struct {
+	Name   string           `fig:"name"`
+	Config LLMManagerConfig `fig:"config"`
+}
+
 // LLMManagerConfig configures the LLMManager. The CacheExpirationTime is used
 // for the prompt cache which is shared between the two LLMs. A fallback
 // mechanism will cause the LLMManager to switch between the primary and
@@ -46,4 +55,18 @@ type LLMManagerConfig struct {
 	PromptPrefix        string        `fig:"prompt_prefix" default:""`
 	PromptSuffix        string        `fig:"prompt_suffix" default:""`
 	FallbackInterval    time.Duration `fig:"fallback_interval" default:"1h"`
+}
+
+// FindNamedLLMConfig searches a slice of NamedLLMConfig for the given name
+// and returns the matching LLMManagerConfig.
+func FindNamedLLMConfig(configs []NamedLLMConfig, name string) (LLMManagerConfig, error) {
+	if len(configs) == 0 {
+		return LLMManagerConfig{}, fmt.Errorf("no LLM configs defined")
+	}
+	for _, cfg := range configs {
+		if cfg.Name == name {
+			return cfg.Config, nil
+		}
+	}
+	return LLMManagerConfig{}, fmt.Errorf("LLM config %q not found", name)
 }

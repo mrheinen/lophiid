@@ -1,0 +1,167 @@
+# Campaign Agent Configuration
+#
+# This configuration file is for the lophiid campaign clustering agent.
+# It analyzes honeypot requests to automatically detect, group, and
+# summarize attack campaigns using similarity-based clustering and
+# optional LLM summarization.
+
+general:
+  log_file: /tmp/campaign_agent.log
+  # The log level can be one of debug, info, warn and error.
+  log_level: info
+
+database:
+  # URL to the postgresql database (same database as the backend).
+  url: postgres://lo:passwordhere@localhost/lophiid
+  max_open_connections: 10
+
+prometheus:
+  listen_address: 127.0.0.1:8996
+
+# LLM configuration for campaign summarization.
+# If you don't want LLM summarization, leave llm_config empty or use --skip-llm.
+llm:
+  # Reference one of the named configs below by name.
+  llm_config: oss120
+
+  llm_configs:
+    - name: oss120
+      config:
+        cache_expiration_time: 1h
+        completion_timeout: 600s
+        concurrent_requests: 5
+        primary_llm:
+          api_location: https://openrouter.ai/api/v1
+          model: openai/gpt-oss-120b
+          api_key: xxxx
+
+campaign_agent:
+  # How often the pipeline runs in interval mode.
+  scan_interval: 1h
+  # The time window of requests to consider per pipeline run. Should be at
+  # least as large as scan_interval to avoid gaps. A larger window provides
+  # overlap which helps catch campaigns that span multiple runs.
+  lookback_window: 24h
+
+  # Minimum number of malicious requests needed to form a new campaign.
+  # Lower values catch smaller campaigns but may create noise.
+  campaign_min_requests: 200
+  # Minimum number of unique source IPs needed to form a new campaign.
+  # Helps filter out single-source noise from being classified as a campaign.
+  campaign_min_source_ips: 10
+
+  # Minimum weighted similarity score to match a request to a campaign
+  # fingerprint, or to merge two campaigns. The score is the sum of matching
+  # feature weights, so this should be tuned relative to your source weights.
+  # A value around 1.0-1.5 works well with the default weights below.
+  similarity_threshold: 2.4
+
+  # How long after last_seen_at before an ACTIVE campaign transitions to DORMANT.
+  # Campaigns that stop receiving new requests become dormant after this window.
+  active_window: 48h
+  # How long after last_seen_at before a DORMANT campaign transitions to CLOSED.
+  # A final LLM summary is generated on close.
+  close_window: 168h
+
+  # Fractional growth in request count that triggers LLM re-summarization.
+  # 0.2 means the campaign must grow by 20% before being re-summarized.
+  resummarize_threshold: 0.2
+
+  # How far back to search for historical matches when a new campaign is created.
+  # This retroactively links older malicious requests to newly discovered campaigns.
+  retroactive_lookback: 168h
+
+  # Time buffer added before first_seen and after last_seen when querying for
+  # non-malicious correlated requests around a campaign's time window.
+  correlation_padding: 1h
+
+  # Which correlation strategies to use for linking non-malicious requests to
+  # campaigns. Correlators check if a candidate request shares an identifier
+  # with a campaign's seed requests.
+  # Available: session_id, source_ip, subnet
+  correlation_features:
+    - session_id
+    - source_ip
+    - subnet
+
+  # Data sources and their per-feature similarity weights.
+  # Each source enriches requests with features used for clustering.
+  # The weight controls how much a matching feature contributes to the
+  # similarity score. Higher weights = stronger signal.
+  sources:
+    # Core request metadata (URI, method, hash). Always enable this.
+    request:
+      enabled: true
+      features:
+        # cmp_hash is a normalized hash of the request; very strong signal
+        # that two requests are the same type of attack.
+        cmp_hash: 1.0
+        # base_hash captures the URL structure without parameters.
+        base_hash: 0.3
+        # source_ip match is a moderate signal - attackers often use the same IP.
+        source_ip: 1
+        # The app (honeypot port/service) the request targeted.
+        app_id: 0.1
+
+    # AI-generated request descriptions and classifications.
+    # Requires the describer to be running in the backend.
+    request_description:
+      enabled: true
+      features:
+        # The AI-assigned category of the attack (e.g. "RCE", "SQLi").
+        ai_category: 0.2
+        # The specific CVE or vulnerability targeted, if identified.
+        ai_cve: 0.2
+
+    # Whois/RDAP data for source IPs. Provides country and network range.
+    whois:
+      enabled: true
+      options:
+        # Skip networks larger than this prefix to avoid false positives
+        # from large cloud providers (e.g. /8, /16). Default: 20.
+        max_network_prefix: "20"
+      features:
+        # Country of origin is a weak but useful clustering signal.
+        country: 0.2
+        # Network range groups IPs from the same provider/allocation.
+        network_range: 0.7
+
+    # Passive OS fingerprinting via p0f. Only enable if you run p0f.
+    p0f:
+      enabled: true
+      features:
+        os_name: 0.3
+        os_version: 0
+        link_type: 0
+
+    # IP event data (scans, brute force attempts, etc).
+    ip_event:
+      enabled: false
+      features:
+        event_types: 0.3
+
+    # Session tracking data. Groups requests from the same session.
+    session:
+      enabled: true
+      features:
+        session_request_count: 0
+        behavior_is_human: 0.2
+        behavior_has_bursts: 0.2
+
+    # Downloaded payloads associated with requests.
+    downloads:
+      enabled: true
+      features:
+        # SHA256 of downloaded malware; very strong campaign indicator.
+        download_sha256_hash: 0.9
+        # Same download URL across different hosts strongly indicates a campaign.
+        download_url: 1
+        # Same download hostname is a moderate campaign signal.
+        download_url_hostname: 0.6
+
+  # Optional custom LLM prompt templates. Leave empty to use defaults.
+  # The summarize_template receives a JSON aggregation state and should
+  # return a JSON object with name, summary, and severity fields.
+  llm_prompts:
+    summarize_template: ""
+    final_template: ""

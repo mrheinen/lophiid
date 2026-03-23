@@ -30,6 +30,7 @@ const (
 	LIKE
 	GREATER_THAN
 	LOWER_THAN
+	IS_NULL
 )
 
 type SearchRequestsParam struct {
@@ -119,11 +120,29 @@ func ParseQuery(q string, validFields []string) ([][]SearchRequestsParam, error)
 			keyword.WriteByte(q[i])
 		}
 
+		if i >= len(q) {
+			return ret, fmt.Errorf("missing separator after keyword %q", keyword.String())
+		}
+
 		if !slices.Contains(validFields, keyword.String()) {
 			return ret, fmt.Errorf("unknown search keyword: %s", keyword.String())
 		}
 
 		separator = q[i]
+
+		// Check for empty value (keyword: at end of string or followed by space),
+		// which indicates an IS NULL match.
+		if separator == ':' && (i+1 >= len(q) || unicode.IsSpace(rune(q[i+1]))) {
+			i++ // advance past the separator
+			outsideParam = true
+			currentParams = append(currentParams, SearchRequestsParam{
+				key:      keyword.String(),
+				value:    "",
+				matching: IS_NULL,
+				not:      not,
+			})
+			continue
+		}
 
 		// We move to the start of the value and check if it is between quotes. When
 		// between quotes then we will allow spaces.
@@ -221,6 +240,11 @@ func getLabelWhereClause(index int, s *SearchRequestsParam) (string, error) {
 
 func getWhereClause(index int, s *SearchRequestsParam) (string, error) {
 	switch s.matching {
+	case IS_NULL:
+		if s.not {
+			return fmt.Sprintf("%s IS NOT NULL", s.key), nil
+		}
+		return fmt.Sprintf("%s IS NULL", s.key), nil
 	case IS:
 		if s.not {
 			return fmt.Sprintf("%s != $%d", s.key, index), nil
@@ -281,12 +305,14 @@ func buildComposedQuery(params [][]SearchRequestsParam, queryPrefix string, quer
 
 			if i == 0 {
 				subQuery = wc
-				values = append(values, param.value)
 			} else {
 				subQuery = fmt.Sprintf("%s AND %s", subQuery, wc)
-				values = append(values, param.value)
 			}
-			valueIdx += 1
+			// IS_NULL does not use a parameter placeholder.
+			if param.matching != IS_NULL {
+				values = append(values, param.value)
+				valueIdx += 1
+			}
 		}
 
 		subQueries = append(subQueries, subQuery)

@@ -34,6 +34,7 @@ type BackendClient interface {
 	Connect(connectString string, authToken string) error
 	HandleProbeRequest(probeRequest *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error)
 	HandleUploadFile(request *backend_service.UploadFileRequest) (*backend_service.UploadFileResponse, error)
+	HandleNetworkStatus(request *backend_service.HandleNetworkStatusRequest) (*backend_service.HandleNetworkStatusResponse, error)
 	SendSourceContext(req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error)
 	SendStatus(req *backend_service.StatusRequest) (*backend_service.StatusResponse, error)
 	SendPingStatus(req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error)
@@ -43,19 +44,21 @@ type BackendClient interface {
 // FakeBackendClient is a fake backend client that implements the BackendClient
 // interface and which is useful for testing.
 type FakeBackendClient struct {
-	ConnectReturnError        error // Error you want to return or nil
-	HandleProbeReturnError    error
-	HandleProbeReturnResponse *backend_service.HandleProbeResponse
-	HandleProbeCalled         bool
-	CapturedProbeRequest      *backend_service.HandleProbeRequest
-	SendStatusReturnResponse  *backend_service.StatusResponse
-	SendStatusReturnError     error
-	UploadFileReturnResponse  *backend_service.UploadFileResponse
-	UploadFileReturnError     error
-	SendSourceContextResponse *backend_service.SendSourceContextResponse
-	SendSourceContextError    error
-	SendPingStatusResponse    *backend_service.SendPingStatusResponse
-	SendPingStatusError       error
+	ConnectReturnError          error // Error you want to return or nil
+	HandleProbeReturnError      error
+	HandleProbeReturnResponse   *backend_service.HandleProbeResponse
+	HandleProbeCalled           bool
+	CapturedProbeRequest        *backend_service.HandleProbeRequest
+	SendStatusReturnResponse    *backend_service.StatusResponse
+	SendStatusReturnError       error
+	UploadFileReturnResponse    *backend_service.UploadFileResponse
+	UploadFileReturnError       error
+	SendSourceContextResponse   *backend_service.SendSourceContextResponse
+	SendSourceContextError      error
+	SendPingStatusResponse      *backend_service.SendPingStatusResponse
+	SendPingStatusError         error
+	HandleNetworkStatusResponse *backend_service.HandleNetworkStatusResponse
+	HandleNetworkStatusError    error
 }
 
 func (f *FakeBackendClient) Connect(connectString string, authToken string) error {
@@ -63,6 +66,10 @@ func (f *FakeBackendClient) Connect(connectString string, authToken string) erro
 }
 
 func (f *FakeBackendClient) Disconnect() {}
+
+func (f *FakeBackendClient) HandleNetworkStatus(request *backend_service.HandleNetworkStatusRequest) (*backend_service.HandleNetworkStatusResponse, error) {
+	return f.HandleNetworkStatusResponse, f.HandleNetworkStatusError
+}
 
 func (f *FakeBackendClient) HandleProbeRequest(probeRequest *backend_service.HandleProbeRequest) (*backend_service.HandleProbeResponse, error) {
 	f.CapturedProbeRequest = probeRequest
@@ -80,6 +87,7 @@ func (f *FakeBackendClient) HandleUploadFile(req *backend_service.UploadFileRequ
 func (f *FakeBackendClient) SendSourceContext(req *backend_service.SendSourceContextRequest) (*backend_service.SendSourceContextResponse, error) {
 	return f.SendSourceContextResponse, f.SendSourceContextError
 }
+
 func (f *FakeBackendClient) SendPingStatus(req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error) {
 	return f.SendPingStatusResponse, f.SendPingStatusError
 }
@@ -173,6 +181,10 @@ func (c *SecureBackendClient) SendPingStatus(req *backend_service.SendPingStatus
 	return c.backendClient.SendPingStatus(context.Background(), req)
 }
 
+func (c *SecureBackendClient) HandleNetworkStatus(req *backend_service.HandleNetworkStatusRequest) (*backend_service.HandleNetworkStatusResponse, error) {
+	return c.backendClient.HandleNetworkStatus(context.Background(), req)
+}
+
 // InsecureBackendClient is a backend client that does not use SSL.
 type InsecureBackendClient struct {
 	clientConnect *grpc.ClientConn
@@ -216,4 +228,8 @@ func (c *InsecureBackendClient) SendSourceContext(req *backend_service.SendSourc
 
 func (c *InsecureBackendClient) SendPingStatus(req *backend_service.SendPingStatusRequest) (*backend_service.SendPingStatusResponse, error) {
 	return c.backendClient.SendPingStatus(context.Background(), req)
+}
+
+func (c *InsecureBackendClient) HandleNetworkStatus(req *backend_service.HandleNetworkStatusRequest) (*backend_service.HandleNetworkStatusResponse, error) {
+	return c.backendClient.HandleNetworkStatus(context.Background(), req)
 }

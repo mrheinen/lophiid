@@ -20,6 +20,8 @@ import EventsList from './components/container/EventsList.vue';
 import TagList from './components/container/TagList.vue';
 import YaraList from './components/container/YaraList.vue';
 import RuleGroupList from './components/container/RuleGroupList.vue';
+import CampaignsList from './components/container/CampaignsList.vue';
+import CampaignView from './components/container/CampaignView.vue';
 import GlobalStats from './components/container/GlobalStats.vue';
 import UriStats from './components/container/UriStats.vue';
 import InfoCard from './components/cards/InfoCard.vue';
@@ -139,6 +141,9 @@ const router = createRouter({
     { path: Config.yaraSegmentLink, component: YaraList },
     { path: Config.ruleGroupsLink, component: RuleGroupList },
     { path: Config.ruleGroupsSegmentLink, component: RuleGroupList },
+    { path: Config.campaignsLink, component: CampaignsList },
+    { path: Config.campaignsSegmentLink, component: CampaignsList },
+    { path: Config.campaignViewLink, component: CampaignView },
     { path: Config.statsLink, component: GlobalStats },
     { path: Config.uriStatsLink, component: UriStats },
   ]

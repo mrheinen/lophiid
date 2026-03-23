@@ -17,7 +17,6 @@
 package backend
 
 import (
-	"fmt"
 	"lophiid/pkg/llm"
 	"time"
 )
@@ -68,11 +67,13 @@ type Config struct {
 			MaxDownloadsPerIP int `fig:"max_downloads_per_ip" default:"50"`
 			// Upload limits. By default allow 3MB uploads. Maximum of 5 per 30
 			// minutes per unique IP.
-			MaxUploadSizeBytes         int           `fig:"max_upload_size_bytes" default:"3000000"`
-			MaxUploadsPerIP            int           `fig:"max_uploads_per_ip" default:"5"`
-			MaxUploadsPerIPWindow      time.Duration `fig:"max_uploads_per_ip_window" default:"30m"`
+			MaxUploadSizeBytes    int           `fig:"max_upload_size_bytes" default:"3000000"`
+			MaxUploadsPerIP       int           `fig:"max_uploads_per_ip" default:"5"`
+			MaxUploadsPerIPWindow time.Duration `fig:"max_uploads_per_ip_window" default:"30m"`
 
 			PingCacheDuration          time.Duration `fig:"ping_cache_duration" default:"5m"`
+			NetworkFetchCacheDuration  time.Duration `fig:"network_fetch_cache_duration" default:"5m"`
+			MaxNetworkFetchesPerIP     int           `fig:"max_network_fetches_per_ip" default:"10"`
 			DownloadIPCountersDuration time.Duration `fig:"download_ip_counters_duration" default:"5m"`
 			HoneypotCacheDuration      time.Duration `fig:"honeypot_cache_duration" default:"15m"`
 			PayloadCmpHashDuration     time.Duration `fig:"payload_cmp_hash_duration" default:"45m"`
@@ -149,7 +150,7 @@ type Config struct {
 		MaxInputCharacters int `fig:"max_input_characters" default:"10000"`
 
 		// LLMConfigs holds named LLM configurations that can be referenced by other settings.
-		LLMConfigs []NamedLLMConfig `fig:"llm_configs"`
+		LLMConfigs []llm.NamedLLMConfig `fig:"llm_configs"`
 
 		Responder struct {
 			Enable    bool   `fig:"enable" default:"0"`
@@ -205,22 +206,8 @@ type AIRateLimitConfig struct {
 	MaxRequestsPerBucket int           `fig:"max_requests_per_bucket" default:"20"`
 }
 
-// NamedLLMConfig wraps an LLMManagerConfig with a name for referencing.
-type NamedLLMConfig struct {
-	Name   string               `fig:"name"`
-	Config llm.LLMManagerConfig `fig:"config"`
-}
-
 // GetLLMConfig returns the LLM configuration for the given name.
 // Returns an error if the configuration is not found.
 func (c *Config) GetLLMConfig(name string) (llm.LLMManagerConfig, error) {
-	if len(c.AI.LLMConfigs) == 0 {
-		return llm.LLMManagerConfig{}, fmt.Errorf("no LLM configs defined")
-	}
-	for _, cfg := range c.AI.LLMConfigs {
-		if cfg.Name == name {
-			return cfg.Config, nil
-		}
-	}
-	return llm.LLMManagerConfig{}, fmt.Errorf("LLM config %q not found", name)
+	return llm.FindNamedLLMConfig(c.AI.LLMConfigs, name)
 }

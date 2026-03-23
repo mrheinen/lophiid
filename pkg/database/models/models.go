@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2023-2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -31,4 +31,9 @@ type ExternalDataModel interface {
 type TagPerRequestFull struct {
 	TagPerRequest TagPerRequest `tablename:"tag_per_request" json:"tag_per_request"`
 	Tag           Tag           `tablename:"tag" json:"tag"`
+}
+
+type RequestWithDescription struct {
+	Request Request `tablename:"request" json:"request"`
+	Description RequestDescription `tablename:"request_description" json:"description"`
 }

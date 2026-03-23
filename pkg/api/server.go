@@ -1546,6 +1546,46 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 	a.sendStatus(w, "", ResultSuccess, nil)
 }
 
+// HandleSearchCampaigns handles paginated search queries for campaigns.
+func (a *ApiServer) HandleSearchCampaigns(w http.ResponseWriter, req *http.Request) {
+	offset, limit, query, err := GetQueryParameters(req)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	var rls []models.Campaign
+	rls, err = a.dbc.SearchCampaigns(offset, limit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, rls)
+}
+
+// HandleGetSingleCampaign returns a single campaign by ID.
+func (a *ApiServer) HandleGetSingleCampaign(w http.ResponseWriter, req *http.Request) {
+	idStr := req.URL.Query().Get("id")
+	if idStr == "" {
+		a.sendStatus(w, "id parameter is required", ResultError, nil)
+		return
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		a.sendStatus(w, fmt.Sprintf("invalid id: %s", idStr), ResultError, nil)
+		return
+	}
+
+	campaign, err := a.dbc.GetCampaignByID(id)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, campaign)
+}
+
 func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Request) {
 	modelName := strings.ToLower(req.URL.Query().Get("model"))
 	var retval map[string]database.FieldDocEntry
@@ -1561,6 +1601,7 @@ func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Reques
 		"storedquery": models.StoredQuery{},
 		"ipevent":     models.IpEvent{},
 		"yara":        models.Yara{},
+		"campaign":    models.Campaign{},
 	}
 
 	if model, ok := modelMap[modelName]; ok {
