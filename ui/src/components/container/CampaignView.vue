@@ -379,6 +379,10 @@ export default {
   font-weight: 600;
   font-size: 0.9rem;
 }
+.campaign-view table th {
+  padding-right: 1rem;
+  white-space: nowrap;
+}
 .empty-stat {
   color: var(--p-text-muted-color);
   font-style: italic;

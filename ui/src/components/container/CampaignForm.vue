@@ -148,4 +148,8 @@ export default {
 </script>
 
 <style scoped>
+table th {
+  padding-right: 1rem;
+  white-space: nowrap;
+}
 </style>
