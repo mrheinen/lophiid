@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"lophiid/pkg/database"
-	"lophiid/pkg/database/models"
 )
 
 // RunInterval runs the pipeline on a timer in production mode.
@@ -135,49 +134,32 @@ func RunBackfill(ctx context.Context, pipeline *Pipeline, metrics *PipelineMetri
 }
 
 // WipeCampaignsInWindow deletes all campaigns whose time range overlaps the
-// given [from, to] window. The ON DELETE CASCADE constraint on campaign_request
-// automatically removes associated request links. The denormalized campaign_id
-// on the request table is also cleared for affected requests.
+// given [from, to] window using bulk SQL operations. The ON DELETE CASCADE
+// constraint on campaign_request automatically removes associated request
+// links. The denormalized campaign_id on the request table is also cleared
+// for affected requests.
 func WipeCampaignsInWindow(db database.DatabaseClient, from, to time.Time) error {
-	query := fmt.Sprintf("first_seen_at<%s last_seen_at>%s", to.Format(time.RFC3339), from.Format(time.RFC3339))
-	campaigns, err := db.SearchCampaigns(0, 100000, query)
-	if err != nil {
-		return fmt.Errorf("searching campaigns in window: %w", err)
-	}
-
-	if len(campaigns) == 0 {
-		slog.Info("no campaigns to wipe in window")
-		return nil
-	}
-
 	slog.Info("wiping campaigns in window",
-		slog.Int("count", len(campaigns)),
 		slog.Time("from", from),
 		slog.Time("to", to),
 	)
 
-	for _, c := range campaigns {
-		// Clear denormalized campaign_id on requests before deleting the campaign.
-		if _, err := db.ParameterizedQuery(
-			"UPDATE request SET campaign_id = NULL WHERE campaign_id = $1 AND time_received >= $2 AND time_received <= $3",
-			&[]models.Request{}, c.ID, from, to,
-		); err != nil {
-			slog.Warn("failed to clear request campaign_id",
-				slog.Int64("campaign_id", c.ID),
-				slog.String("error", err.Error()),
-			)
-		}
-
-		if err := db.Delete(&c); err != nil {
-			return fmt.Errorf("deleting campaign %d: %w", c.ID, err)
-		}
-		slog.Info("wiped campaign",
-			slog.Int64("id", c.ID),
-			slog.String("name", c.Name),
-			slog.String("status", c.Status),
-		)
+	// Bulk-clear denormalized campaign_id on requests whose campaign overlaps the window.
+	if err := db.ExecStatement(
+		"UPDATE request SET campaign_id = NULL WHERE campaign_id IN (SELECT id FROM campaign WHERE first_seen_at < $1 AND last_seen_at > $2)",
+		to, from,
+	); err != nil {
+		return fmt.Errorf("bulk clearing request campaign_id: %w", err)
 	}
 
-	slog.Info("wipe complete", slog.Int("campaigns_deleted", len(campaigns)))
+	// Bulk-delete campaigns overlapping the window. ON DELETE CASCADE removes campaign_request links.
+	if err := db.ExecStatement(
+		"DELETE FROM campaign WHERE first_seen_at < $1 AND last_seen_at > $2",
+		to, from,
+	); err != nil {
+		return fmt.Errorf("bulk deleting campaigns: %w", err)
+	}
+
+	slog.Info("wipe complete")
 	return nil
 }

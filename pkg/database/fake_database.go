@@ -199,6 +199,9 @@ func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) 
 func (f *FakeDatabaseClient) ParameterizedQuery(query string, result any, params ...any) (any, error) {
 	return f.ParameterizedQueryResult, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) ExecStatement(query string, params ...any) error {
+	return f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error) {
 	return f.AppPerGroupToReturn, f.ErrorToReturn
 }

@@ -100,6 +100,7 @@ type DatabaseClient interface {
 	GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error)
 	SimpleQuery(query string, result any) (any, error)
 	ParameterizedQuery(query string, result any, params ...any) (any, error)
+	ExecStatement(query string, params ...any) error
 }
 
 // Helper function to get database field names.
@@ -298,6 +299,13 @@ func (d *KSQLClient) SimpleQuery(query string, result any) (any, error) {
 func (d *KSQLClient) ParameterizedQuery(query string, result any, params ...any) (any, error) {
 	err := d.db.Query(d.ctx, result, query, params...)
 	return result, err
+}
+
+// ExecStatement executes a SQL statement (UPDATE, DELETE, etc.) that does not
+// return rows. Use this instead of ParameterizedQuery for bulk mutations.
+func (d *KSQLClient) ExecStatement(query string, params ...any) error {
+	_, err := d.db.Exec(d.ctx, query, params...)
+	return err
 }
 
 // Search performs a generic search operation using the provided configuration
