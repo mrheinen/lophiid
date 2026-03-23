@@ -483,6 +483,7 @@ func (p *Pipeline) phase2Correlate(ctx context.Context, campaigns []models.Campa
 		return
 	}
 
+	slog.Debug("phase2Correlate: starting correlation phase")
 	for _, c := range campaigns {
 		if c.Status != constants.CampaignStatusActive {
 			continue
@@ -572,6 +573,8 @@ func (p *Pipeline) phase3Merge(ctx context.Context, campaigns []models.Campaign,
 	if len(campaigns) < 2 {
 		return
 	}
+
+	slog.Debug("phase3Merge: starting merge phase")
 
 	// Build campaign index for quick lookup.
 	campaignByID := make(map[int64]*models.Campaign)
