@@ -19,6 +19,7 @@ package network
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"time"
@@ -53,7 +54,7 @@ func ReadDataFromTcp(address string, port int64, timeout time.Duration) ([]byte,
 	// Read data from the connection
 	data := make([]byte, MaxTcpReadBufferSize)
 	n, err := conn.Read(data)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return nil, fmt.Errorf("%w: %w", ErrRead, err)
 	}
 
@@ -76,7 +77,7 @@ func ReadDataFromUdp(address string, port int64, timeout time.Duration) ([]byte,
 	// Read data from the connection
 	data := make([]byte, MaxUdpReadBufferSize)
 	n, err := conn.Read(data)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return nil, fmt.Errorf("%w: %w", ErrRead, err)
 	}
 
