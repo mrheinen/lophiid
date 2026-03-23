@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -38,12 +39,7 @@ var (
 
 // ReadDataFromTcp reads data from a TCP connection at the specified IP address and port.
 func ReadDataFromTcp(address string, port int64, timeout time.Duration) ([]byte, error) {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(address, fmt.Sprintf("%d", port)))
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrResolve, err)
-	}
-
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(address, strconv.FormatInt(port, 10)), timeout)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrDial, err)
 	}
@@ -66,12 +62,7 @@ func ReadDataFromTcp(address string, port int64, timeout time.Duration) ([]byte,
 
 // ReadDataFromUdp reads data from a UDP connection at the specified IP address and port.
 func ReadDataFromUdp(address string, port int64, timeout time.Duration) ([]byte, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp", net.JoinHostPort(address, fmt.Sprintf("%d", port)))
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrResolve, err)
-	}
-
-	conn, err := net.DialUDP("udp", nil, udpAddr)
+	conn, err := net.DialTimeout("udp", net.JoinHostPort(address, strconv.FormatInt(port, 10)), timeout)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrDial, err)
 	}
