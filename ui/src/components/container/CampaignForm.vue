@@ -45,14 +45,6 @@
                 <th>Last Seen</th>
                 <td>{{ localCampaign.parsed.last_seen_at }}</td>
               </tr>
-              <tr v-if="localCampaign.targeted_apps && localCampaign.targeted_apps.length">
-                <th>Targeted Apps</th>
-                <td>{{ localCampaign.targeted_apps.join(', ') }}</td>
-              </tr>
-              <tr v-if="localCampaign.targeted_cves && localCampaign.targeted_cves.length">
-                <th>Targeted CVEs</th>
-                <td>{{ localCampaign.targeted_cves.join(', ') }}</td>
-              </tr>
               <tr v-if="localCampaign.source_countries && localCampaign.source_countries.length">
                 <th>Countries</th>
                 <td>{{ localCampaign.source_countries.join(', ') }}</td>
