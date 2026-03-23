@@ -258,7 +258,9 @@ export default {
                 const last = new Date(c.last_seen_at);
                 c.parsed.age_days = Math.max(0, Math.round((last - first) / (1000 * 60 * 60 * 24)));
                 try {
-                  const agg = JSON.parse(c.aggregation_state || '{}');
+                  const agg = (typeof c.aggregation_state === 'string')
+                    ? JSON.parse(c.aggregation_state || '{}')
+                    : (c.aggregation_state || {});
                   c.parsed.ip_count = (agg.sources && agg.sources.unique_ips) ? agg.sources.unique_ips.length : 0;
                 } catch (e) {
                   c.parsed.ip_count = 0;

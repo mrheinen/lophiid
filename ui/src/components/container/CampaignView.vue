@@ -333,9 +333,11 @@ export default {
               last_seen_at: dateToString(this.campaign.last_seen_at),
               created_at: dateToString(this.campaign.created_at),
             };
-            if (this.campaign.aggregation_state && this.campaign.aggregation_state !== '{}') {
+            if (this.campaign.aggregation_state) {
               try {
-                const parsed = JSON.parse(this.campaign.aggregation_state);
+                const parsed = (typeof this.campaign.aggregation_state === 'string')
+                  ? JSON.parse(this.campaign.aggregation_state)
+                  : this.campaign.aggregation_state;
                 this.agg = { ...JSON.parse(JSON.stringify(emptyAgg)), ...parsed };
               } catch (e) {
                 console.warn('Failed to parse aggregation_state:', e);
