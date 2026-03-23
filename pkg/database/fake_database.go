@@ -202,6 +202,9 @@ func (f *FakeDatabaseClient) ParameterizedQuery(query string, result any, params
 func (f *FakeDatabaseClient) ExecStatement(query string, params ...any) error {
 	return f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) InsertBatch(dms []models.DataModel) error {
+	return f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) SearchAppPerGroup(offset int64, limit int64, query string) ([]models.AppPerGroup, error) {
 	return f.AppPerGroupToReturn, f.ErrorToReturn
 }

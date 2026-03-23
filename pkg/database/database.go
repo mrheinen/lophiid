@@ -60,6 +60,7 @@ var CampaignRequestTable = ksql.NewTable("campaign_request")
 type DatabaseClient interface {
 	Close()
 	Insert(dm models.DataModel) (models.DataModel, error)
+	InsertBatch(dms []models.DataModel) error
 	InsertExternalModel(dm models.ExternalDataModel) (models.DataModel, error)
 
 	Update(dm models.DataModel) error
@@ -215,6 +216,166 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	}
 
 	return table
+}
+
+// getTableNameForModel returns the SQL table name string for a DataModel.
+func (d *KSQLClient) getTableNameForModel(dm models.DataModel) string {
+	name := util.GetStructName(dm)
+	tableNames := map[string]string{
+		"Application":             "app",
+		"Request":                 "request",
+		"Content":                 "content",
+		"ContentRule":             "content_rule",
+		"RequestMetadata":         "request_metadata",
+		"Download":                "downloads",
+		"Honeypot":                "honeypot",
+		"Whois":                   "whois",
+		"StoredQuery":             "stored_query",
+		"Tag":                     "tag",
+		"TagPerQuery":             "tag_per_query",
+		"TagPerRequest":           "tag_per_request",
+		"P0fResult":               "p0f_result",
+		"IpEvent":                 "ip_event",
+		"Session":                 "session",
+		"RequestDescription":      "request_description",
+		"Yara":                    "yara",
+		"SessionExecutionContext": "session_execution_context",
+		"LLMCodeExecution":        "llm_code_execution",
+		"TagPerRule":              "tag_per_rule",
+		"AppPerGroup":             "app_per_group",
+		"RuleGroup":               "rule_group",
+		"Campaign":                "campaign",
+		"CampaignRequest":         "campaign_request",
+	}
+	if tn, ok := tableNames[name]; ok {
+		return tn
+	}
+	return ""
+}
+
+// insertFieldInfo holds metadata for a single struct field used in batch inserts.
+type insertFieldInfo struct {
+	columnName string
+	fieldIndex int
+	timeNowUTC bool
+}
+
+// parseInsertFields extracts column names and field indices from a DataModel
+// type, skipping fields tagged with skipInserts.
+func parseInsertFields(dm models.DataModel) []insertFieldInfo {
+	val := reflect.TypeOf(dm)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	var fields []insertFieldInfo
+	for i := range val.NumField() {
+		tag := val.Field(i).Tag.Get("ksql")
+		if tag == "" {
+			continue
+		}
+		parts := strings.Split(tag, ",")
+		colName := parts[0]
+		skip := false
+		timeNow := false
+		for _, p := range parts[1:] {
+			switch p {
+			case "skipInserts":
+				skip = true
+			case "timeNowUTC":
+				timeNow = true
+			case "skipUpdates":
+				// Known modifier, not relevant for inserts.
+			default:
+				slog.Error("unknown ksql tag modifier",
+					slog.String("modifier", p),
+					slog.String("field", val.Field(i).Name),
+				)
+			}
+		}
+		if skip {
+			continue
+		}
+		fields = append(fields, insertFieldInfo{
+			columnName: colName,
+			fieldIndex: i,
+			timeNowUTC: timeNow,
+		})
+	}
+	return fields
+}
+
+// BuildBatchInsertQuery constructs a parameterized INSERT statement and its
+// corresponding parameter slice for a batch of DataModel rows. The tableName
+// identifies the target table and all models must be of the same concrete type.
+func BuildBatchInsertQuery(tableName string, dms []models.DataModel) (string, []any, error) {
+	if len(dms) == 0 {
+		return "", nil, fmt.Errorf("empty model slice")
+	}
+
+	fields := parseInsertFields(dms[0])
+	if len(fields) == 0 {
+		return "", nil, fmt.Errorf("no insertable fields for model")
+	}
+
+	// Build column list.
+	cols := make([]string, len(fields))
+	for i, f := range fields {
+		cols[i] = f.columnName
+	}
+
+	// Build VALUES placeholders and collect params.
+	now := time.Now().UTC()
+	colCount := len(fields)
+	params := make([]any, 0, colCount*len(dms))
+	valueClauses := make([]string, 0, len(dms))
+
+	for rowIdx, dm := range dms {
+		placeholders := make([]string, colCount)
+		rv := reflect.ValueOf(dm)
+		if rv.Kind() == reflect.Ptr {
+			rv = rv.Elem()
+		}
+		for colIdx, f := range fields {
+			paramIdx := rowIdx*colCount + colIdx + 1
+			placeholders[colIdx] = fmt.Sprintf("$%d", paramIdx)
+			if f.timeNowUTC {
+				params = append(params, now)
+			} else {
+				params = append(params, rv.Field(f.fieldIndex).Interface())
+			}
+		}
+		valueClauses = append(valueClauses, "("+strings.Join(placeholders, ", ")+")")
+	}
+
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES %s",
+		tableName,
+		strings.Join(cols, ", "),
+		strings.Join(valueClauses, ", "),
+	)
+
+	return query, params, nil
+}
+
+// InsertBatch inserts multiple DataModel rows in a single INSERT statement.
+// All models in the slice must be of the same concrete type.
+func (d *KSQLClient) InsertBatch(dms []models.DataModel) error {
+	if len(dms) == 0 {
+		return nil
+	}
+
+	tableName := d.getTableNameForModel(dms[0])
+	if tableName == "" {
+		return fmt.Errorf("unknown datamodel: %v", dms[0])
+	}
+
+	query, params, err := BuildBatchInsertQuery(tableName, dms)
+	if err != nil {
+		return fmt.Errorf("building batch insert query: %w", err)
+	}
+
+	_, err = d.db.Exec(d.ctx, query, params...)
+	return err
 }
 
 func (d *KSQLClient) Insert(dm models.DataModel) (models.DataModel, error) {

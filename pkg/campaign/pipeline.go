@@ -395,22 +395,22 @@ func (p *Pipeline) createCampaign(ctx context.Context, requests []EnrichedReques
 	newCampaign := inserted.(*models.Campaign)
 	fingerprints[newCampaign.ID] = fp
 
-	// Link all requests via campaign_request rows.
+	// Link all requests via campaign_request rows in a single batch insert.
+	links := make([]models.DataModel, 0, len(requests))
 	requestIDs := make([]int64, 0, len(requests))
 	for _, r := range requests {
-		link := models.CampaignRequest{
+		links = append(links, &models.CampaignRequest{
 			CampaignID: newCampaign.ID,
 			RequestID:  r.RequestID,
 			Role:       constants.CampaignRequestRoleSeed,
-		}
-		if _, err := p.db.Insert(&link); err != nil {
-			slog.Warn("failed to link request to new campaign",
-				slog.Int64("campaign_id", newCampaign.ID),
-				slog.Int64("request_id", r.RequestID),
-				slog.String("error", err.Error()),
-			)
-		}
+		})
 		requestIDs = append(requestIDs, r.RequestID)
+	}
+	if err := p.db.InsertBatch(links); err != nil {
+		slog.Warn("failed to batch-insert campaign_request links",
+			slog.Int64("campaign_id", newCampaign.ID),
+			slog.String("error", err.Error()),
+		)
 	}
 
 	// Bulk-update denormalized campaign_id on all requests in one round-trip.
