@@ -356,12 +356,16 @@ func (s *AggregationState) ToJSON() (json.RawMessage, error) {
 
 // cappedStringSet converts a set to a slice, capped at maxLen.
 func cappedStringSet(set map[string]bool, maxLen int) []string {
-	result := make([]string, 0, len(set))
-	for k := range set {
-		result = append(result, k)
+	cap := len(set)
+	if cap > maxLen {
+		cap = maxLen
 	}
-	if len(result) > maxLen {
-		result = result[:maxLen]
+	result := make([]string, 0, cap)
+	for k := range set {
+		if len(result) == maxLen {
+			break
+		}
+		result = append(result, k)
 	}
 	return result
 }
