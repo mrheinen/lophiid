@@ -395,7 +395,8 @@ func (p *Pipeline) createCampaign(ctx context.Context, requests []EnrichedReques
 	newCampaign := inserted.(*models.Campaign)
 	fingerprints[newCampaign.ID] = fp
 
-	// Link all requests.
+	// Link all requests via campaign_request rows.
+	requestIDs := make([]int64, 0, len(requests))
 	for _, r := range requests {
 		link := models.CampaignRequest{
 			CampaignID: newCampaign.ID,
@@ -409,12 +410,18 @@ func (p *Pipeline) createCampaign(ctx context.Context, requests []EnrichedReques
 				slog.String("error", err.Error()),
 			)
 		}
-		// Update denormalized campaign_id.
-		req, err := p.db.GetRequestByID(r.RequestID)
-		if err == nil {
-			req.CampaignID = &newCampaign.ID
-			_ = p.db.Update(&req)
-		}
+		requestIDs = append(requestIDs, r.RequestID)
+	}
+
+	// Bulk-update denormalized campaign_id on all requests in one round-trip.
+	if err := p.db.ExecStatement(
+		"UPDATE request SET campaign_id = $1 WHERE id = ANY($2)",
+		newCampaign.ID, requestIDs,
+	); err != nil {
+		slog.Warn("failed to bulk-update request campaign_id",
+			slog.Int64("campaign_id", newCampaign.ID),
+			slog.String("error", err.Error()),
+		)
 	}
 
 	result.CampaignsCreated++
