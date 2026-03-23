@@ -39,9 +39,10 @@ type CandidateRequest struct {
 // CampaignSeedData holds the aggregated identifiers from a campaign's
 // malicious seeds, used for correlation matching.
 type CampaignSeedData struct {
-	SessionIDs map[int64]bool
-	SourceIPs  map[string]bool
-	Subnets    map[string]bool
+	SessionIDs     map[int64]bool
+	SourceIPs      map[string]bool
+	Subnets        map[string]bool
+	SubnetPrefixes []netip.Prefix
 }
 
 // NewCampaignSeedData creates an empty CampaignSeedData.
@@ -50,6 +51,18 @@ func NewCampaignSeedData() CampaignSeedData {
 		SessionIDs: make(map[int64]bool),
 		SourceIPs:  make(map[string]bool),
 		Subnets:    make(map[string]bool),
+	}
+}
+
+// AddSubnet adds a subnet string and its pre-parsed netip.Prefix to the seed
+// data. Duplicate strings are ignored.
+func (d *CampaignSeedData) AddSubnet(subnet string) {
+	if d.Subnets[subnet] {
+		return
+	}
+	d.Subnets[subnet] = true
+	if p, err := netip.ParsePrefix(subnet); err == nil {
+		d.SubnetPrefixes = append(d.SubnetPrefixes, p)
 	}
 }
 
@@ -93,11 +106,7 @@ func (c *SubnetCorrelator) Match(candidate CandidateRequest, seeds CampaignSeedD
 	if err != nil {
 		return false
 	}
-	for s := range seeds.Subnets {
-		seedPrefix, err := netip.ParsePrefix(s)
-		if err != nil {
-			continue
-		}
+	for _, seedPrefix := range seeds.SubnetPrefixes {
 		if seedPrefix.Contains(candPrefix.Addr()) || candPrefix.Contains(seedPrefix.Addr()) {
 			return true
 		}

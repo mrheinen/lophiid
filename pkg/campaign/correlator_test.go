@@ -45,7 +45,7 @@ func TestSourceIPCorrelator_Match(t *testing.T) {
 func TestSubnetCorrelator_Match(t *testing.T) {
 	c := &SubnetCorrelator{}
 	seeds := NewCampaignSeedData()
-	seeds.Subnets["203.0.113.0/24"] = true
+	seeds.AddSubnet("203.0.113.0/24")
 
 	assert.True(t, c.Match(CandidateRequest{Subnet: "203.0.113.0/24"}, seeds))
 	assert.False(t, c.Match(CandidateRequest{Subnet: "198.51.100.0/24"}, seeds))
@@ -55,7 +55,7 @@ func TestSubnetCorrelator_Match(t *testing.T) {
 func TestSubnetCorrelator_MatchContainment(t *testing.T) {
 	c := &SubnetCorrelator{}
 	seeds := NewCampaignSeedData()
-	seeds.Subnets["203.0.113.0/24"] = true
+	seeds.AddSubnet("203.0.113.0/24")
 
 	// A smaller subnet within the seed's /24 should match.
 	assert.True(t, c.Match(CandidateRequest{Subnet: "203.0.113.0/28"}, seeds))

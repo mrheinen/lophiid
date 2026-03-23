@@ -560,7 +560,7 @@ func (p *Pipeline) buildSeedData(campaignID int64) (CampaignSeedData, error) {
 		if err == nil && len(whoisResults) > 0 && len(whoisResults[0].Rdap) > 0 {
 			parser := whoisPkg.NewRdapParser(string(whoisResults[0].Rdap))
 			if network, err := parser.GetNetwork(); err == nil {
-				data.Subnets[network.String()] = true
+				data.AddSubnet(network.String())
 			}
 		}
 	}
