@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2023-2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -26,6 +26,8 @@ type WhoisMetrics struct {
 	whoisLookupResponseTime   prometheus.Histogram
 	whoisRetriesCount         prometheus.Counter
 	whoisRetriesExceededCount prometheus.Counter
+	geoipLookupResponseTime   prometheus.Histogram
+	geoipLookupErrorCount     prometheus.Counter
 }
 
 // Register Metrics
@@ -46,10 +48,22 @@ func CreateWhoisMetrics(reg prometheus.Registerer) *WhoisMetrics {
 				Name: "lophiid_whois_total_retries_exceeded_counter",
 				Help: "Total whois retries exceeded counter",
 			}),
+		geoipLookupResponseTime: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "lophiid_geoip_lookup_duration",
+				Help:    "GeoIP lookup duration",
+				Buckets: metrics.MediumResponseTimebuckets}),
+		geoipLookupErrorCount: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "lophiid_geoip_lookup_errors_total",
+				Help: "Total GeoIP lookup errors",
+			}),
 	}
 
 	reg.MustRegister(m.whoisLookupResponseTime)
 	reg.MustRegister(m.whoisRetriesCount)
 	reg.MustRegister(m.whoisRetriesExceededCount)
+	reg.MustRegister(m.geoipLookupResponseTime)
+	reg.MustRegister(m.geoipLookupErrorCount)
 	return m
 }

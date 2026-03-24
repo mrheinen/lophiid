@@ -28,6 +28,21 @@ type Whois struct {
 	CreatedAt time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at"`
 
+	// GeoIP fields from MaxMind City DB.
+	GeoIPCountry        string  `ksql:"geoip_country" json:"geoip_country"`
+	GeoIPCountryCode    string  `ksql:"geoip_country_code" json:"geoip_country_code"`
+	GeoIPContinent      string  `ksql:"geoip_continent" json:"geoip_continent"`
+	GeoIPCity           string  `ksql:"geoip_city" json:"geoip_city"`
+	GeoIPLatitude       float64 `ksql:"geoip_latitude" json:"geoip_latitude"`
+	GeoIPLongitude      float64 `ksql:"geoip_longitude" json:"geoip_longitude"`
+	GeoIPTimezone       string  `ksql:"geoip_timezone" json:"geoip_timezone"`
+	GeoIPAccuracyRadius uint16  `ksql:"geoip_accuracy_radius" json:"geoip_accuracy_radius"`
+	GeoIPIsInEU         bool    `ksql:"geoip_is_in_eu" json:"geoip_is_in_eu"`
+
+	// GeoIP fields from MaxMind ASN DB.
+	GeoIPASN    uint   `ksql:"geoip_asn" json:"geoip_asn"`
+	GeoIPASNOrg string `ksql:"geoip_asn_org" json:"geoip_asn_org"`
+
 	// The next fields are spefically for the API server.
 	RdapString string `json:"rdap_string"` // rdap field converted to string
 }
