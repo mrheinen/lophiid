@@ -60,6 +60,8 @@ type Request struct {
 	TriageHasPayload      bool                     `ksql:"triage_has_payload" json:"triage_has_payload" doc:"Whether the request has a payload"`
 	TriagePayload         string                   `ksql:"triage_payload" json:"triage_payload" doc:"The payload of the request"`
 	TriagePayloadType     string                   `ksql:"triage_payload_type" json:"triage_payload_type" doc:"The payload type of the request"`
+	TriageDurationMs      int64                    `ksql:"triage_duration_ms" json:"triage_duration_ms" doc:"Duration in ms of the initial triage LLM call"`
+	PreprocessTotalTimeMs int64                    `ksql:"preprocess_total_time_ms" json:"preprocess_total_time_ms" doc:"Total wall-clock time in ms of the preprocess step"`
 	TriageTargetParameter *string                  `ksql:"triage_target_parameter" json:"triage_target_parameter" doc:"The parameter being targeted"`
 	CampaignID            *int64                   `ksql:"campaign_id" json:"campaign_id" doc:"The primary campaign this request belongs to (nil if unassigned)"`
 }

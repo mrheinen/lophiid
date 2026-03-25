@@ -299,7 +299,11 @@ func (s *WhoisSource) EnrichRequest(_ context.Context, req *EnrichedRequest) err
 	if !ok {
 		return nil
 	}
-	req.Features.Set("country", w.Country)
+	// "country" from RDAP is kept for backward compatibility; prefer
+	// "geoip_country" from MaxMind which is more consistently populated.
+	if w.Country != "" {
+		req.Features.Set("country", w.Country)
+	}
 	if w.GeoIPASN != 0 {
 		req.Features.Set("geoip_asn", strconv.FormatUint(uint64(w.GeoIPASN), 10))
 	}
