@@ -2505,7 +2505,18 @@ CREATE TABLE public.whois (
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     country character varying(128) DEFAULT ''::character varying,
-    rdap bytea DEFAULT '\x'::bytea NOT NULL
+    rdap bytea DEFAULT '\x'::bytea NOT NULL,
+    geoip_country character varying(256) DEFAULT ''::character varying,
+    geoip_country_code character varying(4) DEFAULT ''::character varying,
+    geoip_continent character varying(4) DEFAULT ''::character varying,
+    geoip_city character varying(256) DEFAULT ''::character varying,
+    geoip_latitude double precision DEFAULT 0,
+    geoip_longitude double precision DEFAULT 0,
+    geoip_timezone character varying(64) DEFAULT ''::character varying,
+    geoip_accuracy_radius integer DEFAULT 0,
+    geoip_is_in_eu boolean DEFAULT false,
+    geoip_asn integer DEFAULT 0,
+    geoip_asn_org character varying(256) DEFAULT ''::character varying
 );
 
 

@@ -144,6 +144,8 @@ type Config struct {
 		ClientTimeout       time.Duration `fig:"client_timeout" default:"2s"`
 		CacheExpirationTime time.Duration `fig:"cache_expiration_time" default:"12h"`
 		MaxAttempts         int           `fig:"max_attempts" default:"6"`
+		GeoIPEnabled        bool          `fig:"geoip_enabled" default:"false"`
+		GeoIPDbDir          string        `fig:"geoip_db_dir"`
 	} `fig:"whois_manager"`
 
 	AI struct {

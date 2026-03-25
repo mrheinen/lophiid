@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2024 Niels Heinen
+// Copyright (C) 2023-2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -36,7 +36,8 @@ type RdapManager interface {
 type CachedRdapManager struct {
 	dbClient     database.DatabaseClient
 	whoisClient  RdapClientInterface
-	ipCache      util.StringMapCache[bool]
+	ipCache      util.StringMapCache[models.Whois]
+	geoIPLookup  GeoIPLookup
 	lookupMap    map[string]int
 	bgChan       chan bool
 	maxAttempts  int
@@ -48,22 +49,27 @@ type RdapClientInterface interface {
 	QueryIP(ip string) (*rdap.IPNetwork, error)
 }
 
-func NewCachedRdapManager(dbClient database.DatabaseClient, whoisMetrics *WhoisMetrics, rdapClient RdapClientInterface, cacheDuration time.Duration, maxAttempts int) *CachedRdapManager {
+// NewCachedRdapManager creates a new CachedRdapManager. The geoIPLookup
+// parameter may be nil to disable GeoIP enrichment.
+func NewCachedRdapManager(dbClient database.DatabaseClient, whoisMetrics *WhoisMetrics, rdapClient RdapClientInterface, cacheDuration time.Duration, maxAttempts int, geoIPLookup GeoIPLookup) *CachedRdapManager {
 	return &CachedRdapManager{
 		dbClient:     dbClient,
 		whoisClient:  rdapClient,
 		whoisMetrics: whoisMetrics,
+		geoIPLookup:  geoIPLookup,
 		// The int value in the map indicates how many times we have tried to lookup
 		// the whois for that given IP.
 		lookupMap:   make(map[string]int),
 		bgChan:      make(chan bool),
 		maxAttempts: maxAttempts,
-		ipCache:     *util.NewStringMapCache[bool]("whois_ip_cache", cacheDuration),
+		ipCache:     *util.NewStringMapCache[models.Whois]("whois_ip_cache", cacheDuration),
 	}
 }
 
 func (c *CachedRdapManager) Start() {
 	slog.Info("Starting Whois Rdap manager")
+	c.ipCache.Start()
+
 	ticker := time.NewTicker(time.Second * 10)
 	go func() {
 		for {
@@ -80,6 +86,8 @@ func (c *CachedRdapManager) Start() {
 
 func (c *CachedRdapManager) Stop() {
 	slog.Info("Stopping Whois Rdap manager")
+	c.geoIPLookup.Close()
+	c.ipCache.Stop()
 	c.bgChan <- true
 }
 
@@ -96,7 +104,7 @@ func (c *CachedRdapManager) DoWhoisWork() {
 
 			// Pretend we actually have the results. This will prevent new lookups
 			// from happening.
-			c.ipCache.Store(ip, true)
+			c.ipCache.Store(ip, models.Whois{IP: ip})
 			continue
 		}
 		ips = append(ips, ip)
@@ -127,13 +135,19 @@ func (c *CachedRdapManager) DoWhoisWork() {
 
 		rdapPrinter.Print(resNetwork)
 
-		if _, err := c.dbClient.Insert(
-			&models.Whois{
-				IP:      ip,
-				Data:    "",
-				Rdap:    printerOutput.Bytes(),
-				Country: resNetwork.Country,
-			}); err != nil {
+		whoisRecord := models.Whois{
+			IP:      ip,
+			Data:    "",
+			Rdap:    printerOutput.Bytes(),
+			Country: resNetwork.Country,
+		}
+
+		// Enrich with GeoIP data if enabled.
+		if c.geoIPLookup != nil {
+			c.enrichWithGeoIP(ip, &whoisRecord)
+		}
+
+		if _, err := c.dbClient.Insert(&whoisRecord); err != nil {
 			slog.Warn("Failed to store whois in database", slog.String("error", err.Error()))
 			c.whoisMetrics.whoisRetriesCount.Inc()
 			c.mu.Lock()
@@ -146,13 +160,41 @@ func (c *CachedRdapManager) DoWhoisWork() {
 		delete(c.lookupMap, ip)
 		c.mu.Unlock()
 
-		// We don't actually cache the results, we just cache the fact that we have
-		// seen this IP.
-		c.ipCache.Store(ip, true)
+		c.ipCache.Store(ip, whoisRecord)
 		slog.Debug("Added whois record for IP", slog.String("ip", ip))
 	}
+}
 
-	c.ipCache.CleanExpired()
+// enrichWithGeoIP performs a GeoIP lookup for the given IP and populates the
+// GeoIP fields on the Whois record. Errors are logged but do not prevent the
+// whois record from being stored.
+func (c *CachedRdapManager) enrichWithGeoIP(ip string, record *models.Whois) {
+	startTime := time.Now()
+	result, err := c.geoIPLookup.Lookup(ip)
+	c.whoisMetrics.geoipLookupResponseTime.Observe(time.Since(startTime).Seconds())
+
+	if err != nil {
+		slog.Warn("GeoIP lookup failed", slog.String("ip", ip), slog.String("error", err.Error()))
+		c.whoisMetrics.geoipLookupErrorCount.Inc()
+		return
+	}
+
+	ApplyGeoIPResult(record, result)
+}
+
+// ApplyGeoIPResult copies GeoIPResult fields into the Whois model.
+func ApplyGeoIPResult(record *models.Whois, result *GeoIPResult) {
+	record.GeoIPCountry = result.Country
+	record.GeoIPCountryCode = result.CountryCode
+	record.GeoIPContinent = result.Continent
+	record.GeoIPCity = result.City
+	record.GeoIPLatitude = result.Latitude
+	record.GeoIPLongitude = result.Longitude
+	record.GeoIPTimezone = result.Timezone
+	record.GeoIPAccuracyRadius = result.AccuracyRadius
+	record.GeoIPIsInEU = result.IsInEU
+	record.GeoIPASN = result.ASN
+	record.GeoIPASNOrg = result.ASNOrg
 }
 
 func (c *CachedRdapManager) LookupIP(ip string) error {
@@ -170,9 +212,9 @@ func (c *CachedRdapManager) LookupIP(ip string) error {
 
 	} else {
 		if len(hps) != 0 {
-			// Update the cache to recored we already have an entry. In the future we
+			// Update the cache with the existing record. In the future we
 			// might want to look at the age of the entry.
-			c.ipCache.Store(ip, true)
+			c.ipCache.Store(ip, hps[0])
 			return nil
 		}
 	}

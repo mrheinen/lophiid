@@ -134,7 +134,20 @@ func main() {
 	}
 
 	wMetrics := whois.CreateWhoisMetrics(metricsRegistry)
-	whoisManager := whois.NewCachedRdapManager(dbc, wMetrics, rdapClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts)
+
+	// Set up GeoIP lookup if enabled.
+	var geoIPLookup whois.GeoIPLookup
+	if cfg.WhoisManager.GeoIPEnabled {
+		gl, err := whois.NewMaxMindGeoIPLookup(cfg.WhoisManager.GeoIPDbDir)
+		if err != nil {
+			slog.Error("Failed to initialize GeoIP lookup", slog.String("error", err.Error()))
+			return
+		}
+		geoIPLookup = gl
+		slog.Info("GeoIP lookup enabled", slog.String("db_dir", cfg.WhoisManager.GeoIPDbDir))
+	}
+
+	whoisManager := whois.NewCachedRdapManager(dbc, wMetrics, rdapClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts, geoIPLookup)
 	whoisManager.Start()
 
 	secureHttpTransport := &http.Transport{

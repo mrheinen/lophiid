@@ -26,6 +26,7 @@ import (
 	"github.com/openrdap/rdap"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 type FakeRdapClient struct {
@@ -50,7 +51,7 @@ func TestDoWhoisRdapWorkCachesDatabaseMatch(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil)
 
 	// Check that the IP is not in the cache.
 	if _, err := mgr.ipCache.Get(testIP); err == nil {
@@ -82,7 +83,7 @@ func TestDoWhoisRdapWorksOk(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil)
 
 	_, ok := mgr.lookupMap[testIP]
 	if ok {
@@ -122,7 +123,7 @@ func TestDoWhoisRdapWorkRetries(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil)
 
 	// Do the lookup, The database will return an error which simulates the
 	// scenario where there is no record already in the database. As a result the
@@ -179,4 +180,156 @@ func TestDoWhoisRdapWorkRetries(t *testing.T) {
 	if ok {
 		t.Errorf("Expected lookupMap entry to be removed. Instead it has value %d", mgr.lookupMap[testIP])
 	}
+}
+
+func TestDoWhoisWorkEnrichesWithGeoIP(t *testing.T) {
+	dbc := database.FakeDatabaseClient{
+		WhoisModelsToReturn: []models.Whois{},
+		WhoisErrorToReturn:  errors.New("missing"),
+	}
+	testIP := "1.1.1.1"
+	wc := FakeRdapClient{
+		ErrorToReturn: nil,
+	}
+
+	expectedGeoIP := &GeoIPResult{
+		Country:        "Netherlands",
+		CountryCode:    "NL",
+		Continent:      "EU",
+		City:           "Amsterdam",
+		Latitude:       52.3676,
+		Longitude:      4.9041,
+		Timezone:       "Europe/Amsterdam",
+		AccuracyRadius: 100,
+		IsInEU:         true,
+		ASN:            1234,
+		ASNOrg:         "Test Org",
+	}
+
+	fakeGeoIP := &FakeGeoIPLookup{
+		ResultToReturn: expectedGeoIP,
+		ErrorToReturn:  nil,
+	}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateWhoisMetrics(reg)
+
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP)
+
+	if err := mgr.LookupIP(testIP); err != nil {
+		t.Errorf("got unexpected error: %s", err)
+	}
+
+	mgr.DoWhoisWork()
+
+	// Verify the inserted model has GeoIP fields populated.
+	inserted, ok := dbc.LastDataModelSeen.(*models.Whois)
+	if !ok {
+		t.Fatal("expected Insert to be called with *models.Whois")
+	}
+
+	assert.Equal(t, "Netherlands", inserted.GeoIPCountry)
+	assert.Equal(t, "NL", inserted.GeoIPCountryCode)
+	assert.Equal(t, "EU", inserted.GeoIPContinent)
+	assert.Equal(t, "Amsterdam", inserted.GeoIPCity)
+	assert.Equal(t, 52.3676, inserted.GeoIPLatitude)
+	assert.Equal(t, 4.9041, inserted.GeoIPLongitude)
+	assert.Equal(t, "Europe/Amsterdam", inserted.GeoIPTimezone)
+	assert.Equal(t, uint16(100), inserted.GeoIPAccuracyRadius)
+	assert.True(t, inserted.GeoIPIsInEU)
+	assert.Equal(t, uint(1234), inserted.GeoIPASN)
+	assert.Equal(t, "Test Org", inserted.GeoIPASNOrg)
+}
+
+func TestDoWhoisWorkGeoIPErrorIsNonFatal(t *testing.T) {
+	dbc := database.FakeDatabaseClient{
+		WhoisModelsToReturn: []models.Whois{},
+		WhoisErrorToReturn:  errors.New("missing"),
+	}
+	testIP := "1.1.1.1"
+	wc := FakeRdapClient{
+		ErrorToReturn: nil,
+	}
+
+	fakeGeoIP := &FakeGeoIPLookup{
+		ResultToReturn: nil,
+		ErrorToReturn:  errors.New("geoip failed"),
+	}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateWhoisMetrics(reg)
+
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP)
+
+	if err := mgr.LookupIP(testIP); err != nil {
+		t.Errorf("got unexpected error: %s", err)
+	}
+
+	// DoWhoisWork should still succeed and insert the record despite GeoIP failure.
+	mgr.DoWhoisWork()
+
+	// The record should have been inserted (IP removed from lookupMap).
+	_, ok := mgr.lookupMap[testIP]
+	if ok {
+		t.Errorf("expected IP to be removed from lookupMap after successful insert")
+	}
+
+	// GeoIP fields should be zero-valued.
+	inserted, ok := dbc.LastDataModelSeen.(*models.Whois)
+	if !ok {
+		t.Fatal("expected Insert to be called with *models.Whois")
+	}
+	assert.Equal(t, "", inserted.GeoIPCountry)
+	assert.Equal(t, uint(0), inserted.GeoIPASN)
+
+	// Verify the error metric was incremented.
+	metric := testutil.ToFloat64(metrics.geoipLookupErrorCount)
+	assert.Equal(t, float64(1), metric)
+}
+
+func TestDoWhoisWorkGeoIPCacheHit(t *testing.T) {
+	dbc := database.FakeDatabaseClient{
+		WhoisModelsToReturn: []models.Whois{},
+		WhoisErrorToReturn:  errors.New("missing"),
+	}
+	testIP := "1.1.1.1"
+	wc := FakeRdapClient{
+		ErrorToReturn: nil,
+	}
+
+	fakeGeoIP := &FakeGeoIPLookup{
+		ResultToReturn: &GeoIPResult{
+			Country:     "Germany",
+			CountryCode: "DE",
+		},
+		ErrorToReturn: nil,
+	}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateWhoisMetrics(reg)
+
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP)
+
+	// Pre-populate the ipCache with a whois record that has GeoIP data.
+	// This simulates a previously enriched record already being cached.
+	mgr.ipCache.Store(testIP, models.Whois{
+		IP:               testIP,
+		GeoIPCountry:     "Cached Country",
+		GeoIPCountryCode: "CC",
+	})
+
+	// LookupIP should find the IP in the cache and not schedule a lookup.
+	if err := mgr.LookupIP(testIP); err != nil {
+		t.Errorf("got unexpected error: %s", err)
+	}
+
+	// The IP should NOT be in the lookupMap because the cache hit prevents scheduling.
+	_, ok := mgr.lookupMap[testIP]
+	assert.False(t, ok, "expected IP to NOT be in lookupMap due to cache hit")
+
+	// Verify the cached record has the expected GeoIP data.
+	cached, err := mgr.ipCache.Get(testIP)
+	assert.NoError(t, err)
+	assert.Equal(t, "Cached Country", cached.GeoIPCountry)
+	assert.Equal(t, "CC", cached.GeoIPCountryCode)
 }
