@@ -162,7 +162,12 @@ func main() {
 		// Check if a whois record already exists for this IP.
 		existing, err := dbc.SearchWhois(0, 1, fmt.Sprintf("ip:%s", ip))
 
-		if err == nil && len(existing) > 0 {
+		if err != nil {
+			slog.Error("Failed to query whois records", slog.String("ip", ip), slog.String("error", err.Error()))
+			continue
+
+		}
+		if len(existing) > 0 {
 			// Update the existing record.
 			record := existing[0]
 			record.Data = ""
