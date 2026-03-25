@@ -186,7 +186,7 @@ func TestValidate_MultipleValidSources(t *testing.T) {
 	cfg := validTestConfig()
 	cfg.Agent.Sources = map[string]SourceConfig{
 		constants.CampaignSourceRequest: {Enabled: true, Features: map[string]float64{"source_ip": 0.9}},
-		constants.CampaignSourceWhois:   {Enabled: true, Features: map[string]float64{"asn": 0.8}},
+		constants.CampaignSourceWhois:   {Enabled: true, Features: map[string]float64{"geoip_asn": 0.3}},
 		constants.CampaignSourceP0f:     {Enabled: false},
 	}
 	assert.NoError(t, cfg.Validate())
