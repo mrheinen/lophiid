@@ -139,8 +139,11 @@ type cachedRequestDescription struct {
 }
 
 type cachedWhois struct {
-	Country string
-	Rdap    []byte
+	Country      string
+	Rdap         []byte
+	GeoIPASN     uint
+	GeoIPASNOrg  string
+	GeoIPCountry string
 }
 
 type cachedP0f struct {
@@ -276,8 +279,11 @@ func (s *WhoisSource) Preload(_ context.Context, windowStart, windowEnd time.Tim
 			continue
 		}
 		s.cache[w.IP] = cachedWhois{
-			Country: w.Country,
-			Rdap:    w.Rdap,
+			Country:      w.Country,
+			Rdap:         w.Rdap,
+			GeoIPASN:     w.GeoIPASN,
+			GeoIPASNOrg:  w.GeoIPASNOrg,
+			GeoIPCountry: w.GeoIPCountry,
 		}
 	}
 	slog.Info("preloaded whois records", slog.Int("count", len(s.cache)))
@@ -293,8 +299,20 @@ func (s *WhoisSource) EnrichRequest(_ context.Context, req *EnrichedRequest) err
 	if !ok {
 		return nil
 	}
-	req.Features.Set("country", w.Country)
-	// TODO: Add ASN enrichment once we have autnum RDAP data available.
+	// "country" from RDAP is kept for backward compatibility; prefer
+	// "geoip_country" from MaxMind which is more consistently populated.
+	if w.Country != "" {
+		req.Features.Set("country", w.Country)
+	}
+	if w.GeoIPASN != 0 {
+		req.Features.Set("geoip_asn", strconv.FormatUint(uint64(w.GeoIPASN), 10))
+	}
+	if w.GeoIPASNOrg != "" {
+		req.Features.Set("geoip_asn_org", w.GeoIPASNOrg)
+	}
+	if w.GeoIPCountry != "" {
+		req.Features.Set("geoip_country", w.GeoIPCountry)
+	}
 	parser := whoisPkg.NewRdapParser(string(w.Rdap))
 	if network, err := parser.GetNetwork(); err == nil {
 		if network.Bits() >= s.maxNetworkPrefix {

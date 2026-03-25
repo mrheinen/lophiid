@@ -99,7 +99,7 @@ func TestRequestDescriptionSource_PreloadDBError(t *testing.T) {
 func TestWhoisSource_EnrichRequest(t *testing.T) {
 	fakeDB := &database.FakeDatabaseClient{
 		WhoisModelsToReturn: []models.Whois{
-			{IP: "1.2.3.4", Country: "US"},
+			{IP: "1.2.3.4", Country: "US", GeoIPASN: 13335, GeoIPASNOrg: "Cloudflare Inc", GeoIPCountry: "United States"},
 		},
 	}
 
@@ -110,6 +110,9 @@ func TestWhoisSource_EnrichRequest(t *testing.T) {
 	err := s.EnrichRequest(context.Background(), req)
 	require.NoError(t, err)
 	assert.Equal(t, "US", req.Features.Get("country"))
+	assert.Equal(t, "13335", req.Features.Get("geoip_asn"))
+	assert.Equal(t, "Cloudflare Inc", req.Features.Get("geoip_asn_org"))
+	assert.Equal(t, "United States", req.Features.Get("geoip_country"))
 }
 
 func TestWhoisSource_EmptyIP(t *testing.T) {

@@ -36,8 +36,9 @@ func TestBuildWeightMap(t *testing.T) {
 		constants.CampaignSourceWhois: {
 			Enabled: true,
 			Features: map[string]float64{
-				"asn":     0.8,
-				"country": 0.3,
+				"geoip_asn":     0.3,
+				"geoip_asn_org": 0.5,
+				"geoip_country": 0.2,
 			},
 		},
 		constants.CampaignSourceP0f: {
@@ -52,8 +53,9 @@ func TestBuildWeightMap(t *testing.T) {
 
 	assert.Equal(t, 0.9, wm["source_ip"])
 	assert.Equal(t, 0.8, wm["cmp_hash"])
-	assert.Equal(t, 0.8, wm["asn"])
-	assert.Equal(t, 0.3, wm["country"])
+	assert.Equal(t, 0.3, wm["geoip_asn"])
+	assert.Equal(t, 0.5, wm["geoip_asn_org"])
+	assert.Equal(t, 0.2, wm["geoip_country"])
 	assert.Equal(t, 0.0, wm["os_name"], "disabled source features should not be in weight map")
 }
 

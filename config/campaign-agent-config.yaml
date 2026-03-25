@@ -113,7 +113,7 @@ campaign_agent:
         # The specific CVE or vulnerability targeted, if identified.
         ai_cve: 0.2
 
-    # Whois/RDAP data for source IPs. Provides country and network range.
+    # Whois/RDAP data and GeoIP enrichment for source IPs.
     whois:
       enabled: true
       options:
@@ -121,8 +121,14 @@ campaign_agent:
         # from large cloud providers (e.g. /8, /16). Default: 20.
         max_network_prefix: "20"
       features:
-        # Country of origin is a weak but useful clustering signal.
-        country: 0.2
+        # ASN organisation name groups IPs belonging to the same hosting
+        # provider or ISP and is a strong clustering signal.
+        geoip_asn_org: 0.5
+        # Autonomous System Number — useful when the org name varies.
+        geoip_asn: 0.1
+        # Country from MaxMind GeoIP (prefer over RDAP "country" which
+        # can be inconsistently populated).
+        geoip_country: 0.3
         # Network range groups IPs from the same provider/allocation.
         network_range: 0.7
 
