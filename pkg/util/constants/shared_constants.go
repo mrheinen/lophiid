@@ -178,12 +178,13 @@ const (
 )
 
 const (
-	TriagePayloadTypeUnknown      = "UNKNOWN"
-	TriagePayloadTypeShellCommand = "SHELL_COMMAND"
-	TriagePayloadTypeFileAccess   = "FILE_ACCESS"
-	TriagePayloadTypeCodeExec     = "CODE_EXECUTION"
-	TriagePayloadTypeSqlInjection = "SQL_INJECTION"
-	TriagePayloadTypeFileUpload   = "FILE_UPLOAD"
+	TriagePayloadTypeUnknown        = "UNKNOWN"
+	TriagePayloadTypeShellCommand   = "SHELL_COMMAND"
+	TriagePayloadTypeFileAccess     = "FILE_ACCESS"
+	TriagePayloadTypeCodeExec       = "CODE_EXECUTION"
+	TriagePayloadTypeSqlInjection   = "SQL_INJECTION"
+	TriagePayloadTypeFileUpload     = "FILE_UPLOAD"
+	TriagePayloadTypeAuthentication = "AUTHENTICATION"
 )
 
 // Template constants used by the templator.

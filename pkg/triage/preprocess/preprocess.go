@@ -88,6 +88,7 @@ Analyze the provided HTTP request and tell me in the JSON response whether the r
 "SHELL_COMMAND" for anything that looks like shell/cli commands
 "FILE_ACCESS" for attempts to access a file (e.g. /etc/passwd)
 "SQL_INJECTION" for SQL injection attempts (e.g. ' OR 1=1, UNION SELECT)
+"AUTHENTICATION" for requests where the attacker clearly tries to login or authenticate to a service (e.g. sending credentials, tokens, or login form data)
 "UNKNOWN" for when the payload type doesn't fall into the above categories.
 
 When in doubt between CODE_EXECUTION and FILE_UPLOAD: chose FILE_UPLOAD.
@@ -97,6 +98,7 @@ If you chose "FILE_ACCESS" then provide the filename (full path) in the 'payload
 If you chose "FILE_UPLOAD" then provide the filename (full path) of the uploaded file in the target field and the uploaded file itself in the 'payload' field (original bytes of the file, no summary).
 If you chose "CODE_EXECUTION" then provide the code snippet that was attempted to be executed in the 'payload' field.
 If you chose "SQL_INJECTION" then provide the SQL injection payload in the 'payload' field.
+If you chose "AUTHENTICATION" then provide the credentials or authentication data in the 'payload' field.
 If you chose "UNKNOWN" then provide whatever the payload is in the 'payload' field.
 
 The request is:
@@ -208,6 +210,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 	startTime := time.Now()
 
 	defer func() {
+		req.TriageTotalDurationMs = time.Since(startTime).Milliseconds()
 		p.metrics.totalFullPreprocessTime.Observe(time.Since(startTime).Seconds())
 	}()
 
@@ -217,6 +220,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 		return nil, nil, fmt.Errorf("processing request: %w", err)
 	}
 
+	req.TriageInitialDurationMs = time.Since(startTime).Milliseconds()
 	p.metrics.resultOfPayloadLLMRequests.WithLabelValues(llmResultSuccess).Add(1)
 	p.metrics.payloadLLMResponseTime.Observe(time.Since(startTime).Seconds())
 
