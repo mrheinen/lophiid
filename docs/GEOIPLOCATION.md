@@ -1,5 +1,5 @@
 As part of the whois lookup logic, the Lophiid backend can also lookup geo IP
-information from the offline and free Max Mind databases. To make use of this
+information from the offline and free MaxMind databases. To make use of this
 you will first need to download the MaxMind databases and store them in a
 directory accessible for Lophiid.
 
