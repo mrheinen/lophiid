@@ -143,7 +143,6 @@ func main() {
 			slog.Error("Failed to initialize GeoIP lookup", slog.String("error", err.Error()))
 			return
 		}
-		defer gl.Close()
 		geoIPLookup = gl
 		slog.Info("GeoIP lookup enabled", slog.String("db_dir", cfg.WhoisManager.GeoIPDbDir))
 	}

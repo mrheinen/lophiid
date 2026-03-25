@@ -86,6 +86,7 @@ func (c *CachedRdapManager) Start() {
 
 func (c *CachedRdapManager) Stop() {
 	slog.Info("Stopping Whois Rdap manager")
+	c.geoIPLookup.Close()
 	c.ipCache.Stop()
 	c.bgChan <- true
 }
