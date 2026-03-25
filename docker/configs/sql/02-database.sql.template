@@ -272,7 +272,8 @@ CREATE TYPE public.payload_type AS ENUM (
     'FILE_ACCESS',
     'FILE_UPLOAD',
     'CODE_EXECUTION',
-    'SQL_INJECTION'
+    'SQL_INJECTION',
+    'AUTHENTICATION'
 );
 
 
@@ -994,6 +995,8 @@ CREATE TABLE public.request (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048),
     campaign_id integer
 )
@@ -1114,6 +1117,8 @@ CREATE TABLE public.request_historical (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1210,6 +1215,8 @@ CREATE TABLE public.request_y2023m11_12 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1257,6 +1264,8 @@ CREATE TABLE public.request_y2024m01_02 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1304,6 +1313,8 @@ CREATE TABLE public.request_y2024m03_04 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1351,6 +1362,8 @@ CREATE TABLE public.request_y2024m05_06 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1398,6 +1411,8 @@ CREATE TABLE public.request_y2024m07_08 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1445,6 +1460,8 @@ CREATE TABLE public.request_y2024m09_10 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1492,6 +1509,8 @@ CREATE TABLE public.request_y2024m11_12 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1539,6 +1558,8 @@ CREATE TABLE public.request_y2025m01_02 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1586,6 +1607,8 @@ CREATE TABLE public.request_y2025m03_04 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1633,6 +1656,8 @@ CREATE TABLE public.request_y2025m05_06 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1680,6 +1705,8 @@ CREATE TABLE public.request_y2025m07_08 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1727,6 +1754,8 @@ CREATE TABLE public.request_y2025m09_10 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1774,6 +1803,8 @@ CREATE TABLE public.request_y2025m11_12 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1821,6 +1852,8 @@ CREATE TABLE public.request_y2026m01_02 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1868,6 +1901,8 @@ CREATE TABLE public.request_y2026m03_04 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1915,6 +1950,8 @@ CREATE TABLE public.request_y2026m05_06 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -1962,6 +1999,8 @@ CREATE TABLE public.request_y2026m07_08 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -2009,6 +2048,8 @@ CREATE TABLE public.request_y2026m09_10 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
@@ -2056,6 +2097,8 @@ CREATE TABLE public.request_y2026m11_12 (
     triage_payload_type public.payload_type DEFAULT 'UNKNOWN'::public.payload_type,
     triage_has_payload boolean DEFAULT false,
     triaged boolean DEFAULT false,
+    triage_initial_duration_ms integer DEFAULT 0 NOT NULL,
+    triage_total_duration_ms integer DEFAULT 0 NOT NULL,
     triage_target_parameter character varying(2048)
 );
 
