@@ -51,7 +51,7 @@ func TestDoWhoisRdapWorkCachesDatabaseMatch(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil, 0)
 
 	// Check that the IP is not in the cache.
 	if _, err := mgr.ipCache.Get(testIP); err == nil {
@@ -83,7 +83,7 @@ func TestDoWhoisRdapWorksOk(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil, 0)
 
 	_, ok := mgr.lookupMap[testIP]
 	if ok {
@@ -123,7 +123,7 @@ func TestDoWhoisRdapWorkRetries(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, nil, 0)
 
 	// Do the lookup, The database will return an error which simulates the
 	// scenario where there is no record already in the database. As a result the
@@ -214,7 +214,7 @@ func TestDoWhoisWorkEnrichesWithGeoIP(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP, 0)
 
 	if err := mgr.LookupIP(testIP); err != nil {
 		t.Errorf("got unexpected error: %s", err)
@@ -259,7 +259,7 @@ func TestDoWhoisWorkGeoIPErrorIsNonFatal(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP, 0)
 
 	if err := mgr.LookupIP(testIP); err != nil {
 		t.Errorf("got unexpected error: %s", err)
@@ -287,6 +287,64 @@ func TestDoWhoisWorkGeoIPErrorIsNonFatal(t *testing.T) {
 	assert.Equal(t, float64(1), metric)
 }
 
+func TestLookupIPSchedulesRefreshWhenStale(t *testing.T) {
+	dbc := database.FakeDatabaseClient{
+		WhoisModelsToReturn: []models.Whois{
+			{IP: "1.1.1.1", CreatedAt: time.Now().Add(-31 * 24 * time.Hour)},
+		},
+		WhoisErrorToReturn: nil,
+	}
+	testIP := "1.1.1.1"
+	wc := FakeRdapClient{}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateWhoisMetrics(reg)
+
+	// refreshPeriod of 30 days; the DB record is 31 days old so it must refresh.
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Hour, 3, nil, 30*24*time.Hour)
+
+	if err := mgr.LookupIP(testIP); err != nil {
+		t.Errorf("got unexpected error: %s", err)
+	}
+
+	// The IP should be in the cache (we found a DB record).
+	if _, err := mgr.ipCache.Get(testIP); err != nil {
+		t.Errorf("expected entry to be in cache")
+	}
+
+	// The stale record should have triggered a scheduled refresh.
+	_, ok := mgr.lookupMap[testIP]
+	assert.True(t, ok, "expected IP to be in lookupMap for refresh")
+}
+
+func TestLookupIPCacheHitSchedulesRefreshWhenStale(t *testing.T) {
+	dbc := database.FakeDatabaseClient{
+		WhoisModelsToReturn: []models.Whois{},
+		WhoisErrorToReturn:  errors.New("not found"),
+	}
+	testIP := "1.1.1.1"
+	wc := FakeRdapClient{}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateWhoisMetrics(reg)
+
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Hour, 3, nil, 30*24*time.Hour)
+
+	// Pre-populate the cache with a record older than the refresh period.
+	mgr.ipCache.Store(testIP, models.Whois{
+		IP:        testIP,
+		CreatedAt: time.Now().Add(-31 * 24 * time.Hour),
+	})
+
+	if err := mgr.LookupIP(testIP); err != nil {
+		t.Errorf("got unexpected error: %s", err)
+	}
+
+	// The stale cache hit should have scheduled a background refresh.
+	_, ok := mgr.lookupMap[testIP]
+	assert.True(t, ok, "expected IP to be in lookupMap for refresh")
+}
+
 func TestDoWhoisWorkGeoIPCacheHit(t *testing.T) {
 	dbc := database.FakeDatabaseClient{
 		WhoisModelsToReturn: []models.Whois{},
@@ -308,7 +366,7 @@ func TestDoWhoisWorkGeoIPCacheHit(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	metrics := CreateWhoisMetrics(reg)
 
-	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP)
+	mgr := NewCachedRdapManager(&dbc, metrics, &wc, time.Second, 3, fakeGeoIP, 0)
 
 	// Pre-populate the ipCache with a whois record that has GeoIP data.
 	// This simulates a previously enriched record already being cached.

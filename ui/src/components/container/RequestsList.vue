@@ -218,7 +218,7 @@ export default {
       if (this.selectedRequest) {
         this.loadMetadata(this.selectedRequest.id);
         this.loadDescription(this.selectedRequest.cmp_hash);
-        this.loadWhois(this.selectedRequest.source_ip);
+        this.loadWhois(this.selectedRequest.source_ip, this.selectedRequest.created_at);
       }
     },
   },

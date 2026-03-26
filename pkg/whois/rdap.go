@@ -34,15 +34,16 @@ type RdapManager interface {
 }
 
 type CachedRdapManager struct {
-	dbClient     database.DatabaseClient
-	whoisClient  RdapClientInterface
-	ipCache      util.StringMapCache[models.Whois]
-	geoIPLookup  GeoIPLookup
-	lookupMap    map[string]int
-	bgChan       chan bool
-	maxAttempts  int
-	mu           sync.Mutex
-	whoisMetrics *WhoisMetrics
+	dbClient      database.DatabaseClient
+	whoisClient   RdapClientInterface
+	ipCache       util.StringMapCache[models.Whois]
+	geoIPLookup   GeoIPLookup
+	lookupMap     map[string]int
+	bgChan        chan bool
+	maxAttempts   int
+	refreshPeriod time.Duration
+	mu            sync.Mutex
+	whoisMetrics  *WhoisMetrics
 }
 
 type RdapClientInterface interface {
@@ -50,8 +51,9 @@ type RdapClientInterface interface {
 }
 
 // NewCachedRdapManager creates a new CachedRdapManager. The geoIPLookup
-// parameter may be nil to disable GeoIP enrichment.
-func NewCachedRdapManager(dbClient database.DatabaseClient, whoisMetrics *WhoisMetrics, rdapClient RdapClientInterface, cacheDuration time.Duration, maxAttempts int, geoIPLookup GeoIPLookup) *CachedRdapManager {
+// parameter may be nil to disable GeoIP enrichment. Set refreshPeriod to zero
+// to disable automatic re-fetching of stale records.
+func NewCachedRdapManager(dbClient database.DatabaseClient, whoisMetrics *WhoisMetrics, rdapClient RdapClientInterface, cacheDuration time.Duration, maxAttempts int, geoIPLookup GeoIPLookup, refreshPeriod time.Duration) *CachedRdapManager {
 	return &CachedRdapManager{
 		dbClient:     dbClient,
 		whoisClient:  rdapClient,
@@ -59,10 +61,11 @@ func NewCachedRdapManager(dbClient database.DatabaseClient, whoisMetrics *WhoisM
 		geoIPLookup:  geoIPLookup,
 		// The int value in the map indicates how many times we have tried to lookup
 		// the whois for that given IP.
-		lookupMap:   make(map[string]int),
-		bgChan:      make(chan bool),
-		maxAttempts: maxAttempts,
-		ipCache:     *util.NewStringMapCache[models.Whois]("whois_ip_cache", cacheDuration),
+		lookupMap:     make(map[string]int),
+		bgChan:        make(chan bool),
+		maxAttempts:   maxAttempts,
+		refreshPeriod: refreshPeriod,
+		ipCache:       *util.NewStringMapCache[models.Whois]("whois_ip_cache", cacheDuration),
 	}
 }
 
@@ -197,11 +200,29 @@ func ApplyGeoIPResult(record *models.Whois, result *GeoIPResult) {
 	record.GeoIPASNOrg = result.ASNOrg
 }
 
+// scheduleRefresh adds ip to the lookup queue if it is not already present.
+func (c *CachedRdapManager) scheduleRefresh(ip string) {
+	c.mu.Lock()
+	if _, ok := c.lookupMap[ip]; !ok {
+		c.lookupMap[ip] = 0
+	}
+	c.mu.Unlock()
+}
+
+// isStale returns true when the record's CreatedAt is older than refreshPeriod.
+func (c *CachedRdapManager) isStale(record *models.Whois) bool {
+	return c.refreshPeriod > 0 && time.Since(record.CreatedAt) > c.refreshPeriod
+}
+
 func (c *CachedRdapManager) LookupIP(ip string) error {
-	// If we have a cached entry for this IP then we can return
-	// immediately and prevent doing a database query.
-	_, err := c.ipCache.Get(ip)
-	if err == nil {
+	// If we have a cached entry for this IP, return immediately. If the
+	// record is older than refreshPeriod, schedule a background re-fetch so
+	// a fresh record will be inserted on the next lookup cycle.
+	if record, err := c.ipCache.Get(ip); err == nil {
+		if c.isStale(record) {
+			slog.Debug("WHOIS cache hit but record is stale, scheduling refresh", slog.String("ip", ip))
+			c.scheduleRefresh(ip)
+		}
 		return nil
 	}
 
@@ -209,22 +230,20 @@ func (c *CachedRdapManager) LookupIP(ip string) error {
 	hps, err := c.dbClient.SearchWhois(0, 1, fmt.Sprintf("ip:%s", ip))
 	if err != nil {
 		slog.Error("Failed to query whois in database", slog.String("error", err.Error()))
-
 	} else {
 		if len(hps) != 0 {
-			// Update the cache with the existing record. In the future we
-			// might want to look at the age of the entry.
 			c.ipCache.Store(ip, hps[0])
+			// Schedule a fresh lookup if the most recent DB record is stale.
+			if c.isStale(&hps[0]) {
+				slog.Debug("WHOIS DB record is stale, scheduling refresh", slog.String("ip", ip))
+				c.scheduleRefresh(ip)
+			}
 			return nil
 		}
 	}
 
-	// Schedule for lookup, if not already in the map
-	c.mu.Lock()
-	if _, ok := c.lookupMap[ip]; !ok {
-		c.lookupMap[ip] = 0
-	}
-	c.mu.Unlock()
+	// No existing record found: schedule for initial lookup.
+	c.scheduleRefresh(ip)
 	return nil
 }
 

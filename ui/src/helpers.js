@@ -63,17 +63,23 @@ export const sharedMixin = {
   methods: {
 
     // LoadWhois loads the whois for IP.
+    // The optional date parameter (RFC3339 string) selects the record whose
+    // created_at is closest in time to that date.
     //
     // Emits: require-auth
     // Sets:  this.selectedWhois
-    loadWhois(ip) {
+    loadWhois(ip, date) {
+      let body = "ip=" + encodeURIComponent(ip);
+      if (date) {
+        body += "&date=" + encodeURIComponent(date);
+      }
       fetch(this.config.backendAddress + "/whois/ip", {
         method: "POST",
         headers: {
           "API-Key": this.$store.getters.apiToken,
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: "ip=" + ip,
+        body: body,
       })
         .then((response) => {
           if (response.status == 403) {

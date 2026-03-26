@@ -146,6 +146,7 @@ type Config struct {
 		MaxAttempts         int           `fig:"max_attempts" default:"6"`
 		GeoIPEnabled        bool          `fig:"geoip_enabled" default:"false"`
 		GeoIPDbDir          string        `fig:"geoip_db_dir"`
+		RefreshPeriod       time.Duration `fig:"refresh_period" default:"720h"`
 	} `fig:"whois_manager"`
 
 	AI struct {

@@ -147,7 +147,7 @@ func main() {
 		slog.Info("GeoIP lookup enabled", slog.String("db_dir", cfg.WhoisManager.GeoIPDbDir))
 	}
 
-	whoisManager := whois.NewCachedRdapManager(dbc, wMetrics, rdapClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts, geoIPLookup)
+	whoisManager := whois.NewCachedRdapManager(dbc, wMetrics, rdapClient, cfg.WhoisManager.CacheExpirationTime, cfg.WhoisManager.MaxAttempts, geoIPLookup, cfg.WhoisManager.RefreshPeriod)
 	whoisManager.Start()
 
 	secureHttpTransport := &http.Transport{
