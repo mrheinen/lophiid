@@ -185,7 +185,8 @@ func (s *RequestSource) Enabled() bool { return s.enabled }
 func (s *RequestSource) Preload(_ context.Context, _, _ time.Time) error { return nil }
 
 // EnrichRequest is a no-op. Fields (source_ip, cmp_hash, base_hash, uri,
-// method, app_id) are set during request loading in the pipeline.
+// method, app_id, port, triage_payload_type, triage_has_payload, triage_payload)
+// are set during request loading in the pipeline.
 func (s *RequestSource) EnrichRequest(_ context.Context, _ *EnrichedRequest) error {
 	return nil
 }
