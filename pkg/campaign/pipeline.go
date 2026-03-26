@@ -469,7 +469,6 @@ func (p *Pipeline) retroactiveLookback(ctx context.Context, windowStart time.Tim
 			er.Features.Set("app_id", strconv.FormatInt(req.AppID, 10))
 			er.Features.Set("triage_payload_type", req.TriagePayloadType)
 			er.Features.Set("triage_has_payload", strconv.FormatBool(req.TriageHasPayload))
-			er.Features.Set("triage_payload", req.TriagePayload)
 
 			_ = p.registry.EnrichAll(ctx, &er)
 
