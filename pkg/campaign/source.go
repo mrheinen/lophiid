@@ -501,9 +501,9 @@ func (s *DownloadsSource) Enabled() bool { return s.enabled }
 // Preload fetches all downloads in the given time window and caches them by
 // request_id.
 func (s *DownloadsSource) Preload(_ context.Context, windowStart, windowEnd time.Time) error {
-	query := fmt.Sprintf("created_at>%s", windowStart.Format(time.RFC3339))
+	query := fmt.Sprintf("last_seen_at>%s", windowStart.Format(time.RFC3339))
 	if !windowEnd.IsZero() {
-		query += fmt.Sprintf(" created_at<%s", windowEnd.Format(time.RFC3339))
+		query += fmt.Sprintf(" last_seen_at<%s", windowEnd.Format(time.RFC3339))
 	}
 	downloads, err := s.db.SearchDownloads(0, maxPreloadResults, query)
 	if err != nil {

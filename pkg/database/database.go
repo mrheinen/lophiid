@@ -99,6 +99,7 @@ type DatabaseClient interface {
 	GetAppPerGroupJoin() ([]models.AppPerGroupJoin, error)
 	ReplaceAppsForGroup(groupID int64, appIDs []int64) error
 	GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error)
+	BulkGetByField(tableName string, field string, values any, dest any) error
 	SimpleQuery(query string, result any) (any, error)
 	ParameterizedQuery(query string, result any, params ...any) (any, error)
 	ExecStatement(query string, params ...any) error
@@ -784,6 +785,76 @@ func (d *KSQLClient) GetCampaignByID(id int64) (models.Campaign, error) {
 	var c models.Campaign
 	err := d.db.QueryOne(d.ctx, &c, "FROM campaign WHERE id = $1", id)
 	return c, err
+}
+
+// bulkFetchableEntry pairs a SQL table name with its Go model for reflection.
+type bulkFetchableEntry struct {
+	tableName string
+	model     any
+}
+
+// bulkFetchableModels is the explicit list of models that may be bulk-fetched.
+// Adding a model here automatically permits all of its ksql-tagged columns.
+var bulkFetchableModels = []bulkFetchableEntry{
+	{"request", models.Request{}},
+	{"request_description", models.RequestDescription{}},
+	{"p0f_result", models.P0fResult{}},
+	{"whois", models.Whois{}},
+}
+
+// bulkFetchAllowlist maps table name → allowed field names, built at init time.
+var bulkFetchAllowlist map[string]map[string]bool
+
+func init() {
+	bulkFetchAllowlist = make(map[string]map[string]bool, len(bulkFetchableModels))
+	for _, entry := range bulkFetchableModels {
+		fields := getDatamodelDatabaseFields(entry.model)
+		allowed := make(map[string]bool, len(fields))
+		for _, f := range fields {
+			allowed[f] = true
+		}
+		bulkFetchAllowlist[entry.tableName] = allowed
+	}
+}
+
+// bulkGetChunkSize is the maximum number of values per BulkGetByField query.
+const bulkGetChunkSize = 5000
+
+// BulkGetByField fetches all rows from tableName where field matches any value
+// in values (a slice), scanning results into dest (a pointer to a slice). Both
+// tableName and field are validated against the allowlist before use. When
+// len(values) exceeds bulkGetChunkSize the query is split into multiple chunks
+// and the results are merged into dest.
+func (d *KSQLClient) BulkGetByField(tableName, field string, values any, dest any) error {
+	fields, ok := bulkFetchAllowlist[tableName]
+	if !ok || !fields[field] {
+		return fmt.Errorf("BulkGetByField: disallowed combination: %s.%s", tableName, field)
+	}
+
+	query := fmt.Sprintf("FROM %s WHERE %s = ANY($1)", tableName, field)
+
+	vVal := reflect.ValueOf(values)
+	// For non-slice values or slices within the chunk size, use a single query.
+	if vVal.Kind() != reflect.Slice || vVal.Len() <= bulkGetChunkSize {
+		return d.db.Query(d.ctx, dest, query, values)
+	}
+
+	// Split into chunks and accumulate results into dest.
+	destVal := reflect.ValueOf(dest).Elem()
+	total := vVal.Len()
+	for start := 0; start < total; start += bulkGetChunkSize {
+		end := start + bulkGetChunkSize
+		if end > total {
+			end = total
+		}
+		chunk := vVal.Slice(start, end).Interface()
+		chunkDest := reflect.New(reflect.SliceOf(destVal.Type().Elem()))
+		if err := d.db.Query(d.ctx, chunkDest.Interface(), query, chunk); err != nil {
+			return err
+		}
+		destVal.Set(reflect.AppendSlice(destVal, chunkDest.Elem()))
+	}
+	return nil
 }
 
 func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]models.RequestMetadata, error) {

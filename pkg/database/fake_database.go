@@ -19,6 +19,7 @@ package database
 import (
 	"fmt"
 	"lophiid/pkg/database/models"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -69,6 +70,7 @@ type FakeDatabaseClient struct {
 	CampaignRequestsToReturn         []models.CampaignRequest
 	CampaignToReturn                 models.Campaign
 	RequestsWithDescriptionsToReturn []models.RequestWithDescription
+	BulkGetResults                   map[string]any
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -219,4 +221,16 @@ func (f *FakeDatabaseClient) SearchCampaignRequests(offset int64, limit int64, q
 }
 func (f *FakeDatabaseClient) GetCampaignByID(id int64) (models.Campaign, error) {
 	return f.CampaignToReturn, f.ErrorToReturn
+}
+
+// BulkGetByField looks up "tableName:field" in BulkGetResults and copies the
+// stored slice into dest via reflection.
+func (f *FakeDatabaseClient) BulkGetByField(tableName, field string, values any, dest any) error {
+	if f.BulkGetResults != nil {
+		key := tableName + ":" + field
+		if result, ok := f.BulkGetResults[key]; ok {
+			reflect.ValueOf(dest).Elem().Set(reflect.ValueOf(result))
+		}
+	}
+	return f.ErrorToReturn
 }
