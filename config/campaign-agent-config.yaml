@@ -108,6 +108,8 @@ campaign_agent:
         triage_payload_type: 0.2
         # Whether the request has a payload at all.
         triage_has_payload: 0.2
+        # The actual payload extracted by the triage LLM.
+        triage_payload: 0.8
 
     # AI-generated request descriptions and classifications.
     # Requires the describer to be running in the backend.
