@@ -19,10 +19,12 @@ package campaign
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sort"
 	"time"
 
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
 )
 
@@ -36,7 +38,6 @@ const (
 	MaxSamplePayloads       = 10
 	MaxScannerResults       = 20
 	MaxOSFingerprints       = 10
-	MaxTags                 = 50
 	MaxTargetedApps         = 20
 	MaxVulnTypes            = 20
 	MaxMITRETechniques      = 20
@@ -54,7 +55,6 @@ type AggregationState struct {
 	Behavior       BehaviorSection      `json:"behavior"`
 	VTScanResults  []VTScanResult       `json:"vt_scanner_results"`
 	OSFingerprints []OSFingerprint      `json:"os_fingerprints"`
-	Tags           []string             `json:"tags"`
 }
 
 // TimelineSection holds temporal data about the campaign.
@@ -117,8 +117,10 @@ type OSFingerprint struct {
 }
 
 // ComputeAggregationState builds the aggregation state for a campaign from its
-// linked requests and enrichment data. This is a pure DB aggregation.
+// linked requests and enrichment data. Uses bulk queries to avoid N+1 DB
+// round-trips.
 func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*AggregationState, error) {
+	slog.Debug("computing aggregation state for campaign", slog.Int64("campaign_id", campaignID))
 	// Fetch all campaign_request links.
 	links, err := db.SearchCampaignRequests(0, MaxCampaignRequestLinks, fmt.Sprintf("campaign_id:%d", campaignID))
 	if err != nil {
@@ -128,6 +130,69 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 		return &AggregationState{}, nil
 	}
 
+	// Build role lookup and collect request IDs for bulk fetch.
+	roleByRequestID := make(map[int64]string, len(links))
+	requestIDs := make([]int64, 0, len(links))
+	for _, link := range links {
+		roleByRequestID[link.RequestID] = link.Role
+		requestIDs = append(requestIDs, link.RequestID)
+	}
+
+	// Bulk-fetch all requests in one query.
+	var requests []models.Request
+	if err := db.BulkGetByField("request", "id", requestIDs, &requests); err != nil {
+		return nil, fmt.Errorf("bulk-fetching requests: %w", err)
+	}
+
+	// Collect unique cmp_hashes and source IPs for subsequent bulk fetches.
+	cmpHashSet := make(map[string]bool)
+	ipSet := make(map[string]bool)
+	for _, req := range requests {
+		if req.CmpHash != "" {
+			cmpHashSet[req.CmpHash] = true
+		}
+		if req.SourceIP != "" {
+			ipSet[req.SourceIP] = true
+		}
+	}
+
+	uniqueHashes := make([]string, 0, len(cmpHashSet))
+	for h := range cmpHashSet {
+		uniqueHashes = append(uniqueHashes, h)
+	}
+	uniqueIPs := make([]string, 0, len(ipSet))
+	for ip := range ipSet {
+		uniqueIPs = append(uniqueIPs, ip)
+	}
+
+	// Bulk-fetch request descriptions indexed by cmp_hash.
+	descsByHash := make(map[string]models.RequestDescription)
+	var descs []models.RequestDescription
+	if err := db.BulkGetByField("request_description", "cmp_hash", uniqueHashes, &descs); err == nil {
+		for _, d := range descs {
+			descsByHash[d.CmpHash] = d
+		}
+	}
+
+	// Bulk-fetch p0f results indexed by IP.
+	p0fByIP := make(map[string]models.P0fResult)
+	var p0fResults []models.P0fResult
+	if err := db.BulkGetByField("p0f_result", "ip", uniqueIPs, &p0fResults); err == nil {
+		for _, p := range p0fResults {
+			p0fByIP[p.IP] = p
+		}
+	}
+
+	// Bulk-fetch whois records indexed by IP.
+	whoisByIP := make(map[string]models.Whois)
+	var whoisResults []models.Whois
+	if err := db.BulkGetByField("whois", "ip", uniqueIPs, &whoisResults); err == nil {
+		for _, w := range whoisResults {
+			whoisByIP[w.IP] = w
+		}
+	}
+
+	// Iterate over fetched requests using in-memory maps — zero per-row queries.
 	state := &AggregationState{
 		Timeline: TimelineSection{
 			ActivityHistogram: make(map[string]int),
@@ -146,18 +211,14 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 	vulnTypes := make(map[string]bool)
 	mitre := make(map[string]bool)
 	cves := make(map[string]bool)
-	tagSet := make(map[string]bool)
 	osMap := make(map[string]int)
 
 	var firstSeen, lastSeen time.Time
 	seedCount := 0
 	correlatedCount := 0
 
-	for _, link := range links {
-		req, err := db.GetRequestByID(link.RequestID)
-		if err != nil {
-			continue // Skip missing requests.
-		}
+	for _, req := range requests {
+		role := roleByRequestID[req.ID]
 
 		// Timeline.
 		if firstSeen.IsZero() || req.TimeReceived.Before(firstSeen) {
@@ -170,7 +231,7 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 		state.Timeline.ActivityHistogram[day]++
 
 		// Role counts.
-		if link.Role == constants.CampaignRequestRoleSeed {
+		if role == constants.CampaignRequestRoleSeed {
 			seedCount++
 		} else {
 			correlatedCount++
@@ -197,11 +258,9 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 			samplePayloads = append(samplePayloads, payload)
 		}
 
-		// Request description enrichment (AI triage).
+		// Request description enrichment from pre-fetched map.
 		if req.CmpHash != "" {
-			descs, err := db.SearchRequestDescription(0, 1, fmt.Sprintf("cmp_hash:%s", req.CmpHash))
-			if err == nil && len(descs) > 0 {
-				d := descs[0]
+			if d, ok := descsByHash[req.CmpHash]; ok {
 				if d.AIApplication != "" {
 					apps[d.AIApplication] = true
 				}
@@ -217,18 +276,9 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 			}
 		}
 
-		// Tags.
-		tags, err := db.GetTagPerRequestFullForRequest(req.ID)
-		if err == nil {
-			for _, t := range tags {
-				tagSet[t.Tag.Name] = true
-			}
-		}
-
-		// P0f.
+		// P0f from pre-fetched map.
 		if req.SourceIP != "" {
-			p0f, err := db.GetP0fResultByIP(req.SourceIP, "")
-			if err == nil && p0f.OsName != "" {
+			if p0f, ok := p0fByIP[req.SourceIP]; ok && p0f.OsName != "" {
 				osStr := p0f.OsName
 				if p0f.OsVersion != "" {
 					osStr += " " + p0f.OsVersion
@@ -247,15 +297,11 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 	// Populate sources.
 	state.Sources.UniqueIPs = cappedStringSet(ips, MaxUniqueIPs)
 
-	// Look up whois data per unique IP for countries and ASNs.
+	// Populate countries from pre-fetched whois map.
 	countries := make(map[string]bool)
 	for ip := range ips {
-		whoisResults, err := db.SearchWhois(0, 1, fmt.Sprintf("ip:%s", ip))
-		if err == nil && len(whoisResults) > 0 {
-			w := whoisResults[0]
-			if w.Country != "" {
-				countries[w.Country] = true
-			}
+		if w, ok := whoisByIP[ip]; ok && w.Country != "" {
+			countries[w.Country] = true
 		}
 	}
 	state.Sources.UniqueCountries = cappedStringSet(countries, MaxCountries)
@@ -338,9 +384,6 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 		}
 		state.OSFingerprints = append(state.OSFingerprints, OSFingerprint{OS: os, Count: count})
 	}
-
-	// Tags.
-	state.Tags = cappedStringSet(tagSet, MaxTags)
 
 	return state, nil
 }

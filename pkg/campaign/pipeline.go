@@ -446,6 +446,7 @@ func (p *Pipeline) retroactiveLookback(ctx context.Context, windowStart time.Tim
 			continue
 		}
 
+		slog.Debug("retroactive lookback for campaign", slog.Int64("campaign_id", c.ID))
 		historicalRwds, err := p.db.CampaignGetUnassignedRequestsWithDescriptions(true, lookbackStart, windowStart)
 		if err != nil {
 			slog.Warn("retroactive lookback query failed", slog.Int64("campaign_id", c.ID), slog.String("error", err.Error()))
@@ -554,32 +555,55 @@ func (p *Pipeline) phase2Correlate(ctx context.Context, campaigns []models.Campa
 	}
 }
 
-// buildSeedData collects session IDs, source IPs, and subnets from a campaign's seeds.
+// buildSeedData collects session IDs, source IPs, and subnets from a
+// campaign's seeds. Uses bulk queries to avoid per-link DB round-trips.
 func (p *Pipeline) buildSeedData(campaignID int64) (CampaignSeedData, error) {
 	data := NewCampaignSeedData()
 
+	slog.Debug("building seed data for campaign", slog.Int64("campaign_id", campaignID))
 	links, err := p.db.SearchCampaignRequests(0, MaxCampaignRequestLinks, fmt.Sprintf("campaign_id:%d role:seed", campaignID))
 	if err != nil {
 		return data, err
 	}
+	if len(links) == 0 {
+		return data, nil
+	}
 
+	// Bulk-fetch all seed requests in one query.
+	requestIDs := make([]int64, 0, len(links))
 	for _, link := range links {
-		req, err := p.db.GetRequestByID(link.RequestID)
-		if err != nil {
-			continue
-		}
+		requestIDs = append(requestIDs, link.RequestID)
+	}
+	var requests []models.Request
+	if err := p.db.BulkGetByField("request", "id", requestIDs, &requests); err != nil {
+		return data, fmt.Errorf("bulk-fetching seed requests: %w", err)
+	}
+
+	// Collect source IPs and session IDs; gather unique IPs for whois.
+	uniqueIPs := make(map[string]bool)
+	for _, req := range requests {
 		if req.SourceIP != "" {
 			data.SourceIPs[req.SourceIP] = true
+			uniqueIPs[req.SourceIP] = true
 		}
 		if req.SessionID != 0 {
 			data.SessionIDs[req.SessionID] = true
 		}
-		// Subnet from whois, if available.
-		whoisResults, err := p.db.SearchWhois(0, 1, fmt.Sprintf("ip:%s", req.SourceIP))
-		if err == nil && len(whoisResults) > 0 && len(whoisResults[0].Rdap) > 0 {
-			parser := whoisPkg.NewRdapParser(string(whoisResults[0].Rdap))
-			if network, err := parser.GetNetwork(); err == nil {
-				data.AddSubnet(network.String())
+	}
+
+	// Bulk-fetch whois records for all unique source IPs.
+	ipSlice := make([]string, 0, len(uniqueIPs))
+	for ip := range uniqueIPs {
+		ipSlice = append(ipSlice, ip)
+	}
+	var whoisResults []models.Whois
+	if err := p.db.BulkGetByField("whois", "ip", ipSlice, &whoisResults); err == nil {
+		for _, w := range whoisResults {
+			if len(w.Rdap) > 0 {
+				parser := whoisPkg.NewRdapParser(string(w.Rdap))
+				if network, err := parser.GetNetwork(); err == nil {
+					data.AddSubnet(network.String())
+				}
 			}
 		}
 	}

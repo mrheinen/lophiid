@@ -47,27 +47,30 @@ func TestComputeAggregationState_SingleSeed(t *testing.T) {
 		CampaignRequestsToReturn: []models.CampaignRequest{
 			{ID: 1, CampaignID: 10, RequestID: 100, Role: constants.CampaignRequestRoleSeed},
 		},
-		RequestToReturn: models.Request{
-			ID:           100,
-			SourceIP:     "1.2.3.4",
-			Uri:          "/exploit",
-			Method:       "POST",
-			CmpHash:      "abc123",
-			Body:         []byte("malicious payload"),
-			TimeReceived: now,
-		},
-		RequestDescriptionsToReturn: []models.RequestDescription{
-			{
-				CmpHash:             "abc123",
-				AIApplication:       "Apache Struts",
-				AIVulnerabilityType: "RCE",
-				AIMitreAttack:       "T1190",
-				AICVE:               "CVE-2017-5638",
+		BulkGetResults: map[string]any{
+			"request:id": []models.Request{
+				{
+					ID:           100,
+					SourceIP:     "1.2.3.4",
+					Uri:          "/exploit",
+					Method:       "POST",
+					CmpHash:      "abc123",
+					Body:         []byte("malicious payload"),
+					TimeReceived: now,
+				},
 			},
-		},
-		P0fResultToReturn: models.P0fResult{
-			OsName:    "Linux",
-			OsVersion: "3.x",
+			"request_description:cmp_hash": []models.RequestDescription{
+				{
+					CmpHash:             "abc123",
+					AIApplication:       "Apache Struts",
+					AIVulnerabilityType: "RCE",
+					AIMitreAttack:       "T1190",
+					AICVE:               "CVE-2017-5638",
+				},
+			},
+			"p0f_result:ip": []models.P0fResult{
+				{IP: "1.2.3.4", OsName: "Linux", OsVersion: "3.x"},
+			},
 		},
 		DownloadsToReturn: []models.Download{},
 	}
@@ -120,22 +123,19 @@ func TestComputeAggregationState_MixedRoles(t *testing.T) {
 			{ID: 2, CampaignID: 10, RequestID: 101, Role: constants.CampaignRequestRoleCorrelated},
 			{ID: 3, CampaignID: 10, RequestID: 102, Role: constants.CampaignRequestRoleSeed},
 		},
-		RequestToReturn: models.Request{
-			ID:           100,
-			SourceIP:     "1.2.3.4",
-			Uri:          "/test",
-			Method:       "GET",
-			TimeReceived: now,
+		BulkGetResults: map[string]any{
+			"request:id": []models.Request{
+				{ID: 100, SourceIP: "1.2.3.4", Uri: "/test", Method: "GET", TimeReceived: now},
+				{ID: 101, SourceIP: "1.2.3.5", Uri: "/test", Method: "GET", TimeReceived: now},
+				{ID: 102, SourceIP: "1.2.3.6", Uri: "/test", Method: "GET", TimeReceived: now},
+			},
 		},
 		DownloadsToReturn: []models.Download{},
-		P0fErrorToReturn:  assert.AnError,
 	}
 
 	state, err := ComputeAggregationState(fakeDB, 10)
 	require.NoError(t, err)
 
-	// FakeDB returns the same request for all GetRequestByID calls,
-	// so all 3 links resolve to the same request data.
 	assert.Equal(t, 3, state.Behavior.TotalRequests)
 	assert.Equal(t, 2, state.Behavior.MaliciousSeedCount)
 	assert.Equal(t, 1, state.Behavior.CorrelatedReconCount)
@@ -148,12 +148,10 @@ func TestComputeAggregationState_WithDownloads(t *testing.T) {
 		CampaignRequestsToReturn: []models.CampaignRequest{
 			{ID: 1, CampaignID: 10, RequestID: 100, Role: constants.CampaignRequestRoleSeed},
 		},
-		RequestToReturn: models.Request{
-			ID:           100,
-			SourceIP:     "1.2.3.4",
-			Uri:          "/dl",
-			Method:       "GET",
-			TimeReceived: now,
+		BulkGetResults: map[string]any{
+			"request:id": []models.Request{
+				{ID: 100, SourceIP: "1.2.3.4", Uri: "/dl", Method: "GET", TimeReceived: now},
+			},
 		},
 		DownloadsToReturn: []models.Download{
 			{
@@ -164,7 +162,6 @@ func TestComputeAggregationState_WithDownloads(t *testing.T) {
 				VTAnalysisHarmless:   50,
 			},
 		},
-		P0fErrorToReturn: assert.AnError,
 	}
 
 	state, err := ComputeAggregationState(fakeDB, 10)
@@ -188,17 +185,14 @@ func TestComputeAggregationState_DownloadFilteredByCampaign(t *testing.T) {
 		CampaignRequestsToReturn: []models.CampaignRequest{
 			{ID: 1, CampaignID: 10, RequestID: 100, Role: constants.CampaignRequestRoleSeed},
 		},
-		RequestToReturn: models.Request{
-			ID:           100,
-			SourceIP:     "1.2.3.4",
-			Uri:          "/test",
-			Method:       "GET",
-			TimeReceived: now,
+		BulkGetResults: map[string]any{
+			"request:id": []models.Request{
+				{ID: 100, SourceIP: "1.2.3.4", Uri: "/test", Method: "GET", TimeReceived: now},
+			},
 		},
 		DownloadsToReturn: []models.Download{
 			{RequestID: 999, SHA256sum: "should-not-appear", VTAnalysisMalicious: 5},
 		},
-		P0fErrorToReturn: assert.AnError,
 	}
 
 	state, err := ComputeAggregationState(fakeDB, 10)
