@@ -209,6 +209,9 @@ func (p *Pipeline) phase1Seed(ctx context.Context, windowStart, windowEnd time.T
 		er.Features.Set("uri", req.Uri)
 		er.Features.Set("method", req.Method)
 		er.Features.Set("app_id", strconv.FormatInt(req.AppID, 10))
+		er.Features.Set("triage_payload_type", req.TriagePayloadType)
+		er.Features.Set("triage_has_payload", strconv.FormatBool(req.TriageHasPayload))
+		er.Features.Set("triage_payload", req.TriagePayload)
 
 		if err := p.registry.EnrichAll(ctx, &er); err != nil {
 			slog.Warn("enrichment failed", slog.Int64("request_id", req.ID), slog.String("error", err.Error()))
@@ -464,6 +467,15 @@ func (p *Pipeline) retroactiveLookback(ctx context.Context, windowStart time.Tim
 			er.Features.Set("uri", req.Uri)
 			er.Features.Set("method", req.Method)
 			er.Features.Set("app_id", strconv.FormatInt(req.AppID, 10))
+			er.Features.Set("port", strconv.FormatInt(req.Port, 10))
+			er.Features.Set("triage_payload_type", req.TriagePayloadType)
+			er.Features.Set("triage_has_payload", strconv.FormatBool(req.TriageHasPayload))
+
+			pLen := len(req.TriagePayload)
+			// TODO: make this configurable.
+			if pLen > 10 && pLen < 1000 {
+				er.Features.Set("triage_payload", req.TriagePayload)
+			}
 
 			_ = p.registry.EnrichAll(ctx, &er)
 
