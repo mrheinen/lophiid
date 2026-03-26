@@ -831,16 +831,38 @@ func (d *KSQLClient) BulkGetByField(tableName, field string, values any, dest an
 		return fmt.Errorf("BulkGetByField: disallowed combination: %s.%s", tableName, field)
 	}
 
+	// Validate dest: must be a non-nil pointer to a slice.
+	dVal := reflect.ValueOf(dest)
+	if dVal.Kind() != reflect.Ptr || dVal.IsNil() {
+		return fmt.Errorf("BulkGetByField: dest must be a non-nil pointer, got %T", dest)
+	}
+	if dVal.Elem().Kind() != reflect.Slice {
+		return fmt.Errorf("BulkGetByField: dest must be a pointer to a slice, got pointer to %s", dVal.Elem().Kind())
+	}
+
+	// Validate values: must be a slice. Wrap a scalar into a 1-element slice so
+	// the WHERE field = ANY($1) query always receives an array-like parameter.
+	vVal := reflect.ValueOf(values)
+	if vVal.Kind() != reflect.Slice {
+		wrapped := reflect.MakeSlice(reflect.SliceOf(vVal.Type()), 1, 1)
+		wrapped.Index(0).Set(vVal)
+		vVal = wrapped
+		values = vVal.Interface()
+	}
+
 	query := fmt.Sprintf("FROM %s WHERE %s = ANY($1)", tableName, field)
 
-	vVal := reflect.ValueOf(values)
-	// For non-slice values or slices within the chunk size, use a single query.
-	if vVal.Kind() != reflect.Slice || vVal.Len() <= bulkGetChunkSize {
+	// For slices within the chunk size, use a single query.
+	if vVal.Len() <= bulkGetChunkSize {
 		return d.db.Query(d.ctx, dest, query, values)
 	}
 
+	// Reset dest before accumulating to avoid appending to stale data when
+	// callers reuse the same slice across multiple calls.
+	destVal := dVal.Elem()
+	destVal.Set(reflect.MakeSlice(destVal.Type(), 0, 0))
+
 	// Split into chunks and accumulate results into dest.
-	destVal := reflect.ValueOf(dest).Elem()
 	total := vVal.Len()
 	for start := 0; start < total; start += bulkGetChunkSize {
 		end := start + bulkGetChunkSize

@@ -511,11 +511,23 @@ func (s *DownloadsSource) Preload(_ context.Context, windowStart, windowEnd time
 	}
 	s.cache = make(map[int64]cachedDownload, len(downloads))
 	for _, d := range downloads {
-		s.cache[d.RequestID] = cachedDownload{
+		cd := cachedDownload{
 			SHA256sum:           d.SHA256sum,
 			VTAnalysisMalicious: d.VTAnalysisMalicious,
 			DetectedContentType: d.DetectedContentType,
 			OriginalUrl:         d.OriginalUrl,
+		}
+		// TODO: Fix this. We need a table that tracks all requests per download.
+		// Use LastRequestID as the primary key since storeDownload updates it on
+		// deduplication. Fall back to RequestID for first-seen downloads.
+		primaryKey := d.LastRequestID
+		if primaryKey == 0 {
+			primaryKey = d.RequestID
+		}
+		s.cache[primaryKey] = cd
+		// Also index by RequestID when it differs to preserve first-seen lookups.
+		if d.RequestID != 0 && d.RequestID != primaryKey {
+			s.cache[d.RequestID] = cd
 		}
 	}
 	slog.Info("preloaded downloads", slog.Int("count", len(s.cache)))
