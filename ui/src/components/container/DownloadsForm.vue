@@ -171,6 +171,12 @@
           >
             Whois
           </PrimeTab>
+          <PrimeTab
+            v-if="localWhois && localWhois.geoip_country"
+            value="3"
+          >
+            Geo
+          </PrimeTab>
         </TabList>
         <TabPanels>
           <TabPanel
@@ -220,6 +226,53 @@
             >{{
               localWhois.rdap_string
             }}</pre>
+          </TabPanel>
+          <TabPanel
+            v-if="localWhois && localWhois.geoip_country"
+            value="3"
+          >
+            <table>
+              <tbody>
+                <tr v-if="localWhois.geoip_country">
+                  <th>GeoIP Country</th>
+                  <td>
+                    {{ localWhois.geoip_country }} ({{ localWhois.geoip_country_code }})
+                    <span v-if="localWhois.geoip_is_in_eu"> [EU]</span>
+                  </td>
+                </tr>
+                <tr v-if="localWhois.geoip_continent">
+                  <th>GeoIP Continent</th>
+                  <td>
+                    {{ localWhois.geoip_continent }}
+                  </td>
+                </tr>
+                <tr v-if="localWhois.geoip_city">
+                  <th>GeoIP City</th>
+                  <td>
+                    {{ localWhois.geoip_city }}
+                  </td>
+                </tr>
+                <tr v-if="localWhois.geoip_asn">
+                  <th>GeoIP ASN</th>
+                  <td>
+                    {{ localWhois.geoip_asn }} ({{ localWhois.geoip_asn_org }})
+                  </td>
+                </tr>
+                <tr v-if="localWhois.geoip_latitude">
+                  <th>GeoIP Location</th>
+                  <td>
+                    {{ localWhois.geoip_latitude }}, {{ localWhois.geoip_longitude }}
+                    <span v-if="localWhois.geoip_accuracy_radius"> (radius: {{ localWhois.geoip_accuracy_radius }}km)</span>
+                  </td>
+                </tr>
+                <tr v-if="localWhois.geoip_timezone">
+                  <th>GeoIP Timezone</th>
+                  <td>
+                    {{ localWhois.geoip_timezone }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </TabPanel>
         </TabPanels>
       </PrimeTabs>
