@@ -180,6 +180,23 @@ func (p *Pipeline) loadActiveCampaigns() ([]models.Campaign, error) {
 	return append(active, dormant...), nil
 }
 
+// deduplicateByRequestID returns a deduplicated slice of RequestWithDescription,
+// keeping the first occurrence of each Request.ID. This is necessary because the
+// DB join on cmp_hash can produce multiple rows for the same request when there
+// are multiple request_description entries sharing the same cmp_hash.
+func deduplicateByRequestID(rwds []models.RequestWithDescription) []models.RequestWithDescription {
+	seen := make(map[int64]bool, len(rwds))
+	out := make([]models.RequestWithDescription, 0, len(rwds))
+	for _, rwd := range rwds {
+		if seen[rwd.Request.ID] {
+			continue
+		}
+		seen[rwd.Request.ID] = true
+		out = append(out, rwd)
+	}
+	return out
+}
+
 // phase1Seed implements Phase 1: seed from malicious requests.
 // Returns newly created campaigns, set of modified campaign IDs, and error.
 func (p *Pipeline) phase1Seed(ctx context.Context, windowStart, windowEnd time.Time, activeCampaigns []models.Campaign, fingerprints map[int64]Fingerprint, result *PipelineResult) ([]models.Campaign, map[int64]bool, error) {
@@ -190,6 +207,7 @@ func (p *Pipeline) phase1Seed(ctx context.Context, windowStart, windowEnd time.T
 	if err != nil {
 		return nil, modifiedIDs, fmt.Errorf("fetching malicious candidates: %w", err)
 	}
+	candidates = deduplicateByRequestID(candidates)
 	slog.Info("phase 1: malicious candidates", slog.Int("count", len(candidates)))
 	result.RequestsProcessed += len(candidates)
 
@@ -454,6 +472,7 @@ func (p *Pipeline) retroactiveLookback(ctx context.Context, windowStart time.Tim
 			slog.Warn("retroactive lookback query failed", slog.Int64("campaign_id", c.ID), slog.String("error", err.Error()))
 			continue
 		}
+		historicalRwds = deduplicateByRequestID(historicalRwds)
 
 		for _, rwd := range historicalRwds {
 			req := rwd.Request
@@ -646,6 +665,13 @@ func (p *Pipeline) phase3Merge(ctx context.Context, campaigns []models.Campaign,
 
 			// Score fingerprint similarity by checking overlap.
 			score := p.scoreFingerprintPair(modFP, otherFP)
+			slog.Debug("phase3: merge candidate score",
+				slog.Int64("campaign_a", modID),
+				slog.Int64("campaign_b", c.ID),
+				slog.Float64("score", score),
+				slog.Float64("threshold", p.cfg.Agent.SimilarityThreshold),
+				slog.Bool("would_merge", score >= p.cfg.Agent.SimilarityThreshold),
+			)
 			if score >= p.cfg.Agent.SimilarityThreshold {
 				// Older campaign (by ID) survives.
 				survivorID, absorbedID := modID, c.ID
@@ -687,30 +713,43 @@ func (p *Pipeline) phase3Merge(ctx context.Context, campaigns []models.Campaign,
 // A feature is skipped if either fingerprint's cardinality for that feature
 // meets or exceeds its configured exhaust_number.
 func (p *Pipeline) scoreFingerprintPair(a, b Fingerprint) float64 {
-	var score float64
-	for feature, weight := range p.weights {
-		if weight == 0 {
-			continue
-		}
-		if exhaustNum, ok := p.exhaustMap[feature]; ok {
-			if len(a[feature]) >= exhaustNum || len(b[feature]) >= exhaustNum {
-				continue
-			}
-		}
-		aVals, aOk := a[feature]
-		bVals, bOk := b[feature]
-		if !aOk || !bOk {
-			continue
-		}
-		// Check if any value overlaps.
-		for v := range aVals {
-			if bVals[v] {
-				score += weight
-				break // One overlap per feature is enough.
-			}
-		}
-	}
-	return score
+    var score float64
+    for feature, weight := range p.weights {
+        if weight == 0 {
+            continue
+        }
+        aCard, bCard := len(a[feature]), len(b[feature])
+        if exhaustNum, ok := p.exhaustMap[feature]; ok {
+            if aCard >= exhaustNum || bCard >= exhaustNum {
+                slog.Debug("scoreFingerprintPair: feature exhausted, skipping",
+                    slog.String("feature", feature),
+                    slog.Int("cardinality_a", aCard),
+                    slog.Int("cardinality_b", bCard),
+                    slog.Int("exhaust_number", exhaustNum),
+                )
+                continue
+            }
+        }
+        aVals, aOk := a[feature]
+        bVals, bOk := b[feature]
+        if !aOk || !bOk {
+            continue
+        }
+        for v := range aVals {
+            if bVals[v] {
+                slog.Debug("scoreFingerprintPair: feature overlap",
+                    slog.String("feature", feature),
+                    slog.Float64("weight", weight),
+                    slog.Int("cardinality_a", aCard),
+                    slog.Int("cardinality_b", bCard),
+                    slog.String("overlapping_value", v),
+                )
+                score += weight
+                break
+            }
+        }
+    }
+    return score
 }
 
 // resolveTransitiveMerges resolves transitive merge chains.
