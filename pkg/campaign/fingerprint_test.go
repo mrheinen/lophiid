@@ -216,3 +216,25 @@ func TestFingerprint_UnionStopsAtExhaustNumber(t *testing.T) {
 	assert.Equal(t, 2, len(fp1["source_ip"]), "cardinality must stay capped")
 	assert.False(t, fp1.Has("source_ip", "9.9.9.9"))
 }
+
+func TestFingerprint_UnionDeterministicExhaustion(t *testing.T) {
+	// Create two identical fp2 fingerprints, but due to map iteration
+	// they might be processed differently if not sorted.
+	// Since we can't easily force different map iterations, we test that
+	// union always picks the lexicographically first elements up to the limit.
+	fp1 := NewFingerprint()
+	
+	fp2 := NewFingerprint()
+	fp2.Add("source_ip", "c")
+	fp2.Add("source_ip", "a")
+	fp2.Add("source_ip", "b")
+
+	exhaust := ExhaustMap{"source_ip": 2}
+	expanded := fp1.Union(fp2, exhaust)
+	
+	assert.True(t, expanded)
+	assert.Equal(t, 2, len(fp1["source_ip"]), "cardinality must stay capped")
+	assert.True(t, fp1.Has("source_ip", "a"), "should pick lexicographically first element")
+	assert.True(t, fp1.Has("source_ip", "b"), "should pick lexicographically second element")
+	assert.False(t, fp1.Has("source_ip", "c"), "should drop lexicographically later elements")
+}

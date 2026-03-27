@@ -137,13 +137,28 @@ func (fp Fingerprint) Union(other Fingerprint, exhaust ExhaustMap) bool {
 		if fp[key] == nil {
 			fp[key] = make(map[string]bool)
 		}
-		for v := range valSet {
-			if exhaustNum, ok := exhaust[key]; ok && len(fp[key]) >= exhaustNum {
-				break
+		exhaustNum, hasExhaust := exhaust[key]
+		if hasExhaust {
+			var vals []string
+			for v := range valSet {
+				vals = append(vals, v)
 			}
-			if !fp[key][v] {
-				fp[key][v] = true
-				expanded = true
+			sort.Strings(vals)
+			for _, v := range vals {
+				if len(fp[key]) >= exhaustNum {
+					break
+				}
+				if !fp[key][v] {
+					fp[key][v] = true
+					expanded = true
+				}
+			}
+		} else {
+			for v := range valSet {
+				if !fp[key][v] {
+					fp[key][v] = true
+					expanded = true
+				}
 			}
 		}
 	}
