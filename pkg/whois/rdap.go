@@ -107,7 +107,7 @@ func (c *CachedRdapManager) DoWhoisWork() {
 
 			// Pretend we actually have the results. This will prevent new lookups
 			// from happening.
-			c.ipCache.Store(ip, models.Whois{IP: ip})
+			c.ipCache.Store(ip, models.Whois{IP: ip, CreatedAt: time.Now()})
 			continue
 		}
 		ips = append(ips, ip)
