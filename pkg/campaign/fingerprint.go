@@ -107,11 +107,16 @@ func CreateFromFeatureSets(featureSets []FeatureSet) Fingerprint {
 }
 
 // Expand adds new feature values from a feature set to the fingerprint.
+// Values for features whose cardinality already meets or exceeds their
+// exhaust_number in the ExhaustMap are not added.
 // Returns true if the fingerprint was actually expanded.
-func (fp Fingerprint) Expand(fs FeatureSet) bool {
+func (fp Fingerprint) Expand(fs FeatureSet, exhaust ExhaustMap) bool {
 	expanded := false
 	for key, value := range fs {
 		if value == "" {
+			continue
+		}
+		if exhaustNum, ok := exhaust[key]; ok && len(fp[key]) >= exhaustNum {
 			continue
 		}
 		if !fp.Has(key, value) {
@@ -123,14 +128,19 @@ func (fp Fingerprint) Expand(fs FeatureSet) bool {
 }
 
 // Union merges another fingerprint into this one.
+// Values for features whose cardinality already meets or exceeds their
+// exhaust_number in the ExhaustMap are not added.
 // Returns true if this fingerprint was actually expanded.
-func (fp Fingerprint) Union(other Fingerprint) bool {
+func (fp Fingerprint) Union(other Fingerprint, exhaust ExhaustMap) bool {
 	expanded := false
 	for key, valSet := range other {
 		if fp[key] == nil {
 			fp[key] = make(map[string]bool)
 		}
 		for v := range valSet {
+			if exhaustNum, ok := exhaust[key]; ok && len(fp[key]) >= exhaustNum {
+				break
+			}
 			if !fp[key][v] {
 				fp[key][v] = true
 				expanded = true

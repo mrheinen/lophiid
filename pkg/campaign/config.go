@@ -42,11 +42,21 @@ var ValidCorrelationFeatures = map[string]bool{
 	constants.CampaignCorrelationSubnet:    true,
 }
 
+// FeatureConfig configures a single feature within a data source.
+type FeatureConfig struct {
+	// Weight is the similarity score contribution when this feature matches.
+	Weight float64 `fig:"weight"`
+	// ExhaustNumber is the maximum number of distinct values this feature may
+	// accumulate in a campaign fingerprint before it is ignored for matching.
+	// 0 means the feature is never exhausted.
+	ExhaustNumber int `fig:"exhaust_number"`
+}
+
 // SourceConfig configures a single data source for the campaign agent.
 type SourceConfig struct {
-	Enabled  bool               `fig:"enabled"`
-	Features map[string]float64 `fig:"features"`
-	Options  map[string]string  `fig:"options"`
+	Enabled  bool                     `fig:"enabled"`
+	Features map[string]FeatureConfig `fig:"features"`
+	Options  map[string]string        `fig:"options"`
 }
 
 // LLMPromptsConfig holds configurable LLM prompt templates.
@@ -159,9 +169,12 @@ func (c *CampaignAgentConfig) Validate() error {
 			if len(src.Features) == 0 {
 				return fmt.Errorf("source %q is enabled but has no features defined", name)
 			}
-			for featureName, weight := range src.Features {
-				if weight < 0 {
-					return fmt.Errorf("source %q feature %q has negative weight %f", name, featureName, weight)
+			for featureName, fc := range src.Features {
+				if fc.Weight < 0 {
+					return fmt.Errorf("source %q feature %q has negative weight %f", name, featureName, fc.Weight)
+				}
+				if fc.ExhaustNumber < 0 {
+					return fmt.Errorf("source %q feature %q has negative exhaust_number %d", name, featureName, fc.ExhaustNumber)
 				}
 			}
 		}

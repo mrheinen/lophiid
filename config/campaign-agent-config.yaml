@@ -95,21 +95,31 @@ campaign_agent:
       features:
         # cmp_hash is a normalized hash of the request; very strong signal
         # that two requests are the same type of attack.
-        cmp_hash: 1.0
+        cmp_hash:
+          weight: 1.0
         # base_hash captures the URL structure without parameters.
-        base_hash: 0.3
+        base_hash:
+          weight: 0.3
         # source_ip match is a moderate signal - attackers often use the same IP.
-        source_ip: 1
+        # exhaust_number prevents broad matching once a campaign spans many IPs.
+        source_ip:
+          weight: 1.0
+          exhaust_number: 5000
         # The app (honeypot port/service) the request targeted.
-        app_id: 0.1
+        app_id:
+          weight: 0.1
         # The server port the request was received on.
-        port: 0.2
+        port:
+          weight: 0.2
         # The triage payload type (e.g. SHELL_COMMAND, SQL_INJECTION).
-        triage_payload_type: 0.2
+        triage_payload_type:
+          weight: 0.2
         # Whether the request has a payload at all.
-        triage_has_payload: 0.2
+        triage_has_payload:
+          weight: 0.2
         # The actual payload extracted by the triage LLM.
-        triage_payload: 0.8
+        triage_payload:
+          weight: 0.8
 
     # AI-generated request descriptions and classifications.
     # Requires the describer to be running in the backend.
@@ -117,9 +127,11 @@ campaign_agent:
       enabled: true
       features:
         # The AI-assigned category of the attack (e.g. "RCE", "SQLi").
-        ai_category: 0.2
+        ai_category:
+          weight: 0.2
         # The specific CVE or vulnerability targeted, if identified.
-        ai_cve: 0.2
+        ai_cve:
+          weight: 0.2
 
     # Whois/RDAP data and GeoIP enrichment for source IPs.
     whois:
@@ -131,47 +143,63 @@ campaign_agent:
       features:
         # ASN organisation name groups IPs belonging to the same hosting
         # provider or ISP and is a strong clustering signal.
-        geoip_asn_org: 0.5
+        # exhaust_number prevents false positives from large shared ASNs.
+        geoip_asn_org:
+          weight: 0.5
+          exhaust_number: 200
         # Autonomous System Number — useful when the org name varies.
-        geoip_asn: 0.1
+        geoip_asn:
+          weight: 0.1
         # Country from MaxMind GeoIP (prefer over RDAP "country" which
         # can be inconsistently populated).
-        geoip_country: 0.3
+        geoip_country:
+          weight: 0.3
         # Network range groups IPs from the same provider/allocation.
-        network_range: 0.7
+        network_range:
+          weight: 0.7
 
     # Passive OS fingerprinting via p0f. Only enable if you run p0f.
     p0f:
       enabled: true
       features:
-        os_name: 0.3
-        os_version: 0
-        link_type: 0
+        os_name:
+          weight: 0.3
+        os_version:
+          weight: 0
+        link_type:
+          weight: 0
 
     # IP event data (scans, brute force attempts, etc).
     ip_event:
       enabled: false
       features:
-        event_types: 0.3
+        event_types:
+          weight: 0.3
 
     # Session tracking data. Groups requests from the same session.
     session:
       enabled: true
       features:
-        session_request_count: 0
-        behavior_is_human: 0.2
-        behavior_has_bursts: 0.2
+        session_request_count:
+          weight: 0
+        behavior_is_human:
+          weight: 0.2
+        behavior_has_bursts:
+          weight: 0.2
 
     # Downloaded payloads associated with requests.
     downloads:
       enabled: true
       features:
         # SHA256 of downloaded malware; very strong campaign indicator.
-        download_sha256_hash: 0.9
+        download_sha256_hash:
+          weight: 0.9
         # Same download URL across different hosts strongly indicates a campaign.
-        download_url: 1
+        download_url:
+          weight: 1.0
         # Same download hostname is a moderate campaign signal.
-        download_url_hostname: 0.6
+        download_url_hostname:
+          weight: 0.6
 
   # Optional custom LLM prompt templates. Leave empty to use defaults.
   # The summarize_template receives a JSON aggregation state and should

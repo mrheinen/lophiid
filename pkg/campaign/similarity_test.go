@@ -28,23 +28,23 @@ func TestBuildWeightMap(t *testing.T) {
 	sources := map[string]SourceConfig{
 		constants.CampaignSourceRequest: {
 			Enabled: true,
-			Features: map[string]float64{
-				"source_ip": 0.9,
-				"cmp_hash":  0.8,
+			Features: map[string]FeatureConfig{
+				"source_ip": {Weight: 0.9, ExhaustNumber: 5000},
+				"cmp_hash":  {Weight: 0.8},
 			},
 		},
 		constants.CampaignSourceWhois: {
 			Enabled: true,
-			Features: map[string]float64{
-				"geoip_asn":     0.3,
-				"geoip_asn_org": 0.5,
-				"geoip_country": 0.2,
+			Features: map[string]FeatureConfig{
+				"geoip_asn":     {Weight: 0.3},
+				"geoip_asn_org": {Weight: 0.5, ExhaustNumber: 200},
+				"geoip_country": {Weight: 0.2},
 			},
 		},
 		constants.CampaignSourceP0f: {
 			Enabled: false,
-			Features: map[string]float64{
-				"os_name": 0.2,
+			Features: map[string]FeatureConfig{
+				"os_name": {Weight: 0.2},
 			},
 		},
 	}
@@ -57,6 +57,39 @@ func TestBuildWeightMap(t *testing.T) {
 	assert.Equal(t, 0.5, wm["geoip_asn_org"])
 	assert.Equal(t, 0.2, wm["geoip_country"])
 	assert.Equal(t, 0.0, wm["os_name"], "disabled source features should not be in weight map")
+}
+
+func TestBuildExhaustMap(t *testing.T) {
+	sources := map[string]SourceConfig{
+		constants.CampaignSourceRequest: {
+			Enabled: true,
+			Features: map[string]FeatureConfig{
+				"source_ip": {Weight: 0.9, ExhaustNumber: 5000},
+				"cmp_hash":  {Weight: 0.8},
+			},
+		},
+		constants.CampaignSourceWhois: {
+			Enabled: true,
+			Features: map[string]FeatureConfig{
+				"geoip_asn_org": {Weight: 0.5, ExhaustNumber: 200},
+			},
+		},
+		constants.CampaignSourceP0f: {
+			Enabled: false,
+			Features: map[string]FeatureConfig{
+				"os_name": {Weight: 0.2, ExhaustNumber: 10},
+			},
+		},
+	}
+
+	em := BuildExhaustMap(sources)
+
+	assert.Equal(t, 5000, em["source_ip"])
+	assert.Equal(t, 200, em["geoip_asn_org"])
+	_, hasCmpHash := em["cmp_hash"]
+	assert.False(t, hasCmpHash, "feature with exhaust_number=0 should not be in exhaust map")
+	_, hasOsName := em["os_name"]
+	assert.False(t, hasOsName, "disabled source features should not be in exhaust map")
 }
 
 func TestScoreFeatureSets_FullMatch(t *testing.T) {
@@ -156,7 +189,7 @@ func TestScoreAgainstFingerprint_MatchesValue(t *testing.T) {
 		"cmp_hash":  0.8,
 	}
 
-	score := ScoreAgainstFingerprint(fs, fp, weights)
+	score := ScoreAgainstFingerprint(fs, fp, weights, ExhaustMap{})
 	assert.InDelta(t, 1.7, score, 0.001)
 }
 
@@ -171,7 +204,7 @@ func TestScoreAgainstFingerprint_NoMatch(t *testing.T) {
 		"source_ip": 0.9,
 	}
 
-	score := ScoreAgainstFingerprint(fs, fp, weights)
+	score := ScoreAgainstFingerprint(fs, fp, weights, ExhaustMap{})
 	assert.Equal(t, 0.0, score)
 }
 
@@ -185,6 +218,46 @@ func TestScoreAgainstFingerprint_EmptyFingerprint(t *testing.T) {
 		"source_ip": 0.9,
 	}
 
-	score := ScoreAgainstFingerprint(fs, fp, weights)
+	score := ScoreAgainstFingerprint(fs, fp, weights, ExhaustMap{})
 	assert.Equal(t, 0.0, score)
+}
+
+func TestScoreAgainstFingerprint_ExhaustedFeatureSkipped(t *testing.T) {
+	fs := NewFeatureSet()
+	fs.Set("source_ip", "1.2.3.4")
+	fs.Set("cmp_hash", "abc123")
+
+	fp := NewFingerprint()
+	// Populate source_ip beyond the exhaust_number of 3.
+	fp.Add("source_ip", "1.2.3.4")
+	fp.Add("source_ip", "5.6.7.8")
+	fp.Add("source_ip", "9.9.9.9")
+	fp.Add("cmp_hash", "abc123")
+
+	weights := WeightMap{
+		"source_ip": 0.9,
+		"cmp_hash":  0.8,
+	}
+	exhaust := ExhaustMap{"source_ip": 3}
+
+	// source_ip has 3 values == exhaust_number 3, so it is skipped.
+	// Only cmp_hash contributes.
+	score := ScoreAgainstFingerprint(fs, fp, weights, exhaust)
+	assert.InDelta(t, 0.8, score, 0.001, "exhausted feature should not contribute to score")
+}
+
+func TestScoreAgainstFingerprint_UnexhaustedFeatureStillScores(t *testing.T) {
+	fs := NewFeatureSet()
+	fs.Set("source_ip", "1.2.3.4")
+
+	fp := NewFingerprint()
+	fp.Add("source_ip", "1.2.3.4")
+	fp.Add("source_ip", "5.6.7.8")
+
+	weights := WeightMap{"source_ip": 0.9}
+	// exhaust_number is 5 but fingerprint only has 2 values — not exhausted.
+	exhaust := ExhaustMap{"source_ip": 5}
+
+	score := ScoreAgainstFingerprint(fs, fp, weights, exhaust)
+	assert.InDelta(t, 0.9, score, 0.001, "non-exhausted feature should still contribute")
 }

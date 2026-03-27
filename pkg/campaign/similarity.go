@@ -19,6 +19,11 @@ package campaign
 // WeightMap maps feature names to their configured weights.
 type WeightMap map[string]float64
 
+// ExhaustMap maps feature names to their configured exhaust numbers.
+// Only features with ExhaustNumber > 0 are present in the map; absence means
+// the feature is never exhausted.
+type ExhaustMap map[string]int
+
 // BuildWeightMap flattens all source configs into a single feature->weight map.
 func BuildWeightMap(sources map[string]SourceConfig) WeightMap {
 	wm := make(WeightMap)
@@ -26,11 +31,28 @@ func BuildWeightMap(sources map[string]SourceConfig) WeightMap {
 		if !sc.Enabled {
 			continue
 		}
-		for feature, weight := range sc.Features {
-			wm[feature] = weight
+		for feature, fc := range sc.Features {
+			wm[feature] = fc.Weight
 		}
 	}
 	return wm
+}
+
+// BuildExhaustMap flattens all source configs into a single feature->exhaust_number
+// map. Only features with ExhaustNumber > 0 are included.
+func BuildExhaustMap(sources map[string]SourceConfig) ExhaustMap {
+	em := make(ExhaustMap)
+	for _, sc := range sources {
+		if !sc.Enabled {
+			continue
+		}
+		for feature, fc := range sc.Features {
+			if fc.ExhaustNumber > 0 {
+				em[feature] = fc.ExhaustNumber
+			}
+		}
+	}
+	return em
 }
 
 // ScoreFeatureSets computes the weighted similarity score between two feature sets.
@@ -54,10 +76,15 @@ func ScoreFeatureSets(a, b FeatureSet, weights WeightMap) float64 {
 // ScoreAgainstFingerprint computes the weighted similarity score between a
 // feature set and a campaign fingerprint. For each feature in the feature set
 // whose value exists in the fingerprint's value set, the weight is added.
-func ScoreAgainstFingerprint(fs FeatureSet, fp Fingerprint, weights WeightMap) float64 {
+// Features whose fingerprint cardinality meets or exceeds their exhaust_number
+// are skipped, contributing 0 to the score.
+func ScoreAgainstFingerprint(fs FeatureSet, fp Fingerprint, weights WeightMap, exhaust ExhaustMap) float64 {
 	var score float64
 	for feature, weight := range weights {
 		if weight == 0 {
+			continue
+		}
+		if exhaustNum, ok := exhaust[feature]; ok && len(fp[feature]) >= exhaustNum {
 			continue
 		}
 		value := fs.Get(feature)

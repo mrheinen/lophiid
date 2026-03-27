@@ -264,9 +264,9 @@ func TestNewSourceRegistry(t *testing.T) {
 	fakeDB := &database.FakeDatabaseClient{}
 	cfg := CampaignAgentConfig{}
 	cfg.Agent.Sources = map[string]SourceConfig{
-		constants.CampaignSourceRequest:            {Enabled: true, Features: map[string]float64{"source_ip": 0.9}},
-		constants.CampaignSourceRequestDescription: {Enabled: true, Features: map[string]float64{"ai_application": 0.5}},
-		constants.CampaignSourceWhois:              {Enabled: false, Features: map[string]float64{"country": 0.3}},
+		constants.CampaignSourceRequest:            {Enabled: true, Features: map[string]FeatureConfig{"source_ip": {Weight: 0.9}}},
+		constants.CampaignSourceRequestDescription: {Enabled: true, Features: map[string]FeatureConfig{"ai_application": {Weight: 0.5}}},
+		constants.CampaignSourceWhois:              {Enabled: false, Features: map[string]FeatureConfig{"country": {Weight: 0.3}}},
 	}
 
 	reg, err := reg(cfg, fakeDB)
@@ -284,7 +284,7 @@ func TestNewSourceRegistry_UnknownSource(t *testing.T) {
 	fakeDB := &database.FakeDatabaseClient{}
 	cfg := CampaignAgentConfig{}
 	cfg.Agent.Sources = map[string]SourceConfig{
-		"unknown_source": {Enabled: true, Features: map[string]float64{"foo": 1.0}},
+		"unknown_source": {Enabled: true, Features: map[string]FeatureConfig{"foo": {Weight: 1.0}}},
 	}
 
 	_, err := NewSourceRegistry(cfg, fakeDB)

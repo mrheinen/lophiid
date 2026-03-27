@@ -64,6 +64,7 @@ type Pipeline struct {
 	db          database.DatabaseClient
 	registry    *SourceRegistry
 	weights     WeightMap
+	exhaustMap  ExhaustMap
 	correlators []Correlator
 	cfg         CampaignAgentConfig
 	summarizer  Summarizer
@@ -78,6 +79,7 @@ func NewPipeline(db database.DatabaseClient, registry *SourceRegistry, cfg Campa
 		db:          db,
 		registry:    registry,
 		weights:     BuildWeightMap(cfg.Agent.Sources),
+		exhaustMap:  BuildExhaustMap(cfg.Agent.Sources),
 		correlators: BuildCorrelators(cfg.Agent.CorrelationFeatures),
 		cfg:         cfg,
 		summarizer:  summarizer,
@@ -231,7 +233,7 @@ func (p *Pipeline) phase1Seed(ctx context.Context, windowStart, windowEnd time.T
 			if !ok {
 				continue
 			}
-			score := ScoreAgainstFingerprint(er.Features, fp, p.weights)
+			score := ScoreAgainstFingerprint(er.Features, fp, p.weights, p.exhaustMap)
 			if score >= p.cfg.Agent.SimilarityThreshold && score > bestScore {
 				bestScore = score
 				bestCampaignID = c.ID
@@ -316,7 +318,7 @@ func (p *Pipeline) addSeed(campaignID int64, er EnrichedRequest, fingerprints ma
 
 	// Expand fingerprint.
 	if fp, ok := fingerprints[campaignID]; ok {
-		fp.Expand(er.Features)
+		fp.Expand(er.Features, p.exhaustMap)
 	}
 
 	result.SeedsAdded++
@@ -480,7 +482,7 @@ func (p *Pipeline) retroactiveLookback(ctx context.Context, windowStart time.Tim
 
 			_ = p.registry.EnrichAll(ctx, &er)
 
-			score := ScoreAgainstFingerprint(er.Features, fp, p.weights)
+			score := ScoreAgainstFingerprint(er.Features, fp, p.weights, p.exhaustMap)
 			if score >= p.cfg.Agent.SimilarityThreshold {
 				if err := p.addSeed(c.ID, er, fingerprints, result); err != nil {
 					slog.Warn("retroactive seed failed", slog.String("error", err.Error()))
@@ -682,11 +684,18 @@ func (p *Pipeline) phase3Merge(ctx context.Context, campaigns []models.Campaign,
 
 // scoreFingerprintPair scores the similarity between two fingerprints by
 // checking how many feature values overlap, weighted by the feature weights.
+// A feature is skipped if either fingerprint's cardinality for that feature
+// meets or exceeds its configured exhaust_number.
 func (p *Pipeline) scoreFingerprintPair(a, b Fingerprint) float64 {
 	var score float64
 	for feature, weight := range p.weights {
 		if weight == 0 {
 			continue
+		}
+		if exhaustNum, ok := p.exhaustMap[feature]; ok {
+			if len(a[feature]) >= exhaustNum || len(b[feature]) >= exhaustNum {
+				continue
+			}
 		}
 		aVals, aOk := a[feature]
 		bVals, bOk := b[feature]
@@ -795,7 +804,7 @@ func (p *Pipeline) executeMerge(survivorID, absorbedID int64, fingerprints map[i
 	survivorFP, sOk := fingerprints[survivorID]
 	absorbedFP, aOk := fingerprints[absorbedID]
 	if sOk && aOk {
-		survivorFP.Union(absorbedFP)
+		survivorFP.Union(absorbedFP, p.exhaustMap)
 	}
 
 	// Update survivor time range.
