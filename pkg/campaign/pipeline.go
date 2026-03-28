@@ -152,7 +152,7 @@ func (p *Pipeline) Run(ctx context.Context, windowStart, windowEnd time.Time) (*
 	// Phase 4a: Aggregation state computation.
 	// Phase 4b: LLM summarization.
 	// Phase 4c: Lifecycle transitions.
-	p.phase4Summarize(ctx, allActive, result)
+	p.phase4Summarize(ctx, allActive, fingerprints, result)
 	p.phase4Lifecycle(ctx, allActive, windowEnd, result)
 
 	slog.Info("pipeline run complete",
@@ -886,7 +886,7 @@ func (p *Pipeline) executeMerge(survivorID, absorbedID int64, fingerprints map[i
 }
 
 // phase4Summarize computes aggregation state and optionally runs LLM summarization.
-func (p *Pipeline) phase4Summarize(ctx context.Context, campaigns []models.Campaign, result *PipelineResult) {
+func (p *Pipeline) phase4Summarize(ctx context.Context, campaigns []models.Campaign, fingerprints map[int64]Fingerprint, result *PipelineResult) {
 	for i := range campaigns {
 		c := &campaigns[i]
 		if c.Status == constants.CampaignStatusMerged {
@@ -913,6 +913,14 @@ func (p *Pipeline) phase4Summarize(ctx context.Context, campaigns []models.Campa
 		}
 
 		c.AggregationState = aggJSON
+
+		// Persist fingerprint from memory map.
+		if fp, ok := fingerprints[c.ID]; ok {
+			fpJSON, err := fp.ToJSON()
+			if err == nil {
+				c.Fingerprint = fpJSON
+			}
+		}
 
 		// LLM summarization.
 		if !p.skipLLM && p.summarizer != nil {
@@ -1003,9 +1011,9 @@ func (p *Pipeline) phase4Lifecycle(ctx context.Context, campaigns []models.Campa
 				if !p.skipLLM && p.summarizer != nil && !p.dryRun {
 					aggState, err := ComputeAggregationState(p.db, c.ID)
 					if err == nil {
-						aggJSON, err := aggState.ToJSON()
+						llmPayload, err := aggState.ToLLMPayload()
 						if err == nil {
-							name, summary, severity, err := p.summarizer.Summarize(ctx, aggJSON)
+							name, summary, severity, err := p.summarizer.Summarize(ctx, llmPayload)
 							if err == nil {
 								if name != "" {
 									c.Name = name

@@ -530,6 +530,10 @@ func (a *ApiServer) HandleGetWhoisForIP(w http.ResponseWriter, req *http.Request
 		return
 	}
 	ip := req.Form.Get("ip")
+	if ip == "" {
+		a.sendStatus(w, "ip parameter is required", ResultError, nil)
+		return
+	}
 
 	dateStr := req.Form.Get("date")
 	if dateStr != "" {
