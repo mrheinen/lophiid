@@ -39,6 +39,19 @@
                   </a>
                 </td>
               </tr>
+              <tr v-if="campaign.feedback_status && campaign.feedback_status !== 'PENDING'">
+                <th>Feedback</th>
+                <td>
+                  <PrimeTag
+                    :value="campaign.feedback_status"
+                    :severity="campaign.feedback_status === 'APPROVED' ? 'success' : 'danger'"
+                    style="padding: 0.15rem 0.5rem; font-size: 0.8rem;"
+                  />
+                  <span v-if="campaign.feedback_reason && campaign.feedback_reason !== 'NONE'" style="margin-left: 0.5rem; font-size: 0.85rem; color: var(--p-text-muted-color);">
+                    ({{ campaign.feedback_reason }})
+                  </span>
+                </td>
+              </tr>
             </tbody>
           </table>
           <a :href="requestsLink" class="view-requests-link">
@@ -54,11 +67,39 @@
             <tbody>
               <tr>
                 <th>Applications</th>
-                <td>{{ (campaign.targeted_apps || []).join(', ') || '-' }}</td>
+                <td>
+                  <template v-if="(campaign.targeted_apps || []).length > 3">
+                    <span v-if="!expanded.apps">
+                      {{ campaign.targeted_apps.slice(0, 3).join(', ') }}
+                      <a href="#" @click.prevent="expanded.apps = true" style="margin-left: 0.5rem; font-size: 0.85em; text-decoration: underline; color: var(--p-primary-color);">show more ({{ campaign.targeted_apps.length - 3 }})</a>
+                    </span>
+                    <span v-else>
+                      {{ campaign.targeted_apps.join(', ') }}
+                      <a href="#" @click.prevent="expanded.apps = false" style="margin-left: 0.5rem; font-size: 0.85em; text-decoration: underline; color: var(--p-primary-color);">show less</a>
+                    </span>
+                  </template>
+                  <template v-else>
+                    {{ (campaign.targeted_apps || []).join(', ') || '-' }}
+                  </template>
+                </td>
               </tr>
               <tr>
                 <th>CVEs</th>
-                <td>{{ (campaign.targeted_cves || []).join(', ') || '-' }}</td>
+                <td>
+                  <template v-if="(campaign.targeted_cves || []).length > 3">
+                    <span v-if="!expanded.cves">
+                      {{ campaign.targeted_cves.slice(0, 3).join(', ') }}
+                      <a href="#" @click.prevent="expanded.cves = true" style="margin-left: 0.5rem; font-size: 0.85em; text-decoration: underline; color: var(--p-primary-color);">show more ({{ campaign.targeted_cves.length - 3 }})</a>
+                    </span>
+                    <span v-else>
+                      {{ campaign.targeted_cves.join(', ') }}
+                      <a href="#" @click.prevent="expanded.cves = false" style="margin-left: 0.5rem; font-size: 0.85em; text-decoration: underline; color: var(--p-primary-color);">show less</a>
+                    </span>
+                  </template>
+                  <template v-else>
+                    {{ (campaign.targeted_cves || []).join(', ') || '-' }}
+                  </template>
+                </td>
               </tr>
               <tr>
                 <th>Source Countries</th>
@@ -70,11 +111,39 @@
               </tr>
               <tr v-if="agg.attack_profile.mitre_techniques && agg.attack_profile.mitre_techniques.length">
                 <th>MITRE Techniques</th>
-                <td>{{ agg.attack_profile.mitre_techniques.join(', ') }}</td>
+                <td>
+                  <template v-if="agg.attack_profile.mitre_techniques.length > 3">
+                    <span v-if="!expanded.mitre">
+                      {{ agg.attack_profile.mitre_techniques.slice(0, 3).join(', ') }}
+                      <a href="#" @click.prevent="expanded.mitre = true" style="margin-left: 0.5rem; font-size: 0.85em; text-decoration: underline; color: var(--p-primary-color);">show more ({{ agg.attack_profile.mitre_techniques.length - 3 }})</a>
+                    </span>
+                    <span v-else>
+                      {{ agg.attack_profile.mitre_techniques.join(', ') }}
+                      <a href="#" @click.prevent="expanded.mitre = false" style="margin-left: 0.5rem; font-size: 0.85em; text-decoration: underline; color: var(--p-primary-color);">show less</a>
+                    </span>
+                  </template>
+                  <template v-else>
+                    {{ agg.attack_profile.mitre_techniques.join(', ') }}
+                  </template>
+                </td>
               </tr>
               <tr v-if="agg.attack_profile.vulnerability_types && agg.attack_profile.vulnerability_types.length">
                 <th>Vulnerability Types</th>
-                <td>{{ agg.attack_profile.vulnerability_types.join(', ') }}</td>
+                <td>
+                  <template v-if="agg.attack_profile.vulnerability_types.length > 3">
+                    <span v-if="!expanded.vulns">
+                      {{ agg.attack_profile.vulnerability_types.slice(0, 3).join(', ') }}
+                      <a href="#" @click.prevent="expanded.vulns = true" style="margin-left: 0.5rem; font-size: 0.85em; text-decoration: underline; color: var(--p-primary-color);">show more ({{ agg.attack_profile.vulnerability_types.length - 3 }})</a>
+                    </span>
+                    <span v-else>
+                      {{ agg.attack_profile.vulnerability_types.join(', ') }}
+                      <a href="#" @click.prevent="expanded.vulns = false" style="margin-left: 0.5rem; font-size: 0.85em; text-decoration: underline; color: var(--p-primary-color);">show less</a>
+                    </span>
+                  </template>
+                  <template v-else>
+                    {{ agg.attack_profile.vulnerability_types.join(', ') }}
+                  </template>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -217,6 +286,35 @@
         />
       </template>
     </InfoCard>
+
+    <div style="margin-top: 2rem; padding: 1.5rem; border: 1px solid var(--p-content-border-color); border-radius: 6px; background: var(--p-content-background);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h3 style="margin: 0; display: flex; align-items: center;"><i class="pi pi-check-circle" style="margin-right: 0.5rem;" />Review this Campaign</h3>
+          <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: var(--p-text-muted-color);">Classify this campaign to help improve our detection models.</p>
+        </div>
+        <div class="feedback-actions" style="display: flex; gap: 0.5rem;">
+          <PrimeButton label="Approve Campaign" icon="pi pi-check" severity="success" @click="submitFeedback('APPROVED')" />
+          <PrimeButton label="Reject Campaign" icon="pi pi-times" severity="danger" @click="showRejectForm = !showRejectForm" />
+        </div>
+      </div>
+      
+      <div v-if="showRejectForm" class="reject-form" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--p-content-border-color);">
+         <h4 style="margin-bottom: 1rem; margin-top: 0;">Rejection Details</h4>
+         <div style="margin-bottom: 1rem;">
+           <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem;">Reason</label>
+           <FormSelect v-model="feedback.reason" :options="rejectionReasons" optionLabel="label" optionValue="value" style="width: 100%;" />
+         </div>
+         <div style="margin-bottom: 1rem;">
+           <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem;">Details (optional)</label>
+           <TextArea v-model="feedback.details" rows="3" style="width: 100%;" placeholder="Add context (e.g., 'Duplicate of Campaign #123')"></TextArea>
+         </div>
+         <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+           <PrimeButton label="Cancel" severity="secondary" @click="showRejectForm = false" />
+           <PrimeButton label="Submit Rejection" severity="danger" @click="submitFeedback('REJECTED')" />
+         </div>
+      </div>
+    </div>
   </div>
   <div v-else-if="loadError">
     <p>Error loading campaign: {{ loadError }}</p>
@@ -248,6 +346,27 @@ export default {
       parsed: {},
       agg: JSON.parse(JSON.stringify(emptyAgg)),
       loadError: null,
+      expanded: {
+        apps: false,
+        cves: false,
+        mitre: false,
+        vulns: false,
+      },
+      showRejectForm: false,
+      feedback: {
+        reason: 'NONE',
+        details: null,
+      },
+      rejectionReasons: [
+        { value: 'NONE', label: 'None' },
+        { value: 'MIXED_ATTACK_TYPES', label: 'Mixed Attack Types (e.g., SQLi mixed with scanning)' },
+        { value: 'TOO_MANY_DISTINCT_IPS', label: 'Too Many Distinct IPs/ASNs (Localized attack merged with botnet)' },
+        { value: 'TIME_SPAN_TOO_BROAD', label: 'Time Span Too Broad (Unrelated events far apart)' },
+        { value: 'DUPLICATE_CAMPAIGN', label: 'Duplicate Campaign (Provide ID in details)' },
+        { value: 'POLYMORPHIC_URI', label: 'Polymorphic URI / Minor Payload Variation' },
+        { value: 'SAME_ATTACK_DIFFERENT_IPS', label: 'Same Attack, Different IPs' },
+        { value: 'BACKGROUND_RADIATION_NOISE', label: 'Background Radiation / Non-Campaign Noise' },
+      ],
     };
   },
   computed: {
@@ -345,6 +464,46 @@ export default {
             }
           }
         });
+    },
+    submitFeedback(status) {
+      if (!this.campaign) return;
+      const payload = {
+        id: this.campaign.id,
+        status: status,
+        reason: status === 'REJECTED' ? this.feedback.reason : 'NONE',
+        details: status === 'REJECTED' ? this.feedback.details : null
+      };
+
+      fetch(this.config.backendAddress + this.config.campaignFeedbackLink, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "API-Key": this.$store.getters.apiToken,
+        },
+        body: JSON.stringify(payload),
+      })
+      .then(response => {
+        if (response.status == 403) {
+           this.$emit("require-auth");
+           return null;
+        }
+        return response.json();
+      })
+      .then(response => {
+        if (!response) return;
+        if (response.status === this.config.backendResultOk) {
+          this.$toast.success("Feedback submitted successfully");
+          this.showRejectForm = false;
+          this.campaign.feedback_status = payload.status;
+          this.campaign.feedback_reason = payload.reason;
+          this.campaign.feedback_details = payload.details;
+        } else {
+          this.$toast.error("Failed to submit feedback: " + response.message);
+        }
+      })
+      .catch(error => {
+        this.$toast.error("Error submitting feedback: " + error);
+      });
     },
   },
 };

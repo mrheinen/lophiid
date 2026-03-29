@@ -1612,6 +1612,74 @@ func (a *ApiServer) HandleGetSingleCampaign(w http.ResponseWriter, req *http.Req
 	a.sendStatus(w, "", ResultSuccess, campaign)
 }
 
+type CampaignFeedbackRequest struct {
+	ID      int64   `json:"id"`
+	Status  string  `json:"status"`
+	Reason  *string `json:"reason"`
+	Details *string `json:"details"`
+}
+
+func (a *ApiServer) HandleCampaignFeedback(w http.ResponseWriter, req *http.Request) {
+	var payload CampaignFeedbackRequest
+
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields() // To avoid accepting bad keys
+
+	if err := d.Decode(&payload); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if payload.ID == 0 {
+		a.sendStatus(w, "campaign ID is required", ResultError, nil)
+		return
+	}
+
+	validStatuses := map[string]bool{
+		constants.CampaignFeedbackStatusPending:  true,
+		constants.CampaignFeedbackStatusApproved: true,
+		constants.CampaignFeedbackStatusRejected: true,
+	}
+
+	if !validStatuses[payload.Status] {
+		a.sendStatus(w, "invalid feedback status", ResultError, nil)
+		return
+	}
+
+	validReasons := map[string]bool{
+		constants.CampaignFeedbackReasonNone:          true,
+		constants.CampaignFeedbackReasonMixedAttacks:  true,
+		constants.CampaignFeedbackReasonTooManyIPs:    true,
+		constants.CampaignFeedbackReasonTimeSpanBroad: true,
+		constants.CampaignFeedbackReasonDuplicate:     true,
+		constants.CampaignFeedbackReasonPolymorphic:   true,
+		constants.CampaignFeedbackReasonDifferentIPs:  true,
+		constants.CampaignFeedbackReasonNoise:         true,
+	}
+
+	if payload.Reason != nil && !validReasons[*payload.Reason] {
+		a.sendStatus(w, "invalid feedback reason", ResultError, nil)
+		return
+	}
+
+	campaign, err := a.dbc.GetCampaignByID(payload.ID)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	campaign.FeedbackStatus = payload.Status
+	campaign.FeedbackReason = payload.Reason
+	campaign.FeedbackDetails = payload.Details
+
+	if err := a.dbc.Update(&campaign); err != nil {
+		a.sendStatus(w, fmt.Sprintf("unable to update campaign feedback: %s", err.Error()), ResultError, nil)
+		return
+	}
+
+	a.sendStatus(w, "Feedback successfully saved", ResultSuccess, campaign)
+}
+
 func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Request) {
 	modelName := strings.ToLower(req.URL.Query().Get("model"))
 	var retval map[string]database.FieldDocEntry
