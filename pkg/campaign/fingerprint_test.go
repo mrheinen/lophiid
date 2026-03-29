@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2025 Niels Heinen
+// Copyright (C) 2023-2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -123,7 +123,7 @@ func TestFingerprint_Expand(t *testing.T) {
 	fs.Set("source_ip", "5.6.7.8") // FeatureSet only holds one value per key.
 	fs.Set("cmp_hash", "new_hash")
 
-	expanded := fp.Expand(fs)
+	expanded := fp.Expand(fs, ExhaustMap{})
 	assert.True(t, expanded)
 	assert.True(t, fp.Has("cmp_hash", "new_hash"))
 }
@@ -135,8 +135,40 @@ func TestFingerprint_ExpandNoChange(t *testing.T) {
 	fs := NewFeatureSet()
 	fs.Set("source_ip", "1.2.3.4")
 
-	expanded := fp.Expand(fs)
+	expanded := fp.Expand(fs, ExhaustMap{})
 	assert.False(t, expanded, "should not report expansion when nothing new")
+}
+
+func TestFingerprint_ExpandStopsAtExhaustNumber(t *testing.T) {
+	fp := NewFingerprint()
+	fp.Add("source_ip", "1.2.3.4")
+	fp.Add("source_ip", "5.6.7.8")
+
+	// exhaust_number=2 means the feature is already full.
+	exhaust := ExhaustMap{"source_ip": 2}
+
+	fs := NewFeatureSet()
+	fs.Set("source_ip", "9.9.9.9")
+
+	expanded := fp.Expand(fs, exhaust)
+	assert.False(t, expanded, "exhausted feature should not accept new values")
+	assert.False(t, fp.Has("source_ip", "9.9.9.9"))
+	assert.Equal(t, 2, len(fp["source_ip"]), "cardinality must stay capped")
+}
+
+func TestFingerprint_ExpandNonExhaustedFeatureStillAdded(t *testing.T) {
+	fp := NewFingerprint()
+	fp.Add("source_ip", "1.2.3.4")
+
+	// exhaust_number=5 but only 1 value present — not exhausted.
+	exhaust := ExhaustMap{"source_ip": 5}
+
+	fs := NewFeatureSet()
+	fs.Set("source_ip", "2.2.2.2")
+
+	expanded := fp.Expand(fs, exhaust)
+	assert.True(t, expanded)
+	assert.True(t, fp.Has("source_ip", "2.2.2.2"))
 }
 
 func TestFingerprint_Union(t *testing.T) {
@@ -148,7 +180,7 @@ func TestFingerprint_Union(t *testing.T) {
 	fp2.Add("source_ip", "5.6.7.8")
 	fp2.Add("uri", "/test")
 
-	expanded := fp1.Union(fp2)
+	expanded := fp1.Union(fp2, ExhaustMap{})
 	assert.True(t, expanded)
 	assert.True(t, fp1.Has("source_ip", "1.2.3.4"))
 	assert.True(t, fp1.Has("source_ip", "5.6.7.8"))
@@ -163,6 +195,46 @@ func TestFingerprint_UnionNoChange(t *testing.T) {
 	fp2 := NewFingerprint()
 	fp2.Add("source_ip", "1.2.3.4")
 
-	expanded := fp1.Union(fp2)
+	expanded := fp1.Union(fp2, ExhaustMap{})
 	assert.False(t, expanded)
+}
+
+func TestFingerprint_UnionStopsAtExhaustNumber(t *testing.T) {
+	fp1 := NewFingerprint()
+	fp1.Add("source_ip", "1.2.3.4")
+	fp1.Add("source_ip", "5.6.7.8")
+
+	fp2 := NewFingerprint()
+	fp2.Add("source_ip", "9.9.9.9")
+	fp2.Add("source_ip", "10.0.0.1")
+
+	// exhaust_number=2 means fp1's source_ip is already full.
+	exhaust := ExhaustMap{"source_ip": 2}
+
+	expanded := fp1.Union(fp2, exhaust)
+	assert.False(t, expanded, "exhausted feature should block all new values from union")
+	assert.Equal(t, 2, len(fp1["source_ip"]), "cardinality must stay capped")
+	assert.False(t, fp1.Has("source_ip", "9.9.9.9"))
+}
+
+func TestFingerprint_UnionDeterministicExhaustion(t *testing.T) {
+	// Create two identical fp2 fingerprints, but due to map iteration
+	// they might be processed differently if not sorted.
+	// Since we can't easily force different map iterations, we test that
+	// union always picks the lexicographically first elements up to the limit.
+	fp1 := NewFingerprint()
+	
+	fp2 := NewFingerprint()
+	fp2.Add("source_ip", "c")
+	fp2.Add("source_ip", "a")
+	fp2.Add("source_ip", "b")
+
+	exhaust := ExhaustMap{"source_ip": 2}
+	expanded := fp1.Union(fp2, exhaust)
+	
+	assert.True(t, expanded)
+	assert.Equal(t, 2, len(fp1["source_ip"]), "cardinality must stay capped")
+	assert.True(t, fp1.Has("source_ip", "a"), "should pick lexicographically first element")
+	assert.True(t, fp1.Has("source_ip", "b"), "should pick lexicographically second element")
+	assert.False(t, fp1.Has("source_ip", "c"), "should drop lexicographically later elements")
 }

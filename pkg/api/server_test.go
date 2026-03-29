@@ -608,6 +608,67 @@ func TestHandleGetWhoisForIP(t *testing.T) {
 			t.Errorf("expected nil data, got %v", result.Data)
 		}
 	})
+
+	t.Run("With valid date returns closest record", func(t *testing.T) {
+		fd := database.FakeDatabaseClient{
+			ParameterizedQueryResult: []models.Whois{
+				{IP: "1.2.3.4", Country: "NL"},
+			},
+		}
+		s := NewApiServer(&fd, nil, "apikey")
+
+		req := httptest.NewRequest(http.MethodGet, "/whois?ip=1.2.3.4&date=2024-01-15T12:00:00Z", nil)
+		w := httptest.NewRecorder()
+		s.HandleGetWhoisForIP(w, req)
+		res := w.Result()
+
+		defer res.Body.Close()
+		data, err := io.ReadAll(res.Body)
+		assert.NoError(t, err)
+
+		var result HttpResult
+		assert.NoError(t, json.Unmarshal(data, &result))
+		assert.Equal(t, ResultSuccess, result.Status)
+		assert.Empty(t, result.Message)
+		assert.NotNil(t, result.Data)
+	})
+
+	t.Run("With invalid date returns error", func(t *testing.T) {
+		fd := database.FakeDatabaseClient{}
+		s := NewApiServer(&fd, nil, "apikey")
+
+		req := httptest.NewRequest(http.MethodGet, "/whois?ip=1.2.3.4&date=not-a-date", nil)
+		w := httptest.NewRecorder()
+		s.HandleGetWhoisForIP(w, req)
+		res := w.Result()
+
+		defer res.Body.Close()
+		data, err := io.ReadAll(res.Body)
+		assert.NoError(t, err)
+
+		var result HttpResult
+		assert.NoError(t, json.Unmarshal(data, &result))
+		assert.Equal(t, ResultError, result.Status)
+	})
+
+	t.Run("With valid date but no record returns no result", func(t *testing.T) {
+		fd := database.FakeDatabaseClient{}
+		s := NewApiServer(&fd, nil, "apikey")
+
+		req := httptest.NewRequest(http.MethodGet, "/whois?ip=1.2.3.4&date=2024-01-15T12:00:00Z", nil)
+		w := httptest.NewRecorder()
+		s.HandleGetWhoisForIP(w, req)
+		res := w.Result()
+
+		defer res.Body.Close()
+		data, err := io.ReadAll(res.Body)
+		assert.NoError(t, err)
+
+		var result HttpResult
+		assert.NoError(t, json.Unmarshal(data, &result))
+		assert.Equal(t, ResultSuccess, result.Status)
+		assert.Equal(t, "No result", result.Message)
+	})
 }
 
 func TestHandleGetDescriptionForCmpHash(t *testing.T) {

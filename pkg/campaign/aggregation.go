@@ -295,7 +295,7 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 	}
 
 	// Populate sources.
-	state.Sources.UniqueIPs = cappedStringSet(ips, MaxUniqueIPs)
+	state.Sources.UniqueIPs = mapKeys(ips)
 
 	// Populate countries from pre-fetched whois map.
 	countries := make(map[string]bool)
@@ -304,13 +304,13 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 			countries[w.Country] = true
 		}
 	}
-	state.Sources.UniqueCountries = cappedStringSet(countries, MaxCountries)
+	state.Sources.UniqueCountries = mapKeys(countries)
 
 	// Populate attack profile.
-	state.AttackProfile.TargetedApps = cappedStringSet(apps, MaxTargetedApps)
-	state.AttackProfile.VulnerabilityTypes = cappedStringSet(vulnTypes, MaxVulnTypes)
-	state.AttackProfile.MITRETechniques = cappedStringSet(mitre, MaxMITRETechniques)
-	state.AttackProfile.CVEs = cappedStringSet(cves, MaxCVEs)
+	state.AttackProfile.TargetedApps = mapKeys(apps)
+	state.AttackProfile.VulnerabilityTypes = mapKeys(vulnTypes)
+	state.AttackProfile.MITRETechniques = mapKeys(mitre)
+	state.AttackProfile.CVEs = mapKeys(cves)
 	state.AttackProfile.UniquePayloadHashes = len(payloadHashes)
 	state.AttackProfile.SamplePayloads = samplePayloads
 
@@ -324,10 +324,7 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 		uriList = append(uriList, uriEntry{u, c})
 	}
 	sort.Slice(uriList, func(i, j int) bool { return uriList[i].count > uriList[j].count })
-	for i, e := range uriList {
-		if i >= MaxTopURIs {
-			break
-		}
+	for _, e := range uriList {
 		state.AttackProfile.TopURIs = append(state.AttackProfile.TopURIs, URICount{URI: e.uri, Count: e.count})
 	}
 
@@ -378,11 +375,23 @@ func ComputeAggregationState(db database.DatabaseClient, campaignID int64) (*Agg
 	}
 
 	// OS fingerprints.
+	type osEntry struct {
+		os    string
+		count int
+	}
+	var osList []osEntry
 	for os, count := range osMap {
-		if len(state.OSFingerprints) >= MaxOSFingerprints {
-			break
+		osList = append(osList, osEntry{os, count})
+	}
+	// Sort by count descending, then by OS name alphabetically for determinism.
+	sort.Slice(osList, func(i, j int) bool {
+		if osList[i].count == osList[j].count {
+			return osList[i].os < osList[j].os
 		}
-		state.OSFingerprints = append(state.OSFingerprints, OSFingerprint{OS: os, Count: count})
+		return osList[i].count > osList[j].count
+	})
+	for _, e := range osList {
+		state.OSFingerprints = append(state.OSFingerprints, OSFingerprint{OS: e.os, Count: e.count})
 	}
 
 	return state, nil
@@ -397,18 +406,40 @@ func (s *AggregationState) ToJSON() (json.RawMessage, error) {
 	return json.RawMessage(data), nil
 }
 
-// cappedStringSet converts a set to a slice, capped at maxLen.
-func cappedStringSet(set map[string]bool, maxLen int) []string {
-	cap := len(set)
-	if cap > maxLen {
-		cap = maxLen
-	}
-	result := make([]string, 0, cap)
+// mapKeys converts a set to a slice.
+func mapKeys(set map[string]bool) []string {
+	result := make([]string, 0, len(set))
 	for k := range set {
-		if len(result) == maxLen {
-			break
-		}
 		result = append(result, k)
 	}
 	return result
+}
+
+// ToLLMPayload serializes a capped version of the aggregation state for LLM summarization.
+func (s *AggregationState) ToLLMPayload() ([]byte, error) {
+	capped := *s
+
+	capped.Sources.UniqueIPs = capSlice(s.Sources.UniqueIPs, MaxUniqueIPs)
+	capped.Sources.UniqueASNs = capSlice(s.Sources.UniqueASNs, MaxUniqueASNs)
+	capped.Sources.UniqueCountries = capSlice(s.Sources.UniqueCountries, MaxCountries)
+	capped.Sources.UniqueNetworkRanges = capSlice(s.Sources.UniqueNetworkRanges, MaxNetworkRanges)
+
+	capped.AttackProfile.TargetedApps = capSlice(s.AttackProfile.TargetedApps, MaxTargetedApps)
+	capped.AttackProfile.VulnerabilityTypes = capSlice(s.AttackProfile.VulnerabilityTypes, MaxVulnTypes)
+	capped.AttackProfile.MITRETechniques = capSlice(s.AttackProfile.MITRETechniques, MaxMITRETechniques)
+	capped.AttackProfile.CVEs = capSlice(s.AttackProfile.CVEs, MaxCVEs)
+	capped.AttackProfile.SamplePayloads = capSlice(s.AttackProfile.SamplePayloads, MaxSamplePayloads)
+	capped.AttackProfile.TopURIs = capSlice(s.AttackProfile.TopURIs, MaxTopURIs)
+
+	capped.VTScanResults = capSlice(s.VTScanResults, MaxScannerResults)
+	capped.OSFingerprints = capSlice(s.OSFingerprints, MaxOSFingerprints)
+
+	return json.Marshal(capped)
+}
+
+func capSlice[T any](s []T, max int) []T {
+	if len(s) > max {
+		return s[:max]
+	}
+	return s
 }

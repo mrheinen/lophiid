@@ -18,6 +18,7 @@ package campaign
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -240,26 +241,32 @@ func TestAggregationState_ToJSON(t *testing.T) {
 	assert.Equal(t, 5, parsed.Timeline.ActivityHistogram["2025-01-01"])
 }
 
-func TestCappedStringSet(t *testing.T) {
-	set := map[string]bool{
-		"a": true,
-		"b": true,
-		"c": true,
-		"d": true,
-		"e": true,
+func TestToLLMPayload_Capping(t *testing.T) {
+	state := &AggregationState{
+		Sources: SourcesSection{
+			UniqueIPs: make([]string, MaxUniqueIPs+10),
+		},
+		AttackProfile: AttackProfileSection{
+			CVEs: make([]string, MaxCVEs+5),
+		},
+	}
+	for i := 0; i < MaxUniqueIPs+10; i++ {
+		state.Sources.UniqueIPs[i] = fmt.Sprintf("ip-%d", i)
 	}
 
-	result := cappedStringSet(set, 3)
-	assert.Equal(t, 3, len(result))
+	payload, err := state.ToLLMPayload()
+	assert.NoError(t, err)
+
+	var capped AggregationState
+	err = json.Unmarshal(payload, &capped)
+	assert.NoError(t, err)
+
+	assert.Equal(t, MaxUniqueIPs, len(capped.Sources.UniqueIPs))
+	assert.Equal(t, MaxCVEs, len(capped.AttackProfile.CVEs))
 }
 
-func TestCappedStringSet_EmptySet(t *testing.T) {
-	result := cappedStringSet(map[string]bool{}, 10)
-	assert.Equal(t, 0, len(result))
-}
-
-func TestCappedStringSet_UnderLimit(t *testing.T) {
-	set := map[string]bool{"x": true, "y": true}
-	result := cappedStringSet(set, 10)
-	assert.Equal(t, 2, len(result))
+func TestCapSlice(t *testing.T) {
+	s := []int{1, 2, 3, 4, 5}
+	assert.Equal(t, 3, len(capSlice(s, 3)))
+	assert.Equal(t, 5, len(capSlice(s, 10)))
 }

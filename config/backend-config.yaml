@@ -109,6 +109,9 @@ whois_manager:
   client_timeout: 2s
   cache_expiration_time: 12h
   max_attempts: 6
+  # How long before an existing WHOIS record is considered stale and a fresh
+  # lookup is triggered. A new record is inserted; old records are retained.
+  refresh_period: 720h
 
 ai:
   # Named LLM configurations that can be referenced by other settings.

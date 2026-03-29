@@ -47,9 +47,9 @@ func validTestConfig() CampaignAgentConfig {
 	cfg.Agent.Sources = map[string]SourceConfig{
 		constants.CampaignSourceRequest: {
 			Enabled: true,
-			Features: map[string]float64{
-				"source_ip": 0.9,
-				"cmp_hash":  0.8,
+			Features: map[string]FeatureConfig{
+				"source_ip": {Weight: 0.9},
+				"cmp_hash":  {Weight: 0.8},
 			},
 		},
 	}
@@ -154,7 +154,7 @@ func TestValidate_ValidCorrelationFeatures(t *testing.T) {
 
 func TestValidate_UnknownSourceName(t *testing.T) {
 	cfg := validTestConfig()
-	cfg.Agent.Sources["nonexistent"] = SourceConfig{Enabled: true, Features: map[string]float64{"foo": 0.5}}
+	cfg.Agent.Sources["nonexistent"] = SourceConfig{Enabled: true, Features: map[string]FeatureConfig{"foo": {Weight: 0.5}}}
 	assert.ErrorContains(t, cfg.Validate(), "unknown source \"nonexistent\"")
 }
 
@@ -169,7 +169,7 @@ func TestValidate_NoEnabledSources(t *testing.T) {
 func TestValidate_EnabledSourceNoFeatures(t *testing.T) {
 	cfg := validTestConfig()
 	cfg.Agent.Sources = map[string]SourceConfig{
-		constants.CampaignSourceRequest: {Enabled: true, Features: map[string]float64{}},
+		constants.CampaignSourceRequest: {Enabled: true, Features: map[string]FeatureConfig{}},
 	}
 	assert.ErrorContains(t, cfg.Validate(), "source \"request\" is enabled but has no features defined")
 }
@@ -177,16 +177,29 @@ func TestValidate_EnabledSourceNoFeatures(t *testing.T) {
 func TestValidate_NegativeFeatureWeight(t *testing.T) {
 	cfg := validTestConfig()
 	cfg.Agent.Sources = map[string]SourceConfig{
-		constants.CampaignSourceRequest: {Enabled: true, Features: map[string]float64{"source_ip": -0.5}},
+		constants.CampaignSourceRequest: {Enabled: true, Features: map[string]FeatureConfig{"source_ip": {Weight: -0.5}}},
 	}
 	assert.ErrorContains(t, cfg.Validate(), "negative weight")
+}
+
+func TestFeatureConfig_DefaultExhaustNumberIsZero(t *testing.T) {
+	fc := FeatureConfig{Weight: 0.9}
+	assert.Equal(t, 0, fc.ExhaustNumber, "omitting exhaust_number should default to 0 (never exhausted)")
+}
+
+func TestValidate_NegativeExhaustNumber(t *testing.T) {
+	cfg := validTestConfig()
+	cfg.Agent.Sources = map[string]SourceConfig{
+		constants.CampaignSourceRequest: {Enabled: true, Features: map[string]FeatureConfig{"source_ip": {Weight: 0.9, ExhaustNumber: -1}}},
+	}
+	assert.ErrorContains(t, cfg.Validate(), "negative exhaust_number")
 }
 
 func TestValidate_MultipleValidSources(t *testing.T) {
 	cfg := validTestConfig()
 	cfg.Agent.Sources = map[string]SourceConfig{
-		constants.CampaignSourceRequest: {Enabled: true, Features: map[string]float64{"source_ip": 0.9}},
-		constants.CampaignSourceWhois:   {Enabled: true, Features: map[string]float64{"geoip_asn": 0.3}},
+		constants.CampaignSourceRequest: {Enabled: true, Features: map[string]FeatureConfig{"source_ip": {Weight: 0.9, ExhaustNumber: 5000}}},
+		constants.CampaignSourceWhois:   {Enabled: true, Features: map[string]FeatureConfig{"geoip_asn": {Weight: 0.3}}},
 		constants.CampaignSourceP0f:     {Enabled: false},
 	}
 	assert.NoError(t, cfg.Validate())

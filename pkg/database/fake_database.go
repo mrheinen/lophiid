@@ -199,6 +199,13 @@ func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) 
 	return f.SimpleQueryResult, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) ParameterizedQuery(query string, result any, params ...any) (any, error) {
+	if f.ParameterizedQueryResult != nil && result != nil {
+		rv := reflect.ValueOf(result)
+		prv := reflect.ValueOf(f.ParameterizedQueryResult)
+		if rv.Kind() == reflect.Ptr && prv.Type().AssignableTo(rv.Elem().Type()) {
+			rv.Elem().Set(prv)
+		}
+	}
 	return f.ParameterizedQueryResult, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) ExecStatement(query string, params ...any) error {

@@ -530,6 +530,32 @@ func (a *ApiServer) HandleGetWhoisForIP(w http.ResponseWriter, req *http.Request
 		return
 	}
 	ip := req.Form.Get("ip")
+	if ip == "" {
+		a.sendStatus(w, "ip parameter is required", ResultError, nil)
+		return
+	}
+
+	dateStr := req.Form.Get("date")
+	if dateStr != "" {
+		t, err := time.Parse(time.RFC3339, dateStr)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("invalid date parameter: %s", err.Error()), ResultError, nil)
+			return
+		}
+		const q = `FROM whois WHERE ip = $1 ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $2::timestamptz))) ASC LIMIT 1`
+		var records []models.Whois
+		if _, err := a.dbc.ParameterizedQuery(q, &records, ip, t); err != nil {
+			a.sendStatus(w, err.Error(), ResultError, nil)
+			return
+		}
+		if len(records) == 0 {
+			a.sendStatus(w, "No result", ResultSuccess, nil)
+			return
+		}
+		records[0].RdapString = string(records[0].Rdap)
+		a.sendStatus(w, "", ResultSuccess, records[0])
+		return
+	}
 
 	res, err := a.dbc.SearchWhois(0, 1, fmt.Sprintf("ip:%s", ip))
 	if err != nil {
