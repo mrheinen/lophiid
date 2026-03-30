@@ -397,7 +397,7 @@ func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {
 	}
 
 	if p.maxRequestLength > 0 && len(requestData) > p.maxRequestLength {
-		requestData = requestData[:p.maxRequestLength]
+		requestData = requestData[:p.maxRequestLength] + "[truncated]"
 		if p.metrics != nil {
 			p.metrics.truncatedRequests.Inc()
 		}
