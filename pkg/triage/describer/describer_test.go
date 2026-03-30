@@ -250,10 +250,11 @@ func TestGenerateLLMDescriptions(t *testing.T) {
 			)
 
 			manager := &CachedDescriptionManager{
-				dbClient:     mockDB,
-				llmManager:   llmManager,
-				eventManager: mockEvents,
-				metrics:      describerMetrics,
+				dbClient:         mockDB,
+				llmManager:       llmManager,
+				eventManager:     mockEvents,
+				metrics:          describerMetrics,
+				maxRequestLength: 2500,
 			}
 
 			count, err := manager.GenerateLLMDescriptions(tt.workCount)
@@ -317,10 +318,11 @@ func TestTriagePayloadEventFields(t *testing.T) {
 	)
 
 	manager := &CachedDescriptionManager{
-		dbClient:     mockDB,
-		llmManager:   llmManager,
-		eventManager: mockEvents,
-		metrics:      describerMetrics,
+		dbClient:         mockDB,
+		llmManager:       llmManager,
+		eventManager:     mockEvents,
+		metrics:          describerMetrics,
+		maxRequestLength: 2500,
 	}
 
 	_, err := manager.GenerateLLMDescriptions(1)
@@ -403,10 +405,11 @@ func TestApplicationLengthValidation(t *testing.T) {
 			)
 
 			manager := &CachedDescriptionManager{
-				dbClient:     mockDB,
-				llmManager:   llmManager,
-				eventManager: mockEvents,
-				metrics:      describerMetrics,
+				dbClient:         mockDB,
+				llmManager:       llmManager,
+				eventManager:     mockEvents,
+				metrics:          describerMetrics,
+				maxRequestLength: 2500,
 			}
 
 			_, err := manager.GenerateLLMDescriptions(1)

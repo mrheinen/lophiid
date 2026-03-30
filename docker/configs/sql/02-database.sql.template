@@ -442,8 +442,8 @@ CREATE TYPE public.campaign_feedback_reason AS ENUM (
     'TIME_SPAN_TOO_BROAD',
     'DUPLICATE_CAMPAIGN',
     'POLYMORPHIC_URI',
-    'SAME_ATTACK_DIFFERENT_IPS',
-    'BACKGROUND_RADIATION_NOISE'
+    'IPS_ARE_MISSING',
+    'WRONG_IPS_INCLUDED'
 );
 
 ALTER TYPE public.campaign_feedback_reason OWNER TO postgres;

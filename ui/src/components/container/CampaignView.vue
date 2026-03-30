@@ -4,6 +4,8 @@
       <h2>
         <i class="pi pi-flag" style="margin-right: 0.5rem;" />
         {{ campaign.name || '(unnamed campaign)' }}
+        <i v-if="campaign.feedback_status === 'APPROVED'" class="pi pi-check-circle" style="margin-left: 0.5rem; color: var(--p-green-500);" title="Approved" />
+        <i v-else-if="campaign.feedback_status === 'REJECTED'" class="pi pi-times-circle" style="margin-left: 0.5rem; color: var(--p-red-500);" title="Rejected" />
         <PrimeTag
           :value="campaign.status"
           :severity="statusSeverity(campaign.status)"
@@ -57,6 +59,11 @@
           <a :href="requestsLink" class="view-requests-link">
             <i class="pi pi-external-link" style="margin-right: 0.4rem;" />
             View all requests
+          </a>
+          <br>
+          <a href="#" @click.prevent="showFingerprintModal = true" class="view-requests-link" style="margin-top: 0.5rem;">
+            <i class="pi pi-id-card" style="margin-right: 0.4rem;" />
+            View campaign fingerprint
           </a>
         </template>
       </InfoCard>
@@ -315,6 +322,15 @@
          </div>
       </div>
     </div>
+
+    <PrimeDialog v-model:visible="showFingerprintModal" header="Campaign Fingerprint" :style="{ width: '50rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" modal>
+      <div style="background: var(--p-content-background); padding: 1rem; border-radius: 6px; border: 1px solid var(--p-content-border-color); overflow-x: auto;">
+        <pre style="margin: 0; font-family: monospace; font-size: 0.85rem; color: var(--p-text-color);">{{ formattedFingerprint }}</pre>
+      </div>
+      <template #footer>
+        <PrimeButton label="Close" icon="pi pi-times" @click="showFingerprintModal = false" text />
+      </template>
+    </PrimeDialog>
   </div>
   <div v-else-if="loadError">
     <p>Error loading campaign: {{ loadError }}</p>
@@ -353,6 +369,7 @@ export default {
         vulns: false,
       },
       showRejectForm: false,
+      showFingerprintModal: false,
       feedback: {
         reason: 'NONE',
         details: null,
@@ -364,12 +381,21 @@ export default {
         { value: 'TIME_SPAN_TOO_BROAD', label: 'Time Span Too Broad (Unrelated events far apart)' },
         { value: 'DUPLICATE_CAMPAIGN', label: 'Duplicate Campaign (Provide ID in details)' },
         { value: 'POLYMORPHIC_URI', label: 'Polymorphic URI / Minor Payload Variation' },
-        { value: 'SAME_ATTACK_DIFFERENT_IPS', label: 'Same Attack, Different IPs' },
-        { value: 'BACKGROUND_RADIATION_NOISE', label: 'Background Radiation / Non-Campaign Noise' },
+        { value: 'IPS_ARE_MISSING', label: 'IPs that belong to the same campaign are missing' },
+        { value: 'WRONG_IPS_INCLUDED', label: 'IPs that clearly are not part of this campaign were added' },
       ],
     };
   },
   computed: {
+    formattedFingerprint() {
+      if (!this.campaign || !this.campaign.fingerprint) return 'No fingerprint available.';
+      try {
+        const obj = typeof this.campaign.fingerprint === 'string' ? JSON.parse(this.campaign.fingerprint) : this.campaign.fingerprint;
+        return JSON.stringify(obj, null, 2);
+      } catch (e) {
+        return this.campaign.fingerprint;
+      }
+    },
     requestsLink() {
       if (!this.campaign) return '#';
       let query = "campaign_id:" + this.campaign.id;

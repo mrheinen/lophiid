@@ -71,6 +71,12 @@ type Pipeline struct {
 	dryRun      bool
 	skipLLM     bool
 	backfill    bool
+
+	// dry-run export accumulators (only populated when dryRun == true)
+	dryRunNextEphemeralID int
+	dryRunClusters        []CampaignExportDTO
+	dryRunMerges          []MergeExportDTO
+	dryRunSeeds           []SeedAssignmentDTO
 }
 
 // NewPipeline creates a new Pipeline with the given dependencies.
@@ -161,6 +167,7 @@ func (p *Pipeline) Run(ctx context.Context, windowStart, windowEnd time.Time) (*
 		slog.Int("campaigns_merged", result.CampaignsMerged),
 		slog.Int("seeds_added", result.SeedsAdded),
 		slog.Int("correlated_added", result.CorrelatedAdded),
+		slog.Int("errors", len(result.Errors)),
 	)
 
 	return result, nil
@@ -285,12 +292,28 @@ func (p *Pipeline) phase1Seed(ctx context.Context, windowStart, windowEnd time.T
 			clusterRequests[i] = unmatched[idx]
 		}
 
+		uniqueIPsDebug := make(map[string]bool)
+		for _, r := range clusterRequests {
+			if r.SourceIP != "" {
+				uniqueIPsDebug[r.SourceIP] = true
+			}
+		}
+		slog.Debug("phase 1: cluster qualification check",
+			slog.Int("requests", len(clusterRequests)),
+			slog.Int("unique_ips", len(uniqueIPsDebug)),
+			slog.Int("min_requests", p.cfg.Agent.CampaignMinRequests),
+			slog.Int("min_source_ips", p.cfg.Agent.CampaignMinSourceIPs),
+		)
 		if !p.qualifiesAsCampaign(clusterRequests) {
 			continue
 		}
 
 		campaign, err := p.createCampaign(ctx, clusterRequests, fingerprints, result)
 		if err != nil {
+			slog.Warn("phase 1: failed to create campaign from cluster",
+				slog.Int("requests", len(clusterRequests)),
+				slog.String("error", err.Error()),
+			)
 			result.Errors = append(result.Errors, err)
 			continue
 		}
@@ -311,6 +334,11 @@ func (p *Pipeline) fetchMaliciousCandidates(windowStart, windowEnd time.Time) ([
 // addSeed adds a request as a seed to a campaign.
 func (p *Pipeline) addSeed(campaignID int64, er EnrichedRequest, fingerprints map[int64]Fingerprint, result *PipelineResult) error {
 	if p.dryRun {
+		p.dryRunSeeds = append(p.dryRunSeeds, SeedAssignmentDTO{
+			CampaignID: campaignID,
+			RequestID:  er.RequestID,
+			SourceIP:   er.SourceIP,
+		})
 		result.SeedsAdded++
 		return nil
 	}
@@ -389,7 +417,10 @@ func (p *Pipeline) createCampaign(ctx context.Context, requests []EnrichedReques
 		LastSeenAt:       lastSeen,
 		Fingerprint:      fpJSON,
 		AggregationState: json.RawMessage("{}"),
+		FeedbackStatus:   constants.CampaignFeedbackStatusPending,
 	}
+	feedbackReasonNone := constants.CampaignFeedbackReasonNone
+	campaign.FeedbackReason = &feedbackReasonNone
 
 	// Collect arrays for the campaign model.
 	ipsSet := make(map[string]bool)
@@ -406,6 +437,28 @@ func (p *Pipeline) createCampaign(ctx context.Context, requests []EnrichedReques
 			slog.Int("request_count", len(requests)),
 			slog.Int("unique_ips", len(ipsSet)),
 		)
+
+		requestIDs := make([]int64, 0, len(requests))
+		for _, r := range requests {
+			requestIDs = append(requestIDs, r.RequestID)
+		}
+		ipsSlice := make([]string, 0, len(ipsSet))
+		for ip := range ipsSet {
+			ipsSlice = append(ipsSlice, ip)
+		}
+
+		p.dryRunNextEphemeralID++
+		p.dryRunClusters = append(p.dryRunClusters, CampaignExportDTO{
+			EphemeralID:         p.dryRunNextEphemeralID,
+			Severity:            constants.CampaignSeverityLow,
+			Status:              constants.CampaignStatusActive,
+			FirstSeenAt:         firstSeen,
+			LastSeenAt:          lastSeen,
+			RequestCount:        len(requests),
+			ClusteredRequestIDs: requestIDs,
+			ClusteredIPs:        ipsSlice,
+		})
+
 		result.CampaignsCreated++
 		return nil, nil
 	}
@@ -690,6 +743,10 @@ func (p *Pipeline) phase3Merge(ctx context.Context, campaigns []models.Campaign,
 	for absorbedID, survivorID := range resolved {
 		if p.dryRun {
 			slog.Info("dry-run: would merge campaigns", slog.Int64("absorbed", absorbedID), slog.Int64("survivor", survivorID))
+			p.dryRunMerges = append(p.dryRunMerges, MergeExportDTO{
+				SurvivorCampaignID: survivorID,
+				AbsorbedCampaignID: absorbedID,
+			})
 			result.CampaignsMerged++
 			continue
 		}
@@ -713,43 +770,43 @@ func (p *Pipeline) phase3Merge(ctx context.Context, campaigns []models.Campaign,
 // A feature is skipped if either fingerprint's cardinality for that feature
 // meets or exceeds its configured exhaust_number.
 func (p *Pipeline) scoreFingerprintPair(a, b Fingerprint) float64 {
-    var score float64
-    for feature, weight := range p.weights {
-        if weight == 0 {
-            continue
-        }
-        aCard, bCard := len(a[feature]), len(b[feature])
-        if exhaustNum, ok := p.exhaustMap[feature]; ok {
-            if aCard >= exhaustNum || bCard >= exhaustNum {
-                slog.Debug("scoreFingerprintPair: feature exhausted, skipping",
-                    slog.String("feature", feature),
-                    slog.Int("cardinality_a", aCard),
-                    slog.Int("cardinality_b", bCard),
-                    slog.Int("exhaust_number", exhaustNum),
-                )
-                continue
-            }
-        }
-        aVals, aOk := a[feature]
-        bVals, bOk := b[feature]
-        if !aOk || !bOk {
-            continue
-        }
-        for v := range aVals {
-            if bVals[v] {
-                slog.Debug("scoreFingerprintPair: feature overlap",
-                    slog.String("feature", feature),
-                    slog.Float64("weight", weight),
-                    slog.Int("cardinality_a", aCard),
-                    slog.Int("cardinality_b", bCard),
-                    slog.String("overlapping_value", v),
-                )
-                score += weight
-                break
-            }
-        }
-    }
-    return score
+	var score float64
+	for feature, weight := range p.weights {
+		if weight == 0 {
+			continue
+		}
+		aCard, bCard := len(a[feature]), len(b[feature])
+		if exhaustNum, ok := p.exhaustMap[feature]; ok {
+			if aCard >= exhaustNum || bCard >= exhaustNum {
+				slog.Debug("scoreFingerprintPair: feature exhausted, skipping",
+					slog.String("feature", feature),
+					slog.Int("cardinality_a", aCard),
+					slog.Int("cardinality_b", bCard),
+					slog.Int("exhaust_number", exhaustNum),
+				)
+				continue
+			}
+		}
+		aVals, aOk := a[feature]
+		bVals, bOk := b[feature]
+		if !aOk || !bOk {
+			continue
+		}
+		for v := range aVals {
+			if bVals[v] {
+				slog.Debug("scoreFingerprintPair: feature overlap",
+					slog.String("feature", feature),
+					slog.Float64("weight", weight),
+					slog.Int("cardinality_a", aCard),
+					slog.Int("cardinality_b", bCard),
+					slog.String("overlapping_value", v),
+				)
+				score += weight
+				break
+			}
+		}
+	}
+	return score
 }
 
 // resolveTransitiveMerges resolves transitive merge chains.
@@ -1034,5 +1091,30 @@ func (p *Pipeline) phase4Lifecycle(ctx context.Context, campaigns []models.Campa
 				slog.Info("campaign transitioned to CLOSED", slog.Int64("campaign_id", c.ID))
 			}
 		}
+	}
+}
+
+// GetDryRunExport returns all clustering decisions accumulated during dry-run
+// pipeline executions. Call this after Run() (or after RunBackfill /
+// RunInterval completes) to obtain data suitable for writing with
+// ExportDryRunDataToFile.
+func (p *Pipeline) GetDryRunExport() DryRunExportData {
+	clusters := p.dryRunClusters
+	if clusters == nil {
+		clusters = []CampaignExportDTO{}
+	}
+	merges := p.dryRunMerges
+	if merges == nil {
+		merges = []MergeExportDTO{}
+	}
+	seeds := p.dryRunSeeds
+	if seeds == nil {
+		seeds = []SeedAssignmentDTO{}
+	}
+	return DryRunExportData{
+		GeneratedAt:     time.Now().UTC(),
+		NewClusters:     clusters,
+		Merges:          merges,
+		SeedAssignments: seeds,
 	}
 }

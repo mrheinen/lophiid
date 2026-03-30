@@ -113,7 +113,7 @@ func main() {
 	}
 
 	var describerErr error
-	myDescriber, describerErr = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics)
+	myDescriber, describerErr = describer.GetNewCachedDescriptionManager(dbc, llmManager, ipEventManager, deMtrics, cfg.AI.Triage.Describer.MaxRequestLength)
 	if describerErr != nil {
 		slog.Error("error creating description manager", slog.String("error", describerErr.Error()))
 		return

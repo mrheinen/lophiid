@@ -62,6 +62,7 @@ type PreProcess struct {
 	sqlEmu           sql.SqlInjectionEmulatorInterface
 	aiRateLimiters   map[string]ratelimit.RateLimiter
 	metrics          *PreprocessMetrics
+	maxRequestLength int
 }
 
 type PreProcessResult struct {
@@ -121,11 +122,11 @@ func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, *Pay
 
 // NewPreProcess creates a new PreProcess instance. The aiRateLimiters map is
 // keyed by TriagePayloadType constants and limits per-source-IP AI calls.
-func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, aiRateLimiters map[string]ratelimit.RateLimiter, metrics *PreprocessMetrics) (*PreProcess, error) {
+func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, aiRateLimiters map[string]ratelimit.RateLimiter, metrics *PreprocessMetrics, maxRequestLength int) (*PreProcess, error) {
 	if err := triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information"); err != nil {
 		return nil, fmt.Errorf("error setting response schema: %w", err)
 	}
-	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, aiRateLimiters: aiRateLimiters, metrics: metrics}, nil
+	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, aiRateLimiters: aiRateLimiters, metrics: metrics, maxRequestLength: maxRequestLength}, nil
 }
 
 // Case-sensitive patterns to detect potentially malicious payloads.
@@ -393,6 +394,13 @@ func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {
 			continue
 		}
 		requestData += line + "\n"
+	}
+
+	if p.maxRequestLength > 0 && len(requestData) > p.maxRequestLength {
+		requestData = requestData[:p.maxRequestLength]
+		if p.metrics != nil {
+			p.metrics.truncatedRequests.Inc()
+		}
 	}
 
 	finalPrompt := fmt.Sprintf("%s%s", ProcessPrompt, requestData)

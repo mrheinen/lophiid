@@ -39,8 +39,9 @@ type DescriptionManager interface {
 type CachedDescriptionManager struct {
 	dbClient     database.DatabaseClient
 	llmManager   llm.LLMManagerInterface
-	eventManager analysis.IpEventManager
-	metrics      *DescriberMetrics
+	eventManager     analysis.IpEventManager
+	metrics          *DescriberMetrics
+	maxRequestLength int
 }
 
 type QueueEntry struct {
@@ -81,15 +82,16 @@ That was the request. Now the following information was found in the base64 enco
 
 `
 
-func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, eventManager analysis.IpEventManager, metrics *DescriberMetrics) (*CachedDescriptionManager, error) {
+func GetNewCachedDescriptionManager(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, eventManager analysis.IpEventManager, metrics *DescriberMetrics, maxRequestLength int) (*CachedDescriptionManager, error) {
 	if err := llmManager.SetResponseSchemaFromObject(LLMResult{}, "security_information"); err != nil {
 		return nil, fmt.Errorf("error setting response schema: %w", err)
 	}
 	return &CachedDescriptionManager{
-		dbClient:     dbClient,
-		llmManager:   llmManager,
-		metrics:      metrics,
-		eventManager: eventManager,
+		dbClient:         dbClient,
+		llmManager:       llmManager,
+		metrics:          metrics,
+		eventManager:     eventManager,
+		maxRequestLength: maxRequestLength,
 	}, nil
 }
 
@@ -144,9 +146,17 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 
 		slog.Debug("Describing request for URI", slog.String("uri", reqs[0].Uri), slog.String("hash", reqs[0].CmpHash), slog.Int64("id", reqs[0].ID))
 
-		prompt := fmt.Sprintf("%s\n%s", LLMUserPrompt, reqs[0].Raw)
+		rawReq := reqs[0].Raw
+		if b.maxRequestLength > 0 && len(rawReq) > b.maxRequestLength {
+			rawReq = rawReq[:b.maxRequestLength]
+			if b.metrics != nil {
+				b.metrics.truncatedRequests.Inc()
+			}
+		}
+
+		prompt := fmt.Sprintf("%s\n%s", LLMUserPrompt, rawReq)
 		if base64data != "" {
-			prompt = fmt.Sprintf("%s\n%s\n%s\n%s", LLMUserPrompt, reqs[0].Raw, LLMBase64MetaPrompt, base64data)
+			prompt = fmt.Sprintf("%s\n%s\n%s\n%s", LLMUserPrompt, rawReq, LLMBase64MetaPrompt, base64data)
 		}
 
 		prompts = append(prompts, prompt)

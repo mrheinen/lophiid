@@ -52,6 +52,7 @@ var (
 	debugCampID  = flag.Int64("campaign", 0, "Campaign ID for debug modes")
 	debugCamp2ID = flag.Int64("campaign2", 0, "Second campaign ID for --debug-merge")
 	debugReqID   = flag.Int64("request-id", 0, "Request ID for --debug-match")
+	exportJSON   = flag.String("export-json", "", "File path to export clustering results as JSON (only works with --dry-run)")
 )
 
 func main() {
@@ -182,6 +183,11 @@ func main() {
 		return
 	}
 
+	if *exportJSON != "" && !*dryRun {
+		slog.Error("--export-json requires --dry-run")
+		return
+	}
+
 	if *backfillMode {
 		fromTime, err := time.Parse(time.RFC3339, *backfillFrom)
 		if err != nil {
@@ -220,6 +226,14 @@ func main() {
 		if err := campaign.RunBackfill(ctx, pipeline, pipelineMetrics, fromTime, toTime, cfg.Agent.LookbackWindow); err != nil {
 			slog.Error("backfill failed", slog.String("error", err.Error()))
 		}
+		if *dryRun && *exportJSON != "" {
+			exportData := pipeline.GetDryRunExport()
+			if err := campaign.ExportDryRunDataToFile(exportData, *exportJSON); err != nil {
+				slog.Error("failed to export dry-run data", slog.String("error", err.Error()))
+			} else {
+				slog.Info("dry-run: exported clustering results", slog.String("path", *exportJSON))
+			}
+		}
 	} else {
 		slog.Info("starting campaign agent in interval mode",
 			slog.Duration("scan_interval", cfg.Agent.ScanInterval),
@@ -231,6 +245,14 @@ func main() {
 		if err := campaign.RunInterval(ctx, pipeline, pipelineMetrics, cfg.Agent.ScanInterval, cfg.Agent.LookbackWindow); err != nil {
 			if ctx.Err() == nil {
 				slog.Error("interval mode failed", slog.String("error", err.Error()))
+			}
+		}
+		if *dryRun && *exportJSON != "" {
+			exportData := pipeline.GetDryRunExport()
+			if err := campaign.ExportDryRunDataToFile(exportData, *exportJSON); err != nil {
+				slog.Error("failed to export dry-run data", slog.String("error", err.Error()))
+			} else {
+				slog.Info("dry-run: exported clustering results", slog.String("path", *exportJSON))
 			}
 		}
 	}

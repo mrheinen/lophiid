@@ -1653,8 +1653,8 @@ func (a *ApiServer) HandleCampaignFeedback(w http.ResponseWriter, req *http.Requ
 		constants.CampaignFeedbackReasonTimeSpanBroad: true,
 		constants.CampaignFeedbackReasonDuplicate:     true,
 		constants.CampaignFeedbackReasonPolymorphic:   true,
-		constants.CampaignFeedbackReasonDifferentIPs:  true,
-		constants.CampaignFeedbackReasonNoise:         true,
+		constants.CampaignFeedbackReasonMissingIPs:    true,
+		constants.CampaignFeedbackReasonWrongIPs:      true,
 	}
 
 	if payload.Reason != nil && !validReasons[*payload.Reason] {

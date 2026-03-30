@@ -25,10 +25,17 @@ import (
 type DescriberMetrics struct {
 	pendingRequestsGauge         prometheus.Gauge
 	completeMultipleResponsetime prometheus.Histogram
+	truncatedRequests            prometheus.Counter
 }
 
 func CreateDescriberMetrics(reg prometheus.Registerer) *DescriberMetrics {
 	m := &DescriberMetrics{
+		truncatedRequests: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "lophiid_describer_truncated_requests_total",
+				Help: "The total number of requests that were truncated before sending to LLM",
+			},
+		),
 		pendingRequestsGauge: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "lophiid_describer_pending_requests_gauge",
@@ -42,6 +49,7 @@ func CreateDescriberMetrics(reg prometheus.Registerer) *DescriberMetrics {
 		),
 	}
 
+	reg.MustRegister(m.truncatedRequests)
 	reg.MustRegister(m.pendingRequestsGauge)
 	reg.MustRegister(m.completeMultipleResponsetime)
 	return m

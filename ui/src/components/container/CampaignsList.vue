@@ -39,6 +39,8 @@
             <template #body="slotProps">
               <a :href="config.campaignViewLink + '?id=' + slotProps.data.id">
                 {{ slotProps.data.name || '(unnamed)' }}
+                <i v-if="slotProps.data.feedback_status === 'APPROVED'" class="pi pi-check-circle" style="margin-left: 0.25rem; color: var(--p-green-500);" title="Approved" />
+                <i v-else-if="slotProps.data.feedback_status === 'REJECTED'" class="pi pi-times-circle" style="margin-left: 0.25rem; color: var(--p-red-500);" title="Rejected" />
               </a>
             </template>
           </DataColumn>

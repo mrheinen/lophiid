@@ -455,7 +455,7 @@ func main() {
 	}
 
 	preprocMetric := preprocess.CreatePreprocessMetrics(metricsRegistry)
-	preproc, err := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, aiRateLimiters, preprocMetric)
+	preproc, err := preprocess.NewPreProcess(payloadLLMManager, shellClient, codeEmu, fileEmu, sqlEmu, aiRateLimiters, preprocMetric, cfg.AI.Triage.PreProcess.MaxRequestLength)
 	if err != nil {
 		slog.Error("error creating preprocessor", slog.String("error", err.Error()))
 		return

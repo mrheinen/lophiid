@@ -32,10 +32,17 @@ type PreprocessMetrics struct {
 	resultOfPayloadLLMRequests *prometheus.CounterVec
 	triageResultCacheHits      *prometheus.CounterVec
 	aiRateLimitRejects         *prometheus.CounterVec
+	truncatedRequests            prometheus.Counter
 }
 
 func CreatePreprocessMetrics(reg prometheus.Registerer) *PreprocessMetrics {
 	m := &PreprocessMetrics{
+		truncatedRequests: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "lophiid_triage_preprocess_truncated_requests_total",
+				Help: "The total number of requests that were truncated before sending to LLM",
+			},
+		),
 		payloadLLMResponseTime: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    "lophiid_triage_preprocess_payload_llm_response_time",
@@ -89,6 +96,7 @@ func CreatePreprocessMetrics(reg prometheus.Registerer) *PreprocessMetrics {
 			[]string{"function"}),
 	}
 
+	reg.MustRegister(m.truncatedRequests)
 	reg.MustRegister(m.payloadLLMResponseTime)
 	reg.MustRegister(m.shellLLMResponseTime)
 	reg.MustRegister(m.codeEmuLLMResponseTime)

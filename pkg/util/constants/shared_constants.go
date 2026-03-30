@@ -280,6 +280,6 @@ const (
 	CampaignFeedbackReasonTimeSpanBroad = "TIME_SPAN_TOO_BROAD"
 	CampaignFeedbackReasonDuplicate     = "DUPLICATE_CAMPAIGN"
 	CampaignFeedbackReasonPolymorphic   = "POLYMORPHIC_URI"
-	CampaignFeedbackReasonDifferentIPs  = "SAME_ATTACK_DIFFERENT_IPS"
-	CampaignFeedbackReasonNoise         = "BACKGROUND_RADIATION_NOISE"
+	CampaignFeedbackReasonMissingIPs    = "IPS_ARE_MISSING"
+	CampaignFeedbackReasonWrongIPs      = "WRONG_IPS_INCLUDED"
 )
