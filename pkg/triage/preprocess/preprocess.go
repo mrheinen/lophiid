@@ -68,7 +68,7 @@ type PreProcess struct {
 type PreProcessResult struct {
 	HasPayload        bool   `json:"has_payload" jsonschema_description:"This is a boolean field. Use the value 'true' if the request has a payload, such as to execute a command or inject code or open a file. Otherwise use the value 'false'"`
 	TargetedParameter string `json:"targeted_parameter" jsonschema_description:"The name of the HTTP URL/body parameter that is targeted. Use an empty string if you don't know. Use the header name if the payload is in a header and use __body__ if the payload is in the body but without a specific parameter"`
-	PayloadType       string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\", \"SQL_INJECTION\", \"FILE_UPLOAD\" and \"UNKNOWN\" (if you don't know)"`
+	PayloadType       string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\", \"SQL_INJECTION\", \"FILE_UPLOAD\", \"AUTHENTICATION\", and \"UNKNOWN\" (if you don't know)"`
 	Payload           string `json:"payload" jsonschema_description:"The payload if there is one. Empty otherwise"`
 	Target            string `json:"target" jsonschema_description:"The target resource of the payload, such as a filename for file operations or a table name for SQL. Empty if not applicable"`
 }
