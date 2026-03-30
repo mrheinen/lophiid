@@ -37,8 +37,8 @@ type DescriptionManager interface {
 // CachedDescriptionManager is a manager for request descriptions. It caches
 // descriptions in memory so that database calls are minimal.
 type CachedDescriptionManager struct {
-	dbClient     database.DatabaseClient
-	llmManager   llm.LLMManagerInterface
+	dbClient         database.DatabaseClient
+	llmManager       llm.LLMManagerInterface
 	eventManager     analysis.IpEventManager
 	metrics          *DescriberMetrics
 	maxRequestLength int
@@ -148,7 +148,7 @@ func (b *CachedDescriptionManager) GenerateLLMDescriptions(workCount int64) (int
 
 		rawReq := reqs[0].Raw
 		if b.maxRequestLength > 0 && len(rawReq) > b.maxRequestLength {
-			rawReq = rawReq[:b.maxRequestLength]
+			rawReq = append(rawReq[:b.maxRequestLength], []byte("[REQUEST TRUNCATED DUE TO LENGTH]\n")...)
 			if b.metrics != nil {
 				b.metrics.truncatedRequests.Inc()
 			}
