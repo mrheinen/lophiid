@@ -420,6 +420,35 @@ CREATE TYPE public.campaign_status AS ENUM (
 ALTER TYPE public.campaign_status OWNER TO postgres;
 
 --
+-- Name: campaign_feedback_status; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.campaign_feedback_status AS ENUM (
+    'PENDING',
+    'APPROVED',
+    'REJECTED'
+);
+
+ALTER TYPE public.campaign_feedback_status OWNER TO postgres;
+
+--
+-- Name: campaign_feedback_reason; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.campaign_feedback_reason AS ENUM (
+    'NONE',
+    'MIXED_ATTACK_TYPES',
+    'TOO_MANY_DISTINCT_IPS',
+    'TIME_SPAN_TOO_BROAD',
+    'DUPLICATE_CAMPAIGN',
+    'POLYMORPHIC_URI',
+    'IPS_ARE_MISSING',
+    'WRONG_IPS_INCLUDED'
+);
+
+ALTER TYPE public.campaign_feedback_reason OWNER TO postgres;
+
+--
 -- Name: campaign_severity; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -2656,6 +2685,9 @@ CREATE TABLE public.campaign (
     fingerprint jsonb DEFAULT '{}'::jsonb,
     aggregation_state jsonb DEFAULT '{}'::jsonb,
     enabled_sources character varying(128)[],
+    feedback_status public.campaign_feedback_status DEFAULT 'PENDING'::public.campaign_feedback_status,
+    feedback_reason public.campaign_feedback_reason DEFAULT 'NONE'::public.campaign_feedback_reason,
+    feedback_details text,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );

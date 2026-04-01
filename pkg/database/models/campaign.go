@@ -40,6 +40,9 @@ type Campaign struct {
 	Fingerprint      string                   `ksql:"fingerprint" json:"fingerprint" doc:"JSON-encoded feature values defining this campaign"`
 	AggregationState json.RawMessage          `ksql:"aggregation_state" json:"aggregation_state" doc:"JSON-encoded aggregated campaign data, sole input for LLM summarization"`
 	EnabledSources   pgtype.FlatArray[string] `ksql:"enabled_sources" json:"enabled_sources" doc:"Sources that contributed to this campaign"`
+	FeedbackStatus   string                   `ksql:"feedback_status" json:"feedback_status" doc:"Feedback status"`
+	FeedbackReason   *string                  `ksql:"feedback_reason" json:"feedback_reason" doc:"Reason for rejection"`
+	FeedbackDetails  *string                  `ksql:"feedback_details" json:"feedback_details" doc:"Free-form context for feedback"`
 	CreatedAt        time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"When the campaign was created"`
 	UpdatedAt        time.Time                `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"When the campaign was last updated"`
 }

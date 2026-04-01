@@ -21,6 +21,7 @@ export default {
   campaignsLink: '/campaigns',
   campaignsSegmentLink: '/campaigns/:offset/:limit',
   campaignViewLink: '/campaign/view',
+  campaignFeedbackLink: '/campaign/feedback',
   tagsLink: '/tag',
   statsLink: '/stats',
   uriStatsLink: '/uristats',

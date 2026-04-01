@@ -185,6 +185,7 @@ func main() {
 
 	r.HandleFunc("/campaign/segment", as.HandleSearchCampaigns).Methods("GET")
 	r.HandleFunc("/campaign/single", as.HandleGetSingleCampaign).Methods("GET")
+	r.HandleFunc("/campaign/feedback", as.HandleCampaignFeedback).Methods("POST")
 	r.Use(as.AuthMW)
 
 	origins := make([]string, 0)

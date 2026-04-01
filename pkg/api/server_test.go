@@ -1082,3 +1082,82 @@ func TestHandleUpdateAppsForGroup(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleCampaignFeedback(t *testing.T) {
+	for _, test := range []struct {
+		description       string
+		body              string
+		status            string
+		statusMsgContains string
+		dbErr             error
+	}{
+		{
+			description:       "Success Approved",
+			body:              `{"id": 1, "status": "APPROVED", "reason": "NONE"}`,
+			status:            ResultSuccess,
+			statusMsgContains: "Feedback successfully saved",
+			dbErr:             nil,
+		},
+		{
+			description:       "Success Rejected",
+			body:              `{"id": 1, "status": "REJECTED", "reason": "MIXED_ATTACK_TYPES", "details": "context"}`,
+			status:            ResultSuccess,
+			statusMsgContains: "Feedback successfully saved",
+			dbErr:             nil,
+		},
+		{
+			description:       "Missing ID",
+			body:              `{"status": "APPROVED"}`,
+			status:            ResultError,
+			statusMsgContains: "campaign ID is required",
+			dbErr:             nil,
+		},
+		{
+			description:       "Invalid Status",
+			body:              `{"id": 1, "status": "INVALID"}`,
+			status:            ResultError,
+			statusMsgContains: "invalid feedback status",
+			dbErr:             nil,
+		},
+		{
+			description:       "Invalid Reason",
+			body:              `{"id": 1, "status": "REJECTED", "reason": "INVALID_REASON"}`,
+			status:            ResultError,
+			statusMsgContains: "invalid feedback reason",
+			dbErr:             nil,
+		},
+		{
+			description:       "DB Error",
+			body:              `{"id": 1, "status": "APPROVED"}`,
+			status:            ResultError,
+			statusMsgContains: "db error",
+			dbErr:             errors.New("db error"),
+		},
+	} {
+		t.Run(test.description, func(t *testing.T) {
+			fd := database.FakeDatabaseClient{
+				ErrorToReturn: test.dbErr,
+			}
+			s := NewApiServer(&fd, nil, "apikey")
+
+			req := httptest.NewRequest(http.MethodPost, "/campaign/feedback", strings.NewReader(test.body))
+			w := httptest.NewRecorder()
+			s.HandleCampaignFeedback(w, req)
+			res := w.Result()
+
+			defer res.Body.Close()
+			data, err := io.ReadAll(res.Body)
+			assert.NoError(t, err)
+
+			pdata := HttpResult{}
+			err = json.Unmarshal(data, &pdata)
+			assert.NoError(t, err)
+
+			assert.Equal(t, test.status, pdata.Status)
+			if test.statusMsgContains != "" {
+				assert.Contains(t, pdata.Message, test.statusMsgContains)
+			}
+		})
+	}
+}
+

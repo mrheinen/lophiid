@@ -62,12 +62,13 @@ type PreProcess struct {
 	sqlEmu           sql.SqlInjectionEmulatorInterface
 	aiRateLimiters   map[string]ratelimit.RateLimiter
 	metrics          *PreprocessMetrics
+	maxRequestLength int
 }
 
 type PreProcessResult struct {
 	HasPayload        bool   `json:"has_payload" jsonschema_description:"This is a boolean field. Use the value 'true' if the request has a payload, such as to execute a command or inject code or open a file. Otherwise use the value 'false'"`
 	TargetedParameter string `json:"targeted_parameter" jsonschema_description:"The name of the HTTP URL/body parameter that is targeted. Use an empty string if you don't know. Use the header name if the payload is in a header and use __body__ if the payload is in the body but without a specific parameter"`
-	PayloadType       string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\", \"SQL_INJECTION\", \"FILE_UPLOAD\" and \"UNKNOWN\" (if you don't know)"`
+	PayloadType       string `json:"payload_type" jsonschema_description:"The type of payload. Can be \"SHELL_COMMAND\", \"FILE_ACCESS\", \"CODE_EXECUTION\", \"SQL_INJECTION\", \"FILE_UPLOAD\", \"AUTHENTICATION\", and \"UNKNOWN\" (if you don't know)"`
 	Payload           string `json:"payload" jsonschema_description:"The payload if there is one. Empty otherwise"`
 	Target            string `json:"target" jsonschema_description:"The target resource of the payload, such as a filename for file operations or a table name for SQL. Empty if not applicable"`
 }
@@ -121,11 +122,11 @@ func (f *FakePreProcessor) Process(req *models.Request) (*PreProcessResult, *Pay
 
 // NewPreProcess creates a new PreProcess instance. The aiRateLimiters map is
 // keyed by TriagePayloadType constants and limits per-source-IP AI calls.
-func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, aiRateLimiters map[string]ratelimit.RateLimiter, metrics *PreprocessMetrics) (*PreProcess, error) {
+func NewPreProcess(triageLLMManager llm.LLMManagerInterface, shellClient shell.ShellClientInterface, codeEmulator code.CodeSnippetEmulatorInterface, fileEmulator file.FileAccessEmulatorInterface, sqlEmulator sql.SqlInjectionEmulatorInterface, aiRateLimiters map[string]ratelimit.RateLimiter, metrics *PreprocessMetrics, maxRequestLength int) (*PreProcess, error) {
 	if err := triageLLMManager.SetResponseSchemaFromObject(PreProcessResult{}, "request_information"); err != nil {
 		return nil, fmt.Errorf("error setting response schema: %w", err)
 	}
-	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, aiRateLimiters: aiRateLimiters, metrics: metrics}, nil
+	return &PreProcess{triageLLMManager: triageLLMManager, shellClient: shellClient, codeEmu: codeEmulator, fileEmu: fileEmulator, sqlEmu: sqlEmulator, aiRateLimiters: aiRateLimiters, metrics: metrics, maxRequestLength: maxRequestLength}, nil
 }
 
 // Case-sensitive patterns to detect potentially malicious payloads.
@@ -393,6 +394,13 @@ func (p *PreProcess) Complete(req *models.Request) (*PreProcessResult, error) {
 			continue
 		}
 		requestData += line + "\n"
+	}
+
+	if p.maxRequestLength > 0 && len(requestData) > p.maxRequestLength {
+		requestData = requestData[:p.maxRequestLength] + "[truncated]"
+		if p.metrics != nil {
+			p.metrics.truncatedRequests.Inc()
+		}
 	}
 
 	finalPrompt := fmt.Sprintf("%s%s", ProcessPrompt, requestData)

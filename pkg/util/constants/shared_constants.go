@@ -264,3 +264,22 @@ const (
 	CampaignSeverityHigh     = "HIGH"
 	CampaignSeverityCritical = "CRITICAL"
 )
+
+// Campaign feedback status kept in sync with CAMPAIGN_FEEDBACK_STATUS in the database.
+const (
+	CampaignFeedbackStatusPending  = "PENDING"
+	CampaignFeedbackStatusApproved = "APPROVED"
+	CampaignFeedbackStatusRejected = "REJECTED"
+)
+
+// Campaign feedback reasoning kept in sync with CAMPAIGN_FEEDBACK_REASON in the database.
+const (
+	CampaignFeedbackReasonNone          = "NONE"
+	CampaignFeedbackReasonMixedAttacks  = "MIXED_ATTACK_TYPES"
+	CampaignFeedbackReasonTooManyIPs    = "TOO_MANY_DISTINCT_IPS"
+	CampaignFeedbackReasonTimeSpanBroad = "TIME_SPAN_TOO_BROAD"
+	CampaignFeedbackReasonDuplicate     = "DUPLICATE_CAMPAIGN"
+	CampaignFeedbackReasonPolymorphic   = "POLYMORPHIC_URI"
+	CampaignFeedbackReasonMissingIPs    = "IPS_ARE_MISSING"
+	CampaignFeedbackReasonWrongIPs      = "WRONG_IPS_INCLUDED"
+)

@@ -193,9 +193,11 @@ type Config struct {
 				LogLevel             string        `fig:"log_level" default:"debug"`
 				MetricsListenAddress string        `fig:"metrics_listen_address" default:"localhost:8999"`
 				CacheExpirationTime  time.Duration `fig:"cache_expiration_time" default:"8h"`
+				MaxRequestLength     int           `fig:"max_request_length" default:"2500"`
 			} `fig:"describer"`
 			PreProcess struct {
-				LLMConfig string `fig:"llm_config"`
+				LLMConfig        string `fig:"llm_config"`
+				MaxRequestLength int    `fig:"max_request_length" default:"2500"`
 			} `fig:"preprocess"`
 		} `fig:"triage"`
 	} `fig:"ai"`
