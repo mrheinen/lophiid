@@ -250,9 +250,9 @@ func (g *GoogleLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 }
 
 // CompleteWithTools sends a sequence of messages to the Gemini API with function
-// calling support. It runs a loop (up to 10 iterations) dispatching tool calls
+// calling support. It runs a loop (up to maxToolIterations) dispatching tool calls
 // made by the model until the model produces a plain-text final response.
-func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
+func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool, maxToolIterations int) (string, error) {
 	if len(msgs) == 0 {
 		return "", fmt.Errorf("messages must not be empty")
 	}
@@ -282,8 +282,7 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 	}
 	config.Tools = []*genai.Tool{{FunctionDeclarations: decls}}
 
-	maxIterations := 10
-	for iteration := range maxIterations {
+	for iteration := range maxToolIterations {
 		slog.Debug("GoogleLLMClient tool calling iteration",
 			slog.String("model", g.model),
 			slog.Int("iteration", iteration),

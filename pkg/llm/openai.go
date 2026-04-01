@@ -312,9 +312,9 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 }
 
 // CompleteWithTools completes a sequence of LLM messages with tool support.
-// It runs a loop (up to 10 iterations) dispatching tool calls made by the model
+// It runs a loop (up to maxToolIterations) dispatching tool calls made by the model
 // until the model produces a final response with no tool calls.
-func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
+func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool, maxToolIterations int) (string, error) {
 	if msgs[len(msgs)-1].Role != constants.LLMClientMessageUser {
 		return "", fmt.Errorf("last message must be user")
 	}
@@ -362,8 +362,7 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 
 	opts := l.buildRequestOptions()
 
-	maxIterations := 10
-	for iteration := range maxIterations {
+	for iteration := range maxToolIterations {
 		slog.Debug("tool calling iteration", slog.Int("iteration", iteration), slog.Int("message_count", len(param.Messages)))
 
 		resp, err := l.client.Chat.Completions.New(ctx, param, opts...)

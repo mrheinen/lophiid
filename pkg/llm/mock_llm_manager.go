@@ -42,7 +42,7 @@ func (m *MockLLMManager) CompleteWithMessages(msgs []LLMMessage, cacheResult boo
 	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }
 
-func (m *MockLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error) {
+func (m *MockLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, maxToolIterations int, cacheResult bool) (LLMResult, error) {
 	m.LastReceivedMessages = msgs
 	return LLMResult{Output: m.CompletionToReturn, FromCache: false}, m.ErrorToReturn
 }

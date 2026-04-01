@@ -26,7 +26,7 @@ import (
 type LLMClient interface {
 	Complete(ctx context.Context, prompt string) (string, error)
 	CompleteWithMessages(ctx context.Context, msgs []LLMMessage) (string, error)
-	CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error)
+	CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool, maxToolIterations int) (string, error)
 	SetResponseSchemaFromObject(obj any, title string) error
 	LoadedModel() string
 	EnableDebug(enabled bool)
@@ -59,7 +59,7 @@ func (m *MockLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMess
 	return m.CompletionToReturn, m.ErrorToReturn
 }
 
-func (m *MockLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
+func (m *MockLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool, maxToolIterations int) (string, error) {
 	return m.CompletionToReturn, m.ErrorToReturn
 }
 

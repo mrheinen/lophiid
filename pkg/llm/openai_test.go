@@ -115,7 +115,7 @@ func TestCompleteWithTools_NoTools(t *testing.T) {
 	ctx := context.Background()
 	msgs := testMessages()
 
-	_, err := client.CompleteWithTools(ctx, msgs, nil)
+	_, err := client.CompleteWithTools(ctx, msgs, nil, 10)
 	assert.ErrorContains(t, err, "CompleteWithTools requires at least one tool")
 }
 
@@ -154,7 +154,7 @@ func TestCompleteWithTools_ToolError(t *testing.T) {
 		},
 	}
 
-	result, err := client.CompleteWithTools(ctx, msgs, tools)
+	result, err := client.CompleteWithTools(ctx, msgs, tools, 10)
 	assert.NoError(t, err)
 	assert.True(t, toolErrorExecuted, "tool function was not executed")
 	assert.Equal(t, "final response after tool error", result)
@@ -196,7 +196,7 @@ func TestCompleteWithTools_UndefinedTool(t *testing.T) {
 		},
 	}
 
-	result, err := client.CompleteWithTools(ctx, msgs, tools)
+	result, err := client.CompleteWithTools(ctx, msgs, tools, 10)
 	assert.NoError(t, err)
 	assert.False(t, definedToolExecuted, "defined tool should not have been executed")
 	assert.Equal(t, "response after undefined tool", result)
@@ -232,7 +232,7 @@ func TestCompleteWithTools_MaxIterationsExceeded(t *testing.T) {
 		},
 	}
 
-	result, err := client.CompleteWithTools(ctx, msgs, tools)
+	result, err := client.CompleteWithTools(ctx, msgs, tools, 10)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "exceeded maximum tool call iterations")
@@ -278,7 +278,7 @@ func TestCompleteWithTools_SuccessfulToolExecution(t *testing.T) {
 		},
 	}
 
-	result, err := client.CompleteWithTools(ctx, msgs, tools)
+	result, err := client.CompleteWithTools(ctx, msgs, tools, 10)
 	assert.NoError(t, err)
 	assert.True(t, toolExecuted, "tool was not executed")
 	assert.Equal(t, `{"operation": "add", "a": 5, "b": 3}`, receivedArgs)
@@ -329,7 +329,7 @@ func TestCompleteWithTools_MultipleToolCalls(t *testing.T) {
 		},
 	}
 
-	result, err := client.CompleteWithTools(ctx, msgs, tools)
+	result, err := client.CompleteWithTools(ctx, msgs, tools, 10)
 	assert.NoError(t, err)
 	assert.True(t, tool1Executed && tool2Executed, "not all tools were executed")
 	assert.Equal(t, "all tools executed", result)
@@ -349,7 +349,7 @@ func TestCompleteWithTools_InvalidLastMessage(t *testing.T) {
 		},
 	}
 
-	_, err := client.CompleteWithTools(ctx, msgs, nil)
+	_, err := client.CompleteWithTools(ctx, msgs, nil, 10)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "last message must be user")
 }

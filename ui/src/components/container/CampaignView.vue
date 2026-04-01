@@ -167,6 +167,24 @@
       </template>
     </InfoCard>
 
+    <InfoCard mylabel="Research" style="margin-top: 1rem;">
+      <template #default>
+        <p style="margin-top: 0; margin-bottom: 0.75rem; color: var(--p-text-muted-color); font-size: 0.9rem;">
+          Explore requests around the timeframe of this campaign to identify related activity.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <a :href="researchInWindowLink" class="view-requests-link" style="margin-top: 0;">
+            <i class="pi pi-search" style="margin-right: 0.4rem;" />
+            Search all requests within campaign time window
+          </a>
+          <a :href="researchExcludedCampaignLink" class="view-requests-link" style="margin-top: 0;">
+            <i class="pi pi-filter-slash" style="margin-right: 0.4rem;" />
+            Search other requests within window (exclude this campaign)
+          </a>
+        </div>
+      </template>
+    </InfoCard>
+
     <div class="campaign-grid" style="margin-top: 1rem;">
       <InfoCard mylabel="Top Source IPs">
         <template #default>
@@ -396,20 +414,34 @@ export default {
         return this.campaign.fingerprint;
       }
     },
-    requestsLink() {
-      if (!this.campaign) return '#';
-      let query = "campaign_id:" + this.campaign.id;
-      const status = this.campaign.status;
+    timeWindowQuery() {
+      if (!this.campaign) return '';
+      let query = "";
       if (this.campaign.first_seen_at) {
         const d = new Date(this.campaign.first_seen_at);
         d.setUTCDate(d.getUTCDate() - 1);
         query += " time_received>" + d.toISOString().slice(0, 10);
       }
-      if ((status === "CLOSED" || status === "MERGED") && this.campaign.last_seen_at) {
+      if (this.campaign.last_seen_at) {
         const d = new Date(this.campaign.last_seen_at);
         d.setUTCDate(d.getUTCDate() + 1);
         query += " time_received<" + d.toISOString().slice(0, 10);
       }
+      return query;
+    },
+    requestsLink() {
+      if (!this.campaign) return '#';
+      let query = "campaign_id:" + this.campaign.id + this.timeWindowQuery;
+      return this.config.requestsLink + "?q=" + encodeURIComponent(query);
+    },
+    researchInWindowLink() {
+      if (!this.campaign) return '#';
+      let query = this.timeWindowQuery.trim();
+      return this.config.requestsLink + "?q=" + encodeURIComponent(query);
+    },
+    researchExcludedCampaignLink() {
+      if (!this.campaign) return '#';
+      let query = "-campaign_id:" + this.campaign.id + this.timeWindowQuery;
       return this.config.requestsLink + "?q=" + encodeURIComponent(query);
     },
     sortedHistogram() {
