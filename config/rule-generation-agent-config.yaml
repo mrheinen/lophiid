@@ -1,0 +1,45 @@
+# Rule Generation Agent Configuration
+#
+# This configuration file is for the lophiid rule generation agent.
+# The agent analyses a single malicious honeypot request (specified via
+# --request-id) and autonomously researches the exploit, then creates
+# draft Application, Content, and ContentRule records in the database
+# for human review.
+#
+# Usage:
+#   rule_generation_agent --config config/rule-generation-agent-config.yaml \
+#                         --request-id <id> [--dry-run]
+
+general:
+  log_file: /tmp/rule_generation_agent.log
+  # The log level can be one of debug, info, warn and error.
+  log_level: info
+
+database:
+  # URL to the postgresql database (same database as the backend).
+  url: postgres://lo:passwordhere@localhost/lophiid
+  max_open_connections: 10
+
+llm:
+  # api_type can be "openai" or "google".
+  api_type: openai
+  # For OpenRouter, use: https://openrouter.ai/api/v1
+  # For a local model, use: http://localhost:8000/v1
+  api_location: https://openrouter.ai/api/v1
+  api_key: your-openrouter-or-openai-api-key-here
+  # A capable reasoning model is recommended for best results.
+  model: openai/gpt-4o
+  temperature: 0.2
+  # Timeout for a single LLM completion (the agent may use up to 50 iterations).
+  # Set this high enough to allow the full tool-calling loop to complete.
+  completion_timeout: 15m
+  # Only relevant when using OpenRouter models that support reasoning effort.
+  # Valid values: none, minimal, low, medium, high
+  openrouter_reasoning_effort: none
+
+web_search:
+  # Currently only "tavily" is supported.
+  provider: tavily
+  api_key: your-tavily-api-key-here
+  # Maximum number of search results to return per query.
+  max_results: 5

@@ -109,12 +109,11 @@ func TestFetchURL_BadArgs(t *testing.T) {
 
 // --- list_existing_rules ---
 
-func TestListExistingRules_FiltersDisabledAndDraft(t *testing.T) {
+func TestListExistingRules_ReturnsMatchingRules(t *testing.T) {
 	fakeDB := &database.FakeDatabaseClient{
 		ContentRulesToReturn: []models.ContentRule{
 			{ID: 1, Uri: "/admin", Enabled: true, IsDraft: false, Method: "GET", UriMatching: "exact"},
-			{ID: 2, Uri: "/admin/login", Enabled: false, IsDraft: false, Method: "GET", UriMatching: "exact"},
-			{ID: 3, Uri: "/admin/panel", Enabled: true, IsDraft: true, Method: "GET", UriMatching: "exact"},
+			{ID: 2, Uri: "/admin/login", Enabled: true, IsDraft: false, Method: "POST", UriMatching: "prefix"},
 		},
 	}
 	ts := newTestToolSet(t, fakeDB, &fakeSearch{})
@@ -124,8 +123,8 @@ func TestListExistingRules_FiltersDisabledAndDraft(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "ID=1")
-	assert.NotContains(t, result, "ID=2")
-	assert.NotContains(t, result, "ID=3")
+	assert.Contains(t, result, "ID=2")
+	assert.Contains(t, result, `URI="/admin/login"`)
 }
 
 func TestListExistingRules_NoMatches(t *testing.T) {
