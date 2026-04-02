@@ -36,7 +36,7 @@ const (
 	// MaxRetroactiveRequestsToFetch is the upper bound on requests returned by retroactive lookback queries.
 	MaxRetroactiveRequestsToFetch = 50000
 	// MaxRequestsToCorrelate is the upper bound on requests returned by correlation queries.
-	MaxRequestsToCorrelate = 100000
+	MaxRequestsToCorrelate = 200000
 )
 
 // mergePair represents a merge candidate where the survivor absorbs the other.
