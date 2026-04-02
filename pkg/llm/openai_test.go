@@ -1,5 +1,5 @@
 // Lophiid distributed honeypot
-// Copyright (C) 2025 Niels Heinen
+// Copyright (C) 2023-2026 Niels Heinen
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the
@@ -147,7 +147,7 @@ func TestCompleteWithTools_ToolError(t *testing.T) {
 		{
 			Name:        "test_tool",
 			Description: "test tool that errors",
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				toolErrorExecuted = true
 				return "", fmt.Errorf("tool execution failed")
 			},
@@ -189,7 +189,7 @@ func TestCompleteWithTools_UndefinedTool(t *testing.T) {
 		{
 			Name:        "defined_tool",
 			Description: "a defined tool",
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				definedToolExecuted = true
 				return "result", nil
 			},
@@ -225,7 +225,7 @@ func TestCompleteWithTools_MaxIterationsExceeded(t *testing.T) {
 		{
 			Name:        "recursive_tool",
 			Description: "tool that keeps getting called",
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				executionCount++
 				return "continue", nil
 			},
@@ -270,7 +270,7 @@ func TestCompleteWithTools_SuccessfulToolExecution(t *testing.T) {
 		{
 			Name:        "calculator",
 			Description: "performs calculations",
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				toolExecuted = true
 				receivedArgs = args
 				return "8", nil
@@ -315,14 +315,14 @@ func TestCompleteWithTools_MultipleToolCalls(t *testing.T) {
 	tools := []LLMTool{
 		{
 			Name: "tool1",
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				tool1Executed = true
 				return "result1", nil
 			},
 		},
 		{
 			Name: "tool2",
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				tool2Executed = true
 				return "result2", nil
 			},

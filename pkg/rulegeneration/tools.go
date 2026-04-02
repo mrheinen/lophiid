@@ -83,18 +83,16 @@ type ToolSet struct {
 	httpClient *http.Client
 	requestID  int64
 	dryRun     bool
-	ctx        context.Context
 }
 
 // NewToolSet creates a new ToolSet.
-func NewToolSet(ctx context.Context, db database.DatabaseClient, search SearchProvider, requestID int64, dryRun bool) *ToolSet {
+func NewToolSet(db database.DatabaseClient, search SearchProvider, requestID int64, dryRun bool) *ToolSet {
 	return &ToolSet{
 		db:         db,
 		search:     search,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
 		requestID:  requestID,
 		dryRun:     dryRun,
-		ctx:        ctx,
 	}
 }
 
@@ -212,7 +210,7 @@ The rule's request_purpose must be one of: ATTACK, RECON, UNKNOWN.`,
 	}
 }
 
-func (t *ToolSet) webSearchTool(args string) (string, error) {
+func (t *ToolSet) webSearchTool(ctx context.Context, args string) (string, error) {
 	var params struct {
 		Query string `json:"query"`
 	}
@@ -221,7 +219,7 @@ func (t *ToolSet) webSearchTool(args string) (string, error) {
 	}
 	slog.Info("tool: web_search", slog.Int64("request_id", t.requestID), slog.String("query", params.Query))
 
-	results, err := t.search.Search(t.ctx, params.Query, 5)
+	results, err := t.search.Search(ctx, params.Query, 5)
 	if err != nil {
 		slog.Error("tool error", slog.String("tool_name", "web_search"), slog.String("error", err.Error()))
 		return "", fmt.Errorf("web search failed: %w", err)
@@ -238,7 +236,7 @@ func (t *ToolSet) webSearchTool(args string) (string, error) {
 	return sb.String(), nil
 }
 
-func (t *ToolSet) fetchURLTool(args string) (string, error) {
+func (t *ToolSet) fetchURLTool(ctx context.Context, args string) (string, error) {
 	var params struct {
 		URL string `json:"url"`
 	}
@@ -247,7 +245,7 @@ func (t *ToolSet) fetchURLTool(args string) (string, error) {
 	}
 	slog.Info("tool: fetch_url", slog.Int64("request_id", t.requestID), slog.String("url", params.URL))
 
-	req, err := http.NewRequestWithContext(t.ctx, http.MethodGet, params.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, params.URL, nil)
 	if err != nil {
 		slog.Error("tool error", slog.String("tool_name", "fetch_url"), slog.String("error", err.Error()))
 		return "", fmt.Errorf("creating request: %w", err)
@@ -268,7 +266,7 @@ func (t *ToolSet) fetchURLTool(args string) (string, error) {
 	return string(body), nil
 }
 
-func (t *ToolSet) listExistingRulesTool(args string) (string, error) {
+func (t *ToolSet) listExistingRulesTool(_ context.Context, args string) (string, error) {
 	var params struct {
 		URIPattern string `json:"uri_pattern"`
 	}
@@ -298,7 +296,7 @@ func (t *ToolSet) listExistingRulesTool(args string) (string, error) {
 	return sb.String(), nil
 }
 
-func (t *ToolSet) listAppsTool(args string) (string, error) {
+func (t *ToolSet) listAppsTool(_ context.Context, args string) (string, error) {
 	apps, err := t.db.SearchApps(0, maxAppsLookup, "")
 	if err != nil {
 		slog.Error("tool error", slog.String("tool_name", "list_apps"), slog.String("error", err.Error()))
@@ -327,7 +325,7 @@ func (t *ToolSet) listAppsTool(args string) (string, error) {
 	return sb.String(), nil
 }
 
-func (t *ToolSet) createDraftTool(args string) (string, error) {
+func (t *ToolSet) createDraftTool(_ context.Context, args string) (string, error) {
 	var input CreateDraftInput
 	if err := json.Unmarshal([]byte(args), &input); err != nil {
 		return "", fmt.Errorf("parsing create_draft args: %w", err)

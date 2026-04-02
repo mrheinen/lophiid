@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 // SearchResult holds a single result from a web search.
@@ -43,11 +44,11 @@ type TavilySearchProvider struct {
 	httpClient *http.Client
 }
 
-// NewTavilySearchProvider creates a new TavilySearchProvider with the given API key.
-func NewTavilySearchProvider(apiKey string) *TavilySearchProvider {
+// NewTavilySearchProvider creates a new TavilySearchProvider with the given API key and HTTP timeout.
+func NewTavilySearchProvider(apiKey string, timeout time.Duration) *TavilySearchProvider {
 	return &TavilySearchProvider{
 		apiKey:     apiKey,
-		httpClient: &http.Client{},
+		httpClient: &http.Client{Timeout: timeout},
 	}
 }
 

@@ -29,7 +29,7 @@ llm:
   api_key: your-openrouter-or-openai-api-key-here
   # A capable reasoning model is recommended for best results.
   model: openai/gpt-4o
-  temperature: 0.2
+  temperature: 0.6
   # Timeout for a single LLM completion (the agent may use up to 50 iterations).
   # Set this high enough to allow the full tool-calling loop to complete.
   completion_timeout: 15m
@@ -43,3 +43,5 @@ web_search:
   api_key: your-tavily-api-key-here
   # Maximum number of search results to return per query.
   max_results: 5
+  # HTTP timeout for each search request.
+  timeout: 30s

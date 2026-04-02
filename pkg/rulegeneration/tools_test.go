@@ -43,7 +43,7 @@ func (f *fakeSearch) Search(_ context.Context, _ string, _ int) ([]SearchResult,
 
 func newTestToolSet(t *testing.T, db database.DatabaseClient, search SearchProvider) *ToolSet {
 	t.Helper()
-	return NewToolSet(context.Background(), db, search, 42, false)
+	return NewToolSet(db, search, 42, false)
 }
 
 // --- web_search ---
@@ -55,7 +55,7 @@ func TestWebSearch_ReturnsResults(t *testing.T) {
 	ts := newTestToolSet(t, nil, search)
 
 	args, _ := json.Marshal(map[string]string{"query": "CVE-2024-1234 exploitdb"})
-	result, err := ts.webSearchTool(string(args))
+	result, err := ts.webSearchTool(context.Background(), string(args))
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "ExploitDB")
@@ -67,7 +67,7 @@ func TestWebSearch_NoResults(t *testing.T) {
 	ts := newTestToolSet(t, nil, search)
 
 	args, _ := json.Marshal(map[string]string{"query": "something obscure"})
-	result, err := ts.webSearchTool(string(args))
+	result, err := ts.webSearchTool(context.Background(), string(args))
 
 	require.NoError(t, err)
 	assert.Equal(t, "No results found.", result)
@@ -78,7 +78,7 @@ func TestWebSearch_SearchError(t *testing.T) {
 	ts := newTestToolSet(t, nil, search)
 
 	args, _ := json.Marshal(map[string]string{"query": "test"})
-	_, err := ts.webSearchTool(string(args))
+	_, err := ts.webSearchTool(context.Background(), string(args))
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "network error")
@@ -95,7 +95,7 @@ func TestFetchURL_Success(t *testing.T) {
 
 	ts := newTestToolSet(t, nil, &fakeSearch{})
 	args, _ := json.Marshal(map[string]string{"url": srv.URL})
-	result, err := ts.fetchURLTool(string(args))
+	result, err := ts.fetchURLTool(context.Background(), string(args))
 
 	require.NoError(t, err)
 	assert.Equal(t, "hello world", result)
@@ -103,7 +103,7 @@ func TestFetchURL_Success(t *testing.T) {
 
 func TestFetchURL_BadArgs(t *testing.T) {
 	ts := newTestToolSet(t, nil, &fakeSearch{})
-	_, err := ts.fetchURLTool("not json")
+	_, err := ts.fetchURLTool(context.Background(), "not json")
 	assert.Error(t, err)
 }
 
@@ -119,7 +119,7 @@ func TestListExistingRules_ReturnsMatchingRules(t *testing.T) {
 	ts := newTestToolSet(t, fakeDB, &fakeSearch{})
 
 	args, _ := json.Marshal(map[string]string{"uri_pattern": "/admin"})
-	result, err := ts.listExistingRulesTool(string(args))
+	result, err := ts.listExistingRulesTool(context.Background(), string(args))
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "ID=1")
@@ -134,7 +134,7 @@ func TestListExistingRules_NoMatches(t *testing.T) {
 	ts := newTestToolSet(t, fakeDB, &fakeSearch{})
 
 	args, _ := json.Marshal(map[string]string{"uri_pattern": "/nonexistent"})
-	result, err := ts.listExistingRulesTool(string(args))
+	result, err := ts.listExistingRulesTool(context.Background(), string(args))
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "No existing rules")
@@ -150,7 +150,7 @@ func TestListApps_ReturnsList(t *testing.T) {
 	}
 	ts := newTestToolSet(t, fakeDB, &fakeSearch{})
 
-	result, err := ts.listAppsTool("{}")
+	result, err := ts.listAppsTool(context.Background(), "{}")
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "ID=10")
@@ -165,7 +165,7 @@ func TestListApps_HasOutput(t *testing.T) {
 	}
 	ts := newTestToolSet(t, fakeDB, &fakeSearch{})
 
-	result, err := ts.listAppsTool("{}")
+	result, err := ts.listAppsTool(context.Background(), "{}")
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "ID=5")
@@ -200,7 +200,7 @@ func TestCreateDraft_NewApp(t *testing.T) {
 		},
 	}
 	args, _ := json.Marshal(input)
-	result, err := ts.createDraftTool(string(args))
+	result, err := ts.createDraftTool(context.Background(), string(args))
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "draft created")
@@ -226,7 +226,7 @@ func TestCreateDraft_ExistingApp(t *testing.T) {
 		},
 	}
 	args, _ := json.Marshal(input)
-	result, err := ts.createDraftTool(string(args))
+	result, err := ts.createDraftTool(context.Background(), string(args))
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "app_id=99")
@@ -234,7 +234,7 @@ func TestCreateDraft_ExistingApp(t *testing.T) {
 
 func TestCreateDraft_DryRun(t *testing.T) {
 	fakeDB := &database.FakeDatabaseClient{}
-	ts := NewToolSet(context.Background(), fakeDB, &fakeSearch{}, 1, true)
+	ts := NewToolSet(fakeDB, &fakeSearch{}, 1, true)
 
 	input := CreateDraftInput{
 		Content: DraftContent{
@@ -246,7 +246,7 @@ func TestCreateDraft_DryRun(t *testing.T) {
 		},
 	}
 	args, _ := json.Marshal(input)
-	result, err := ts.createDraftTool(string(args))
+	result, err := ts.createDraftTool(context.Background(), string(args))
 
 	require.NoError(t, err)
 	assert.Contains(t, result, "dry-run")
@@ -266,7 +266,7 @@ func TestCreateDraft_MissingApp(t *testing.T) {
 		},
 	}
 	args, _ := json.Marshal(input)
-	_, err := ts.createDraftTool(string(args))
+	_, err := ts.createDraftTool(context.Background(), string(args))
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "app_id")

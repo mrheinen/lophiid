@@ -30,7 +30,7 @@ import (
 )
 
 func newTestAgent(llmMgr llm.LLMManagerInterface, db database.DatabaseClient) *Agent {
-	toolSet := NewToolSet(context.Background(), db, &fakeSearch{}, 1, true)
+	toolSet := NewToolSet(db, &fakeSearch{}, 1, true)
 	return NewAgent(llmMgr, toolSet)
 }
 
@@ -123,7 +123,7 @@ func TestNewAgentFromConfig_UnknownProvider(t *testing.T) {
 		context.Background(),
 		fakeDB,
 		mockLLM,
-		WebSearchConfig{Provider: "unknown-engine", APIKey: "key"},
+		WebSearchConfig{Provider: "unknown-engine", APIKey: "key", Timeout: "30s"},
 		1,
 		false,
 	)
@@ -139,7 +139,7 @@ func TestNewAgentFromConfig_MissingTavilyKey(t *testing.T) {
 		context.Background(),
 		fakeDB,
 		mockLLM,
-		WebSearchConfig{Provider: "tavily", APIKey: ""},
+		WebSearchConfig{Provider: "tavily", APIKey: "", Timeout: "30s"},
 		1,
 		false,
 	)

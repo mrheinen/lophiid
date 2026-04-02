@@ -18,6 +18,7 @@
 package tools
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
@@ -92,7 +93,7 @@ func (t *CodeToolSet) BuildTools(req *models.Request) []llm.LLMTool {
 				},
 				"required": []string{"input"},
 			},
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				input, err := ParseToolInput(args)
 				if err != nil {
 					return "", err
@@ -113,7 +114,7 @@ func (t *CodeToolSet) BuildTools(req *models.Request) []llm.LLMTool {
 				},
 				"required": []string{"input"},
 			},
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				input, err := ParseToolInput(args)
 				if err != nil {
 					return "", err
@@ -137,7 +138,7 @@ func (t *CodeToolSet) BuildTools(req *models.Request) []llm.LLMTool {
 				},
 				"required": []string{"input"},
 			},
-			Function: func(args string) (string, error) {
+			Function: func(_ context.Context, args string) (string, error) {
 				input, err := ParseToolInput(args)
 				if err != nil {
 					return "", err

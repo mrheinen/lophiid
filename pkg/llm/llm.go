@@ -41,7 +41,7 @@ type LLMTool struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Parameters  any    `json:"parameters"`
-	Function    func(args string) (string, error)
+	Function    func(ctx context.Context, args string) (string, error)
 }
 
 type MockLLMClient struct {

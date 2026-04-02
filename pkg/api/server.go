@@ -1680,6 +1680,130 @@ func (a *ApiServer) HandleCampaignFeedback(w http.ResponseWriter, req *http.Requ
 	a.sendStatus(w, "Feedback successfully saved", ResultSuccess, campaign)
 }
 
+type DraftRequest struct {
+	RuleID int64 `json:"rule_id"`
+	Enable bool  `json:"enable"` // used by HandleApproveDraft
+}
+
+func (a *ApiServer) HandleApproveDraft(w http.ResponseWriter, req *http.Request) {
+	var payload DraftRequest
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields()
+
+	if err := d.Decode(&payload); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if payload.RuleID == 0 {
+		a.sendStatus(w, "rule_id is required", ResultError, nil)
+		return
+	}
+
+	rules, err := a.dbc.SearchContentRules(0, 1, fmt.Sprintf("id:%d", payload.RuleID))
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	if len(rules) == 0 {
+		a.sendStatus(w, "Rule not found", ResultError, nil)
+		return
+	}
+	rule := rules[0]
+
+	if !rule.IsDraft {
+		a.sendStatus(w, "rule is not a draft", ResultError, nil)
+		return
+	}
+
+	// Un-draft the rule
+	rule.IsDraft = false
+	if payload.Enable {
+		rule.Enabled = true
+	}
+	if err := a.dbc.Update(&rule); err != nil {
+		a.sendStatus(w, fmt.Sprintf("unable to update rule: %s", err), ResultError, nil)
+		return
+	}
+
+	// Un-draft the content
+	if rule.ContentID != 0 {
+		content, err := a.dbc.GetContentByID(rule.ContentID)
+		if err == nil && content.IsDraft {
+			content.IsDraft = false
+			a.dbc.Update(&content)
+		}
+	}
+
+	// Un-draft the app
+	if rule.AppID != 0 {
+		app, err := a.dbc.GetAppByID(rule.AppID)
+		if err == nil && app.IsDraft {
+			app.IsDraft = false
+			a.dbc.Update(&app)
+		}
+	}
+
+	a.sendStatus(w, "Draft approved successfully", ResultSuccess, rule)
+}
+
+func (a *ApiServer) HandleDiscardDraft(w http.ResponseWriter, req *http.Request) {
+	var payload DraftRequest
+	d := json.NewDecoder(req.Body)
+	d.DisallowUnknownFields() // To avoid accepting bad keys
+
+	if err := d.Decode(&payload); err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	if payload.RuleID == 0 {
+		a.sendStatus(w, "rule_id is required", ResultError, nil)
+		return
+	}
+
+	rules, err := a.dbc.SearchContentRules(0, 1, fmt.Sprintf("id:%d", payload.RuleID))
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	if len(rules) == 0 {
+		a.sendStatus(w, "Rule not found", ResultError, nil)
+		return
+	}
+	rule := rules[0]
+
+	if !rule.IsDraft {
+		a.sendStatus(w, "rule is not a draft", ResultError, nil)
+		return
+	}
+
+	// Delete rule
+	if err := a.dbc.Delete(&rule); err != nil {
+		a.sendStatus(w, fmt.Sprintf("unable to delete rule: %s", err), ResultError, nil)
+		return
+	}
+
+	// If content is draft, delete it
+	if rule.ContentID != 0 {
+		content, err := a.dbc.GetContentByID(rule.ContentID)
+		if err == nil && content.IsDraft {
+			a.dbc.Delete(&content)
+		}
+	}
+
+	// If app is draft, delete it
+	if rule.AppID != 0 {
+		app, err := a.dbc.GetAppByID(rule.AppID)
+		if err == nil && app.IsDraft {
+			a.dbc.Delete(&app)
+		}
+	}
+
+	a.sendStatus(w, "Draft discarded successfully", ResultSuccess, nil)
+}
+
+
 func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Request) {
 	modelName := strings.ToLower(req.URL.Query().Get("model"))
 	var retval map[string]database.FieldDocEntry

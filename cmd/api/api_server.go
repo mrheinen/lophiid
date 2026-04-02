@@ -131,6 +131,10 @@ func main() {
 	r.HandleFunc("/contentrule/delete", as.HandleDeleteContentRule).Methods("POST")
 	r.HandleFunc("/contentrule/segment", as.HandleSearchContentRules).Methods("GET")
 
+	// Draft rules endpoints
+	r.HandleFunc("/draft/approve", as.HandleApproveDraft).Methods("POST")
+	r.HandleFunc("/draft/discard", as.HandleDiscardDraft).Methods("POST")
+
 	// All requests endpoints
 	r.HandleFunc("/request/update", as.HandleUpdateRequest).Methods("POST")
 	r.HandleFunc("/request/segment", as.HandleGetRequestsSegment).Methods("GET")

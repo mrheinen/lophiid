@@ -155,7 +155,7 @@ func (g *GoogleLLMClient) buildContents(msgs []LLMMessage, config *genai.Generat
 // dispatchFunctionCall marshals the function call arguments, invokes the
 // matching tool via findAndCallTool, logs the outcome, and returns a
 // genai.Part carrying the FunctionResponse to send back to the model.
-func (g *GoogleLLMClient) dispatchFunctionCall(fc *genai.FunctionCall, tools []LLMTool) *genai.Part {
+func (g *GoogleLLMClient) dispatchFunctionCall(ctx context.Context, fc *genai.FunctionCall, tools []LLMTool) *genai.Part {
 	argsJSON, err := json.Marshal(fc.Args)
 	if err != nil {
 		slog.Error("error marshaling tool args",
@@ -168,7 +168,7 @@ func (g *GoogleLLMClient) dispatchFunctionCall(fc *genai.FunctionCall, tools []L
 		slog.String("tool", fc.Name),
 		slog.String("args", string(argsJSON)))
 
-	toolResult, err := findAndCallTool(fc.Name, string(argsJSON), tools)
+	toolResult, err := findAndCallTool(ctx, fc.Name, string(argsJSON), tools)
 	if err != nil {
 		slog.Error("tool call failed",
 			slog.String("tool", fc.Name),
@@ -312,7 +312,7 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 
 			var responseParts []*genai.Part
 			for _, fc := range funcCalls {
-				responseParts = append(responseParts, g.dispatchFunctionCall(fc, tools))
+				responseParts = append(responseParts, g.dispatchFunctionCall(ctx, fc, tools))
 			}
 
 			// Append the tool results as a user turn.

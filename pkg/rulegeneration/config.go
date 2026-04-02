@@ -21,6 +21,7 @@ type WebSearchConfig struct {
 	Provider   string `fig:"provider" default:"tavily"`
 	APIKey     string `fig:"api_key"`
 	MaxResults int    `fig:"max_results" default:"5"`
+	Timeout    string `fig:"timeout" default:"30s"`
 }
 
 // AgentConfig holds all configuration for the rule generation agent.
@@ -38,7 +39,7 @@ type AgentConfig struct {
 		ApiLocation               string  `fig:"api_location" validate:"required"`
 		ApiKey                    string  `fig:"api_key" validate:"required"`
 		Model                     string  `fig:"model" validate:"required"`
-		Temperature               float64 `fig:"temperature" default:"0.2"`
+		Temperature               float64 `fig:"temperature" default:"0.6"`
 		CompletionTimeout         string  `fig:"completion_timeout" default:"10m"`
 		OpenRouterReasoningEffort string  `fig:"openrouter_reasoning_effort" default:"none"`
 	} `fig:"llm" validate:"required"`

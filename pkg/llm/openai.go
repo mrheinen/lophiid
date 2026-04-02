@@ -236,10 +236,10 @@ func (l *OpenAILLMClient) buildMessages(msgs []LLMMessage) ([]openai.ChatComplet
 // findAndCallTool looks up a tool by name and invokes it with the provided JSON
 // args string. Returns the result string, or an error if the tool is not found
 // or the invocation fails.
-func findAndCallTool(toolName, toolArgs string, tools []LLMTool) (string, error) {
+func findAndCallTool(ctx context.Context, toolName, toolArgs string, tools []LLMTool) (string, error) {
 	for _, t := range tools {
 		if t.Name == toolName {
-			return t.Function(toolArgs)
+			return t.Function(ctx, toolArgs)
 		}
 	}
 	return "", fmt.Errorf("tool %q not found", toolName)
@@ -389,7 +389,7 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 					slog.String("tool_call_id", toolCall.ID),
 					slog.String("args", toolCall.Function.Arguments))
 
-				result, err := findAndCallTool(toolCall.Function.Name, toolCall.Function.Arguments, tools)
+				result, err := findAndCallTool(ctx, toolCall.Function.Name, toolCall.Function.Arguments, tools)
 				if err != nil {
 					slog.Error("tool call failed",
 						slog.String("tool", toolCall.Function.Name),

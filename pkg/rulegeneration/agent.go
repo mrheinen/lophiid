@@ -24,6 +24,7 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/util/constants"
+	"time"
 )
 
 const maxAgentToolIterations = 50
@@ -197,17 +198,22 @@ func NewAgentFromConfig(
 	requestID int64,
 	dryRun bool,
 ) (*Agent, error) {
+	searchTimeout, err := time.ParseDuration(searchCfg.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("invalid web_search.timeout %q: %w", searchCfg.Timeout, err)
+	}
+
 	var searchProvider SearchProvider
 	switch searchCfg.Provider {
 	case "tavily":
 		if searchCfg.APIKey == "" {
 			return nil, fmt.Errorf("tavily provider requires web_search.api_key")
 		}
-		searchProvider = NewTavilySearchProvider(searchCfg.APIKey)
+		searchProvider = NewTavilySearchProvider(searchCfg.APIKey, searchTimeout)
 	default:
 		return nil, fmt.Errorf("unknown search provider %q", searchCfg.Provider)
 	}
 
-	toolSet := NewToolSet(ctx, dbClient, searchProvider, requestID, dryRun)
+	toolSet := NewToolSet(dbClient, searchProvider, requestID, dryRun)
 	return NewAgent(llmManager, toolSet), nil
 }
