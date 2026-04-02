@@ -116,7 +116,7 @@ func main() {
 	pCache := util.NewStringMapCache[string]("", 0)
 	llmManager := llm.NewLLMManager(llmClient, pCache, metrics, completionTimeout, 1, false, "", "")
 
-	agent, err := rulegeneration.NewAgentFromConfig(ctx, dbClient, llmManager, cfg.WebSearch, *requestID, *dryRun)
+	agent, err := rulegeneration.NewAgentFromConfig(ctx, dbClient, llmManager, cfg.WebSearch, cfg.GitHub, *requestID, *dryRun)
 	if err != nil {
 		slog.Error("failed to create agent", slog.String("error", err.Error()))
 		os.Exit(1)

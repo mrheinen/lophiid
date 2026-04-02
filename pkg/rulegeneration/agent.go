@@ -39,19 +39,41 @@ You have the following tools available:
 - fetch_url(url): Fetch the text content of a URL
 - list_existing_rules(uri_pattern): Check for duplicate active rules
 - list_apps(): List known applications
+- search_github_code(query): Search GitHub for exploit proof-of-concepts and related code; returns raw file URLs
 - create_draft(app, content, rule): Create the final draft records (TERMINAL — call once)
 
 Follow these steps in order:
 
 W-1 EXPLOIT SEARCH
-Search for the URI combined with "exploitdb" (e.g. web_search("<uri> exploitdb")).
-If no useful results and the URI contains encoded characters or payload fragments,
-strip those and retry with just the clean path. For POST requests with generic
-paths, augment the query with a distinctive snippet from the body.
+
+First prepare the search string that we will be using in this step. If the request has 
+no body (e.g. no content-length or content-length = 0) then you need to focus on only the URI.
+In this case you should use the URI as the search string but make sure you remove any payload 
+data that might be present (e.g. like shell commands). For example 
+"/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc=cat%20/proc/cpuinfo" would become 
+"/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc=" as the search string.
+
+If there is a body then process the URI in the same way and if that is not distinct enough then I 
+want you to also include a snippet of the body in the search string (as a separate word). Make sure
+to take a snippet of the body that looks like it belongs to the applications logic and do not take a 
+snippet that has, for example, data that can be unique to a single exploitation attempt.
+
+Do a web search for the search string in combination with "exploitdb" 
+(e.g. web_search("/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc= exploitdb")).
 Try up to three distinct search queries before proceeding without an exploit link.
 
+Also search GitHub for exploit proof-of-concepts using search_github_code with the
+query such as "<URI> CVE". Go through the returned raw
+file URLs with fetch_url until you find an exploit or exhaust the list. A file is
+an exploit if it does one or several of the following things: references a CVE number, 
+uses an HTTP client or library to send
+a payload, checks the server response for success/failure, and contains words like
+exploit, payload, attack, shell, success, or failed. Stop fetching as soon as an
+exploit is confirmed.  If these first results to not contain an exploit then search for 
+"<URI> PoC" instead and try again.
+
 W-2a EXPLOIT ANALYSIS
-If you found an ExploitDB (or similar) page that has the exploit, fetch it with fetch_url. Extract:
+If you found exploit(s), fetch it/them with fetch_url. Extract:
 - Target application name (keep short)
 - CVE ID(s) if mentioned (newline-separated for multiple)
 - Request purpose: ATTACK if it is a clear attack, RECON if reconnaissance, UNKNOWN otherwise
@@ -189,12 +211,13 @@ Proceed with the full workflow now.`,
 }
 
 // NewAgentFromConfig is a convenience constructor that wires up an Agent from
-// a database client, LLM manager, and web search config.
+// a database client, LLM manager, web search config, and GitHub config.
 func NewAgentFromConfig(
 	ctx context.Context,
 	dbClient database.DatabaseClient,
 	llmManager llm.LLMManagerInterface,
 	searchCfg WebSearchConfig,
+	githubCfg GitHubConfig,
 	requestID int64,
 	dryRun bool,
 ) (*Agent, error) {
@@ -214,6 +237,6 @@ func NewAgentFromConfig(
 		return nil, fmt.Errorf("unknown search provider %q", searchCfg.Provider)
 	}
 
-	toolSet := NewToolSet(dbClient, searchProvider, requestID, dryRun)
+	toolSet := NewToolSet(dbClient, searchProvider, requestID, dryRun, githubCfg.Token, githubCfg.MaxResults)
 	return NewAgent(llmManager, toolSet), nil
 }

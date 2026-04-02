@@ -45,3 +45,11 @@ web_search:
   max_results: 5
   # HTTP timeout for each search request.
   timeout: 30s
+
+github:
+  # Personal access token for GitHub code search (search_github_code tool).
+  # Without a token, the unauthenticated rate limit (10 req/min) applies.
+  # Create one at https://github.com/settings/tokens (no scopes needed for public repos).
+  token: your-github-token-here
+  # Maximum number of file results returned per search_github_code call.
+  max_results: 5
