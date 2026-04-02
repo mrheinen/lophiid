@@ -38,7 +38,6 @@ const maxExistingRulesLookup = 100
 const maxAppsLookup = 500
 
 const maxFetchBodyBytes = 65536
-const maxGithubCodeResults = 5
 
 // CreateDraftInput is the JSON payload expected by the create_draft tool.
 type CreateDraftInput struct {
