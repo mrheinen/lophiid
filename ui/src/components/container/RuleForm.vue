@@ -235,7 +235,7 @@
                     </td>
                   </tr>
                   <tr>
-                    <th>Draft (auto-generated, pending review)</th>
+                    <th>Draft (pending review)</th>
                     <td>
                       <CheckBox
                         v-model="localRule.is_draft"

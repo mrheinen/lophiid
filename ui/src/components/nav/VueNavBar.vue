@@ -91,6 +91,13 @@ export default {
           },
         },
         {
+          label: "Drafts",
+          icon: "pi pi-file-edit",
+          command: () => {
+            this.$router.push(this.config.draftsLink);
+          },
+        },
+        {
           label: "Simulate",
           icon: "pi pi-link",
           items: [

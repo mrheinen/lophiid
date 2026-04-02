@@ -22,6 +22,7 @@ import YaraList from './components/container/YaraList.vue';
 import RuleGroupList from './components/container/RuleGroupList.vue';
 import CampaignsList from './components/container/CampaignsList.vue';
 import CampaignView from './components/container/CampaignView.vue';
+import DraftsList from './components/container/DraftsList.vue';
 import GlobalStats from './components/container/GlobalStats.vue';
 import UriStats from './components/container/UriStats.vue';
 import InfoCard from './components/cards/InfoCard.vue';
@@ -144,6 +145,8 @@ const router = createRouter({
     { path: Config.campaignsLink, component: CampaignsList },
     { path: Config.campaignsSegmentLink, component: CampaignsList },
     { path: Config.campaignViewLink, component: CampaignView },
+    { path: Config.draftsLink, component: DraftsList },
+    { path: Config.draftsSegmentLink, component: DraftsList },
     { path: Config.statsLink, component: GlobalStats },
     { path: Config.uriStatsLink, component: UriStats },
   ]
