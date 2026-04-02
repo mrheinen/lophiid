@@ -155,7 +155,7 @@ func (g *GoogleLLMClient) buildContents(msgs []LLMMessage, config *genai.Generat
 // dispatchFunctionCall marshals the function call arguments, invokes the
 // matching tool via findAndCallTool, logs the outcome, and returns a
 // genai.Part carrying the FunctionResponse to send back to the model.
-func (g *GoogleLLMClient) dispatchFunctionCall(fc *genai.FunctionCall, tools []LLMTool) *genai.Part {
+func (g *GoogleLLMClient) dispatchFunctionCall(ctx context.Context, fc *genai.FunctionCall, tools []LLMTool) *genai.Part {
 	argsJSON, err := json.Marshal(fc.Args)
 	if err != nil {
 		slog.Error("error marshaling tool args",
@@ -168,7 +168,7 @@ func (g *GoogleLLMClient) dispatchFunctionCall(fc *genai.FunctionCall, tools []L
 		slog.String("tool", fc.Name),
 		slog.String("args", string(argsJSON)))
 
-	toolResult, err := findAndCallTool(fc.Name, string(argsJSON), tools)
+	toolResult, err := findAndCallTool(ctx, fc.Name, string(argsJSON), tools)
 	if err != nil {
 		slog.Error("tool call failed",
 			slog.String("tool", fc.Name),
@@ -250,9 +250,9 @@ func (g *GoogleLLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 }
 
 // CompleteWithTools sends a sequence of messages to the Gemini API with function
-// calling support. It runs a loop (up to 10 iterations) dispatching tool calls
+// calling support. It runs a loop (up to maxToolIterations) dispatching tool calls
 // made by the model until the model produces a plain-text final response.
-func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
+func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool, maxToolIterations int) (string, error) {
 	if len(msgs) == 0 {
 		return "", fmt.Errorf("messages must not be empty")
 	}
@@ -282,8 +282,7 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 	}
 	config.Tools = []*genai.Tool{{FunctionDeclarations: decls}}
 
-	maxIterations := 10
-	for iteration := range maxIterations {
+	for iteration := range maxToolIterations {
 		slog.Debug("GoogleLLMClient tool calling iteration",
 			slog.String("model", g.model),
 			slog.Int("iteration", iteration),
@@ -313,7 +312,7 @@ func (g *GoogleLLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 
 			var responseParts []*genai.Part
 			for _, fc := range funcCalls {
-				responseParts = append(responseParts, g.dispatchFunctionCall(fc, tools))
+				responseParts = append(responseParts, g.dispatchFunctionCall(ctx, fc, tools))
 			}
 
 			// Append the tool results as a user turn.

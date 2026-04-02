@@ -2265,6 +2265,20 @@ func TestLoadRules(t *testing.T) {
 			expectedGroups: map[int64][]int64{10: {100}},
 		},
 		{
+			description: "draft rules are skipped",
+			appPerGroupJoin: []models.AppPerGroupJoin{
+				{App: models.Application{ID: 1}, AppPerGroup: models.AppPerGroup{ID: 1, AppID: 1, GroupID: 10}},
+			},
+			rulesByAppID: map[int64][]models.ContentRule{
+				1: {
+					{Enabled: true, IsDraft: false, ID: 100, AppID: 1},
+					{Enabled: true, IsDraft: true, ID: 101, AppID: 1},
+				},
+			},
+			expectError:    false,
+			expectedGroups: map[int64][]int64{10: {100}},
+		},
+		{
 			description:     "database error",
 			appPerGroupJoin: nil,
 			rulesByAppID:    nil,

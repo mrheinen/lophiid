@@ -39,6 +39,7 @@ type Content struct {
 	ExtUuid     string                   `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the content"`
 	HasCode     bool                     `ksql:"has_code" json:"has_code" yaml:"has_code" doc:"A bool (0 or 1) indicating if the content has a code snippet"`
 	IsTemporary bool                     `ksql:"is_temporary" json:"is_temporary" yaml:"is_temporary" doc:"A bool (0 or 1) indicating if the content is a temporary content"`
+	IsDraft     bool                     `ksql:"is_draft" json:"is_draft" yaml:"is_draft" doc:"True if this is an auto-generated draft pending review"`
 }
 
 func (c *Content) ModelID() int64              { return c.ID }

@@ -509,7 +509,9 @@ CREATE TABLE public.app (
     os character varying(512),
     ext_version integer DEFAULT 1,
     ext_uuid character varying(36) DEFAULT gen_random_uuid(),
-    cves character varying(15)[]
+    cves character varying(15)[],
+    links text[] DEFAULT '{}',
+    is_draft bool DEFAULT false
 );
 
 
@@ -558,6 +560,7 @@ CREATE TABLE public.content (
     ext_uuid character varying(36) DEFAULT gen_random_uuid() NOT NULL,
     ext_version integer DEFAULT 1,
     is_temporary bool default false,
+    is_draft bool DEFAULT false,
     rule_uuid character varying(36) DEFAULT ''::character varying
 );
 
@@ -642,6 +645,7 @@ CREATE TABLE public.content_rule (
     port integer DEFAULT 0 NOT NULL,
     alert boolean DEFAULT false,
     is_temporary bool default false,
+    is_draft bool DEFAULT false,
     request_purpose public.request_purpose DEFAULT 'UNKNOWN'::public.request_purpose,
     ext_version integer DEFAULT 1,
     ext_uuid character varying(36) DEFAULT gen_random_uuid(),

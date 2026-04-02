@@ -236,10 +236,10 @@ func (l *OpenAILLMClient) buildMessages(msgs []LLMMessage) ([]openai.ChatComplet
 // findAndCallTool looks up a tool by name and invokes it with the provided JSON
 // args string. Returns the result string, or an error if the tool is not found
 // or the invocation fails.
-func findAndCallTool(toolName, toolArgs string, tools []LLMTool) (string, error) {
+func findAndCallTool(ctx context.Context, toolName, toolArgs string, tools []LLMTool) (string, error) {
 	for _, t := range tools {
 		if t.Name == toolName {
-			return t.Function(toolArgs)
+			return t.Function(ctx, toolArgs)
 		}
 	}
 	return "", fmt.Errorf("tool %q not found", toolName)
@@ -312,9 +312,9 @@ func (l *OpenAILLMClient) CompleteWithMessages(ctx context.Context, msgs []LLMMe
 }
 
 // CompleteWithTools completes a sequence of LLM messages with tool support.
-// It runs a loop (up to 10 iterations) dispatching tool calls made by the model
+// It runs a loop (up to maxToolIterations) dispatching tool calls made by the model
 // until the model produces a final response with no tool calls.
-func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool) (string, error) {
+func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessage, tools []LLMTool, maxToolIterations int) (string, error) {
 	if msgs[len(msgs)-1].Role != constants.LLMClientMessageUser {
 		return "", fmt.Errorf("last message must be user")
 	}
@@ -362,8 +362,7 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 
 	opts := l.buildRequestOptions()
 
-	maxIterations := 10
-	for iteration := range maxIterations {
+	for iteration := range maxToolIterations {
 		slog.Debug("tool calling iteration", slog.Int("iteration", iteration), slog.Int("message_count", len(param.Messages)))
 
 		resp, err := l.client.Chat.Completions.New(ctx, param, opts...)
@@ -390,7 +389,7 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 					slog.String("tool_call_id", toolCall.ID),
 					slog.String("args", toolCall.Function.Arguments))
 
-				result, err := findAndCallTool(toolCall.Function.Name, toolCall.Function.Arguments, tools)
+				result, err := findAndCallTool(ctx, toolCall.Function.Name, toolCall.Function.Arguments, tools)
 				if err != nil {
 					slog.Error("tool call failed",
 						slog.String("tool", toolCall.Function.Name),

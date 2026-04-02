@@ -60,12 +60,12 @@
           </div>
 
           <div class="field">
-            <label class="label">Reference link </label>
-            <InputText
-              id="reference"
-              v-model="localApp.link"
-              type="text"
-              placeholder="http://..."
+            <label class="label">Reference links</label>
+            <TextArea
+              v-model="links"
+              rows="3"
+              cols="25"
+              placeholder="https://... (one per line)"
             />
           </div>
 
@@ -87,6 +87,24 @@
               disabled
               placeholder="The UUID of the app"
             />
+          </div>
+
+          <div class="field">
+            <label class="label">Misc options</label>
+            <table>
+              <tbody>
+                <tr>
+                  <th>Draft (pending review)</th>
+                  <td>
+                    <CheckBox
+                      v-model="localApp.is_draft"
+                      input-id="is_draft"
+                      :binary="true"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <div class="flex gap-2 mt-3 flex-wrap">
@@ -152,6 +170,7 @@ export default {
   data() {
     return {
       cves: "",
+      links: "",
       localApp: {},
       importFormVisible: false,
     };
@@ -169,6 +188,19 @@ export default {
           prefix = "\n";
         });
         this.cves = tmpCves;
+      }
+
+      var tmpLinks = "";
+      this.links = "";
+      if (this.localApp.links && this.localApp.links.length > 0) {
+        var linkPrefix = "";
+        this.localApp.links.forEach((l) => {
+          tmpLinks += linkPrefix + l;
+          linkPrefix = "\n";
+        });
+        this.links = tmpLinks;
+      } else if (this.localApp.link) {
+        this.links = this.localApp.link;
       }
     },
   },
@@ -190,6 +222,7 @@ export default {
     resetForm() {
       this.localApp = {};
       this.cves = "";
+      this.links = "";
     },
     onImportDone() {
       this.$emit("update-app");
@@ -202,6 +235,16 @@ export default {
       const appToSubmit = Object.assign({}, this.localApp);
       // Remove the added fields.
       delete appToSubmit.parsed;
+
+      appToSubmit.links = [];
+      if (this.links != "") {
+        this.links.split("\n").forEach((l) => {
+          const trimmed = l.trim();
+          if (trimmed !== "") {
+            appToSubmit.links.push(trimmed);
+          }
+        });
+      }
 
       appToSubmit.cves = []
       if (this.cves != "") {

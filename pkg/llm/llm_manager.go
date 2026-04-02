@@ -39,7 +39,7 @@ type LLMManagerInterface interface {
 	Complete(prompt string, cacheResult bool) (LLMResult, error)
 	CompleteMultiple(prompts []string, cacheResult bool) (map[string]LLMResult, error)
 	CompleteWithMessages(msgs []LLMMessage, cacheResult bool) (LLMResult, error)
-	CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error)
+	CompleteWithTools(msgs []LLMMessage, tools []LLMTool, maxToolIterations int, cacheResult bool) (LLMResult, error)
 	SetResponseSchemaFromObject(obj any, title string) error
 	LoadedModel() string
 }
@@ -195,7 +195,7 @@ func (l *LLMManager) CompleteWithMessages(msgs []LLMMessage, cacheResult bool) (
 	return LLMResult{Output: retStr, FromCache: false}, nil
 }
 
-func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error) {
+func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, maxToolIterations int, cacheResult bool) (LLMResult, error) {
 	cacheKey := CreateCacheKeyFromMessages(msgs)
 	entry, err := l.getPromptFromCache(cacheKey)
 	if err == nil {
@@ -206,7 +206,7 @@ func (l *LLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cache
 	defer cancel()
 
 	start := time.Now()
-	retStr, err := l.client.CompleteWithTools(ctx, msgs, tools)
+	retStr, err := l.client.CompleteWithTools(ctx, msgs, tools, maxToolIterations)
 
 	if err != nil {
 		l.metrics.llmErrorCount.Inc()
@@ -322,7 +322,7 @@ func (d *DualLLMManager) CompleteWithMessages(msgs []LLMMessage, cacheResult boo
 	return result, nil
 }
 
-func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, cacheResult bool) (LLMResult, error) {
+func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, maxToolIterations int, cacheResult bool) (LLMResult, error) {
 	d.mutex.Lock()
 	// Check if we should switch back to primary after fallback interval
 	if d.usingSecondary && time.Since(d.lastFailureTime) > d.fallbackInterval {
@@ -333,7 +333,7 @@ func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, c
 	d.mutex.Unlock()
 
 	if !usingSecondary {
-		result, err := d.primary.CompleteWithTools(msgs, tools, cacheResult)
+		result, err := d.primary.CompleteWithTools(msgs, tools, maxToolIterations, cacheResult)
 		if err == nil {
 			return result, nil
 		}
@@ -348,7 +348,7 @@ func (d *DualLLMManager) CompleteWithTools(msgs []LLMMessage, tools []LLMTool, c
 
 	// Use secondary client
 	slog.Info("Using secondary LLM client", slog.Bool("fallback_mode", usingSecondary))
-	result, err := d.secondary.CompleteWithTools(msgs, tools, cacheResult)
+	result, err := d.secondary.CompleteWithTools(msgs, tools, maxToolIterations, cacheResult)
 	if err != nil {
 		return LLMResult{}, fmt.Errorf("both primary and secondary LLM clients failed: %w", err)
 	}

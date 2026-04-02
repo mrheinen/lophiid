@@ -92,6 +92,7 @@ func (c *CodeSnippetEmulator) Emulate(req *models.Request, code string) (*models
 			},
 		},
 		tools,
+		10,
 		true,
 	)
 

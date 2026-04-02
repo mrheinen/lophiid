@@ -1611,8 +1611,8 @@ func (s *BackendServer) LoadRules() error {
 		}
 
 		for _, rule := range rules {
-			if !rule.Enabled {
-				slog.Debug("rule disabled", slog.Int64("rule_id", rule.ID), slog.Int64("app_id", rule.AppID))
+			if !rule.Enabled || rule.IsDraft {
+				slog.Debug("rule disabled or draft", slog.Int64("rule_id", rule.ID), slog.Int64("app_id", rule.AppID))
 				continue
 			}
 			for _, groupID := range groupIDs {

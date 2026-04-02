@@ -234,6 +234,16 @@
                       />
                     </td>
                   </tr>
+                  <tr>
+                    <th>Draft (pending review)</th>
+                    <td>
+                      <CheckBox
+                        v-model="localRule.is_draft"
+                        input-id="is_draft"
+                        :binary="true"
+                      />
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

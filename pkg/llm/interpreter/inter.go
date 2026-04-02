@@ -98,6 +98,7 @@ func (c *CodeInterpreter) Interpret(req *models.Request, content *models.Content
 			},
 		},
 		tools,
+		10,
 		/* Do not cache the results. Note however that the tools themselves are free
 		* to cache (and the shell emulator, for example, does this) */
 		false,
