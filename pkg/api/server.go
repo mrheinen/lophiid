@@ -1792,17 +1792,19 @@ func (a *ApiServer) HandleDiscardDraft(w http.ResponseWriter, req *http.Request)
 		}
 	}
 
-	// If app is draft, delete it
+	// If app is draft and no other rules reference it, delete it
 	if rule.AppID != 0 {
 		app, err := a.dbc.GetAppByID(rule.AppID)
 		if err == nil && app.IsDraft {
-			a.dbc.Delete(&app)
+			otherRules, err := a.dbc.SearchContentRules(0, 1, fmt.Sprintf("app_id:%d", rule.AppID))
+			if err == nil && len(otherRules) == 0 {
+				a.dbc.Delete(&app)
+			}
 		}
 	}
 
 	a.sendStatus(w, "Draft discarded successfully", ResultSuccess, nil)
 }
-
 
 func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Request) {
 	modelName := strings.ToLower(req.URL.Query().Get("model"))
