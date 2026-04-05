@@ -415,6 +415,8 @@ export default {
       delete ruleToSubmit.parsed;
       delete ruleToSubmit.app_version;
       delete ruleToSubmit.app_name;
+      delete ruleToSubmit.contentData;
+      delete ruleToSubmit.appData;
 
       fetch(this.config.backendAddress + "/contentrule/upsert", {
         method: "POST",
