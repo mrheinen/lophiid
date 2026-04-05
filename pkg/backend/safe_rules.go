@@ -32,6 +32,7 @@ type SafeRules struct {
 	rulesPerGroup map[int64][]models.ContentRule
 	dbClient      database.DatabaseClient
 	stopChan      chan struct{}
+	stopOnce      sync.Once
 }
 
 func NewSafeRules(dbClient database.DatabaseClient) *SafeRules {
@@ -152,7 +153,8 @@ func (s *SafeRules) Start(interval time.Duration) error {
 	return nil
 }
 
-// Stop stops the rule reloading goroutine started by Start.
+// Stop stops the rule reloading goroutine started by Start. It is safe to
+// call Stop even if Start was never called, and safe to call multiple times.
 func (s *SafeRules) Stop() {
-	s.stopChan <- struct{}{}
+	s.stopOnce.Do(func() { close(s.stopChan) })
 }
