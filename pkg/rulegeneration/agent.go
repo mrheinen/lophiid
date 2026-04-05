@@ -46,7 +46,7 @@ Follow these steps in order:
 
 W-1 EXPLOIT SEARCH
 
-First prepare the search string that we will be using in this step. If the request has 
+First prepare the base search string that we will be using in this step. If the request has 
 no body (e.g. no content-length or content-length = 0) then you need to focus on only the URI.
 In this case you should use the URI as the search string but make sure you remove any payload 
 data that might be present (e.g. like shell commands). For example 
@@ -62,12 +62,11 @@ Do a web search for the search string in combination with "exploitdb"
 (e.g. web_search("/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc= exploitdb")).
 Try up to three distinct search queries before proceeding without an exploit link.
 
-Also search GitHub for exploit proof-of-concepts using search_github_code with the
-query such as "<URI> CVE". Go through the returned raw
-file URLs with fetch_url until you find an exploit or exhaust the list. A file is
-an exploit if it does one or several of the following things: references a CVE number, 
-uses an HTTP client or library to send
-a payload, checks the server response for success/failure, and contains words like
+Also search GitHub for exploit proof-of-concepts using search_github_code with a
+query such as <search string> + " CVE". Go through the returned raw
+file URLs with fetch_url until you find an exploit or exhausted the list (whatever comes first). 
+A file is an exploit if it does one or several of the following things: references a CVE number, 
+uses an HTTP client or library to send a payload, checks the server response for success/failure, and contains words like
 exploit, payload, attack, shell, success, or failed. Stop fetching as soon as an
 exploit is confirmed.  If these first results to not contain an exploit then search for 
 "<URI> PoC" instead and try again.
