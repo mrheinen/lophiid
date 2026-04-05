@@ -479,7 +479,7 @@ func TestHandleProbe(t *testing.T) {
 	fakeInter := &interpreter.FakeCodeInterpreter{}
 	b := NewBackendServer(fdbc, bMetrics, []ratelimit.RateLimiter{&fakeLimiter}, GetDefaultBackendConfig(), WithJavascriptRunner(&fakeJrunner), WithAlertManager(alertManager), WithVTManager(&vt.FakeVTManager{}), WithWhoisManager(&whoisManager), WithQueryRunner(&queryRunner), WithIpEventManager(&fIpMgr), WithResponder(fakeRes), WithSessionManager(fSessionMgr), WithDescriber(&fakeDescriber), WithPreprocessor(&fakePreprocessor), WithCodeInterpreter(fakeInter))
 
-	b.LoadRules()
+	b.safeRules.LoadRules()
 
 	probeReq := backend_service.HandleProbeRequest{
 		RequestUri: "/aa",
@@ -556,7 +556,7 @@ func TestHandleProbe(t *testing.T) {
 		fdbc.ContentRulesByAppIDToReturn[42] = append(fdbc.ContentRulesByAppIDToReturn[42],
 			models.ContentRule{Enabled: true, ID: 99, AppID: 42, Method: "GET", Port: 80, Uri: "/headers-test", UriMatching: "exact", ContentID: 99},
 		)
-		b.LoadRules()
+		b.safeRules.LoadRules()
 
 		probeReq.RequestUri = "/headers-test"
 		probeReq.Request.ParsedUrl.Path = "/headers-test"
@@ -681,7 +681,7 @@ func TestHandleProbePreprocessHeaders(t *testing.T) {
 	fakeInter := &interpreter.FakeCodeInterpreter{}
 	b := NewBackendServer(fdbc, bMetrics, []ratelimit.RateLimiter{&fakeLimiter}, GetDefaultBackendConfig(), WithJavascriptRunner(&fakeJrunner), WithAlertManager(alertManager), WithVTManager(&vt.FakeVTManager{}), WithWhoisManager(&whoisManager), WithQueryRunner(&queryRunner), WithIpEventManager(&fIpMgr), WithResponder(fakeRes), WithSessionManager(fSessionMgr), WithDescriber(&fakeDescriber), WithPreprocessor(&fakePreprocessor), WithCodeInterpreter(fakeInter))
 
-	b.LoadRules()
+	b.safeRules.LoadRules()
 
 	ctx := GetContextWithAuthMetadata()
 	probeReq := &backend_service.HandleProbeRequest{
@@ -1502,7 +1502,7 @@ func TestHandleProbeResponderLogic(t *testing.T) {
 
 			b := NewBackendServer(fdbc, bMetrics, []ratelimit.RateLimiter{&fakeLimiter}, GetDefaultBackendConfig(), WithJavascriptRunner(&fakeJrunner), WithAlertManager(alertManager), WithVTManager(&vt.FakeVTManager{}), WithWhoisManager(&whoisManager), WithQueryRunner(&queryRunner), WithIpEventManager(&fIpMgr), WithResponder(fakeRes), WithSessionManager(fSessionMgr), WithDescriber(&fakeDescriber), WithPreprocessor(&fakePreprocessor), WithCodeInterpreter(fakeInter))
 
-			b.LoadRules()
+			b.safeRules.LoadRules()
 
 			ctx := GetContextWithAuthMetadata()
 			probeReq := &backend_service.HandleProbeRequest{
@@ -2294,12 +2294,9 @@ func TestLoadRules(t *testing.T) {
 				ErrorToReturn:               test.dbError,
 			}
 
-			b := &BackendServer{
-				dbClient:  fakeDB,
-				safeRules: &SafeRules{},
-			}
+			sr := NewSafeRules(fakeDB)
 
-			err := b.LoadRules()
+			err := sr.LoadRules()
 			if test.expectError {
 				assert.Error(t, err)
 				return
@@ -2308,11 +2305,11 @@ func TestLoadRules(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify the rules are correctly grouped by GroupID.
-			rules := b.safeRules.Get()
+			rules := sr.Get()
 			assert.Equal(t, len(test.expectedGroups), len(rules))
 
 			for groupID, expectedRuleIDs := range test.expectedGroups {
-				groupRules := b.safeRules.GetGroup(groupID)
+				groupRules := sr.GetGroup(groupID)
 				assert.Equal(t, len(expectedRuleIDs), len(groupRules), "group %d rule count mismatch", groupID)
 
 				actualRuleIDs := make([]int64, len(groupRules))
