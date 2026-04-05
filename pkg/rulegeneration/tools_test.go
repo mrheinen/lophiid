@@ -43,7 +43,7 @@ func (f *fakeSearch) Search(_ context.Context, _ string, _ int) ([]SearchResult,
 
 func newTestToolSet(t *testing.T, db database.DatabaseClient, search SearchProvider) *ToolSet {
 	t.Helper()
-	return NewToolSet(db, search, 42, false)
+	return NewToolSet(db, search, 42, false, "", 5)
 }
 
 // --- web_search ---
@@ -234,7 +234,7 @@ func TestCreateDraft_ExistingApp(t *testing.T) {
 
 func TestCreateDraft_DryRun(t *testing.T) {
 	fakeDB := &database.FakeDatabaseClient{}
-	ts := NewToolSet(fakeDB, &fakeSearch{}, 1, true)
+	ts := NewToolSet(fakeDB, &fakeSearch{}, 1, true, "", 5)
 
 	input := CreateDraftInput{
 		Content: DraftContent{

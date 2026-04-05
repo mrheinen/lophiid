@@ -77,25 +77,31 @@ export default {
           },
         },
         {
-          label: "Events",
-          icon: "pi pi-server",
-          command: () => {
-            this.$router.push(this.config.eventLink);
-          },
-        },
-        {
-          label: "Campaigns",
-          icon: "pi pi-flag",
-          command: () => {
-            this.$router.push(this.config.campaignsLink);
-          },
-        },
-        {
-          label: "Drafts",
-          icon: "pi pi-file-edit",
-          command: () => {
-            this.$router.push(this.config.draftsLink);
-          },
+          label: "Analysis",
+          icon: "pi pi-chart-line",
+          items: [
+            {
+              label: "Events",
+              icon: "pi pi-server",
+              command: () => {
+                this.$router.push(this.config.eventLink);
+              },
+            },
+            {
+              label: "Campaigns",
+              icon: "pi pi-flag",
+              command: () => {
+                this.$router.push(this.config.campaignsLink);
+              },
+            },
+            {
+              label: "Stats",
+              icon: "pi pi-chart-bar",
+              command: () => {
+                this.$router.push(this.config.statsLink);
+              },
+            },
+          ],
         },
         {
           label: "Simulate",
@@ -127,6 +133,13 @@ export default {
               icon: "pi pi-objects-column",
               command: () => {
                 this.$router.push(this.config.ruleGroupsLink);
+              },
+            },
+            {
+              label: "Drafts",
+              icon: "pi pi-file-edit",
+              command: () => {
+                this.$router.push(this.config.draftsLink);
               },
             },
           ],
@@ -170,13 +183,6 @@ export default {
               },
             },
           ],
-        },
-        {
-          label: "Stats",
-          icon: "pi pi-chart-bar",
-          command: () => {
-            this.$router.push(this.config.statsLink);
-          },
         },
       ],
     };

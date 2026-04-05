@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-github/v68/github"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -78,21 +79,34 @@ type DraftRule struct {
 
 // ToolSet holds all dependencies needed by the LLM tool functions.
 type ToolSet struct {
-	db         database.DatabaseClient
-	search     SearchProvider
-	httpClient *http.Client
-	requestID  int64
-	dryRun     bool
+	db               database.DatabaseClient
+	search           SearchProvider
+	httpClient       *http.Client
+	githubClient     *github.Client
+	githubMaxResults int
+	requestID        int64
+	dryRun           bool
 }
 
-// NewToolSet creates a new ToolSet.
-func NewToolSet(db database.DatabaseClient, search SearchProvider, requestID int64, dryRun bool) *ToolSet {
+// NewToolSet creates a new ToolSet. Pass an empty githubToken to use
+// unauthenticated GitHub access (lower rate limits).
+func NewToolSet(db database.DatabaseClient, search SearchProvider, requestID int64, dryRun bool, githubToken string, githubMaxResults int) *ToolSet {
+	var ghClient *github.Client
+	if githubToken != "" {
+		slog.Info("Using GitHub token for authenticated access")
+		ghClient = github.NewClient(nil).WithAuthToken(githubToken)
+	} else {
+		slog.Warn("Using unauthenticated GitHub access (lower rate limits)")
+		ghClient = github.NewClient(nil)
+	}
 	return &ToolSet{
-		db:         db,
-		search:     search,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
-		requestID:  requestID,
-		dryRun:     dryRun,
+		db:               db,
+		search:           search,
+		httpClient:       &http.Client{Timeout: 30 * time.Second},
+		githubClient:     ghClient,
+		githubMaxResults: githubMaxResults,
+		requestID:        requestID,
+		dryRun:           dryRun,
 	}
 }
 
@@ -152,6 +166,21 @@ func (t *ToolSet) BuildTools() []llm.LLMTool {
 				"properties": map[string]any{},
 			},
 			Function: t.listAppsTool,
+		},
+		{
+			Name:        "search_github_code",
+			Description: "Search GitHub for exploit proof-of-concepts and related code. Returns up to 5 raw file URLs pointing to matching files. Use fetch_url on each result to inspect the content.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"query": map[string]any{
+						"type":        "string",
+						"description": "The GitHub code search query, e.g. \" /scriptText CVE\"",
+					},
+				},
+				"required": []string{"query"},
+			},
+			Function: t.searchGithubCodeTool,
 		},
 		{
 			Name: "create_draft",
@@ -321,6 +350,38 @@ func (t *ToolSet) listAppsTool(_ context.Context, args string) (string, error) {
 		}
 		fmt.Fprintf(&sb, "ID=%d name=%q version=%q vendor=%q cves=%v\n",
 			a.ID, a.Name, version, vendor, []string(a.CVES))
+	}
+	return sb.String(), nil
+}
+
+func (t *ToolSet) searchGithubCodeTool(ctx context.Context, args string) (string, error) {
+	var params struct {
+		Query string `json:"query"`
+	}
+	if err := json.Unmarshal([]byte(args), &params); err != nil {
+		return "", fmt.Errorf("parsing search_github_code args: %w", err)
+	}
+	slog.Info("tool: search_github_code", slog.Int64("request_id", t.requestID), slog.String("query", params.Query))
+
+	opts := &github.SearchOptions{
+		ListOptions: github.ListOptions{PerPage: t.githubMaxResults},
+	}
+	results, _, err := t.githubClient.Search.Code(ctx, params.Query, opts)
+	if err != nil {
+		slog.Error("tool error", slog.String("tool_name", "search_github_code"), slog.String("error", err.Error()))
+		return "", fmt.Errorf("GitHub code search failed: %w", err)
+	}
+
+	if results.GetTotal() == 0 {
+		return "No results found.", nil
+	}
+
+	var sb strings.Builder
+	for _, r := range results.CodeResults {
+		htmlURL := r.GetHTMLURL()
+		rawURL := strings.Replace(htmlURL, "https://github.com", "https://raw.githubusercontent.com", 1)
+		rawURL = strings.Replace(rawURL, "/blob/", "/", 1)
+		fmt.Fprintf(&sb, "%s\n", rawURL)
 	}
 	return sb.String(), nil
 }

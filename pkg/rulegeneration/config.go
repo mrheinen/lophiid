@@ -16,6 +16,12 @@
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package rulegeneration
 
+// GitHubConfig holds the configuration for the GitHub code search tool.
+type GitHubConfig struct {
+	Token      string `fig:"token"`
+	MaxResults int    `fig:"max_results" default:"5"`
+}
+
 // WebSearchConfig holds the configuration for the web search provider.
 type WebSearchConfig struct {
 	Provider   string `fig:"provider" default:"tavily"`
@@ -44,4 +50,5 @@ type AgentConfig struct {
 		OpenRouterReasoningEffort string  `fig:"openrouter_reasoning_effort" default:"none"`
 	} `fig:"llm" validate:"required"`
 	WebSearch WebSearchConfig `fig:"web_search"`
+	GitHub    GitHubConfig    `fig:"github"`
 }
