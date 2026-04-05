@@ -36,8 +36,9 @@ type SafeRules struct {
 
 func NewSafeRules(dbClient database.DatabaseClient) *SafeRules {
 	return &SafeRules{
-		dbClient: dbClient,
-		stopChan: make(chan struct{}),
+		dbClient:      dbClient,
+		stopChan:      make(chan struct{}),
+		rulesPerGroup: make(map[int64][]models.ContentRule),
 	}
 }
 
@@ -101,7 +102,7 @@ func (s *SafeRules) LoadRules() error {
 	ruleCount := 0
 	finalRules := map[int64][]models.ContentRule{}
 	for appID, groupIDs := range appToGroups {
-		rules, err := s.dbClient.SearchContentRules(0, 1000, fmt.Sprintf("app_id:%d", appID))
+		rules, err := s.dbClient.SearchContentRules(0, 10000, fmt.Sprintf("app_id:%d", appID))
 		if err != nil {
 			return fmt.Errorf("searching rules for app %d: %w", appID, err)
 		}
