@@ -87,7 +87,7 @@ func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) 
 // is responsible for modifying the cache.
 func (d *DatabaseSessionManager) EndSession(session *models.Session) error {
 	session.Active = false
-	session.EndedAt = time.Now().UTC()
+	session.EndedAt = session.LastRequestAt
 
 	profile, err := analysis.GetSessionBehaviorProfile(session.RequestGaps)
 	if err != nil {
