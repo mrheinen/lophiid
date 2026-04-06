@@ -389,7 +389,7 @@ func (t *ToolSet) searchGithubCodeTool(ctx context.Context, args string) (string
 func (t *ToolSet) createDraftTool(_ context.Context, args string) (string, error) {
 	var input CreateDraftInput
 	if err := json.Unmarshal([]byte(args), &input); err != nil {
-		return "", fmt.Errorf("parsing create_draft args: %w", err)
+		return "", fmt.Errorf("parsing create_draft args: %w, %s", err, args)
 	}
 
 	slog.Info("tool: create_draft",

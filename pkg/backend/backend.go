@@ -273,7 +273,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, rateLi
 	be := &BackendServer{
 		dbClient:             c,
 		qRunnerChan:          make(chan bool),
-		safeRules:            &SafeRules{},
+		safeRules:            NewSafeRules(c),
 		maintenanceChan:      make(chan bool),
 		reqsProcessChan:      make(chan bool),
 		reqsQueue:            make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
@@ -1587,46 +1587,6 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 	}, nil
 }
 
-// LoadRules loads the content rules from the database. It first fetches the
-// app-per-group mappings and then fetches the rules for each app separately.
-func (s *BackendServer) LoadRules() error {
-	appPerGroup, err := s.dbClient.GetAppPerGroupJoin()
-	if err != nil {
-		return fmt.Errorf("getting app per group: %w", err)
-	}
-
-	// Build a map of app ID to the group IDs it belongs to, and track which
-	// apps we need to fetch rules for.
-	appToGroups := map[int64][]int64{}
-	for _, apg := range appPerGroup {
-		appToGroups[apg.App.ID] = append(appToGroups[apg.App.ID], apg.AppPerGroup.GroupID)
-	}
-
-	ruleCount := 0
-	finalRules := map[int64][]models.ContentRule{}
-	for appID, groupIDs := range appToGroups {
-		rules, err := s.dbClient.SearchContentRules(0, 1000, fmt.Sprintf("app_id:%d", appID))
-		if err != nil {
-			return fmt.Errorf("searching rules for app %d: %w", appID, err)
-		}
-
-		for _, rule := range rules {
-			if !rule.Enabled || rule.IsDraft {
-				slog.Debug("rule disabled or draft", slog.Int64("rule_id", rule.ID), slog.Int64("app_id", rule.AppID))
-				continue
-			}
-			for _, groupID := range groupIDs {
-				finalRules[groupID] = append(finalRules[groupID], rule)
-				ruleCount++
-			}
-		}
-	}
-
-	slog.Info("loaded rules", slog.Int("rules_count", ruleCount), slog.Int("amount_of_groups", len(finalRules)))
-	s.safeRules.Set(finalRules)
-	return nil
-}
-
 func (s *BackendServer) ProcessReqsQueue() {
 	for {
 		select {
@@ -1842,16 +1802,14 @@ func (s *BackendServer) Start() error {
 		return fmt.Errorf("ensuring defaults: %w", err)
 	}
 
-	// Load the rules once.
-	err := s.LoadRules()
-	if err != nil {
-		return fmt.Errorf("loading rules: %s", err)
+	if err := s.safeRules.Start(s.config.Backend.Advanced.MaintenanceRoutineInterval); err != nil {
+		return fmt.Errorf("starting safe rules: %s", err)
 	}
 
 	s.alertMgr.Start()
 	go s.ProcessReqsQueue()
 
-	// Setup the rules reloading.
+	// Setup cache maintenance.
 	maintenanceTicker := time.NewTicker(s.config.Backend.Advanced.MaintenanceRoutineInterval)
 	go func() {
 		for {
@@ -1860,23 +1818,11 @@ func (s *BackendServer) Start() error {
 				maintenanceTicker.Stop()
 				return
 			case <-maintenanceTicker.C:
-
 				s.sessionCache.CleanExpired()
 				s.downloadsCache.CleanExpired()
 				s.pingsCache.CleanExpired()
 				s.networkFetchCache.CleanExpired()
 				s.networkFetchIPCounts.CleanExpired()
-
-				// Reload the rules.
-				cl := len(s.safeRules.Get())
-				if err = s.LoadRules(); err != nil {
-					slog.Error("reloading rules", slog.String("error", err.Error()))
-				}
-				nl := len(s.safeRules.Get())
-
-				if cl != nl {
-					slog.Info("Rules updated\n", slog.Int("from", cl), slog.Int("to", nl))
-				}
 			}
 		}
 	}()
@@ -1902,7 +1848,7 @@ func (s *BackendServer) Start() error {
 }
 
 func (s *BackendServer) Stop() {
-	// Stop the rules loading.
+	s.safeRules.Stop()
 	s.maintenanceChan <- true
 	s.reqsProcessChan <- true
 	s.qRunnerChan <- true
