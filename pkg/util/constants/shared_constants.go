@@ -18,7 +18,7 @@ package constants
 
 // The lophiid version. Needs to be bumped with every release and is used by
 // both the agent and the backend.
-const LophiidVersion = "1.00.0-alpha"
+const LophiidVersion = "1.0.0-alpha"
 
 // IP event sources are used to indicate the source of an IP event. The values
 // below need to be kept in sync with IP_EVENT_SOURCE in the database.
@@ -271,6 +271,35 @@ const (
 	CampaignFeedbackStatusApproved = "APPROVED"
 	CampaignFeedbackStatusRejected = "REJECTED"
 )
+
+// Kill chain phases
+const (
+	KillChainPhaseRecon        = "RECON"
+	KillChainPhaseVerify       = "VERIFY"
+	KillChainPhaseExploitation = "EXPLOITATION"
+	KillChainPhaseAbuse        = "ABUSE"
+	KillChainPhaseCleanup      = "CLEANUP"
+	KillChainPhaseUnknown      = "UNKNOWN"
+)
+
+// Kill chain analysis process status (stored in session.kill_chain_process_status)
+const (
+	KillChainProcessStatusPending = "PENDING"
+	KillChainProcessStatusDone    = "DONE"
+	KillChainProcessStatusFailed  = "FAILED"
+	KillChainProcessStatusSkipped = "SKIPPED"
+)
+
+// KillChainPhaseDepth maps phase names to integer depth values for range queries.
+// 0 = unknown/no phase, higher values represent deeper kill chain penetration.
+var KillChainPhaseDepth = map[string]int64{
+	KillChainPhaseUnknown:      0,
+	KillChainPhaseRecon:        1,
+	KillChainPhaseVerify:       2,
+	KillChainPhaseExploitation: 3,
+	KillChainPhaseAbuse:        4,
+	KillChainPhaseCleanup:      5,
+}
 
 // Campaign feedback reasoning kept in sync with CAMPAIGN_FEEDBACK_REASON in the database.
 const (
