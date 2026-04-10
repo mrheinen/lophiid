@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"lophiid/pkg/backend/rules"
 	"lophiid/pkg/database"
@@ -118,6 +119,8 @@ func (a *KillChainAnalyzer) analyzeSession(session *models.Session) error {
 		return a.markFailed(session, fmt.Errorf("fetching requests: %w", err))
 	}
 
+	// reverse the requests so that they are chronologically as indicated by the prompt
+	slices.Reverse(requests)
 	partial := len(requests) > a.maxRequests
 	if partial {
 		slog.Info("session exceeds max requests, analysing first N only",

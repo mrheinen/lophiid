@@ -2280,6 +2280,7 @@ CREATE TABLE public.session (
     behavior_cv float default 0,
     behavior_final_gaps float array default '{}'::float[],
     started_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    last_request_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     ended_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,

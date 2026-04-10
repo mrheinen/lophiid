@@ -38,7 +38,7 @@ type Session struct {
 	KillChainProcessStatus string    `ksql:"kill_chain_process_status" json:"kill_chain_process_status" doc:"Kill chain analysis status: PENDING, DONE, FAILED or SKIPPED"`
 	RequestCount           int64
 	RequestGaps            []float64
-	LastRequestAt          time.Time
+	LastRequestAt          time.Time `ksql:"last_request_at" json:"last_request_at" doc:"Time of the last request in this session"`
 	Mu                     sync.RWMutex
 }
 
