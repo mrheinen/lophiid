@@ -27,7 +27,6 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util/constants"
-	whoisPkg "lophiid/pkg/whois"
 )
 
 const (
@@ -61,16 +60,15 @@ type PipelineResult struct {
 
 // Pipeline orchestrates all phases of a single campaign agent run.
 type Pipeline struct {
-	db          database.DatabaseClient
-	registry    *SourceRegistry
-	weights     WeightMap
-	exhaustMap  ExhaustMap
-	correlators []Correlator
-	cfg         CampaignAgentConfig
-	summarizer  Summarizer
-	dryRun      bool
-	skipLLM     bool
-	backfill    bool
+	db         database.DatabaseClient
+	registry   *SourceRegistry
+	weights    WeightMap
+	exhaustMap ExhaustMap
+	cfg        CampaignAgentConfig
+	summarizer Summarizer
+	dryRun     bool
+	skipLLM    bool
+	backfill   bool
 
 	// dry-run export accumulators (only populated when dryRun == true)
 	dryRunNextEphemeralID int
@@ -82,16 +80,15 @@ type Pipeline struct {
 // NewPipeline creates a new Pipeline with the given dependencies.
 func NewPipeline(db database.DatabaseClient, registry *SourceRegistry, cfg CampaignAgentConfig, summarizer Summarizer, dryRun, skipLLM, backfill bool) *Pipeline {
 	return &Pipeline{
-		db:          db,
-		registry:    registry,
-		weights:     BuildWeightMap(cfg.Agent.Sources),
-		exhaustMap:  BuildExhaustMap(cfg.Agent.Sources),
-		correlators: BuildCorrelators(cfg.Agent.CorrelationFeatures),
-		cfg:         cfg,
-		summarizer:  summarizer,
-		dryRun:      dryRun,
-		skipLLM:     skipLLM,
-		backfill:    backfill,
+		db:         db,
+		registry:   registry,
+		weights:    BuildWeightMap(cfg.Agent.Sources),
+		exhaustMap: BuildExhaustMap(cfg.Agent.Sources),
+		cfg:        cfg,
+		summarizer: summarizer,
+		dryRun:     dryRun,
+		skipLLM:    skipLLM,
+		backfill:   backfill,
 	}
 }
 
@@ -571,118 +568,48 @@ func (p *Pipeline) retroactiveLookback(ctx context.Context, windowStart time.Tim
 	}
 }
 
-// phase2Correlate implements Phase 2: correlation of non-malicious requests.
+// phase2Correlate implements Phase 2: session-based correlation.
+// For each active campaign it finds all unassigned requests that share a
+// session_id with a request already belonging to the campaign, then links
+// them as correlated.
 func (p *Pipeline) phase2Correlate(ctx context.Context, campaigns []models.Campaign, result *PipelineResult) {
-	if len(p.correlators) == 0 {
-		return
-	}
-
 	slog.Debug("phase2Correlate: starting correlation phase")
 	for _, c := range campaigns {
 		if c.Status != constants.CampaignStatusActive {
 			continue
 		}
 
-		// Build seed data for correlation.
-		seedData, err := p.buildSeedData(c.ID)
-		if err != nil {
-			slog.Warn("failed to build seed data", slog.Int64("campaign_id", c.ID), slog.String("error", err.Error()))
-			continue
-		}
+		slog.Info("phase2Correlate: correlating requests for campaign", slog.Int64("campaign_id", c.ID))
 
-		// Query non-malicious requests in the campaign's padded time window.
 		paddedStart := c.FirstSeenAt.Add(-p.cfg.Agent.CorrelationPadding)
 		paddedEnd := c.LastSeenAt.Add(p.cfg.Agent.CorrelationPadding)
-
-		candidateRwds, err := p.db.CampaignGetUnassignedRequestsWithDescriptions(false, paddedStart, paddedEnd)
+		candidates, err := p.db.GetUnassignedRequestsForCampaignSessions(c.ID, paddedStart, paddedEnd, c.FirstSeenAt, c.LastSeenAt)
 		if err != nil {
-			slog.Warn("correlation query failed", slog.Int64("campaign_id", c.ID), slog.String("error", err.Error()))
+			slog.Warn("session correlation query failed", slog.Int64("campaign_id", c.ID), slog.String("error", err.Error()))
+			continue
+		}
+		if len(candidates) == 0 {
 			continue
 		}
 
-		for _, rwd := range candidateRwds {
-			req := rwd.Request
-			candidate := CandidateRequest{
-				RequestID: req.ID,
-				SourceIP:  req.SourceIP,
-				SessionID: req.SessionID,
-			}
-
-			if MatchAny(p.correlators, candidate, seedData) {
-				if p.dryRun {
-					result.CorrelatedAdded++
-					continue
-				}
-				link := models.CampaignRequest{
-					CampaignID: c.ID,
-					RequestID:  req.ID,
-					Role:       constants.CampaignRequestRoleCorrelated,
-				}
-				if _, err := p.db.Insert(&link); err != nil {
-					continue // Duplicate is expected (unique index).
-				}
-				req.CampaignID = &c.ID
-				_ = p.db.Update(&req)
+		for _, req := range candidates {
+			if p.dryRun {
 				result.CorrelatedAdded++
+				continue
 			}
-		}
-	}
-}
-
-// buildSeedData collects session IDs, source IPs, and subnets from a
-// campaign's seeds. Uses bulk queries to avoid per-link DB round-trips.
-func (p *Pipeline) buildSeedData(campaignID int64) (CampaignSeedData, error) {
-	data := NewCampaignSeedData()
-
-	slog.Debug("building seed data for campaign", slog.Int64("campaign_id", campaignID))
-	links, err := p.db.SearchCampaignRequests(0, MaxCampaignRequestLinks, fmt.Sprintf("campaign_id:%d role:seed", campaignID))
-	if err != nil {
-		return data, err
-	}
-	if len(links) == 0 {
-		return data, nil
-	}
-
-	// Bulk-fetch all seed requests in one query.
-	requestIDs := make([]int64, 0, len(links))
-	for _, link := range links {
-		requestIDs = append(requestIDs, link.RequestID)
-	}
-	var requests []models.Request
-	if err := p.db.BulkGetByField("request", "id", requestIDs, &requests); err != nil {
-		return data, fmt.Errorf("bulk-fetching seed requests: %w", err)
-	}
-
-	// Collect source IPs and session IDs; gather unique IPs for whois.
-	uniqueIPs := make(map[string]bool)
-	for _, req := range requests {
-		if req.SourceIP != "" {
-			data.SourceIPs[req.SourceIP] = true
-			uniqueIPs[req.SourceIP] = true
-		}
-		if req.SessionID != 0 {
-			data.SessionIDs[req.SessionID] = true
-		}
-	}
-
-	// Bulk-fetch whois records for all unique source IPs.
-	ipSlice := make([]string, 0, len(uniqueIPs))
-	for ip := range uniqueIPs {
-		ipSlice = append(ipSlice, ip)
-	}
-	var whoisResults []models.Whois
-	if err := p.db.BulkGetByField("whois", "ip", ipSlice, &whoisResults); err == nil {
-		for _, w := range whoisResults {
-			if len(w.Rdap) > 0 {
-				parser := whoisPkg.NewRdapParser(string(w.Rdap))
-				if network, err := parser.GetNetwork(); err == nil {
-					data.AddSubnet(network.String())
-				}
+			link := models.CampaignRequest{
+				CampaignID: c.ID,
+				RequestID:  req.ID,
+				Role:       constants.CampaignRequestRoleCorrelated,
 			}
+			if _, err := p.db.Insert(&link); err != nil {
+				continue // Duplicate is expected (unique index).
+			}
+			req.CampaignID = &c.ID
+			_ = p.db.Update(&req)
+			result.CorrelatedAdded++
 		}
 	}
-
-	return data, nil
 }
 
 // phase3Merge implements Phase 3: campaign merging.
@@ -751,6 +678,7 @@ func (p *Pipeline) phase3Merge(ctx context.Context, campaigns []models.Campaign,
 			continue
 		}
 
+		slog.Debug("phase3: executing merge", slog.Int64("absorbed", absorbedID), slog.Int64("survivor", survivorID))
 		if err := p.executeMerge(survivorID, absorbedID, fingerprints); err != nil {
 			slog.Warn("merge failed", slog.Int64("absorbed", absorbedID), slog.Int64("survivor", survivorID), slog.String("error", err.Error()))
 			result.Errors = append(result.Errors, err)

@@ -277,29 +277,28 @@ const (
 	KillChainPhaseRecon        = "RECON"
 	KillChainPhaseVerify       = "VERIFY"
 	KillChainPhaseExploitation = "EXPLOITATION"
-	KillChainPhaseAbuse        = "ABUSE"
 	KillChainPhaseCleanup      = "CLEANUP"
 	KillChainPhaseUnknown      = "UNKNOWN"
+)
+
+// RuleRequestPurpose values for ContentRule.RequestPurpose.
+// These must be kept in sync with the kill_chain_phase database enum.
+const (
+	RuleRequestPurposeUnknown      = KillChainPhaseUnknown
+	RuleRequestPurposeRecon        = KillChainPhaseRecon
+	RuleRequestPurposeVerify       = KillChainPhaseVerify
+	RuleRequestPurposeExploitation = KillChainPhaseExploitation
+	RuleRequestPurposeCleanup      = KillChainPhaseCleanup
 )
 
 // Kill chain analysis process status (stored in session.kill_chain_process_status)
 const (
 	KillChainProcessStatusPending = "PENDING"
 	KillChainProcessStatusDone    = "DONE"
+	KillChainProcessStatusPartial = "PARTIAL"
 	KillChainProcessStatusFailed  = "FAILED"
 	KillChainProcessStatusSkipped = "SKIPPED"
 )
-
-// KillChainPhaseDepth maps phase names to integer depth values for range queries.
-// 0 = unknown/no phase, higher values represent deeper kill chain penetration.
-var KillChainPhaseDepth = map[string]int64{
-	KillChainPhaseUnknown:      0,
-	KillChainPhaseRecon:        1,
-	KillChainPhaseVerify:       2,
-	KillChainPhaseExploitation: 3,
-	KillChainPhaseAbuse:        4,
-	KillChainPhaseCleanup:      5,
-}
 
 // Campaign feedback reasoning kept in sync with CAMPAIGN_FEEDBACK_REASON in the database.
 const (

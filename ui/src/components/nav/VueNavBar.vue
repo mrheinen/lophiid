@@ -88,6 +88,13 @@ export default {
               },
             },
             {
+              label: "Sessions",
+              icon: "pi pi-clock",
+              command: () => {
+                this.$router.push(this.config.sessionsLink);
+              },
+            },
+            {
               label: "Campaigns",
               icon: "pi pi-flag",
               command: () => {

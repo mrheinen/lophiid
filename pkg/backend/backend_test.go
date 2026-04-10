@@ -28,6 +28,7 @@ import (
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/backend/responder"
+	"lophiid/pkg/backend/rules"
 	"lophiid/pkg/backend/session"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
@@ -725,8 +726,8 @@ func TestProcessQueue(t *testing.T) {
 		expectedPingCommand  *backend_service.CommandPingAddress
 	}{
 		{
-			description:          "Runs ok, marked attack",
-			requestPurpose:       models.RuleRequestPurposeAttack,
+			description:          "Runs ok, marked exploitation",
+			requestPurpose:       constants.RuleRequestPurposeExploitation,
 			expectedEventType:    constants.IpEventTrafficClass,
 			expectedEventSubType: constants.IpEventSubTypeTrafficClassAttacked,
 			ruleID:               42,
@@ -738,10 +739,10 @@ func TestProcessQueue(t *testing.T) {
 			},
 		},
 		{
-			description:          "Runs ok, marked crawl",
-			requestPurpose:       models.RuleRequestPurposeCrawl,
+			description:          "Runs ok, marked recon (formerly crawl)",
+			requestPurpose:       constants.RuleRequestPurposeRecon,
 			expectedEventType:    constants.IpEventTrafficClass,
-			expectedEventSubType: constants.IpEventSubTypeTrafficClassCrawl,
+			expectedEventSubType: constants.IpEventSubTypeTrafficClassRecon,
 			ruleID:               43,
 			request: &models.Request{
 				ID:   42,
@@ -752,7 +753,7 @@ func TestProcessQueue(t *testing.T) {
 		},
 		{
 			description:          "Runs ok, marked recon",
-			requestPurpose:       models.RuleRequestPurposeRecon,
+			requestPurpose:       constants.RuleRequestPurposeRecon,
 			expectedEventType:    constants.IpEventTrafficClass,
 			expectedEventSubType: constants.IpEventSubTypeTrafficClassRecon,
 			ruleID:               44,
@@ -764,8 +765,8 @@ func TestProcessQueue(t *testing.T) {
 			},
 		},
 		{
-			description:          "Runs ok, marked attack, ping command",
-			requestPurpose:       models.RuleRequestPurposeAttack,
+			description:          "Runs ok, marked exploitation, ping command",
+			requestPurpose:       constants.RuleRequestPurposeExploitation,
 			expectedEventType:    constants.IpEventTrafficClass,
 			expectedEventSubType: constants.IpEventSubTypeTrafficClassAttacked,
 			ruleID:               42,
@@ -2294,7 +2295,7 @@ func TestLoadRules(t *testing.T) {
 				ErrorToReturn:               test.dbError,
 			}
 
-			sr := NewSafeRules(fakeDB)
+			sr := rules.NewSafeRules(fakeDB)
 
 			err := sr.LoadRules()
 			if test.expectError {
@@ -2305,8 +2306,8 @@ func TestLoadRules(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify the rules are correctly grouped by GroupID.
-			rules := sr.Get()
-			assert.Equal(t, len(test.expectedGroups), len(rules))
+			ruleMap := sr.Get()
+			assert.Equal(t, len(test.expectedGroups), len(ruleMap))
 
 			for groupID, expectedRuleIDs := range test.expectedGroups {
 				groupRules := sr.GetGroup(groupID)

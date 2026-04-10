@@ -23,6 +23,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"time"
 )
 
@@ -137,6 +138,7 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *models.Session) boo
 func (d *DatabaseSessionManager) StartSession(ip string) (*models.Session, error) {
 	newSession := models.NewSession()
 	newSession.Active = true
+	newSession.KillChainProcessStatus = constants.KillChainProcessStatusPending
 	newSession.StartedAt = time.Now().UTC()
 	newSession.IP = ip
 

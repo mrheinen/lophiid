@@ -168,3 +168,17 @@ var campaignRequestConfig = SearchConfig{
 	AllowedFields: getDatamodelDatabaseFields(models.CampaignRequest{}),
 	OrderBy:       "added_at DESC",
 }
+
+var killChainConfig = SearchConfig{
+	Table:         &KillChainTable,
+	TableName:     "kill_chain",
+	AllowedFields: getDatamodelDatabaseFields(models.KillChain{}),
+	OrderBy:       "started_at ASC",
+}
+
+var singleKillChainPhaseConfig = SearchConfig{
+	Table:         &SingleKillChainPhaseTable,
+	TableName:     "single_kill_chain_phase",
+	AllowedFields: getDatamodelDatabaseFields(models.SingleKillChainPhase{}),
+	OrderBy:       "first_request_time ASC",
+}

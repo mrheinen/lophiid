@@ -184,6 +184,17 @@ type Config struct {
 			LLMConfig string `fig:"llm_config"`
 		} `fig:"code_interpreter"`
 
+		KillChain struct {
+			Enable               bool   `fig:"enable" default:"0"`
+			LLMConfig            string `fig:"llm_config"`
+			MaxRequests          int    `fig:"max_requests" default:"50"`
+			MaxRequestSize       int    `fig:"max_request_size" default:"4096"`
+			BatchSize            int    `fig:"batch_size" default:"10"`
+			LogFile              string `fig:"log_file" default:"killchain.log"`
+			LogLevel             string `fig:"log_level" default:"info"`
+			MetricsListenAddress string `fig:"metrics_listen_address" default:"localhost:8996"`
+		} `fig:"kill_chain"`
+
 		Triage struct {
 			Describer struct {
 				Enable               bool          `fig:"enable" default:"1"`
