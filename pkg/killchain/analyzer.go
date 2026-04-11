@@ -170,6 +170,7 @@ func (a *KillChainAnalyzer) analyzeSession(session *models.Session) error {
 	modelName := a.llmManager.LoadedModel()
 
 	var chainsInserted int
+	var persistErr error
 	for _, chain := range llmResult.KillChains {
 		// Filter: skip chains with fewer than 2 unique cmp_hash values.
 		uniqueCmpHashes := make(map[string]struct{})
@@ -225,6 +226,7 @@ func (a *KillChainAnalyzer) analyzeSession(session *models.Session) error {
 			slog.Error("error inserting kill chain",
 				slog.Int64("session_id", session.ID),
 				slog.String("error", insertErr.Error()))
+			persistErr = insertErr
 			continue
 		}
 		kcID := inserted.(*models.KillChain).ID
@@ -266,9 +268,14 @@ func (a *KillChainAnalyzer) analyzeSession(session *models.Session) error {
 					slog.Int64("session_id", session.ID),
 					slog.String("phase", p.Phase),
 					slog.String("error", phaseErr.Error()))
+				persistErr = phaseErr
 			}
 		}
 		chainsInserted++
+	}
+
+	if persistErr != nil {
+		return a.markFailed(session, fmt.Errorf("persisting kill chain data: %w", persistErr))
 	}
 
 	if partial {
