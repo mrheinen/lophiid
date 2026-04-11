@@ -177,7 +177,7 @@
               <span class="text-sm font-semibold text-surface-500">Links:</span>
               <ul class="mt-1 pl-5 text-sm" style="list-style-type: disc">
                 <li v-for="link in selectedDetails.appData.links" :key="link" class="mb-1">
-                  <a :href="link" target="_blank" class="break-all">{{ link }}</a>
+                  <a :href="link" target="_blank" rel="noopener noreferrer" class="break-all">{{ link }}</a>
                 </li>
               </ul>
             </div>
@@ -190,6 +190,7 @@
                   :key="cve" 
                   :href="'https://nvd.nist.gov/vuln/detail/' + cve" 
                   target="_blank"
+                  rel="noopener noreferrer"
                   class="mytag shadow-sm"
                 >
                   <i class="pi pi-external-link text-xs mr-1"></i>{{ cve }}
