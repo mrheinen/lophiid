@@ -18,7 +18,7 @@ package constants
 
 // The lophiid version. Needs to be bumped with every release and is used by
 // both the agent and the backend.
-const LophiidVersion = "1.00.0-alpha"
+const LophiidVersion = "1.0.0-alpha"
 
 // IP event sources are used to indicate the source of an IP event. The values
 // below need to be kept in sync with IP_EVENT_SOURCE in the database.
@@ -270,6 +270,34 @@ const (
 	CampaignFeedbackStatusPending  = "PENDING"
 	CampaignFeedbackStatusApproved = "APPROVED"
 	CampaignFeedbackStatusRejected = "REJECTED"
+)
+
+// Kill chain phases
+const (
+	KillChainPhaseRecon        = "RECON"
+	KillChainPhaseVerify       = "VERIFY"
+	KillChainPhaseExploitation = "EXPLOITATION"
+	KillChainPhaseCleanup      = "CLEANUP"
+	KillChainPhaseUnknown      = "UNKNOWN"
+)
+
+// RuleRequestPurpose values for ContentRule.RequestPurpose.
+// These must be kept in sync with the kill_chain_phase database enum.
+const (
+	RuleRequestPurposeUnknown      = KillChainPhaseUnknown
+	RuleRequestPurposeRecon        = KillChainPhaseRecon
+	RuleRequestPurposeVerify       = KillChainPhaseVerify
+	RuleRequestPurposeExploitation = KillChainPhaseExploitation
+	RuleRequestPurposeCleanup      = KillChainPhaseCleanup
+)
+
+// Kill chain analysis process status (stored in session.kill_chain_process_status)
+const (
+	KillChainProcessStatusPending = "PENDING"
+	KillChainProcessStatusDone    = "DONE"
+	KillChainProcessStatusPartial = "PARTIAL"
+	KillChainProcessStatusFailed  = "FAILED"
+	KillChainProcessStatusSkipped = "SKIPPED"
 )
 
 // Campaign feedback reasoning kept in sync with CAMPAIGN_FEEDBACK_REASON in the database.

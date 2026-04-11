@@ -363,9 +363,8 @@ func TestPipeline_Phase4Lifecycle_MergedSkipped(t *testing.T) {
 	assert.Equal(t, constants.CampaignStatusMerged, campaigns[0].Status, "MERGED campaigns should not transition")
 }
 
-func TestPipeline_Phase2Correlate_NoFingerprintExpansion(t *testing.T) {
+func TestPipeline_Phase2Correlate_SessionBased(t *testing.T) {
 	cfg := testConfig()
-	cfg.Agent.CorrelationFeatures = []string{constants.CampaignCorrelationSourceIP}
 
 	// Create a campaign with an initial fingerprint.
 	fp := NewFingerprint()
@@ -380,38 +379,25 @@ func TestPipeline_Phase2Correlate_NoFingerprintExpansion(t *testing.T) {
 		Fingerprint: fpJSON,
 	}
 
-	// Create a non-malicious request from the same IP.
-	// This request should be correlated but should NOT expand the fingerprint.
-	req := models.Request{
-		ID:           100,
+	// Unassigned request sharing a session with the campaign's existing requests.
+	candidateReq := models.Request{
+		ID:           200,
 		SourceIP:     "1.1.1.1",
-		SessionID:    12345,
+		SessionID:    42,
 		TimeReceived: time.Now().Add(-90 * time.Minute),
 	}
 
 	fakeDB := &database.FakeDatabaseClient{
-		RequestsWithDescriptionsToReturn: []models.RequestWithDescription{
-			{Request: req},
-		},
-		CampaignRequestsToReturn: []models.CampaignRequest{
-			{CampaignID: 1, RequestID: 1, Role: constants.CampaignRequestRoleSeed},
-		},
-		BulkGetResults: map[string]any{
-			"request:id": []models.Request{{ID: 1, SourceIP: "1.1.1.1"}},
-		},
+		UnassignedSessionRequestsToReturn: []models.Request{candidateReq},
 	}
 
-	// Mock registry with a simple correlator.
 	p := NewPipeline(fakeDB, nil, cfg, nil, false, true, false)
-	p.correlators = []Correlator{&SourceIPCorrelator{}}
 
 	result := &PipelineResult{}
 	p.phase2Correlate(context.Background(), []models.Campaign{campaign}, result)
 
-	assert.Equal(t, 1, result.CorrelatedAdded, "request should be correlated")
+	assert.Equal(t, 1, result.CorrelatedAdded, "session-matched request should be correlated")
 
-	// Verify the fingerprint in the campaign object was not modified.
-	// (Note: phase2Correlate doesn't even have access to the fingerprints map).
+	// Verify the fingerprint was not modified by correlation.
 	assert.Equal(t, fpJSON, campaign.Fingerprint, "fingerprint should not be modified by correlation")
 }
-

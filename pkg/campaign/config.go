@@ -104,7 +104,7 @@ type CampaignAgentConfig struct {
 		RetroactiveLookback time.Duration `fig:"retroactive_lookback" default:"168h"`
 		// CorrelationPadding is the time buffer added before first_seen and after last_seen when querying correlated requests.
 		CorrelationPadding time.Duration `fig:"correlation_padding" default:"1h"`
-		// CorrelationFeatures lists which correlators to use (e.g. session_id, source_ip, subnet).
+		// CorrelationFeatures lists which correlators to use (e.g. subnet).
 		CorrelationFeatures []string `fig:"correlation_features"`
 		// Sources maps source names to their configuration (enabled flag and per-feature weights).
 		Sources map[string]SourceConfig `fig:"sources"`

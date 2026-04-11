@@ -41,6 +41,7 @@ import (
 	"lophiid/pkg/backend/extractors"
 	"lophiid/pkg/backend/ratelimit"
 	"lophiid/pkg/backend/responder"
+	"lophiid/pkg/backend/rules"
 	"lophiid/pkg/backend/session"
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
@@ -228,7 +229,7 @@ type BackendServer struct {
 	vtMgr                vt.VTManager
 	whoisMgr             whois.RdapManager
 	alertMgr             *alerting.AlertManager
-	safeRules            *SafeRules
+	safeRules            *rules.SafeRules
 	maintenanceChan      chan bool
 	reqsProcessChan      chan bool
 	reqsQueue            chan ReqQueueEntry
@@ -273,7 +274,7 @@ func NewBackendServer(c database.DatabaseClient, metrics *BackendMetrics, rateLi
 	be := &BackendServer{
 		dbClient:             c,
 		qRunnerChan:          make(chan bool),
-		safeRules:            NewSafeRules(c),
+		safeRules:            rules.NewSafeRules(c),
 		maintenanceChan:      make(chan bool),
 		reqsProcessChan:      make(chan bool),
 		reqsQueue:            make(chan ReqQueueEntry, config.Backend.Advanced.RequestsQueueSize),
@@ -1640,9 +1641,9 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 		}
 	}
 
-	if rule.RequestPurpose != models.RuleRequestPurposeUnknown {
+	if rule.RequestPurpose != constants.RuleRequestPurposeUnknown {
 		switch rule.RequestPurpose {
-		case models.RuleRequestPurposeAttack:
+		case constants.RuleRequestPurposeExploitation, constants.RuleRequestPurposeCleanup:
 			s.ipEventManager.AddEvent(&models.IpEvent{
 				IP:            req.SourceIP,
 				Type:          constants.IpEventTrafficClass,
@@ -1654,19 +1655,7 @@ func (s *BackendServer) ProcessRequest(req *models.Request, rule models.ContentR
 				RequestID:     req.ID,
 				HoneypotIP:    req.HoneypotIP,
 			})
-		case models.RuleRequestPurposeCrawl:
-			s.ipEventManager.AddEvent(&models.IpEvent{
-				IP:            req.SourceIP,
-				Type:          constants.IpEventTrafficClass,
-				Subtype:       constants.IpEventSubTypeTrafficClassCrawl,
-				Source:        constants.IpEventSourceRule,
-				SourceRef:     fmt.Sprintf("%d", rule.ID),
-				SourceRefType: constants.IpEventRefTypeRuleId,
-				Details:       "rule indicated the IP crawled",
-				RequestID:     req.ID,
-				HoneypotIP:    req.HoneypotIP,
-			})
-		case models.RuleRequestPurposeRecon:
+		case constants.RuleRequestPurposeRecon, constants.RuleRequestPurposeVerify:
 			s.ipEventManager.AddEvent(&models.IpEvent{
 				IP:            req.SourceIP,
 				Source:        constants.IpEventSourceRule,

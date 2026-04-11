@@ -10,6 +10,8 @@ export default {
   eventLink: '/events',
   eventSegmentLink: '/events/:offset/:limit',
   requestsLink: '/requests',
+  sessionsLink: '/sessions',
+  sessionsSegmentLink: '/sessions/:offset/:limit',
   honeypotsLink: '/honeypot',
   honeypotsSegmentLink: '/honeypot/:offset/:limit',
   storedqueryLink: '/query',
@@ -52,7 +54,7 @@ export default {
 
   // There next 5 need to be in sync with the database enums.
   backendMatchingMethods: ['none', 'exact', 'prefix', 'suffix', 'regex', 'contains'],
-  contentRuleRequestPurposes: ['UNKNOWN', 'RECON', 'CRAWL', 'ATTACK'],
+  contentRuleRequestPurposes: ['UNKNOWN', 'RECON', 'VERIFY', 'EXPLOITATION', 'CLEANUP'],
   contentRuleHTTPMethods: ['ANY' , 'GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'],
   ruleResponderTypes: ['NONE', 'COMMAND_INJECTION', 'SOURCE_CODE_INJECTION', 'AUTO', 'HELPFUL_AI'],
   ruleResponderDecoders: ['NONE', 'URI', 'HTML'],

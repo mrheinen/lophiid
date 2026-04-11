@@ -280,18 +280,34 @@ CREATE TYPE public.payload_type AS ENUM (
 ALTER TYPE public.payload_type OWNER TO postgres;
 
 --
--- Name: request_purpose; Type: TYPE; Schema: public; Owner: postgres
+-- Name: kill_chain_phase; Type: TYPE; Schema: public; Owner: postgres
 --
 
-CREATE TYPE public.request_purpose AS ENUM (
+CREATE TYPE public.kill_chain_phase AS ENUM (
     'UNKNOWN',
     'RECON',
-    'CRAWL',
-    'ATTACK'
+    'VERIFY',
+    'EXPLOITATION',
+    'CLEANUP'
 );
 
 
-ALTER TYPE public.request_purpose OWNER TO postgres;
+ALTER TYPE public.kill_chain_phase OWNER TO postgres;
+
+--
+-- Name: kill_chain_process_status; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.kill_chain_process_status AS ENUM (
+    'PENDING',
+    'DONE',
+    'PARTIAL',
+    'FAILED',
+    'SKIPPED'
+);
+
+
+ALTER TYPE public.kill_chain_process_status OWNER TO postgres;
 
 --
 -- Name: responder_decoder_type; Type: TYPE; Schema: public; Owner: postgres
@@ -646,7 +662,7 @@ CREATE TABLE public.content_rule (
     alert boolean DEFAULT false,
     is_temporary bool default false,
     is_draft bool DEFAULT false,
-    request_purpose public.request_purpose DEFAULT 'UNKNOWN'::public.request_purpose,
+    request_purpose public.kill_chain_phase DEFAULT 'UNKNOWN'::public.kill_chain_phase,
     ext_version integer DEFAULT 1,
     ext_uuid character varying(36) DEFAULT gen_random_uuid(),
     app_uuid character varying(36) DEFAULT ''::character varying,
@@ -2264,13 +2280,63 @@ CREATE TABLE public.session (
     behavior_cv float default 0,
     behavior_final_gaps float array default '{}'::float[],
     started_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    last_request_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     ended_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    kill_chain_process_status public.kill_chain_process_status DEFAULT 'PENDING'::public.kill_chain_process_status,
+    kill_chain_max_depth integer DEFAULT 0,
+    kill_chain_phase_count integer DEFAULT 0,
+    kill_chain_unique_phases public.kill_chain_phase[] DEFAULT '{}'::public.kill_chain_phase[]
 );
 
 
 ALTER TABLE public.session OWNER TO postgres;
+
+--
+-- Name: kill_chain; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.kill_chain (
+    id serial NOT NULL,
+    session_id integer NOT NULL,
+    started_at timestamp without time zone NOT NULL,
+    unique_base_hashes text[] DEFAULT '{}'::text[] NOT NULL,
+    source_model character varying(256) DEFAULT 'UNKNOWN'::character varying NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+
+ALTER TABLE public.kill_chain OWNER TO postgres;
+
+CREATE INDEX kill_chain_session_id_idx ON public.kill_chain USING btree (session_id);
+
+--
+-- Name: single_kill_chain_phase; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.single_kill_chain_phase (
+    id serial NOT NULL,
+    kill_chain_id integer NOT NULL,
+    session_id integer NOT NULL,
+    phase public.kill_chain_phase NOT NULL,
+    evidence text NOT NULL,
+    first_request_id integer NOT NULL,
+    first_request_time timestamp without time zone NOT NULL,
+    last_request_time timestamp without time zone NOT NULL,
+    request_count integer DEFAULT 0 NOT NULL,
+    phase_duration_seconds integer DEFAULT 0 NOT NULL,
+    source_model character varying(256) DEFAULT 'UNKNOWN'::character varying NOT NULL,
+    created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+
+ALTER TABLE public.single_kill_chain_phase OWNER TO postgres;
+
+CREATE INDEX single_kill_chain_phase_session_id_idx ON public.single_kill_chain_phase USING btree (session_id);
+CREATE INDEX single_kill_chain_phase_kill_chain_id_idx ON public.single_kill_chain_phase USING btree (kill_chain_id);
 
 --
 -- Name: session_execution_context; Type: TABLE; Schema: public; Owner: postgres

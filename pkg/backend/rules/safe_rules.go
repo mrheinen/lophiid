@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package backend
+package rules
 
 import (
 	"fmt"
@@ -36,13 +36,12 @@ type SafeRules struct {
 
 func NewSafeRules(dbClient database.DatabaseClient) *SafeRules {
 	return &SafeRules{
-		dbClient:      dbClient,
-		stopChan:      make(chan struct{}),
-		rulesPerGroup: make(map[int64][]models.ContentRule),
+		dbClient: dbClient,
+		stopChan: make(chan struct{}),
 	}
 }
 
-// GetRules returns a copy of the content rules.
+// Get returns a copy of all rules keyed by group ID.
 func (s *SafeRules) Get() map[int64][]models.ContentRule {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -54,8 +53,7 @@ func (s *SafeRules) Get() map[int64][]models.ContentRule {
 	return result
 }
 
-// Add adds a content rule to a group. It does not check if the rule already
-// exists.
+// Add adds a content rule to a group. It does not check if the rule already exists.
 func (s *SafeRules) Add(r models.ContentRule, groupID int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -67,6 +65,7 @@ func (s *SafeRules) Add(r models.ContentRule, groupID int64) {
 	}
 }
 
+// GetGroup returns a copy of the rules for a specific group.
 func (s *SafeRules) GetGroup(groupID int64) []models.ContentRule {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -74,10 +73,26 @@ func (s *SafeRules) GetGroup(groupID int64) []models.ContentRule {
 	if _, ok := s.rulesPerGroup[groupID]; !ok {
 		return []models.ContentRule{}
 	}
-
 	return slices.Clone(s.rulesPerGroup[groupID])
 }
 
+// GetByID returns the first rule matching the given ID across all groups.
+// Returns false if no rule with that ID is cached.
+func (s *SafeRules) GetByID(id int64) (models.ContentRule, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, groupRules := range s.rulesPerGroup {
+		for _, r := range groupRules {
+			if r.ID == id {
+				return r, true
+			}
+		}
+	}
+	return models.ContentRule{}, false
+}
+
+// Set replaces the entire rule map atomically.
 func (s *SafeRules) Set(rules map[int64][]models.ContentRule) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -92,8 +107,6 @@ func (s *SafeRules) LoadRules() error {
 		return fmt.Errorf("getting app per group: %w", err)
 	}
 
-	// Build a map of app ID to the group IDs it belongs to, and track which
-	// apps we need to fetch rules for.
 	appToGroups := map[int64][]int64{}
 	for _, apg := range appPerGroup {
 		appToGroups[apg.App.ID] = append(appToGroups[apg.App.ID], apg.AppPerGroup.GroupID)
@@ -102,12 +115,12 @@ func (s *SafeRules) LoadRules() error {
 	ruleCount := 0
 	finalRules := map[int64][]models.ContentRule{}
 	for appID, groupIDs := range appToGroups {
-		rules, err := s.dbClient.SearchContentRules(0, 10000, fmt.Sprintf("app_id:%d", appID))
+		appRules, err := s.dbClient.SearchContentRules(0, 10000, fmt.Sprintf("app_id:%d", appID))
 		if err != nil {
 			return fmt.Errorf("searching rules for app %d: %w", appID, err)
 		}
 
-		for _, rule := range rules {
+		for _, rule := range appRules {
 			if !rule.Enabled || rule.IsDraft {
 				slog.Debug("rule disabled or draft", slog.Int64("rule_id", rule.ID), slog.Int64("app_id", rule.AppID))
 				continue

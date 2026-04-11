@@ -28,49 +28,52 @@ import (
 // FakeDatabaseClient is a struct specifically for testing users of the
 // DatabaseClient interface
 type FakeDatabaseClient struct {
-	ContentIDToReturn                int64
-	ContentsToReturn                 map[int64]models.Content
-	ErrorToReturn                    error
-	UpdateErrorToReturn              error
-	ContentRuleIDToReturn            int64
-	ContentRulesToReturn             []models.ContentRule
-	RequestsToReturn                 []models.Request
-	RequestToReturn                  models.Request
-	DownloadsToReturn                []models.Download
-	ApplicationToReturn              models.Application
-	AppErrorToReturn                 error
-	HoneypotToReturn                 models.Honeypot
-	HoneypotErrorToReturn            error
-	QueriesToReturn                  []models.StoredQuery
-	QueriesToReturnError             error
-	TagPerQueryReturn                []models.TagPerQuery
-	TagPerQueryReturnError           error
-	WhoisModelsToReturn              []models.Whois
-	WhoisErrorToReturn               error
-	LastDataModelSeen                any
-	LastExternalDataModelSeen        any
-	P0fResultToReturn                models.P0fResult
-	P0fResultsToReturn               []models.P0fResult
-	P0fErrorToReturn                 error
-	IpEventToReturn                  models.IpEvent
-	DataModelToReturn                models.DataModel
-	SessionToReturn                  models.Session
-	RequestDescriptionsToReturn      []models.RequestDescription
-	MetadataToReturn                 []models.RequestMetadata
-	YarasToReturn                    []models.Yara
-	SimpleQueryResult                any
-	ParameterizedQueryResult         any
-	SessionExecutionContextToReturn  []models.SessionExecutionContext
-	TagsPerRuleToReturn              []models.TagPerRule
-	AppPerGroupToReturn              []models.AppPerGroup
-	RuleGroupToReturn                []models.RuleGroup
-	AppPerGroupJoinToReturn          []models.AppPerGroupJoin
-	ContentRulesByAppIDToReturn      map[int64][]models.ContentRule
-	CampaignsToReturn                []models.Campaign
-	CampaignRequestsToReturn         []models.CampaignRequest
-	CampaignToReturn                 models.Campaign
-	RequestsWithDescriptionsToReturn []models.RequestWithDescription
-	BulkGetResults                   map[string]any
+	ContentIDToReturn                 int64
+	ContentsToReturn                  map[int64]models.Content
+	ErrorToReturn                     error
+	UpdateErrorToReturn               error
+	ContentRuleIDToReturn             int64
+	ContentRulesToReturn              []models.ContentRule
+	RequestsToReturn                  []models.Request
+	RequestToReturn                   models.Request
+	DownloadsToReturn                 []models.Download
+	ApplicationToReturn               models.Application
+	AppErrorToReturn                  error
+	HoneypotToReturn                  models.Honeypot
+	HoneypotErrorToReturn             error
+	QueriesToReturn                   []models.StoredQuery
+	QueriesToReturnError              error
+	TagPerQueryReturn                 []models.TagPerQuery
+	TagPerQueryReturnError            error
+	WhoisModelsToReturn               []models.Whois
+	WhoisErrorToReturn                error
+	LastDataModelSeen                 any
+	LastExternalDataModelSeen         any
+	P0fResultToReturn                 models.P0fResult
+	P0fResultsToReturn                []models.P0fResult
+	P0fErrorToReturn                  error
+	IpEventToReturn                   models.IpEvent
+	DataModelToReturn                 models.DataModel
+	SessionToReturn                   models.Session
+	RequestDescriptionsToReturn       []models.RequestDescription
+	MetadataToReturn                  []models.RequestMetadata
+	YarasToReturn                     []models.Yara
+	SimpleQueryResult                 any
+	ParameterizedQueryResult          any
+	SessionExecutionContextToReturn   []models.SessionExecutionContext
+	TagsPerRuleToReturn               []models.TagPerRule
+	AppPerGroupToReturn               []models.AppPerGroup
+	RuleGroupToReturn                 []models.RuleGroup
+	AppPerGroupJoinToReturn           []models.AppPerGroupJoin
+	ContentRulesByAppIDToReturn       map[int64][]models.ContentRule
+	CampaignsToReturn                 []models.Campaign
+	CampaignRequestsToReturn          []models.CampaignRequest
+	CampaignToReturn                  models.Campaign
+	RequestsWithDescriptionsToReturn  []models.RequestWithDescription
+	UnassignedSessionRequestsToReturn []models.Request
+	KillChainsToReturn                []models.KillChain
+	SingleKillChainPhasesToReturn     []models.SingleKillChainPhase
+	BulkGetResults                    map[string]any
 }
 
 func (f *FakeDatabaseClient) Close() {}
@@ -195,6 +198,9 @@ func (f *FakeDatabaseClient) SearchTagPerRule(offset int64, limit int64, query s
 func (f *FakeDatabaseClient) CampaignGetUnassignedRequestsWithDescriptions(isMalicious bool, startTime, endTime time.Time) ([]models.RequestWithDescription, error) {
 	return f.RequestsWithDescriptionsToReturn, f.ErrorToReturn
 }
+func (f *FakeDatabaseClient) GetUnassignedRequestsForCampaignSessions(campaignID int64, startTime, endTime, campaignStart, campaignEnd time.Time) ([]models.Request, error) {
+	return f.UnassignedSessionRequestsToReturn, f.ErrorToReturn
+}
 func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) {
 	return f.SimpleQueryResult, f.ErrorToReturn
 }
@@ -228,6 +234,12 @@ func (f *FakeDatabaseClient) SearchCampaignRequests(offset int64, limit int64, q
 }
 func (f *FakeDatabaseClient) GetCampaignByID(id int64) (models.Campaign, error) {
 	return f.CampaignToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchKillChains(offset int64, limit int64, query string) ([]models.KillChain, error) {
+	return f.KillChainsToReturn, f.ErrorToReturn
+}
+func (f *FakeDatabaseClient) SearchSingleKillChainPhases(offset int64, limit int64, query string) ([]models.SingleKillChainPhase, error) {
+	return f.SingleKillChainPhasesToReturn, f.ErrorToReturn
 }
 
 // BulkGetByField looks up "tableName:field" in BulkGetResults and copies the

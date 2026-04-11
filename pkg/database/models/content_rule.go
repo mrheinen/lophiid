@@ -22,15 +22,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// The request purpose for the ContentRule needs to be kept in sync with the
-// database REQUEST_PURPOSE type.
-const (
-	RuleRequestPurposeUnknown = "UNKNOWN"
-	RuleRequestPurposeAttack  = "ATTACK"
-	RuleRequestPurposeRecon   = "RECON"
-	RuleRequestPurposeCrawl   = "CRAWL"
-)
-
 type ContentRule struct {
 	ID           int64                 `ksql:"id,skipInserts" json:"id" doc:"The rule ID"`
 	Uri          string                `ksql:"uri" json:"uri"           doc:"The URI matching string"`
@@ -56,14 +47,8 @@ type ContentRule struct {
 	ExtUuid      string     `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
 	IsTemporary  bool       `ksql:"is_temporary" json:"is_temporary" yaml:"is_temporary" doc:"A bool (0 or 1) indicating if the rule is a temporary rule"`
 	IsDraft      bool       `ksql:"is_draft" json:"is_draft" yaml:"is_draft" doc:"True if this is an auto-generated draft pending review"`
-	// The request purpose should indicate what the request is intended to do. It
-	// is used, amongst other things, to determine whether a request is malicious
-	// or not.
-	// Valid values are:
-	//   - UNKNOWN : the purpose is unknown
-	//   - RECON : the purpose is reconnaissance
-	//   - CRAWL : the request is part of regular crawling
-	//   - ATTACK : the request is an attack (e.g. an RCE)
+	// The request purpose should indicate what the request is intended to do in
+	// the kill chain.
 	RequestPurpose   string       `ksql:"request_purpose" json:"request_purpose" yaml:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
 	Responder        string       `ksql:"responder" json:"responder" doc:"The responder type for this rule (e.g. COMMAND_INJECTION)"`
 	ResponderRegex   string       `ksql:"responder_regex" json:"responder_regex" yaml:"responder_regex" doc:"The responder regex to grab the relevant bits"`

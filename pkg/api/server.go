@@ -963,6 +963,53 @@ func (a *ApiServer) HandleGetRequestsSegment(w http.ResponseWriter, req *http.Re
 	a.sendStatus(w, "", ResultSuccess, reqs)
 }
 
+func (a *ApiServer) HandleGetSessionsSegment(w http.ResponseWriter, req *http.Request) {
+	offset, limit, query, err := GetQueryParameters(req)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	var sessions []models.Session
+	sessions, err = a.dbc.SearchSession(offset, limit, query)
+
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, sessions)
+}
+
+func (a *ApiServer) HandleSearchKillChains(w http.ResponseWriter, req *http.Request) {
+	offset, limit, query, err := GetQueryParameters(req)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	chains, err := a.dbc.SearchKillChains(offset, limit, query)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, chains)
+}
+
+func (a *ApiServer) HandleSearchSingleKillChainPhases(w http.ResponseWriter, req *http.Request) {
+	offset, limit, query, err := GetQueryParameters(req)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+
+	phases, err := a.dbc.SearchSingleKillChainPhases(offset, limit, query)
+	if err != nil {
+		a.sendStatus(w, err.Error(), ResultError, nil)
+		return
+	}
+	a.sendStatus(w, "", ResultSuccess, phases)
+}
+
 func (a *ApiServer) HandleSearchYara(w http.ResponseWriter, req *http.Request) {
 	offset, limit, query, err := GetQueryParameters(req)
 	if err != nil {
@@ -1822,6 +1869,7 @@ func (a *ApiServer) HandleReturnDocField(w http.ResponseWriter, req *http.Reques
 		"ipevent":     models.IpEvent{},
 		"yara":        models.Yara{},
 		"campaign":    models.Campaign{},
+		"session":     models.Session{},
 	}
 
 	if model, ok := modelMap[modelName]; ok {

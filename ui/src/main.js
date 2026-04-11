@@ -12,6 +12,7 @@ import Config from './Config.js';
 import ContentList from './components/container/ContentList.vue';
 import RulesList from './components/container/RulesList.vue';
 import RequestsList from './components/container/RequestsList.vue';
+import SessionsList from './components/container/SessionsList.vue';
 import AppsList from './components/container/AppsList.vue';
 import DownList from './components/container/DownloadsList.vue';
 import HoneyList from './components/container/HoneypotList.vue';
@@ -136,6 +137,8 @@ const router = createRouter({
     { path: Config.tagsSegmentLink, component: TagList },
     { path: Config.requestsLink, component: RequestsList },
     { path: Config.requestsSegmentLink, component: RequestsList, name: Config.requestsSegmentLinkName },
+    { path: Config.sessionsLink, component: SessionsList },
+    { path: Config.sessionsSegmentLink, component: SessionsList },
     { path: Config.eventLink, component: EventsList },
     { path: Config.eventSegmentLink, component: EventsList },
     { path: Config.yaraLink, component: YaraList },

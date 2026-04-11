@@ -139,6 +139,13 @@ func main() {
 	r.HandleFunc("/request/update", as.HandleUpdateRequest).Methods("POST")
 	r.HandleFunc("/request/segment", as.HandleGetRequestsSegment).Methods("GET")
 
+	// All sessions endpoints
+	r.HandleFunc("/session/segment", as.HandleGetSessionsSegment).Methods("GET")
+
+	// Kill chain endpoints
+	r.HandleFunc("/killchain/segment", as.HandleSearchKillChains).Methods("GET")
+	r.HandleFunc("/killchainphase/segment", as.HandleSearchSingleKillChainPhases).Methods("GET")
+
 	r.HandleFunc("/description/single", as.HandleGetDescriptionForCmpHash).Methods("POST")
 	r.HandleFunc("/description/status", as.HandleDescriptionReview).Methods("POST")
 

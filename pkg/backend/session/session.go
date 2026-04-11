@@ -23,6 +23,7 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"time"
 )
 
@@ -72,9 +73,9 @@ func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) 
 
 	slog.Warn("Found stale sessions. Cleaning the up", slog.Int("count", len(res)))
 
-	for _, sess := range res {
-		if err := d.EndSession(&sess); err != nil {
-			slog.Error("error ending session", slog.String("ip", sess.IP), slog.String("error", err.Error()))
+	for i := range res {
+		if err := d.EndSession(&res[i]); err != nil {
+			slog.Error("error ending session", slog.String("ip", res[i].IP), slog.String("error", err.Error()))
 			// We do not return here as we want the try to cleanup the other sessions
 			// as well.
 		}
@@ -87,7 +88,11 @@ func (d *DatabaseSessionManager) CleanupStaleSessions(limit int64) (int, error) 
 // is responsible for modifying the cache.
 func (d *DatabaseSessionManager) EndSession(session *models.Session) error {
 	session.Active = false
-	session.EndedAt = time.Now().UTC()
+	if !session.LastRequestAt.IsZero() {
+		session.EndedAt = session.LastRequestAt
+	} else {
+		session.EndedAt = time.Now().UTC()
+	}
 
 	profile, err := analysis.GetSessionBehaviorProfile(session.RequestGaps)
 	if err != nil {
@@ -137,6 +142,7 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *models.Session) boo
 func (d *DatabaseSessionManager) StartSession(ip string) (*models.Session, error) {
 	newSession := models.NewSession()
 	newSession.Active = true
+	newSession.KillChainProcessStatus = constants.KillChainProcessStatusPending
 	newSession.StartedAt = time.Now().UTC()
 	newSession.IP = ip
 

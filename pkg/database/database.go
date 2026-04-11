@@ -56,6 +56,8 @@ var AppPerGroupTable = ksql.NewTable("app_per_group")
 var RuleGroupTable = ksql.NewTable("rule_group")
 var CampaignTable = ksql.NewTable("campaign")
 var CampaignRequestTable = ksql.NewTable("campaign_request")
+var KillChainTable = ksql.NewTable("kill_chain")
+var SingleKillChainPhaseTable = ksql.NewTable("single_kill_chain_phase")
 
 type DatabaseClient interface {
 	Close()
@@ -84,6 +86,7 @@ type DatabaseClient interface {
 	SearchRequestDescription(offset int64, limit int64, query string) ([]models.RequestDescription, error)
 	SearchSessionExecutionContext(offset int64, limit int64, query string) ([]models.SessionExecutionContext, error)
 	CampaignGetUnassignedRequestsWithDescriptions(isMalicious bool, startTime, endTime time.Time) ([]models.RequestWithDescription, error)
+	GetUnassignedRequestsForCampaignSessions(campaignID int64, startTime, endTime, campaignStart, campaignEnd time.Time) ([]models.Request, error)
 	SearchStoredQuery(offset int64, limit int64, query string) ([]models.StoredQuery, error)
 	SearchTags(offset int64, limit int64, query string) ([]models.Tag, error)
 	SearchTagPerQuery(offset int64, limit int64, query string) ([]models.TagPerQuery, error)
@@ -94,6 +97,8 @@ type DatabaseClient interface {
 	SearchCampaigns(offset int64, limit int64, query string) ([]models.Campaign, error)
 	SearchCampaignRequests(offset int64, limit int64, query string) ([]models.CampaignRequest, error)
 	GetCampaignByID(id int64) (models.Campaign, error)
+	SearchKillChains(offset int64, limit int64, query string) ([]models.KillChain, error)
+	SearchSingleKillChainPhases(offset int64, limit int64, query string) ([]models.SingleKillChainPhase, error)
 	GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error)
 	GetTagsPerRequestForRequestID(id int64) ([]models.TagPerRequest, error)
 	GetAppPerGroupJoin() ([]models.AppPerGroupJoin, error)
@@ -209,6 +214,8 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["RuleGroup"] = &RuleGroupTable
 	sqlTable["Campaign"] = &CampaignTable
 	sqlTable["CampaignRequest"] = &CampaignRequestTable
+	sqlTable["KillChain"] = &KillChainTable
+	sqlTable["SingleKillChainPhase"] = &SingleKillChainPhaseTable
 
 	table, ok := sqlTable[name]
 	if !ok {
@@ -247,6 +254,7 @@ func (d *KSQLClient) getTableNameForModel(dm models.DataModel) string {
 		"RuleGroup":               "rule_group",
 		"Campaign":                "campaign",
 		"CampaignRequest":         "campaign_request",
+		"SingleKillChainPhase":    "single_kill_chain_phase",
 	}
 	if tn, ok := tableNames[name]; ok {
 		return tn
@@ -732,6 +740,19 @@ func (d *KSQLClient) CampaignGetUnassignedRequestsWithDescriptions(isMalicious b
 	return rds, err
 }
 
+// GetUnassignedRequestsForCampaignSessions returns all unassigned requests
+// whose session_id appears in any request already belonging to the given
+// campaign, restricted to the given time window. The time window should be
+// padded around the campaign's first/last seen timestamps.
+func (d *KSQLClient) GetUnassignedRequestsForCampaignSessions(campaignID int64, startTime, endTime, campaignStart, campaignEnd time.Time) ([]models.Request, error) {
+	var result []models.Request
+	err := d.db.Query(d.ctx, &result,
+		"FROM request WHERE campaign_id IS NULL AND session_id != 0 AND time_received BETWEEN $2 AND $3 AND session_id IN (SELECT DISTINCT session_id FROM request WHERE campaign_id = $1 AND session_id != 0 AND time_received BETWEEN $4 AND $5)",
+		campaignID, startTime.Format(time.RFC3339), endTime.Format(time.RFC3339), campaignStart.Format(time.RFC3339), campaignEnd.Format(time.RFC3339),
+	)
+	return result, err
+}
+
 func (d *KSQLClient) GetTagPerRequestFullForRequest(id int64) ([]models.TagPerRequestFull, error) {
 	var md []models.TagPerRequestFull
 	err := d.db.Query(d.ctx, &md, "FROM tag_per_request JOIN tag ON tag.id = tag_per_request.tag_id AND tag_per_request.request_id = $1", id)
@@ -777,6 +798,20 @@ func (d *KSQLClient) SearchCampaigns(offset int64, limit int64, query string) ([
 func (d *KSQLClient) SearchCampaignRequests(offset int64, limit int64, query string) ([]models.CampaignRequest, error) {
 	var result []models.CampaignRequest
 	err := d.Search(offset, limit, query, campaignRequestConfig, &result)
+	return result, err
+}
+
+// SearchKillChains searches for kill chain records.
+func (d *KSQLClient) SearchKillChains(offset int64, limit int64, query string) ([]models.KillChain, error) {
+	var result []models.KillChain
+	err := d.Search(offset, limit, query, killChainConfig, &result)
+	return result, err
+}
+
+// SearchSingleKillChainPhases searches for single kill chain phase records.
+func (d *KSQLClient) SearchSingleKillChainPhases(offset int64, limit int64, query string) ([]models.SingleKillChainPhase, error) {
+	var result []models.SingleKillChainPhase
+	err := d.Search(offset, limit, query, singleKillChainPhaseConfig, &result)
 	return result, err
 }
 
