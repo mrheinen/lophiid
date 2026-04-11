@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -83,12 +84,15 @@ func main() {
 		programLevel.Set(slog.LevelInfo)
 	}
 
+	var running atomic.Bool
+	running.Store(*keepRunning)
+
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigc
 		slog.Info("Got signal to stop, please wait...")
-		*keepRunning = false
+		running.Store(false)
 	}()
 
 	metricsRegistry := prometheus.NewRegistry()
@@ -155,7 +159,7 @@ func main() {
 			slog.Error("error during analysis batch", slog.String("error", err.Error()))
 		}
 
-		if !*keepRunning {
+		if !running.Load() {
 			slog.Info("Shutting down!")
 			return
 		}
