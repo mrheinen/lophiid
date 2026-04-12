@@ -46,6 +46,23 @@ type KillChainLLMChain struct {
 	Phases     []KillChainLLMPhase `json:"phases" jsonschema_description:"The kill chain phases detected within this chain."`
 }
 
+// phaseDepthOrdinal maps a kill chain phase string to its depth ordinal.
+// Unknown/unmapped phases return 0.
+func phaseDepthOrdinal(phase string) int64 {
+	switch phase {
+	case constants.KillChainPhaseRecon:
+		return constants.KillChainPhaseDepthRecon
+	case constants.KillChainPhaseVerify:
+		return constants.KillChainPhaseDepthVerify
+	case constants.KillChainPhaseExploitation:
+		return constants.KillChainPhaseDepthExploitation
+	case constants.KillChainPhaseCleanup:
+		return constants.KillChainPhaseDepthCleanup
+	default:
+		return 0
+	}
+}
+
 // KillChainLLMResult is the structured output expected from the LLM.
 type KillChainLLMResult struct {
 	KillChains []KillChainLLMChain `json:"kill_chains" jsonschema_description:"The list of distinct kill chains identified in the session. Empty if none were found."`
@@ -215,11 +232,21 @@ func (a *KillChainAnalyzer) analyzeSession(session *models.Session) error {
 			}
 		}
 
+		// Compute depth metrics from the phases returned by the LLM.
+		var maxDepth int64
+		for _, p := range chain.Phases {
+			if d := phaseDepthOrdinal(p.Phase); d > maxDepth {
+				maxDepth = d
+			}
+		}
+
 		kc := &models.KillChain{
 			SessionID:        session.ID,
 			StartedAt:        startedAt,
 			UniqueBaseHashes: pgtype.FlatArray[string](chainUniqueBaseHashes),
 			SourceModel:      modelName,
+			PhaseCount:       int64(len(chain.Phases)),
+			MaxPhaseDepth:    maxDepth,
 		}
 		inserted, insertErr := a.dbClient.Insert(kc)
 		if insertErr != nil {

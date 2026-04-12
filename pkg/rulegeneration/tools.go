@@ -447,6 +447,7 @@ func (t *ToolSet) resolveOrCreateApp(input CreateDraftInput) (int64, error) {
 
 	links := pgtype.FlatArray[string](input.App.Links)
 
+	source := constants.SourceTypeRuleAgent
 	app := models.Application{
 		Name:    input.App.Name,
 		Version: &version,
@@ -454,6 +455,7 @@ func (t *ToolSet) resolveOrCreateApp(input CreateDraftInput) (int64, error) {
 		CVES:    cves,
 		Links:   links,
 		IsDraft: true,
+		Source:  &source,
 	}
 
 	dm, err := t.db.Insert(&app)
@@ -466,6 +468,7 @@ func (t *ToolSet) resolveOrCreateApp(input CreateDraftInput) (int64, error) {
 func (t *ToolSet) createContent(c DraftContent) (int64, error) {
 	headers := pgtype.FlatArray[string](c.Headers)
 
+	source := constants.SourceTypeRuleAgent
 	content := models.Content{
 		Name:        c.Name,
 		Description: c.Description,
@@ -475,6 +478,7 @@ func (t *ToolSet) createContent(c DraftContent) (int64, error) {
 		StatusCode:  c.StatusCode,
 		Headers:     headers,
 		IsDraft:     true,
+		Source:      &source,
 	}
 
 	dm, err := t.db.Insert(&content)
@@ -526,6 +530,7 @@ func (t *ToolSet) createRule(r DraftRule, appID, contentID int64) (int64, error)
 		requestPurpose = constants.RequestPurposeUnknown
 	}
 
+	source := constants.SourceTypeRuleAgent
 	rule := models.ContentRule{
 		Uri:              r.URI,
 		UriMatching:      uriMatching,
@@ -539,6 +544,7 @@ func (t *ToolSet) createRule(r DraftRule, appID, contentID int64) (int64, error)
 		ContentID:        contentID,
 		Enabled:          false,
 		IsDraft:          true,
+		Source:           &source,
 	}
 
 	dm, err := t.db.Insert(&rule)

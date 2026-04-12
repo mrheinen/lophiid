@@ -47,6 +47,9 @@ type ContentRule struct {
 	ExtUuid      string     `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
 	IsTemporary  bool       `ksql:"is_temporary" json:"is_temporary" yaml:"is_temporary" doc:"A bool (0 or 1) indicating if the rule is a temporary rule"`
 	IsDraft      bool       `ksql:"is_draft" json:"is_draft" yaml:"is_draft" doc:"True if this is an auto-generated draft pending review"`
+	ActivatedAt  *time.Time `ksql:"activated_at" json:"activated_at" yaml:"activated_at" doc:"Last time the rule was enabled"`
+	ApprovedAt   *time.Time `ksql:"approved_at" json:"approved_at" yaml:"approved_at" doc:"Time the rule was approved (same as created_at for manually added rules)"`
+	Source       *string    `ksql:"source" json:"source" yaml:"source" doc:"Origin of the rule: USER, RULE_AGENT, or PREPROCESSOR"`
 	// The request purpose should indicate what the request is intended to do in
 	// the kill chain.
 	RequestPurpose   string       `ksql:"request_purpose" json:"request_purpose" yaml:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`

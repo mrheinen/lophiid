@@ -328,6 +328,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 			return nil, nil, fmt.Errorf("getting network: %w", err)
 		}
 
+		ppSource := constants.SourceTypePreprocessor
 		tmpContentRule := models.TemporaryContentRule{
 			Content: models.Content{
 				HasCode:     true,
@@ -338,6 +339,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 				ContentType: "text/html",
 				IsTemporary: true,
 				ExtUuid:     uuid.NewString(),
+				Source:      &ppSource,
 			},
 			Rule: models.ContentRule{
 				Uri:              fileName,
@@ -352,6 +354,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 				ResponderDecoder: constants.ResponderDecoderTypeNone,
 				IsTemporary:      true,
 				ExtUuid:          uuid.NewString(),
+				Source:           &ppSource,
 			},
 		}
 
