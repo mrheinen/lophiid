@@ -489,6 +489,18 @@ CREATE TYPE public.campaign_request_role AS ENUM (
 ALTER TYPE public.campaign_request_role OWNER TO postgres;
 
 --
+-- Name: source_type; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.source_type AS ENUM (
+    'RULE_AGENT',
+    'USER',
+    'PREPROCESSOR'
+);
+
+ALTER TYPE public.source_type OWNER TO postgres;
+
+--
 -- Name: sync_request_refs(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -527,7 +539,8 @@ CREATE TABLE public.app (
     ext_uuid character varying(36) DEFAULT gen_random_uuid(),
     cves character varying(15)[],
     links text[] DEFAULT '{}',
-    is_draft bool DEFAULT false
+    is_draft bool DEFAULT false,
+    source public.source_type
 );
 
 
@@ -577,7 +590,8 @@ CREATE TABLE public.content (
     ext_version integer DEFAULT 1,
     is_temporary bool default false,
     is_draft bool DEFAULT false,
-    rule_uuid character varying(36) DEFAULT ''::character varying
+    rule_uuid character varying(36) DEFAULT ''::character varying,
+    source public.source_type
 );
 
 
@@ -674,7 +688,10 @@ CREATE TABLE public.content_rule (
     enabled boolean DEFAULT true,
     ports integer[] DEFAULT '{}'::integer[],
     block boolean DEFAULT false,
-    rule_group_id integer
+    rule_group_id integer,
+    activated_at timestamp without time zone,
+    approved_at timestamp without time zone,
+    source public.source_type
 );
 
 
@@ -2303,6 +2320,8 @@ CREATE TABLE public.kill_chain (
     started_at timestamp without time zone NOT NULL,
     unique_base_hashes text[] DEFAULT '{}'::text[] NOT NULL,
     source_model character varying(256) DEFAULT 'UNKNOWN'::character varying NOT NULL,
+    phase_count integer DEFAULT 0 NOT NULL,
+    max_phase_depth integer DEFAULT 0 NOT NULL,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );

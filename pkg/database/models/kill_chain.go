@@ -28,6 +28,8 @@ type KillChain struct {
 	StartedAt        time.Time                `ksql:"started_at"                json:"started_at"`
 	UniqueBaseHashes pgtype.FlatArray[string] `ksql:"unique_base_hashes"            json:"unique_base_hashes"`
 	SourceModel      string                   `ksql:"source_model"                  json:"source_model"`
+	PhaseCount       int64                    `ksql:"phase_count"               json:"phase_count"`
+	MaxPhaseDepth    int64                    `ksql:"max_phase_depth"           json:"max_phase_depth"`
 	CreatedAt        time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt        time.Time                `ksql:"updated_at,timeNowUTC"     json:"updated_at"`
 }

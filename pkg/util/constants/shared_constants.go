@@ -300,6 +300,21 @@ const (
 	KillChainProcessStatusSkipped = "SKIPPED"
 )
 
+// SourceType values mirror the source_type DB enum and indicate who created a record.
+const (
+	SourceTypeRuleAgent    = "RULE_AGENT"
+	SourceTypeUser         = "USER"
+	SourceTypePreprocessor = "PREPROCESSOR"
+)
+
+// Kill chain phase depth ordinals (higher = deeper into the kill chain).
+const (
+	KillChainPhaseDepthRecon        = 1
+	KillChainPhaseDepthVerify       = 2
+	KillChainPhaseDepthExploitation = 3
+	KillChainPhaseDepthCleanup      = 4
+)
+
 // Campaign feedback reasoning kept in sync with CAMPAIGN_FEEDBACK_REASON in the database.
 const (
 	CampaignFeedbackReasonNone          = "NONE"

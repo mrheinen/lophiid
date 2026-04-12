@@ -322,6 +322,13 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 	}
 
 	if rb.ID == 0 {
+		now := time.Now().UTC()
+		src := constants.SourceTypeUser
+		rb.Source = &src
+		rb.ApprovedAt = &now
+		if rb.Enabled {
+			rb.ActivatedAt = &now
+		}
 		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
 			errMsg := fmt.Sprintf("unable to update rule: %s", err.Error())
@@ -333,6 +340,10 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		return
 	} else {
 
+		if rb.Enabled {
+			now := time.Now().UTC()
+			rb.ActivatedAt = &now
+		}
 		// This is an update.
 		err := a.dbc.Update(&rb)
 		if err != nil {
@@ -481,6 +492,8 @@ func (a *ApiServer) HandleUpsertSingleContent(w http.ResponseWriter, req *http.R
 
 	if rb.ID == 0 {
 		// This is an insert
+		src := constants.SourceTypeUser
+		rb.Source = &src
 		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
 			a.sendStatus(w, fmt.Sprintf("unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
@@ -676,6 +689,8 @@ func (a *ApiServer) HandleUpsertSingleApp(w http.ResponseWriter, req *http.Reque
 
 	if rb.ID == 0 {
 		// This is an insert
+		src := constants.SourceTypeUser
+		rb.Source = &src
 		dm, err := a.dbc.InsertExternalModel(&rb)
 		if err != nil {
 			a.sendStatus(w, fmt.Sprintf("unable to insert %d: %s", dm.ModelID(), err.Error()), ResultError, nil)
@@ -1548,7 +1563,9 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 	}
 
 	// Set the app ID to 0 so that it gets inserted as new.
+	importSrc := constants.SourceTypeUser
 	ae.App.ID = 0
+	ae.App.Source = &importSrc
 	appModel, err := a.dbc.Insert(ae.App)
 	if err != nil {
 		a.sendStatus(w, err.Error(), ResultError, nil)
@@ -1560,6 +1577,7 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		cm[cnt.ExtUuid] = cnt
 	}
 
+	importNow := time.Now().UTC()
 	for _, rule := range ae.Rules {
 
 		if !util.IsValidUUID(rule.ContentUuid) {
@@ -1574,6 +1592,7 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		}
 
 		ct.ID = 0
+		ct.Source = &importSrc
 
 		if !util.IsValidUUID(rule.ExtUuid) {
 			a.sendStatus(w, "rule UUID is not valid", ResultError, nil)
@@ -1591,6 +1610,11 @@ func (a *ApiServer) ImportAppWithContentAndRule(w http.ResponseWriter, req *http
 		rule.AppID = appModel.ModelID()
 		rule.AppUuid = appModel.(*models.Application).ExtUuid
 		rule.ContentUuid = contentModel.(*models.Content).ExtUuid
+		rule.Source = &importSrc
+		rule.ApprovedAt = &importNow
+		if rule.Enabled {
+			rule.ActivatedAt = &importNow
+		}
 		_, err = a.dbc.Insert(&rule)
 		if err != nil {
 			a.sendStatus(w, err.Error(), ResultError, nil)
@@ -1764,9 +1788,12 @@ func (a *ApiServer) HandleApproveDraft(w http.ResponseWriter, req *http.Request)
 	}
 
 	// Un-draft the rule
+	now := time.Now().UTC()
 	rule.IsDraft = false
+	rule.ApprovedAt = &now
 	if payload.Enable {
 		rule.Enabled = true
+		rule.ActivatedAt = &now
 	}
 	if err := a.dbc.Update(&rule); err != nil {
 		a.sendStatus(w, fmt.Sprintf("unable to update rule: %s", err), ResultError, nil)

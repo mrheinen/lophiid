@@ -36,6 +36,7 @@ type Application struct {
 	ExtUuid    string                   `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID"`
 	CVES       pgtype.FlatArray[string] `ksql:"cves" json:"cves" yaml:"cves" doc:"Related Mitre CVEs"`
 	IsDraft    bool                     `ksql:"is_draft" json:"is_draft" yaml:"is_draft" doc:"True if this is an auto-generated draft pending review"`
+	Source     *string                  `ksql:"source" json:"source" yaml:"source" doc:"Origin of the application: USER, RULE_AGENT, or PREPROCESSOR"`
 }
 
 func (c *Application) ModelID() int64              { return c.ID }

@@ -24,10 +24,12 @@ import (
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/html"
 	"lophiid/pkg/util"
+	"lophiid/pkg/util/constants"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 var UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
@@ -107,6 +109,13 @@ func (a *ApiCLI) FetchUrlAndCreateContentAndRule(appID int64, ports []int64, tar
 // CreateContentAndRule will store the Content and a newly created ContentRule
 // in the database.
 func (a *ApiCLI) CreateContentAndRule(app *models.Application, ports []int64, content *models.Content, targetUrl string) error {
+	src := constants.SourceTypeUser
+	now := time.Now().UTC()
+
+	if content.Source == nil {
+		content.Source = &src
+	}
+
 	addedContent, err := a.contentAPI.UpsertDataModel(*content)
 	if err != nil {
 		return fmt.Errorf("error storing content: %w", err)
@@ -137,6 +146,9 @@ func (a *ApiCLI) CreateContentAndRule(app *models.Application, ports []int64, co
 			Responder:        "NONE",
 			ResponderDecoder: "NONE",
 			Enabled:          true,
+			Source:           &src,
+			ApprovedAt:       &now,
+			ActivatedAt:      &now,
 		}
 
 		addedContentRule, err := a.contentRuleAPI.UpsertDataModel(newContentRule)
