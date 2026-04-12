@@ -77,6 +77,7 @@ type DatabaseClient interface {
 	SearchEvents(offset int64, limit int64, query string) ([]models.IpEvent, error)
 	SearchRequests(offset int64, limit int64, query string) ([]models.Request, error)
 	SearchWhois(offset int64, limit int64, query string) ([]models.Whois, error)
+	GetContentRuleByID(id int64) (models.ContentRule, error)
 	SearchContentRules(offset int64, limit int64, query string) ([]models.ContentRule, error)
 	SearchContent(offset int64, limit int64, query string) ([]models.Content, error)
 	SearchYara(offset int64, limit int64, query string) ([]models.Yara, error)
@@ -918,6 +919,15 @@ func (d *KSQLClient) GetMetadataByRequestID(id int64) ([]models.RequestMetadata,
 	var md []models.RequestMetadata
 	err := d.db.Query(d.ctx, &md, "FROM request_metadata WHERE request_id = $1 ORDER BY type", id)
 	return md, err
+}
+
+func (d *KSQLClient) GetContentRuleByID(id int64) (models.ContentRule, error) {
+	cr := models.ContentRule{}
+	err := d.db.QueryOne(d.ctx, &cr, "FROM content_rule WHERE id = $1", id)
+	if cr.ID == 0 {
+		return cr, fmt.Errorf("found no content rule for ID: %d", id)
+	}
+	return cr, err
 }
 
 func (d *KSQLClient) GetContentByID(id int64) (models.Content, error) {

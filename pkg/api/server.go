@@ -340,12 +340,20 @@ func (a *ApiServer) HandleUpsertSingleContentRule(w http.ResponseWriter, req *ht
 		return
 	} else {
 
-		if rb.Enabled {
+		existing, err := a.dbc.GetContentRuleByID(rb.ID)
+		if err != nil {
+			a.sendStatus(w, fmt.Sprintf("unable to fetch existing rule: %s", err.Error()), ResultError, nil)
+			return
+		}
+
+		if !existing.Enabled && rb.Enabled {
 			now := time.Now().UTC()
 			rb.ActivatedAt = &now
+		} else {
+			rb.ActivatedAt = existing.ActivatedAt
 		}
 		// This is an update.
-		err := a.dbc.Update(&rb)
+		err = a.dbc.Update(&rb)
 		if err != nil {
 			a.sendStatus(w, err.Error(), ResultError, nil)
 			return
