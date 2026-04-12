@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v68/github"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -187,7 +188,7 @@ func (t *ToolSet) BuildTools() []llm.LLMTool {
 			Description: `Terminal tool — call this once you have gathered all required information.
 Creates a draft Application (if new), Content, and ContentRule in the database.
 All records are marked as is_draft=true and enabled=false for human review.
-The rule's request_purpose must be one of: ATTACK, RECON, UNKNOWN.`,
+The rule's request_purpose must be one of: EXPLOITATION, RECON, UNKNOWN.`,
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -226,7 +227,7 @@ The rule's request_purpose must be one of: ATTACK, RECON, UNKNOWN.`,
 							"body":            map[string]any{"type": "string"},
 							"body_matching":   map[string]any{"type": "string", "enum": []string{"exact", "prefix", "regex", "contains"}},
 							"method":          map[string]any{"type": "string"},
-							"request_purpose": map[string]any{"type": "string", "enum": []string{"ATTACK", "RECON", "UNKNOWN"}},
+							"request_purpose": map[string]any{"type": "string", "enum": []string{"EXPLOITATION", "RECON", "UNKNOWN"}},
 							"app_id":          map[string]any{"type": "integer", "description": "ID of an existing app. Only set if not providing a new app object."},
 						},
 						"required": []string{"uri", "uri_matching", "method", "request_purpose"},
@@ -449,6 +450,7 @@ func (t *ToolSet) resolveOrCreateApp(input CreateDraftInput) (int64, error) {
 
 	source := constants.SourceTypeRuleAgent
 	app := models.Application{
+		ExtUuid: uuid.NewString(),
 		Name:    input.App.Name,
 		Version: &version,
 		Vendor:  &vendor,
@@ -477,6 +479,7 @@ func (t *ToolSet) createContent(c DraftContent) (int64, error) {
 		Server:      c.Server,
 		StatusCode:  c.StatusCode,
 		Headers:     headers,
+		ExtUuid:     uuid.NewString(),
 		IsDraft:     true,
 		Source:      &source,
 	}
@@ -490,10 +493,11 @@ func (t *ToolSet) createContent(c DraftContent) (int64, error) {
 
 func (t *ToolSet) createRule(r DraftRule, appID, contentID int64) (int64, error) {
 	validPurposes := map[string]bool{
-		constants.RequestPurposeUnknown: true,
-		constants.RequestPurposeRecon:   true,
-		constants.RequestPurposeCrawl:   true,
-		constants.RequestPurposeAttack:  true,
+		constants.KillChainPhaseUnknown:      true,
+		constants.KillChainPhaseRecon:        true,
+		constants.KillChainPhaseVerify:       true,
+		constants.KillChainPhaseExploitation: true,
+		constants.KillChainPhaseCleanup:      true,
 	}
 	validMatchingTypes := map[string]bool{
 		constants.MatchingTypeNone:     true,
@@ -541,6 +545,7 @@ func (t *ToolSet) createRule(r DraftRule, appID, contentID int64) (int64, error)
 		Responder:        constants.ResponderTypeAuto,
 		ResponderDecoder: constants.ResponderDecoderTypeNone,
 		AppID:            appID,
+		ExtUuid:          uuid.NewString(),
 		ContentID:        contentID,
 		Enabled:          false,
 		IsDraft:          true,
