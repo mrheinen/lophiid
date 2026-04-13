@@ -196,7 +196,7 @@ func TestCreateDraft_NewApp(t *testing.T) {
 			URI:            "/struts2-showcase",
 			URIMatching:    "prefix",
 			Method:         "POST",
-			RequestPurpose: "ATTACK",
+			RequestPurpose: "EXPLOITATION",
 		},
 	}
 	args, _ := json.Marshal(input)
