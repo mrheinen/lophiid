@@ -46,36 +46,36 @@ Follow these steps in order:
 
 W-1 EXPLOIT SEARCH
 
-First prepare the base search string that we will be using in this step. If the request has 
+First prepare the base search string that we will be using in this step. If the request has
 no body (e.g. no content-length or content-length = 0) then you need to focus on only the URI.
-In this case you should use the URI as the search string but make sure you remove any payload 
-data that might be present (e.g. like shell commands). For example 
-"/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc=cat%20/proc/cpuinfo" would become 
+In this case you should use the URI as the search string but make sure you remove any payload
+data that might be present (e.g. like shell commands). For example
+"/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc=cat%20/proc/cpuinfo" would become
 "/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc=" as the search string.
 
-If there is a body then process the URI in the same way and if that is not distinct enough then I 
+If there is a body then process the URI in the same way and if that is not distinct enough then I
 want you to also include a snippet of the body in the search string (as a separate word). Make sure
-to take a snippet of the body that looks like it belongs to the applications logic and do not take a 
+to take a snippet of the body that looks like it belongs to the applications logic and do not take a
 snippet that has, for example, data that can be unique to a single exploitation attempt.
 
-Do a web search for the search string in combination with "exploitdb" 
+Do a web search for the search string in combination with "exploitdb"
 (e.g. web_search("/device.rsp?opt=sys&cmd=___S_O_S_T_R_E_A_MAX___&mdb=sos&mdc= exploitdb")).
 Try up to three distinct search queries before proceeding without an exploit link.
 
 Also search GitHub for exploit proof-of-concepts using search_github_code with a
 query such as <search string> + " CVE". Go through the returned raw
-file URLs with fetch_url until you find an exploit or exhausted the list (whatever comes first). 
-A file is an exploit if it does one or several of the following things: references a CVE number, 
+file URLs with fetch_url until you find an exploit or exhausted the list (whatever comes first).
+A file is an exploit if it does one or several of the following things: references a CVE number,
 uses an HTTP client or library to send a payload, checks the server response for success/failure, and contains words like
 exploit, payload, attack, shell, success, or failed. Stop fetching as soon as an
-exploit is confirmed.  If these first results to not contain an exploit then search for 
+exploit is confirmed.  If these first results to not contain an exploit then search for
 "<URI> PoC" instead and try again.
 
 W-2a EXPLOIT ANALYSIS
 If you found exploit(s), fetch it/them with fetch_url. Extract:
 - Target application name (keep short)
 - CVE ID(s) if mentioned (newline-separated for multiple)
-- Request purpose: ATTACK if it is a clear attack, RECON if reconnaissance, UNKNOWN otherwise
+- Request purpose: EXPLOITATION if it is a clear attack/abuse, RECON if reconnaissance, UNKNOWN otherwise
 - The expected HTTP response body (Data), status code, Content-Type, Server header, and any extra headers
 
 W-2b VULNERABILITY ANALYSIS
@@ -118,7 +118,7 @@ Then call create_draft with:
   server (if relevant), headers (if relevant)
 - rule: uri (from request), uri_matching (exact/prefix/regex/contains, note that request.uri contains parameters so if the uri is '/blah?a=b' then using exact will match on that entire string. Important !! If you remove anything from the original uri then you need to use either 'prefix' or 'contains' (which is the safest option) ),
   body (very optional and for POST and PUT only, if needed for specificity but in that case make sure to only use strings that are part of the application and not part of the payload. Do not use shell commands, code execution strings, filenames or sql injections here!), body_matching (use "contains" when body is set, otherwise use none),
-  method (from request), request_purpose (ATTACK/RECON/UNKNOWN), app_id (if existing app)
+  method (from request), request_purpose (EXPLOITATION/RECON/UNKNOWN), app_id (if existing app)
 
 All is_draft and enabled flags are set automatically — do not include them.
 TCP ports must always be left empty.`
