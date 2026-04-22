@@ -299,6 +299,7 @@ ALTER TYPE public.kill_chain_phase OWNER TO postgres;
 --
 
 CREATE TYPE public.kill_chain_process_status AS ENUM (
+    'NOT_MONITORED',
     'PENDING',
     'DONE',
     'PARTIAL',
@@ -493,12 +494,28 @@ ALTER TYPE public.campaign_request_role OWNER TO postgres;
 --
 
 CREATE TYPE public.source_type AS ENUM (
+    'UNKNOWN',
     'RULE_AGENT',
     'USER',
     'PREPROCESSOR'
 );
 
 ALTER TYPE public.source_type OWNER TO postgres;
+
+
+--
+-- Name: rule_management_log_type; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.rule_management_log_type AS ENUM (
+    'RULE_CREATION',
+    'RULE_EVALUATION',
+    'RULE_UPDATE',
+    'RULE_UPDATE_CONTENT'
+);
+
+
+ALTER TYPE public.rule_management_log_type OWNER TO postgres;
 
 --
 -- Name: sync_request_refs(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -691,7 +708,9 @@ CREATE TABLE public.content_rule (
     rule_group_id integer,
     activated_at timestamp without time zone,
     approved_at timestamp without time zone,
-    source public.source_type
+    source public.source_type,
+    last_evaluated_at timestamp without time zone NOT NULL DEFAULT '2000-01-01 00:00:00',
+    monitor_killchain boolean NOT NULL DEFAULT false
 );
 
 
@@ -2301,7 +2320,7 @@ CREATE TABLE public.session (
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     ended_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    kill_chain_process_status public.kill_chain_process_status DEFAULT 'PENDING'::public.kill_chain_process_status,
+    kill_chain_process_status public.kill_chain_process_status DEFAULT 'NOT_MONITORED'::public.kill_chain_process_status,
     kill_chain_max_depth integer DEFAULT 0,
     kill_chain_phase_count integer DEFAULT 0,
     kill_chain_unique_phases public.kill_chain_phase[] DEFAULT '{}'::public.kill_chain_phase[]
@@ -2322,6 +2341,7 @@ CREATE TABLE public.kill_chain (
     source_model character varying(256) DEFAULT 'UNKNOWN'::character varying NOT NULL,
     phase_count integer DEFAULT 0 NOT NULL,
     max_phase_depth integer DEFAULT 0 NOT NULL,
+    ended_at timestamp without time zone,
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -2844,6 +2864,45 @@ ALTER SEQUENCE public.campaign_request_id_seq OWNED BY public.campaign_request.i
 
 
 --
+-- Name: rule_management_log; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.rule_management_log (
+    id            integer NOT NULL,
+    created_at    timestamp without time zone NOT NULL DEFAULT NOW(),
+    type          public.rule_management_log_type NOT NULL,
+    rule_id       integer NOT NULL REFERENCES public.content_rule(id),
+    request_id    integer REFERENCES public.request_refs(id),
+    description   text NOT NULL DEFAULT '',
+    related_links text[] NOT NULL DEFAULT '{}'
+);
+
+
+ALTER TABLE public.rule_management_log OWNER TO postgres;
+
+--
+-- Name: rule_management_log_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.rule_management_log_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.rule_management_log_id_seq OWNER TO postgres;
+
+--
+-- Name: rule_management_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.rule_management_log_id_seq OWNED BY public.rule_management_log.id;
+
+
+--
 -- Name: request_historical; Type: TABLE ATTACH; Schema: public; Owner: postgres
 --
 
@@ -3173,6 +3232,13 @@ ALTER TABLE ONLY public.campaign ALTER COLUMN id SET DEFAULT nextval('public.cam
 --
 
 ALTER TABLE ONLY public.campaign_request ALTER COLUMN id SET DEFAULT nextval('public.campaign_request_id_seq'::regclass);
+
+
+--
+-- Name: rule_management_log id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.rule_management_log ALTER COLUMN id SET DEFAULT nextval('public.rule_management_log_id_seq'::regclass);
 
 
 --
@@ -3549,6 +3615,14 @@ ALTER TABLE ONLY public.campaign_request
 
 
 --
+-- Name: rule_management_log rule_management_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.rule_management_log
+    ADD CONSTRAINT rule_management_log_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idx_campaign_request_campaign_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -3567,6 +3641,27 @@ CREATE INDEX idx_campaign_request_request_id ON public.campaign_request USING bt
 --
 
 CREATE UNIQUE INDEX idx_campaign_request_unique ON public.campaign_request (campaign_id, request_id);
+
+
+--
+-- Name: rule_management_log_rule_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX rule_management_log_rule_id_idx ON public.rule_management_log USING btree (rule_id);
+
+
+--
+-- Name: rule_management_log_request_id_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX rule_management_log_request_id_idx ON public.rule_management_log USING btree (request_id);
+
+
+--
+-- Name: rule_management_log_type_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX rule_management_log_type_idx ON public.rule_management_log USING btree (type);
 
 
 --
@@ -9216,6 +9311,20 @@ GRANT ALL ON TABLE public.campaign_request TO lo;
 --
 
 GRANT ALL ON SEQUENCE public.campaign_request_id_seq TO lo;
+
+
+--
+-- Name: TABLE rule_management_log; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON TABLE public.rule_management_log TO lo;
+
+
+--
+-- Name: SEQUENCE rule_management_log_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON SEQUENCE public.rule_management_log_id_seq TO lo;
 
 
 --

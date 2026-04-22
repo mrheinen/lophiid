@@ -139,14 +139,6 @@ const (
 	MatchingTypeRegex    = "regex"
 )
 
-// This needs to be kept in sync with public.request_purpose in the database.
-const (
-	RequestPurposeUnknown = "UNKNOWN"
-	RequestPurposeRecon   = "RECON"
-	RequestPurposeCrawl   = "CRAWL"
-	RequestPurposeAttack  = "ATTACK"
-)
-
 // These need to be kept in sync with REVIEW_STATUS_TYPE in the database
 const (
 	DescriberUnreviewed  = "UNREVIEWED"
@@ -293,11 +285,12 @@ const (
 
 // Kill chain analysis process status (stored in session.kill_chain_process_status)
 const (
-	KillChainProcessStatusPending = "PENDING"
-	KillChainProcessStatusDone    = "DONE"
-	KillChainProcessStatusPartial = "PARTIAL"
-	KillChainProcessStatusFailed  = "FAILED"
-	KillChainProcessStatusSkipped = "SKIPPED"
+	KillChainProcessStatusNotMonitored = "NOT_MONITORED"
+	KillChainProcessStatusPending      = "PENDING"
+	KillChainProcessStatusDone         = "DONE"
+	KillChainProcessStatusPartial      = "PARTIAL"
+	KillChainProcessStatusFailed       = "FAILED"
+	KillChainProcessStatusSkipped      = "SKIPPED"
 )
 
 // SourceType values mirror the source_type DB enum and indicate who created a record.
@@ -313,6 +306,14 @@ const (
 	KillChainPhaseDepthVerify       = 2
 	KillChainPhaseDepthExploitation = 3
 	KillChainPhaseDepthCleanup      = 4
+)
+
+// RuleManagementLogType values mirror the rule_management_log_type DB enum.
+const (
+	RuleManagementLogTypeCreation      = "RULE_CREATION"
+	RuleManagementLogTypeEvaluation    = "RULE_EVALUATION"
+	RuleManagementLogTypeUpdate        = "RULE_UPDATE"
+	RuleManagementLogTypeUpdateContent = "RULE_UPDATE_CONTENT"
 )
 
 // Campaign feedback reasoning kept in sync with CAMPAIGN_FEEDBACK_REASON in the database.
