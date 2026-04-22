@@ -16,6 +16,8 @@
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package rulegeneration
 
+import "time"
+
 // GitHubConfig holds the configuration for the GitHub code search tool.
 type GitHubConfig struct {
 	Token      string `fig:"token"`
@@ -28,6 +30,15 @@ type WebSearchConfig struct {
 	APIKey     string `fig:"api_key"`
 	MaxResults int    `fig:"max_results" default:"5"`
 	Timeout    string `fig:"timeout" default:"30s"`
+}
+
+// EvaluationConfig holds settings for the rule evaluation tools.
+type EvaluationConfig struct {
+	RuleEvaluationWindow  time.Duration `fig:"rule_evaluation_window" default:"24h"`
+	MaxEvalSessions       int           `fig:"max_eval_sessions" default:"100"`
+	EvalProgressThreshold float64       `fig:"eval_progress_threshold" default:"0.10"`
+	MaxLinksPerDomain     int           `fig:"max_links_per_domain" default:"5"`
+	MaxTotalLinks         int           `fig:"max_total_links" default:"20"`
 }
 
 // AgentConfig holds all configuration for the rule generation agent.
@@ -49,6 +60,7 @@ type AgentConfig struct {
 		CompletionTimeout         string  `fig:"completion_timeout" default:"10m"`
 		OpenRouterReasoningEffort string  `fig:"openrouter_reasoning_effort" default:"none"`
 	} `fig:"llm" validate:"required"`
-	WebSearch WebSearchConfig `fig:"web_search"`
-	GitHub    GitHubConfig    `fig:"github"`
+	WebSearch  WebSearchConfig  `fig:"web_search"`
+	GitHub     GitHubConfig     `fig:"github"`
+	Evaluation EvaluationConfig `fig:"evaluation"`
 }

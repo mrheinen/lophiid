@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package rulegeneration
+package providers
 
 import (
 	"bytes"
@@ -22,23 +22,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lophiid/pkg/rulegeneration/tools"
 	"net/http"
 	"time"
 )
 
-// SearchResult holds a single result from a web search.
-type SearchResult struct {
-	Title   string
-	URL     string
-	Snippet string
-}
-
-// SearchProvider abstracts web search so additional engines can be added.
-type SearchProvider interface {
-	Search(ctx context.Context, query string, maxResults int) ([]SearchResult, error)
-}
-
-// TavilySearchProvider implements SearchProvider using the Tavily Search API.
+// TavilySearchProvider implements tools.SearchProvider using the Tavily Search API.
 type TavilySearchProvider struct {
 	apiKey     string
 	httpClient *http.Client
@@ -69,7 +58,7 @@ type tavilyResponse struct {
 }
 
 // Search performs a web search using the Tavily API.
-func (t *TavilySearchProvider) Search(ctx context.Context, query string, maxResults int) ([]SearchResult, error) {
+func (t *TavilySearchProvider) Search(ctx context.Context, query string, maxResults int) ([]tools.SearchResult, error) {
 	reqBody := tavilyRequest{
 		Query:       query,
 		MaxResults:  maxResults,
@@ -104,9 +93,9 @@ func (t *TavilySearchProvider) Search(ctx context.Context, query string, maxResu
 		return nil, fmt.Errorf("decoding tavily response: %w", err)
 	}
 
-	results := make([]SearchResult, 0, len(tavilyResp.Results))
+	results := make([]tools.SearchResult, 0, len(tavilyResp.Results))
 	for _, r := range tavilyResp.Results {
-		results = append(results, SearchResult{
+		results = append(results, tools.SearchResult{
 			Title:   r.Title,
 			URL:     r.URL,
 			Snippet: r.Content,

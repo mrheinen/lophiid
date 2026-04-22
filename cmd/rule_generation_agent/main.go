@@ -26,8 +26,12 @@ import (
 
 	"lophiid/pkg/bootstrap"
 	"lophiid/pkg/database"
+	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
 	"lophiid/pkg/rulegeneration"
+	"lophiid/pkg/rulegeneration/tools"
+	"lophiid/pkg/rulegeneration/tools/providers"
+	"lophiid/pkg/rulegeneration/workflows"
 	"lophiid/pkg/util"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -116,16 +120,66 @@ func main() {
 	pCache := util.NewStringMapCache[string]("", 0)
 	llmManager := llm.NewLLMManager(llmClient, pCache, metrics, completionTimeout, 1, false, "", "")
 
-	agent, err := rulegeneration.NewAgentFromConfig(ctx, dbClient, llmManager, cfg.WebSearch, cfg.GitHub, *requestID, *dryRun)
+	agent, err := newCreationAgent(ctx, dbClient, llmManager, cfg.WebSearch, cfg.GitHub, *dryRun, req, desc)
 	if err != nil {
 		slog.Error("failed to create agent", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
-	if err := agent.Process(ctx, req, desc); err != nil {
+	if err := agent.Process(ctx); err != nil {
 		slog.Error("agent failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
 	slog.Info("rule generation agent finished successfully", slog.Int64("request_id", *requestID))
+}
+
+func newCreationAgent(
+	ctx context.Context,
+	dbClient database.DatabaseClient,
+	llmManager llm.LLMManagerInterface,
+	searchCfg rulegeneration.WebSearchConfig,
+	githubCfg rulegeneration.GitHubConfig,
+	dryRun bool,
+	req models.Request,
+	desc models.RequestDescription,
+) (*rulegeneration.Agent, error) {
+	searchTimeout, err := time.ParseDuration(searchCfg.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("invalid web_search.timeout %q: %w", searchCfg.Timeout, err)
+	}
+
+	var searchProvider tools.SearchProvider
+	switch searchCfg.Provider {
+	case "tavily":
+		if searchCfg.APIKey == "" {
+			return nil, fmt.Errorf("tavily provider requires web_search.api_key")
+		}
+		searchProvider = providers.NewTavilySearchProvider(searchCfg.APIKey, searchTimeout)
+	default:
+		return nil, fmt.Errorf("unknown search provider %q", searchCfg.Provider)
+	}
+
+	webTools := tools.NewWebTools(searchProvider)
+	githubTools := tools.NewGithubTools(githubCfg.Token, githubCfg.MaxResults)
+	dbTools := tools.NewDatabaseTools(dbClient, dryRun)
+
+	toolset := workflows.NewRuleCreationToolSet(webTools, githubTools, dbTools)
+	workflow := workflows.NewRuleCreationWorkflow(llmManager, toolset, req, desc)
+	return rulegeneration.NewAgent(workflow), nil
+}
+
+func newManagementAgent(
+	_ context.Context,
+	dbClient database.DatabaseClient,
+	llmManager llm.LLMManagerInterface,
+	evalCfg rulegeneration.EvaluationConfig,
+) (*rulegeneration.Agent, error) {
+	evalTools := tools.NewEvalTools(dbClient, evalCfg.RuleEvaluationWindow, evalCfg.MaxEvalSessions, evalCfg.EvalProgressThreshold, evalCfg.MaxLinksPerDomain, evalCfg.MaxTotalLinks)
+	dbTools := tools.NewDatabaseTools(dbClient, false)
+	webTools := tools.NewWebTools(nil)
+
+	toolset := workflows.NewRuleManagementToolSet(evalTools, dbTools, webTools)
+	workflow := workflows.NewRuleManagementWorkflow(llmManager, toolset)
+	return rulegeneration.NewAgent(workflow), nil
 }

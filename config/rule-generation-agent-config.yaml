@@ -53,3 +53,19 @@ github:
   token: your-github-token-here
   # Maximum number of file results returned per search_github_code call.
   max_results: 5
+
+evaluation:
+  # How far before/after approved_at to look for requests and kill chains.
+  rule_evaluation_window: 24h
+  # Maximum number of sessions to consider per window when evaluating kill chains.
+  max_eval_sessions: 100
+  # Minimum fraction-point improvement required to count as progression.
+  # E.g. 0.10 means at least 10% more after-window kill chains must exceed the
+  # before-window baseline depth/count than before-window chains do.
+  eval_progress_threshold: 0.10
+  # Maximum number of links returned per domain when the management agent calls
+  # fetch_rule_creation_links. Prevents a single source (e.g. GitHub) from
+  # consuming the entire link budget.
+  max_links_per_domain: 5
+  # Maximum total links returned by fetch_rule_creation_links.
+  max_total_links: 20
