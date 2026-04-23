@@ -189,6 +189,7 @@ func TestCreateDraft_NewApp(t *testing.T) {
 	dt := newDBTools(fakeDB)
 
 	input := tools.CreateDraftInput{
+		Links: []string{"https://www.exploit-db.com/exploits/41570"},
 		App: &tools.DraftApp{
 			Name:    "Struts",
 			Version: "2.5.10",
@@ -221,6 +222,7 @@ func TestCreateDraft_ExistingApp(t *testing.T) {
 	dt := newDBTools(fakeDB)
 
 	input := tools.CreateDraftInput{
+		Links: []string{"https://nvd.nist.gov/vuln/detail/CVE-2024-0001"},
 		Content: tools.DraftContent{
 			Name:        "Test content",
 			Description: "Test",
@@ -247,6 +249,7 @@ func TestCreateDraft_DryRun(t *testing.T) {
 	dt := tools.NewDatabaseTools(fakeDB, true)
 
 	input := tools.CreateDraftInput{
+		Links: []string{"https://example.com/advisory"},
 		Content: tools.DraftContent{
 			Name: "x", Description: "y", Data: "z", StatusCode: "200",
 		},
@@ -267,6 +270,7 @@ func TestCreateDraft_MissingApp(t *testing.T) {
 	dt := newDBTools(fakeDB)
 
 	input := tools.CreateDraftInput{
+		Links: []string{"https://example.com/advisory"},
 		Content: tools.DraftContent{
 			Name: "x", Description: "y", Data: "z", StatusCode: "200",
 		},
