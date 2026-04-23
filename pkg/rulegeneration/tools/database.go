@@ -116,6 +116,9 @@ func (t *DatabaseTools) CreateDraftTool(_ context.Context, args string) (string,
 	if err := json.Unmarshal([]byte(args), &input); err != nil {
 		return GetJSONErrorMessage("Failed to parse args", nil), fmt.Errorf("parsing create_draft args: %w, %s", err, args)
 	}
+	if len(input.Links) == 0 {
+		return GetJSONErrorMessage("links is required: provide all research URLs used to investigate this rule", nil), nil
+	}
 
 	slog.Info("tool: create_draft",
 		slog.String("uri", input.Rule.URI),
@@ -170,6 +173,10 @@ func (t *DatabaseTools) writeCreationLog(input CreateDraftInput, ruleID int64) {
 		links = pgtype.FlatArray[string](input.Links)
 	} else if input.App != nil && len(input.App.Links) > 0 {
 		links = pgtype.FlatArray[string](input.App.Links)
+	}
+	if len(links) == 0 {
+		slog.Warn("create_draft: no research links available; rule_management_log will have empty related_links",
+			slog.Int64("rule_id", ruleID))
 	}
 
 	entry := models.RuleManagementLog{
