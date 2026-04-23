@@ -24,14 +24,27 @@ import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
 	"lophiid/pkg/llm"
+	"lophiid/pkg/rulegeneration/tools"
+	"lophiid/pkg/rulegeneration/workflows"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func newTestAgent(llmMgr llm.LLMManagerInterface, db database.DatabaseClient) *Agent {
-	toolSet := NewToolSet(db, &fakeSearch{}, 1, true, "", 5)
-	return NewAgent(llmMgr, toolSet)
+// fakeSearch is a minimal tools.SearchProvider for agent-level tests.
+type fakeSearch struct{}
+
+func (f *fakeSearch) Search(_ context.Context, _ string, _ int) ([]tools.SearchResult, error) {
+	return nil, nil
+}
+
+func newTestAgent(llmMgr llm.LLMManagerInterface, db database.DatabaseClient, req models.Request, desc models.RequestDescription) *Agent {
+	webTools := tools.NewWebTools(&fakeSearch{})
+	githubTools := tools.NewGithubTools("", 5)
+	dbTools := tools.NewDatabaseTools(db, true)
+	toolset := workflows.NewRuleCreationToolSet(webTools, githubTools, dbTools)
+	wf := workflows.NewRuleCreationWorkflow(llmMgr, toolset, req, desc)
+	return NewAgent(wf)
 }
 
 func TestAgent_Process_Success(t *testing.T) {
@@ -39,7 +52,6 @@ func TestAgent_Process_Success(t *testing.T) {
 		CompletionToReturn: "Draft created successfully.",
 	}
 	fakeDB := &database.FakeDatabaseClient{}
-	agent := newTestAgent(mockLLM, fakeDB)
 
 	req := models.Request{
 		ID:     1,
@@ -54,7 +66,8 @@ func TestAgent_Process_Success(t *testing.T) {
 		AICVE:               "CVE-2017-5638",
 	}
 
-	err := agent.Process(context.Background(), req, desc)
+	agent := newTestAgent(mockLLM, fakeDB, req, desc)
+	err := agent.Process(context.Background())
 	require.NoError(t, err)
 
 	// Verify the LLM received both system and user messages.
@@ -71,80 +84,12 @@ func TestAgent_Process_LLMError(t *testing.T) {
 		ErrorToReturn: fmt.Errorf("LLM unavailable"),
 	}
 	fakeDB := &database.FakeDatabaseClient{}
-	agent := newTestAgent(mockLLM, fakeDB)
 
 	req := models.Request{ID: 2, Method: "POST", Uri: "/wp-login.php"}
 	desc := models.RequestDescription{AIMalicious: "yes", AIDescription: "brute force"}
 
-	err := agent.Process(context.Background(), req, desc)
+	agent := newTestAgent(mockLLM, fakeDB, req, desc)
+	err := agent.Process(context.Background())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "LLM unavailable")
-}
-
-func TestBuildUserMessage_IncludesBody(t *testing.T) {
-	req := models.Request{
-		Method: "POST",
-		Uri:    "/cgi-bin/test.cgi",
-		Body:   []byte("param=value&exploit=yes"),
-	}
-	desc := models.RequestDescription{
-		AIMalicious:   "yes",
-		AIDescription: "CGI injection",
-	}
-
-	msg := buildUserMessage(req, desc)
-	assert.Contains(t, msg, "param=value&exploit=yes")
-	assert.Contains(t, msg, "/cgi-bin/test.cgi")
-	assert.Contains(t, msg, "CGI injection")
-}
-
-func TestBuildUserMessage_TruncatesLongBody(t *testing.T) {
-	longBody := make([]byte, 4096)
-	for i := range longBody {
-		longBody[i] = 'A'
-	}
-	req := models.Request{
-		Method: "POST",
-		Uri:    "/test",
-		Body:   longBody,
-	}
-	desc := models.RequestDescription{}
-
-	msg := buildUserMessage(req, desc)
-	// Only first 2048 bytes should appear
-	assert.Contains(t, msg, "Request body (first 2048 bytes)")
-}
-
-func TestNewAgentFromConfig_UnknownProvider(t *testing.T) {
-	fakeDB := &database.FakeDatabaseClient{}
-	mockLLM := &llm.MockLLMManager{}
-
-	_, err := NewAgentFromConfig(
-		context.Background(),
-		fakeDB,
-		mockLLM,
-		WebSearchConfig{Provider: "unknown-engine", APIKey: "key", Timeout: "30s"},
-		GitHubConfig{},
-		1,
-		false,
-	)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown search provider")
-}
-
-func TestNewAgentFromConfig_MissingTavilyKey(t *testing.T) {
-	fakeDB := &database.FakeDatabaseClient{}
-	mockLLM := &llm.MockLLMManager{}
-
-	_, err := NewAgentFromConfig(
-		context.Background(),
-		fakeDB,
-		mockLLM,
-		WebSearchConfig{Provider: "tavily", APIKey: "", Timeout: "30s"},
-		GitHubConfig{},
-		1,
-		false,
-	)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "api_key")
 }

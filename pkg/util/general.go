@@ -80,3 +80,15 @@ func FastCacheHash(data string) []byte {
 	h.Write([]byte(data))
 	return h.Sum(nil)
 }
+
+// MapKeysToSlice returns up to maxN keys from m as a slice.
+func MapKeysToSlice[K comparable, V any](m map[K]V, maxN int) []K {
+	keys := make([]K, 0, min(maxN, len(m)))
+	for k := range m {
+		keys = append(keys, k)
+		if len(keys) >= maxN {
+			break
+		}
+	}
+	return keys
+}

@@ -34,28 +34,30 @@ type ContentRule struct {
 	ContentID    int64                 `ksql:"content_id" json:"content_id" yaml:"content_id" doc:"The ID of the Content this rule serves"`
 	AppID        int64                 `ksql:"app_id" json:"app_id"         yaml:"app_id" doc:"The ID of the application for which this rule is"`
 	// The content and app UUID are only set on imported rules.
-	AppUuid      string     `ksql:"app_uuid" json:"app_uuid" yaml:"app_uuid" doc:"The external UUID of the related app"`
-	ContentUuid  string     `ksql:"content_uuid" json:"content_uuid" yaml:"content_uuid" doc:"The external UUID of the related content"`
-	CreatedAt    time.Time  `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Creation date of the rule"`
-	UpdatedAt    time.Time  `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Last update date of the rule"`
-	ValidUntil   *time.Time `ksql:"valid_until"    json:"valid_until" yaml:"valid_until" doc:"time.Time of expiration"`
-	Alert        bool       `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
-	AllowFromNet *string    `ksql:"allow_from_net" json:"allow_from_net" doc:"The IP network range from which the rule is allowed to match (e.g. 1.1.1.1/24)"`
-	Enabled      bool       `ksql:"enabled" json:"enabled" doc:"A bool (0 or 1) indicating if the rule is enabled"`
-	Block        bool       `ksql:"block" json:"block" doc:"A bool (0 or 1) indicating if requests matching the rule should be blocked"`
-	ExtVersion   int64      `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
-	ExtUuid      string     `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
-	IsTemporary  bool       `ksql:"is_temporary" json:"is_temporary" yaml:"is_temporary" doc:"A bool (0 or 1) indicating if the rule is a temporary rule"`
-	IsDraft      bool       `ksql:"is_draft" json:"is_draft" yaml:"is_draft" doc:"True if this is an auto-generated draft pending review"`
-	ActivatedAt  *time.Time `ksql:"activated_at" json:"activated_at" yaml:"activated_at" doc:"Last time the rule was enabled"`
-	ApprovedAt   *time.Time `ksql:"approved_at" json:"approved_at" yaml:"approved_at" doc:"Time the rule was approved (same as created_at for manually added rules)"`
-	Source       *string    `ksql:"source" json:"source" yaml:"source" doc:"Origin of the rule: USER, RULE_AGENT, or PREPROCESSOR"`
+	AppUuid         string     `ksql:"app_uuid" json:"app_uuid" yaml:"app_uuid" doc:"The external UUID of the related app"`
+	ContentUuid     string     `ksql:"content_uuid" json:"content_uuid" yaml:"content_uuid" doc:"The external UUID of the related content"`
+	CreatedAt       time.Time  `ksql:"created_at,skipInserts,skipUpdates" yaml:"created_at" json:"created_at" doc:"Creation date of the rule"`
+	UpdatedAt       time.Time  `ksql:"updated_at,timeNowUTC" json:"updated_at" yaml:"updated_at" doc:"Last update date of the rule"`
+	ValidUntil      *time.Time `ksql:"valid_until"    json:"valid_until" yaml:"valid_until" doc:"time.Time of expiration"`
+	Alert           bool       `ksql:"alert" json:"alert" doc:"A bool (0 or 1) indicating if the rule should alert"`
+	AllowFromNet    *string    `ksql:"allow_from_net" json:"allow_from_net" doc:"The IP network range from which the rule is allowed to match (e.g. 1.1.1.1/24)"`
+	Enabled         bool       `ksql:"enabled" json:"enabled" doc:"A bool (0 or 1) indicating if the rule is enabled"`
+	Block           bool       `ksql:"block" json:"block" doc:"A bool (0 or 1) indicating if requests matching the rule should be blocked"`
+	ExtVersion      int64      `ksql:"ext_version" json:"ext_version" yaml:"ext_version" doc:"The external numerical version of the rule"`
+	ExtUuid         string     `ksql:"ext_uuid" json:"ext_uuid" yaml:"ext_uuid" doc:"The external unique ID of the rule"`
+	IsTemporary     bool       `ksql:"is_temporary" json:"is_temporary" yaml:"is_temporary" doc:"A bool (0 or 1) indicating if the rule is a temporary rule"`
+	IsDraft         bool       `ksql:"is_draft" json:"is_draft" yaml:"is_draft" doc:"True if this is an auto-generated draft pending review"`
+	ActivatedAt     *time.Time `ksql:"activated_at" json:"activated_at" yaml:"activated_at" doc:"Last time the rule was enabled"`
+	ApprovedAt      *time.Time `ksql:"approved_at" json:"approved_at" yaml:"approved_at" doc:"Time the rule was approved (same as created_at for manually added rules)"`
+	Source          *string    `ksql:"source" json:"source" yaml:"source" doc:"Origin of the rule: USER, RULE_AGENT, or PREPROCESSOR"`
+	LastEvaluatedAt time.Time  `ksql:"last_evaluated_at" json:"last_evaluated_at" yaml:"last_evaluated_at" doc:"Last time the rule was evaluated by the agent (default: 2000-01-01)"`
 	// The request purpose should indicate what the request is intended to do in
 	// the kill chain.
-	RequestPurpose   string       `ksql:"request_purpose" json:"request_purpose" yaml:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, CRAWL, ATTACK)"`
+	RequestPurpose   string       `ksql:"request_purpose" json:"request_purpose" yaml:"request_purpose" doc:"The purpose of the request (e.g. UNKNOWN, RECON, VERIFY, EXPLOITATION, CLEANUP)"`
 	Responder        string       `ksql:"responder" json:"responder" doc:"The responder type for this rule (e.g. COMMAND_INJECTION)"`
 	ResponderRegex   string       `ksql:"responder_regex" json:"responder_regex" yaml:"responder_regex" doc:"The responder regex to grab the relevant bits"`
 	ResponderDecoder string       `ksql:"responder_decoder" json:"responder_decoder" yaml:"responder_decoder" doc:"The responder decoder to use (e.g. NONE, URI, HTML)"`
+	MonitorKillchain bool         `ksql:"monitor_killchain" json:"monitor_killchain" yaml:"monitor_killchain" doc:"If true, sessions where this rule matched will be analyzed for kill chains"`
 	TagsToApply      []TagPerRule `json:"tags_to_apply"`
 }
 

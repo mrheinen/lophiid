@@ -14,25 +14,13 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-package rulegeneration
+package workflows
 
-import (
-	"context"
+import "context"
 
-	"lophiid/pkg/rulegeneration/workflows"
-)
+const maxAgentToolIterations = 50
 
-// Agent orchestrates a single workflow run.
-type Agent struct {
-	workflow workflows.Workflow
-}
-
-// NewAgent creates a new Agent wrapping the given workflow.
-func NewAgent(workflow workflows.Workflow) *Agent {
-	return &Agent{workflow: workflow}
-}
-
-// Process runs the agent's workflow.
-func (a *Agent) Process(ctx context.Context) error {
-	return a.workflow.Run(ctx)
+// Workflow is the common interface implemented by every agent workflow.
+type Workflow interface {
+	Run(ctx context.Context) error
 }
