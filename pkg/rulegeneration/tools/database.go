@@ -304,11 +304,17 @@ func (t *DatabaseTools) UpdateContentTool(_ context.Context, args string) (strin
 		ContentType    *string `json:"content_type"`
 		Server         *string `json:"server"`
 		StatusCode     *string `json:"status_code"`
-		RuleID         int64   `json:"rule_id,omitempty"`
-		LogDescription string  `json:"log_description,omitempty"`
+		RuleID         int64   `json:"rule_id"`
+		LogDescription string  `json:"log_description"`
 	}
 	if err := json.Unmarshal([]byte(args), &params); err != nil {
 		return GetJSONErrorMessage("Failed to parse args", nil), fmt.Errorf("parsing update_content args: %w", err)
+	}
+	if params.RuleID == 0 {
+		return GetJSONErrorMessage("rule_id is required", nil), nil
+	}
+	if params.LogDescription == "" {
+		return GetJSONErrorMessage("log_description is required", nil), nil
 	}
 	slog.Info("tool: update_content", slog.Int64("content_id", params.ContentID))
 	content, err := t.db.GetContentByID(params.ContentID)
@@ -347,19 +353,17 @@ func (t *DatabaseTools) UpdateContentTool(_ context.Context, args string) (strin
 		return GetJSONErrorMessage("Content database level update error", nil), fmt.Errorf("updating content %d: %w", params.ContentID, err)
 	}
 
-	if params.RuleID != 0 {
-		entry := models.RuleManagementLog{
-			Type:         constants.RuleManagementLogTypeUpdateContent,
-			RuleID:       params.RuleID,
-			Description:  params.LogDescription,
-			RelatedLinks: pgtype.FlatArray[string]{},
-		}
-		if _, err := t.db.Insert(&entry); err != nil {
-			slog.Warn("update_content: failed to write rule management log",
-				slog.Int64("content_id", params.ContentID),
-				slog.Int64("rule_id", params.RuleID),
-				slog.String("error", err.Error()))
-		}
+	entry := models.RuleManagementLog{
+		Type:         constants.RuleManagementLogTypeUpdateContent,
+		RuleID:       params.RuleID,
+		Description:  params.LogDescription,
+		RelatedLinks: pgtype.FlatArray[string]{},
+	}
+	if _, err := t.db.Insert(&entry); err != nil {
+		slog.Warn("update_content: failed to write rule management log",
+			slog.Int64("content_id", params.ContentID),
+			slog.Int64("rule_id", params.RuleID),
+			slog.String("error", err.Error()))
 	}
 
 	return GetJSONSuccessMessage(fmt.Sprintf("content %d updated successfully", content.ID), nil), nil

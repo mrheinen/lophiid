@@ -181,7 +181,7 @@ func (ts *RuleManagementToolSet) BuildTools() []llm.LLMTool {
 						"description": "Brief description of what was changed and why (used for the management log entry).",
 					},
 				},
-				"required": []string{"content_id"},
+				"required": []string{"content_id", "rule_id", "log_description"},
 			},
 			Function: ts.databaseTools.UpdateContentTool,
 		},
