@@ -37,7 +37,7 @@ type JSONStatusReply struct {
 func (j *JSONStatusReply) JSON() string {
 	jsonData, err := json.Marshal(j)
 	if err != nil {
-		return `{"status": "ERROR", "status_message": "error marshalling json", "data": {}`
+		return `{"status": "ERROR", "status_message": "error marshalling json", "data": {}}`
 	}
 	return string(jsonData)
 }
