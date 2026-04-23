@@ -349,7 +349,7 @@ func (p *PreProcess) Process(req *models.Request) (*PreProcessResult, *PayloadPr
 				AllowFromNet:     &net,
 				AppID:            constants.DefaultUploadAppID,
 				Method:           constants.HTTPMethodAny,
-				RequestPurpose:   constants.RequestPurposeAttack,
+				RequestPurpose:   constants.RuleRequestPurposeExploitation,
 				Responder:        constants.ResponderTypeNone,
 				ResponderDecoder: constants.ResponderDecoderTypeNone,
 				IsTemporary:      true,
