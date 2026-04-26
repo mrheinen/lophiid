@@ -36,7 +36,7 @@ func makeLLMResponse(chains []KillChainLLMChain) string {
 
 func makeAnalyzer(t *testing.T, fakeDB *database.FakeDatabaseClient, fakeLLM *llm.MockLLMManager, dryRun bool) *KillChainAnalyzer {
 	t.Helper()
-	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, 50, 4096, dryRun)
+	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, 50, 4096, 1, dryRun)
 	if err != nil {
 		t.Fatalf("NewKillChainAnalyzer: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestAnalyzeSession_TruncatesWhenTooManyRequests(t *testing.T) {
 	fakeDB.RequestsToReturn = reqs
 
 	fakeLLM := &llm.MockLLMManager{CompletionToReturn: `{"kill_chains":[]}`}
-	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, maxReqs, 4096, false)
+	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, maxReqs, 4096, 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,6 +270,49 @@ func TestAnalyzeSession_InvalidJSON(t *testing.T) {
 	}
 	if updated.KillChainProcessStatus != constants.KillChainProcessStatusFailed {
 		t.Errorf("expected FAILED on bad JSON, got %s", updated.KillChainProcessStatus)
+	}
+}
+
+func TestAnalyzeSessions_Concurrent(t *testing.T) {
+	now := time.Now().UTC()
+	req := models.Request{ID: 1, SessionID: 42, CmpHash: "hash-a", BaseHash: "base-1", TimeReceived: now.Add(-5 * time.Minute), Raw: []byte("GET /scan HTTP/1.1")}
+
+	chain := KillChainLLMChain{
+		RequestIDs: []int64{1},
+		Phases: []KillChainLLMPhase{
+			{Phase: constants.KillChainPhaseRecon, Evidence: "scanning", FirstRequestID: 1, LastRequestID: 1, RequestCount: 1},
+		},
+	}
+
+	fakeDB := &database.FakeDatabaseClient{
+		SessionToReturn: models.Session{
+			ID:                     42,
+			StartedAt:              now.Add(-10 * time.Minute),
+			KillChainProcessStatus: constants.KillChainProcessStatusPending,
+		},
+		RequestsToReturn: []models.Request{req},
+	}
+	fakeLLM := &llm.MockLLMManager{CompletionToReturn: makeLLMResponse([]KillChainLLMChain{chain})}
+
+	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, 50, 4096, 4, false)
+	if err != nil {
+		t.Fatalf("NewKillChainAnalyzer: %v", err)
+	}
+
+	cnt, err := a.AnalyzeSessions(10)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cnt == 0 {
+		t.Error("expected at least one session processed")
+	}
+
+	updated, ok := fakeDB.LastDataModelSeen.(*models.Session)
+	if !ok {
+		t.Fatalf("expected *models.Session as final write, got %T", fakeDB.LastDataModelSeen)
+	}
+	if updated.KillChainProcessStatus != constants.KillChainProcessStatusDone {
+		t.Errorf("expected DONE, got %s", updated.KillChainProcessStatus)
 	}
 }
 

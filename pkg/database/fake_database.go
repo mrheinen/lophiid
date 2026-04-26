@@ -60,6 +60,7 @@ type FakeDatabaseClient struct {
 	YarasToReturn                     []models.Yara
 	SimpleQueryResult                 any
 	ParameterizedQueryResult          any
+	ParameterizedQueryResultsQueue    []any
 	SessionExecutionContextToReturn   []models.SessionExecutionContext
 	TagsPerRuleToReturn               []models.TagPerRule
 	AppPerGroupToReturn               []models.AppPerGroup
@@ -205,14 +206,21 @@ func (f *FakeDatabaseClient) SimpleQuery(query string, result any) (any, error) 
 	return f.SimpleQueryResult, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) ParameterizedQuery(query string, result any, params ...any) (any, error) {
-	if f.ParameterizedQueryResult != nil && result != nil {
+	var queryResult any
+	if len(f.ParameterizedQueryResultsQueue) > 0 {
+		queryResult = f.ParameterizedQueryResultsQueue[0]
+		f.ParameterizedQueryResultsQueue = f.ParameterizedQueryResultsQueue[1:]
+	} else {
+		queryResult = f.ParameterizedQueryResult
+	}
+	if queryResult != nil && result != nil {
 		rv := reflect.ValueOf(result)
-		prv := reflect.ValueOf(f.ParameterizedQueryResult)
+		prv := reflect.ValueOf(queryResult)
 		if rv.Kind() == reflect.Ptr && prv.Type().AssignableTo(rv.Elem().Type()) {
 			rv.Elem().Set(prv)
 		}
 	}
-	return f.ParameterizedQueryResult, f.ErrorToReturn
+	return queryResult, f.ErrorToReturn
 }
 func (f *FakeDatabaseClient) ExecStatement(query string, params ...any) error {
 	return f.ErrorToReturn

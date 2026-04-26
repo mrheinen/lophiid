@@ -354,6 +354,91 @@ func TestCompleteWithTools_InvalidLastMessage(t *testing.T) {
 	assert.Contains(t, err.Error(), "last message must be user")
 }
 
+// TestCompleteWithTools_ToolErrorFallbackMessage verifies that when a tool
+// returns an error with an empty result, the static fallback string
+// "could not run tool successfully for you" is forwarded to the model.
+func TestCompleteWithTools_ToolErrorFallbackMessage(t *testing.T) {
+	callCount := 0
+	var secondCallBody string
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		w.Header().Set("Content-Type", "application/json")
+		if callCount == 1 {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(chatCompletionResponse("", []map[string]interface{}{
+				toolCall("call-1", "test_tool", `{}`),
+			})))
+			return
+		}
+		// Capture the body to verify what was sent as the tool result.
+		var body map[string]interface{}
+		json.NewDecoder(r.Body).Decode(&body)
+		data, _ := json.Marshal(body)
+		secondCallBody = string(data)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(chatCompletionResponse("done", nil)))
+	}
+
+	client := testClient(t, handler)
+	tools := []LLMTool{
+		{
+			Name: "test_tool",
+			Function: func(_ context.Context, args string) (string, error) {
+				return "", fmt.Errorf("tool failed with no output")
+			},
+		},
+	}
+
+	result, err := client.CompleteWithTools(context.Background(), testMessages(), tools, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, "done", result)
+	assert.Contains(t, secondCallBody, toolErrorFallbackMessage,
+		"fallback message should be sent to the model when tool returns empty result")
+}
+
+// TestCompleteWithTools_ToolErrorWithPartialResult verifies that when a tool
+// returns both a non-empty result AND an error, the actual result is forwarded
+// to the model instead of the fallback string.
+func TestCompleteWithTools_ToolErrorWithPartialResult(t *testing.T) {
+	callCount := 0
+	var secondCallBody string
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		w.Header().Set("Content-Type", "application/json")
+		if callCount == 1 {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(chatCompletionResponse("", []map[string]interface{}{
+				toolCall("call-1", "test_tool", `{}`),
+			})))
+			return
+		}
+		var body map[string]interface{}
+		json.NewDecoder(r.Body).Decode(&body)
+		data, _ := json.Marshal(body)
+		secondCallBody = string(data)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(chatCompletionResponse("done", nil)))
+	}
+
+	client := testClient(t, handler)
+	tools := []LLMTool{
+		{
+			Name: "test_tool",
+			Function: func(_ context.Context, args string) (string, error) {
+				return "partial result from tool", fmt.Errorf("tool partially failed")
+			},
+		},
+	}
+
+	result, err := client.CompleteWithTools(context.Background(), testMessages(), tools, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, "done", result)
+	assert.Contains(t, secondCallBody, "partial result from tool",
+		"actual tool output should be forwarded when result is non-empty despite error")
+	assert.NotContains(t, secondCallBody, toolErrorFallbackMessage,
+		"fallback message must not be used when tool returned a non-empty result")
+}
+
 func TestValidateOpenrouterReasoningEffort(t *testing.T) {
 	// Valid efforts should not return an error
 	validEfforts := []string{"none", "minimal", "low", "medium", "high"}

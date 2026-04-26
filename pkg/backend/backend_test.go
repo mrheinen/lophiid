@@ -2510,6 +2510,29 @@ func TestHandleNetworkStatus_Dedup(t *testing.T) {
 	assert.Equal(t, int64(2), updated.TimesSeen)
 }
 
+func TestUpdateSessionWithRule_MonitorKillchain(t *testing.T) {
+	fSessionMgr := &session.FakeSessionManager{}
+	bs := &BackendServer{sessionMgr: fSessionMgr}
+
+	sess := models.NewSession()
+	sess.KillChainProcessStatus = constants.KillChainProcessStatusNotMonitored
+
+	nonMonitoredRule := models.ContentRule{ID: 1, MonitorKillchain: false}
+	bs.UpdateSessionWithRule("1.2.3.4", sess, &nonMonitoredRule)
+	assert.Equal(t, constants.KillChainProcessStatusNotMonitored, sess.KillChainProcessStatus,
+		"status should remain NOT_MONITORED when rule.MonitorKillchain is false")
+
+	monitoredRule := models.ContentRule{ID: 2, MonitorKillchain: true}
+	bs.UpdateSessionWithRule("1.2.3.4", sess, &monitoredRule)
+	assert.Equal(t, constants.KillChainProcessStatusPending, sess.KillChainProcessStatus,
+		"status should be promoted to PENDING when rule.MonitorKillchain is true")
+
+	anotherMonitoredRule := models.ContentRule{ID: 3, MonitorKillchain: true}
+	bs.UpdateSessionWithRule("1.2.3.4", sess, &anotherMonitoredRule)
+	assert.Equal(t, constants.KillChainProcessStatusPending, sess.KillChainProcessStatus,
+		"status should remain PENDING on subsequent monitored rule hits")
+}
+
 func TestIterateMetadata_Netcat(t *testing.T) {
 	fdbc := &database.FakeDatabaseClient{}
 	b := newTestBackendServer(t, fdbc)

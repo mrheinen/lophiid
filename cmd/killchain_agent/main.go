@@ -134,8 +134,9 @@ func main() {
 
 	maxRequests := cfg.AI.KillChain.MaxRequests
 	maxRequestSize := cfg.AI.KillChain.MaxRequestSize
+	concurrency := cfg.AI.KillChain.Concurrency
 
-	analyzer, err := killchain.NewKillChainAnalyzer(dbc, llmManager, safeRules, maxRequests, maxRequestSize, *dryRun)
+	analyzer, err := killchain.NewKillChainAnalyzer(dbc, llmManager, safeRules, maxRequests, maxRequestSize, concurrency, *dryRun)
 	if err != nil {
 		slog.Error("error creating kill chain analyzer", slog.String("error", err.Error()))
 		return

@@ -58,6 +58,7 @@ var CampaignTable = ksql.NewTable("campaign")
 var CampaignRequestTable = ksql.NewTable("campaign_request")
 var KillChainTable = ksql.NewTable("kill_chain")
 var SingleKillChainPhaseTable = ksql.NewTable("single_kill_chain_phase")
+var RuleManagementLogTable = ksql.NewTable("rule_management_log")
 
 type DatabaseClient interface {
 	Close()
@@ -217,6 +218,7 @@ func (d *KSQLClient) getTableForModel(dm models.DataModel) *ksql.Table {
 	sqlTable["CampaignRequest"] = &CampaignRequestTable
 	sqlTable["KillChain"] = &KillChainTable
 	sqlTable["SingleKillChainPhase"] = &SingleKillChainPhaseTable
+	sqlTable["RuleManagementLog"] = &RuleManagementLogTable
 
 	table, ok := sqlTable[name]
 	if !ok {

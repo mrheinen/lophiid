@@ -244,6 +244,16 @@
                       />
                     </td>
                   </tr>
+                  <tr>
+                    <th>Monitor Killchains</th>
+                    <td>
+                      <CheckBox
+                        v-model="localRule.monitor_killchain"
+                        input-id="monitor_killchain"
+                        :binary="true"
+                      />
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -380,6 +390,7 @@ export default {
         responder_decoder: "NONE",
         enabled: true,
         block: false,
+        monitor_killchain: false,
         ports: [],
         parsed: {
           port_field: "",

@@ -28,6 +28,8 @@ import (
 	"github.com/openai/openai-go/v2/option"
 )
 
+const toolErrorFallbackMessage = "could not run tool successfully for you"
+
 type OpenAILLMClient struct {
 	client *openai.Client
 	Model  string
@@ -236,6 +238,8 @@ func (l *OpenAILLMClient) buildMessages(msgs []LLMMessage) ([]openai.ChatComplet
 // findAndCallTool looks up a tool by name and invokes it with the provided JSON
 // args string. Returns the result string, or an error if the tool is not found
 // or the invocation fails.
+// Note that if an error occrured but also a result is returned by the tool then this
+// result will be handed over to the LLM.
 func findAndCallTool(ctx context.Context, toolName, toolArgs string, tools []LLMTool) (string, error) {
 	for _, t := range tools {
 		if t.Name == toolName {
@@ -394,7 +398,12 @@ func (l *OpenAILLMClient) CompleteWithTools(ctx context.Context, msgs []LLMMessa
 					slog.Error("tool call failed",
 						slog.String("tool", toolCall.Function.Name),
 						slog.String("error", err.Error()))
-					result = "could not run tool successfully for you"
+					// Important: if the tool gave a result despite the error condition
+					// then we will return that result. In other cases we return the
+					// static string below.
+					if result == "" {
+						result = toolErrorFallbackMessage
+					}
 				}
 
 				slog.Debug("tool result",
