@@ -56,6 +56,15 @@ func (c *Session) IncreaseRequestCount() {
 	c.Mu.Unlock()
 }
 
+// SetKillChainProcessStatus sets the kill chain process status. Does not
+// validate the status, callers are expected to use the enum values directly to
+// avoid using the wrong status.
+func (c *Session) SetKillChainProcessStatus(status string) {
+	c.Mu.Lock()
+	c.KillChainProcessStatus = status
+	c.Mu.Unlock()
+}
+
 func (c *Session) SetLastRequestAt(t time.Time) {
 	c.Mu.Lock()
 	c.LastRequestAt = t
