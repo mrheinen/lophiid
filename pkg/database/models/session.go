@@ -36,7 +36,7 @@ type Session struct {
 	BehaviorHasBursts      bool      `ksql:"behavior_has_bursts" json:"behavior_has_bursts" doc:"Does the behavior of the session have bursts"`
 	BehaviorFinalGaps      []float64 `ksql:"behavior_final_gaps"            json:"behavior_final_gaps"            doc:"The final gaps of the behavior of the session"`
 	KillChainProcessStatus string    `ksql:"kill_chain_process_status" json:"kill_chain_process_status" doc:"Kill chain analysis status: PENDING, DONE, FAILED or SKIPPED"`
-	RequestCount           int64
+	RequestCount           int64     `ksql:"request_count" json:"request_count" doc:"Number of requests in this session"`
 	RequestGaps            []float64
 	LastRequestAt          time.Time `ksql:"last_request_at" json:"last_request_at" doc:"Time of the last request in this session"`
 	Mu                     sync.RWMutex

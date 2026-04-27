@@ -2320,6 +2320,7 @@ CREATE TABLE public.session (
     created_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     ended_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at timestamp without time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    request_count integer DEFAULT 0 NOT NULL,
     kill_chain_process_status public.kill_chain_process_status DEFAULT 'NOT_MONITORED'::public.kill_chain_process_status,
     kill_chain_max_depth integer DEFAULT 0,
     kill_chain_phase_count integer DEFAULT 0,
