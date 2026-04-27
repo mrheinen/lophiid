@@ -36,7 +36,7 @@ func makeLLMResponse(chains []KillChainLLMChain) string {
 
 func makeAnalyzer(t *testing.T, fakeDB *database.FakeDatabaseClient, fakeLLM *llm.MockLLMManager, dryRun bool) *KillChainAnalyzer {
 	t.Helper()
-	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, 50, 4096, dryRun)
+	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, 50, 4096, 1, dryRun)
 	if err != nil {
 		t.Fatalf("NewKillChainAnalyzer: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestAnalyzeSession_TruncatesWhenTooManyRequests(t *testing.T) {
 	fakeDB.RequestsToReturn = reqs
 
 	fakeLLM := &llm.MockLLMManager{CompletionToReturn: `{"kill_chains":[]}`}
-	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, maxReqs, 4096, false)
+	a, err := NewKillChainAnalyzer(fakeDB, fakeLLM, nil, maxReqs, 4096, 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}

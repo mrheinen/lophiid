@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"sync/atomic"
+	"time"
 
 	"lophiid/pkg/backend/rules"
 	"lophiid/pkg/database"
@@ -29,6 +31,7 @@ import (
 	"lophiid/pkg/util/constants"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/sourcegraph/conc/pool"
 )
 
 // KillChainLLMPhase represents a single detected kill chain phase in the LLM response.
@@ -75,19 +78,21 @@ type KillChainAnalyzer struct {
 	safeRules      *rules.SafeRules
 	maxRequests    int
 	maxRequestSize int
+	concurrency    int
 	dryRun         bool
 }
 
 // NewKillChainAnalyzer creates a new KillChainAnalyzer.
 // safeRules may be nil; when provided it is used to annotate requests with their
 // matched rule's RequestPurpose without any additional database queries.
-func NewKillChainAnalyzer(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, safeRules *rules.SafeRules, maxRequests int, maxRequestSize int, dryRun bool) (*KillChainAnalyzer, error) {
+func NewKillChainAnalyzer(dbClient database.DatabaseClient, llmManager llm.LLMManagerInterface, safeRules *rules.SafeRules, maxRequests int, maxRequestSize int, concurrency int, dryRun bool) (*KillChainAnalyzer, error) {
 	a := &KillChainAnalyzer{
 		dbClient:       dbClient,
 		llmManager:     llmManager,
 		safeRules:      safeRules,
 		maxRequests:    maxRequests,
 		maxRequestSize: maxRequestSize,
+		concurrency:    concurrency,
 		dryRun:         dryRun,
 	}
 	if err := llmManager.SetResponseSchemaFromObject(KillChainLLMResult{}, "KillChainLLMResult"); err != nil {
@@ -105,16 +110,21 @@ func (a *KillChainAnalyzer) AnalyzeSessions(batchSize int64) (int64, error) {
 		return 0, fmt.Errorf("searching sessions: %w", err)
 	}
 
-	var processed int64
+	var processed atomic.Int64
+	p := pool.New().WithMaxGoroutines(a.concurrency)
 	for i := range sessions {
-		if analyzeErr := a.analyzeSession(&sessions[i]); analyzeErr != nil {
-			slog.Error("error analysing session",
-				slog.Int64("session_id", sessions[i].ID),
-				slog.String("error", analyzeErr.Error()))
-		}
-		processed++
+		i := i
+		p.Go(func() {
+			if analyzeErr := a.analyzeSession(&sessions[i]); analyzeErr != nil {
+				slog.Error("error analysing session",
+					slog.Int64("session_id", sessions[i].ID),
+					slog.String("error", analyzeErr.Error()))
+			}
+			processed.Add(1)
+		})
 	}
-	return processed, nil
+	p.Wait()
+	return processed.Load(), nil
 }
 
 // AnalyzeSingleSession analyses a single session by ID.
@@ -240,9 +250,36 @@ func (a *KillChainAnalyzer) analyzeSession(session *models.Session) error {
 			}
 		}
 
+		var endedAt *time.Time
+		for _, p := range chain.Phases {
+			if lastReq, ok := reqMap[p.LastRequestID]; ok {
+				t := lastReq.TimeReceived
+				if endedAt == nil || t.After(*endedAt) {
+					endedAt = &t
+				}
+			}
+		}
+		for _, reqID := range chain.RequestIDs {
+			if req, ok := reqMap[reqID]; ok {
+				t := req.TimeReceived
+				if endedAt == nil || t.After(*endedAt) {
+					endedAt = &t
+				}
+			}
+		}
+		if endedAt == nil {
+			if !session.EndedAt.IsZero() {
+				t := session.EndedAt
+				endedAt = &t
+			} else {
+				endedAt = &startedAt
+			}
+		}
+
 		kc := &models.KillChain{
 			SessionID:        session.ID,
 			StartedAt:        startedAt,
+			EndedAt:          endedAt,
 			UniqueBaseHashes: pgtype.FlatArray[string](chainUniqueBaseHashes),
 			SourceModel:      modelName,
 			PhaseCount:       int64(len(chain.Phases)),

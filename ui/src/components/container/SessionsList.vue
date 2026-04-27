@@ -89,7 +89,7 @@
               {{ slotProps.data.active ? 'Yes' : 'No' }}
             </template>
           </DataColumn>
-          
+
           <template #footer>
             <div class="flex justify-between items-center">
               <div>
@@ -157,7 +157,7 @@ export default {
       selectedSession: null,
       selectedLimit: 21,
       limitOptions: [10, 20, 30, 40, 50],
-      query: "active:no",
+      query: "active:no request_count>0",
       searchAgeMonths: 3,
       isSelectedId: 0,
       isLoading: false,
@@ -327,12 +327,12 @@ export default {
               newSession.parsed = {};
               newSession.parsed.started_at = dateToString(newSession.started_at);
               newSession.parsed.ended_at = dateToString(newSession.ended_at);
-              
+
               var startD = new Date(Date.parse(newSession.started_at));
               var endD = new Date(Date.parse(newSession.ended_at));
               var duration = (endD - startD) / 1000;
               newSession.parsed.duration = duration >= 0 ? duration.toFixed(1) : "0.0";
-              
+
               this.sessions.push(newSession);
             }
             if (selectFirst) {

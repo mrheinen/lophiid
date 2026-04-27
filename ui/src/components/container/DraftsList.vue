@@ -275,6 +275,10 @@ export default {
               }
             }
           });
+
+          if (this.selectedDetails && !this.draftRules.find(r => r.id === this.selectedDetails.id)) {
+            this.selectedDetails = null;
+          }
         }
       });
     },

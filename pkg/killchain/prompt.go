@@ -100,7 +100,7 @@ Note that a single request can span multiple kill chain phases. E.g. if an attac
 sends a request that does "echo <random string>; wget <malware>; ./malware;", this would span
 VERIFY and EXPLOITATION phases. In that case return two phases, both referencing that request.
 
-If no kill chain phases are detected for a chain, return an empty phases list for that chain.
+If no kill chain phases are detected for a chain, do not return that chain in your response.
 If no kill chains are found at all, return an empty kill_chains list.
 `
 

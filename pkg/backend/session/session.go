@@ -142,7 +142,7 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *models.Session) boo
 func (d *DatabaseSessionManager) StartSession(ip string) (*models.Session, error) {
 	newSession := models.NewSession()
 	newSession.Active = true
-	newSession.KillChainProcessStatus = constants.KillChainProcessStatusPending
+	newSession.KillChainProcessStatus = constants.KillChainProcessStatusNotMonitored
 	newSession.StartedAt = time.Now().UTC()
 	newSession.IP = ip
 

@@ -527,6 +527,11 @@ func AddLLMResponseToContent(content *models.Content, llmResponse string) string
 func (s *BackendServer) UpdateSessionWithRule(ip string, session *models.Session, rule *models.ContentRule) {
 	session.LastRuleServed = *rule
 	session.ServedRuleWithContent(rule.ID, rule.ContentID)
+	// If the rule asks for monitoring: mark the session as pending for killchain
+	// analysis.
+	if rule.MonitorKillchain && session.KillChainProcessStatus == constants.KillChainProcessStatusNotMonitored {
+		session.SetKillChainProcessStatus(constants.KillChainProcessStatusPending)
+	}
 	if err := s.sessionMgr.UpdateCachedSession(ip, session); err != nil {
 		slog.Error("error updating session", slog.Int64("session_id", session.ID), slog.String("ip", ip), slog.String("error", err.Error()))
 	}

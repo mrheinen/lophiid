@@ -19,6 +19,7 @@ package session
 import (
 	"lophiid/pkg/database"
 	"lophiid/pkg/database/models"
+	"lophiid/pkg/util/constants"
 	"testing"
 	"time"
 
@@ -81,6 +82,24 @@ func TestSessionManagerCleansStaleSessions(t *testing.T) {
 
 	if cnt != 1 {
 		t.Errorf("expected 1 stale session, got %d", cnt)
+	}
+}
+
+func TestStartSession_KillChainStatusNotMonitored(t *testing.T) {
+	dbClient := database.FakeDatabaseClient{ErrorToReturn: nil}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateSessionMetrics(reg)
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute, metrics)
+
+	sess, err := sm.StartSession("1.2.3.4")
+	if err != nil {
+		t.Fatalf("error starting session: %s", err.Error())
+	}
+
+	if sess.KillChainProcessStatus != constants.KillChainProcessStatusNotMonitored {
+		t.Errorf("expected NOT_MONITORED, got %s", sess.KillChainProcessStatus)
 	}
 }
 

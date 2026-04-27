@@ -190,6 +190,7 @@ type Config struct {
 			MaxRequests          int    `fig:"max_requests" default:"50"`
 			MaxRequestSize       int    `fig:"max_request_size" default:"4096"`
 			BatchSize            int    `fig:"batch_size" default:"10"`
+			Concurrency          int    `fig:"concurrency" default:"4"`
 			LogFile              string `fig:"log_file" default:"killchain.log"`
 			LogLevel             string `fig:"log_level" default:"info"`
 			MetricsListenAddress string `fig:"metrics_listen_address" default:"localhost:8996"`

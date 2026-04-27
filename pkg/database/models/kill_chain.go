@@ -30,6 +30,7 @@ type KillChain struct {
 	SourceModel      string                   `ksql:"source_model"                  json:"source_model"`
 	PhaseCount       int64                    `ksql:"phase_count"               json:"phase_count"`
 	MaxPhaseDepth    int64                    `ksql:"max_phase_depth"           json:"max_phase_depth"`
+	EndedAt          *time.Time               `ksql:"ended_at"                  json:"ended_at"`
 	CreatedAt        time.Time                `ksql:"created_at,skipInserts,skipUpdates" json:"created_at"`
 	UpdatedAt        time.Time                `ksql:"updated_at,timeNowUTC"     json:"updated_at"`
 }

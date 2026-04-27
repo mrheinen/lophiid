@@ -911,6 +911,7 @@ func (p *Pipeline) phase4Summarize(ctx context.Context, campaigns []models.Campa
 		if !p.skipLLM && p.summarizer != nil {
 			needsResummarize := p.needsResummarization(c, aggState)
 			if needsResummarize {
+				slog.Debug("phase4: summarizing campaign", slog.Int64("campaign_id", c.ID))
 				name, summary, severity, err := p.summarizer.Summarize(ctx, aggJSON)
 				if err != nil {
 					slog.Warn("LLM summarization failed", slog.Int64("campaign_id", c.ID), slog.String("error", err.Error()))
@@ -945,6 +946,7 @@ func (p *Pipeline) phase4Summarize(ctx context.Context, campaigns []models.Campa
 			}
 		}
 
+		slog.Debug("phase4: updating campaign", slog.Int64("campaign_id", c.ID))
 		if err := p.db.Update(c); err != nil {
 			slog.Warn("campaign update failed", slog.Int64("campaign_id", c.ID), slog.String("error", err.Error()))
 			result.Errors = append(result.Errors, err)
