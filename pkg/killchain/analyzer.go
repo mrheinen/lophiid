@@ -259,6 +259,22 @@ func (a *KillChainAnalyzer) analyzeSession(session *models.Session) error {
 				}
 			}
 		}
+		for _, reqID := range chain.RequestIDs {
+			if req, ok := reqMap[reqID]; ok {
+				t := req.TimeReceived
+				if endedAt == nil || t.After(*endedAt) {
+					endedAt = &t
+				}
+			}
+		}
+		if endedAt == nil {
+			if !session.EndedAt.IsZero() {
+				t := session.EndedAt
+				endedAt = &t
+			} else {
+				endedAt = &startedAt
+			}
+		}
 
 		kc := &models.KillChain{
 			SessionID:        session.ID,

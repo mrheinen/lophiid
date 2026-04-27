@@ -314,10 +314,10 @@ func (t *EvalTools) FetchRuleCreationLinksTool(_ context.Context, args string) (
 		RuleID int64 `json:"rule_id"`
 	}
 	if err := json.Unmarshal([]byte(args), &params); err != nil {
-		return GetJSONErrorMessage("Failed to parse args", nil), fmt.Errorf("parsing fetch_rule_creation_links args: %w", err)
+		return GetJSONErrorMessage("Failed to parse tool args", nil), fmt.Errorf("parsing fetch_rule_creation_links args: %w", err)
 	}
 	if params.RuleID == 0 {
-		return GetJSONErrorMessage("rule_id is required", nil), nil
+		return GetJSONErrorMessage("A rule_id is required and it cannot be 0", nil), nil
 	}
 
 	slog.Info("tool: fetch_rule_creation_links", slog.Int64("rule_id", params.RuleID))
