@@ -145,6 +145,8 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *models.Session) boo
 // shutdown before the database connection is closed.
 func (d *DatabaseSessionManager) PersistActiveSessions() error {
 	sessions := d.activeSessions.GetAsMap()
+
+	slog.Info("Persisting sessions", slog.Int("count", len(sessions)))
 	var firstErr error
 	for _, session := range sessions {
 		session.SyncRuleIDsFromMap()

@@ -1842,10 +1842,14 @@ func (s *BackendServer) Start() error {
 }
 
 func (s *BackendServer) Stop() {
+	slog.Info("stopping backend")
 	s.safeRules.Stop()
 	s.maintenanceChan <- true
 	s.reqsProcessChan <- true
 	s.qRunnerChan <- true
+	if err := s.sessionMgr.PersistActiveSessions(); err != nil {
+		slog.Error("could not persist active sessions", slog.String("error", err.Error()))
+	}
 	s.dbClient.Close()
 	s.alertMgr.Stop()
 }
