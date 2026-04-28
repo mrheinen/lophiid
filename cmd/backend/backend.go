@@ -51,6 +51,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -477,9 +479,18 @@ func main() {
 		reflection.Register(rpcServer)
 		backend_service.RegisterBackendServiceServer(rpcServer, bs)
 
-		if err = rpcServer.Serve(listener); err != nil {
-			slog.Error("error starting backend", slog.String("error", err.Error()))
-		}
+		go func() {
+			if err = rpcServer.Serve(listener); err != nil {
+				slog.Error("error starting backend", slog.String("error", err.Error()))
+			}
+		}()
+
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+		<-quit
+		slog.Info("Shutting down...")
+		bs.Stop()
+		rpcServer.GracefulStop()
 		return
 	}
 	// Create tls based credential.
@@ -517,10 +528,16 @@ func main() {
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	backend_service.RegisterBackendServiceServer(s, bs)
-	if err := s.Serve(listener); err != nil {
-		slog.Error("error starting backend (serve)", slog.String("error", err.Error()))
-	}
+	go func() {
+		if err := s.Serve(listener); err != nil {
+			slog.Error("error starting backend (serve)", slog.String("error", err.Error()))
+		}
+	}()
 
-	// TODO: Implement proper shutdown
-
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	slog.Info("Shutting down...")
+	bs.Stop()
+	s.GracefulStop()
 }
