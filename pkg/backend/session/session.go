@@ -161,9 +161,13 @@ func (d *DatabaseSessionManager) PersistActiveSessions() error {
 // LoadActiveSessions loads all sessions marked active in the database into the
 // in-memory cache. It is intended to be called during startup after a graceful
 // shutdown to restore the previous session state.
+//
+// Note that this method does not take into account how long sessions already
+// were in the cache. It just loads them and by doing so the sessions will again
+// get the full expiration time.
 func (d *DatabaseSessionManager) LoadActiveSessions() error {
 	var offset int64
-	const pageSize = 50
+	const pageSize = 250
 	for {
 		res, err := d.dbClient.SearchSession(offset, pageSize, "active:true")
 		if err != nil {
