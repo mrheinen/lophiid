@@ -31,11 +31,11 @@ Key features:
 - AI agent for vulnerability research based rule creation
 - Static, scripted (Javascript) and AI supported response handling
 - AI specifialized request handlers for:
- - Shell code injection (with persistent session memory/command history)
- - Code injection (with code emulation)
- - File uploading (with multi step request handling)
- - File access (emulates direct access vulns)
- - SQL injection (emulates data leaking)
+    * Shell code injection (with persistent session memory/command history)
+    * Code injection (with code emulation)
+    * File uploading (with multi step request handling)
+    * File access (emulates direct access vulns)
+    * SQL injection (emulates data leaking)
 - Automatic attacker campaign recognition and management
 - Alerting possible (Telegram, extensible)
 - Desktop and mobile web UI with comprehensive search
