@@ -2324,7 +2324,10 @@ CREATE TABLE public.session (
     kill_chain_process_status public.kill_chain_process_status DEFAULT 'NOT_MONITORED'::public.kill_chain_process_status,
     kill_chain_max_depth integer DEFAULT 0,
     kill_chain_phase_count integer DEFAULT 0,
-    kill_chain_unique_phases public.kill_chain_phase[] DEFAULT '{}'::public.kill_chain_phase[]
+    kill_chain_unique_phases public.kill_chain_phase[] DEFAULT '{}'::public.kill_chain_phase[],
+    request_gaps float[] DEFAULT '{}',
+    rule_ids_served bigint[] DEFAULT '{}',
+    last_app_id_served bigint DEFAULT 0
 );
 
 

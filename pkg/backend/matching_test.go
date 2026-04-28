@@ -54,9 +54,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched nothing ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/fddfffd",
-				Port:   80,
-				Method: "GET",
+				Uri:      "/fddfffd",
+				Port:     80,
+				Method:   "GET",
 			},
 			contentRulesInput: bunchOfRules,
 			errorExpected:     true,
@@ -65,9 +65,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched one rule (exact) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/42",
-				Port:   80,
-				Method: "GET",
+				Uri:      "/42",
+				Port:     80,
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 1,
@@ -77,9 +77,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched one rule (prefix) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/prefixdsfsfdf",
-				Port:   80,
-				Method: "GET",
+				Uri:      "/prefixdsfsfdf",
+				Port:     80,
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 3,
@@ -90,9 +90,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched one rule (contains) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/sddsadcontainsfdfd",
-				Port:   80,
-				Method: "GET",
+				Uri:      "/sddsadcontainsfdfd",
+				Port:     80,
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 4,
@@ -102,9 +102,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched one rule (suffix) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/ttttt?aa=suffix",
-				Port:   80,
-				Method: "GET",
+				Uri:      "/ttttt?aa=suffix",
+				Port:     80,
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 5,
@@ -114,9 +114,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched one rule (suffix) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/ttttt?aa=suffix",
-				Port:   80,
-				Method: "POST",
+				Uri:      "/ttttt?aa=suffix",
+				Port:     80,
+				Method:   "POST",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 12,
@@ -127,9 +127,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched one rule (regex) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/a898989898",
-				Port:   80,
-				Method: "GET",
+				Uri:      "/a898989898",
+				Port:     80,
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 6,
@@ -139,9 +139,9 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched one rule (on port) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/eeee",
-				Port:   8888,
-				Method: "GET",
+				Uri:      "/eeee",
+				Port:     8888,
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 8,
@@ -151,10 +151,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched one rule (uri and body)  ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/same",
-				Port:   80,
-				Body:   []byte("body"),
-				Method: "POST",
+				Uri:      "/same",
+				Port:     80,
+				Body:     []byte("body"),
+				Method:   "POST",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 13,
@@ -165,10 +165,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched on body alone (exact) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/eeee",
-				Port:   80,
-				Body:   []byte("woohoo"),
-				Method: "GET",
+				Uri:      "/eeee",
+				Port:     80,
+				Body:     []byte("woohoo"),
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 9,
@@ -179,10 +179,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched on body alone (contains) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/eeee",
-				Port:   80,
-				Body:   []byte("asdssad /etc/passwd sdds"),
-				Method: "GET",
+				Uri:      "/eeee",
+				Port:     80,
+				Body:     []byte("asdssad /etc/passwd sdds"),
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 10,
@@ -192,10 +192,10 @@ func TestGetMatchedRuleBasic(t *testing.T) {
 			description: "matched on body and path (contains) ",
 			requestInput: models.Request{
 				SourceIP: "1.1.1.1",
-				Uri:    "/pppaaattthhh",
-				Port:   80,
-				Body:   []byte("asdssad /etc/hosts sdds"),
-				Method: "GET",
+				Uri:      "/pppaaattthhh",
+				Port:     80,
+				Body:     []byte("asdssad /etc/hosts sdds"),
+				Method:   "GET",
 			},
 			contentRulesInput:     bunchOfRules,
 			contentRuleIDExpected: 11,
@@ -234,7 +234,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 
 	assert.Equal(t, int64(1), matchedRule.ID)
 	session.ServedRuleWithContent(matchedRule.ID, matchedRule.ContentID)
-	session.LastRuleServed = matchedRule
+	session.LastAppIDServed = matchedRule.AppID
 
 	// The path of the next request matches two rules. We expect rule 2 to be
 	// served though because it shares the app ID of the rule that was already
@@ -248,7 +248,7 @@ func TestGetMatchedRuleSameApp(t *testing.T) {
 
 	assert.Equal(t, int64(2), matchedRule.ID)
 	session.ServedRuleWithContent(matchedRule.ID, matchedRule.ContentID)
-	session.LastRuleServed = matchedRule
+	session.LastAppIDServed = matchedRule.AppID
 
 	// Again this matches two rules. However one of them is already served once
 	// and this is kept track off. Therefore we expect the rule that was not
@@ -385,10 +385,10 @@ func TestGetMatchedRuleValidUntil(t *testing.T) {
 			}
 
 			req := &models.Request{
-				Method: "GET",
-				Uri:    "/test",
+				Method:   "GET",
+				Uri:      "/test",
 				SourceIP: "1.1.1.1",
-				Port:   80,
+				Port:     80,
 			}
 
 			matchedRule, err := GetMatchedRule(rules, req, models.NewSession())

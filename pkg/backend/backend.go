@@ -525,7 +525,7 @@ func AddLLMResponseToContent(content *models.Content, llmResponse string) string
 }
 
 func (s *BackendServer) UpdateSessionWithRule(ip string, session *models.Session, rule *models.ContentRule) {
-	session.LastRuleServed = *rule
+	session.LastAppIDServed = rule.AppID
 	session.ServedRuleWithContent(rule.ID, rule.ContentID)
 	// If the rule asks for monitoring: mark the session as pending for killchain
 	// analysis.
@@ -1302,7 +1302,7 @@ func (s *BackendServer) HandleProbe(ctx context.Context, req *backend_service.Ha
 		if err != nil {
 			logutil.Error("error starting session", sReq, slog.String("error", err.Error()))
 		} else {
-			session.LastRuleServed.AppID = -1
+			session.LastAppIDServed = -1
 		}
 	}
 	sReq.SessionID = session.ID
@@ -1842,10 +1842,14 @@ func (s *BackendServer) Start() error {
 }
 
 func (s *BackendServer) Stop() {
+	slog.Info("stopping backend")
 	s.safeRules.Stop()
 	s.maintenanceChan <- true
 	s.reqsProcessChan <- true
 	s.qRunnerChan <- true
+	if err := s.sessionMgr.PersistActiveSessions(); err != nil {
+		slog.Error("could not persist active sessions", slog.String("error", err.Error()))
+	}
 	s.dbClient.Close()
 	s.alertMgr.Stop()
 }
