@@ -103,6 +103,137 @@ func TestStartSession_KillChainStatusNotMonitored(t *testing.T) {
 	}
 }
 
+func TestPersistActiveSessions(t *testing.T) {
+	dbClient := database.FakeDatabaseClient{
+		ErrorToReturn: nil,
+	}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateSessionMetrics(reg)
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute, metrics)
+
+	sess, err := sm.StartSession("1.2.3.4")
+	if err != nil {
+		t.Fatalf("error starting session: %s", err.Error())
+	}
+
+	sess.LastAppIDServed = 42
+	sess.ServedRuleWithContent(10, 100)
+	sess.ServedRuleWithContent(20, 200)
+
+	if err := sm.PersistActiveSessions(); err != nil {
+		t.Fatalf("error persisting sessions: %s", err.Error())
+	}
+
+	persisted, ok := dbClient.LastDataModelSeen.(*models.Session)
+	if !ok {
+		t.Fatalf("expected *models.Session, got %T", dbClient.LastDataModelSeen)
+	}
+
+	if persisted.LastAppIDServed != 42 {
+		t.Errorf("expected LastAppIDServed=42, got %d", persisted.LastAppIDServed)
+	}
+
+	if persisted.Active != true {
+		t.Errorf("expected Active=true after persist, got false")
+	}
+
+	if len(persisted.RuleIDsServedDB)%2 != 0 {
+		t.Errorf("expected even-length RuleIDsServedDB, got %d", len(persisted.RuleIDsServedDB))
+	}
+
+	rebuilt := make(map[int64]int64)
+	for i := 0; i+1 < len(persisted.RuleIDsServedDB); i += 2 {
+		rebuilt[persisted.RuleIDsServedDB[i]] = persisted.RuleIDsServedDB[i+1]
+	}
+	if rebuilt[10] != 100 {
+		t.Errorf("expected rule 10 -> content 100, got %d", rebuilt[10])
+	}
+	if rebuilt[20] != 200 {
+		t.Errorf("expected rule 20 -> content 200, got %d", rebuilt[20])
+	}
+}
+
+func TestLoadActiveSessions(t *testing.T) {
+	dbClient := database.FakeDatabaseClient{
+		ErrorToReturn: nil,
+		SessionToReturn: models.Session{
+			ID:              7,
+			Active:          true,
+			IP:              "5.6.7.8",
+			LastAppIDServed: 77,
+			RuleIDsServedDB: []int64{10, 100, 20, 200},
+		},
+	}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateSessionMetrics(reg)
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute, metrics)
+
+	if err := sm.LoadActiveSessions(); err != nil {
+		t.Fatalf("error loading active sessions: %s", err.Error())
+	}
+
+	loaded, err := sm.GetCachedSession("5.6.7.8")
+	if err != nil {
+		t.Fatalf("expected session in cache: %s", err.Error())
+	}
+
+	if loaded.ID != 7 {
+		t.Errorf("expected session ID=7, got %d", loaded.ID)
+	}
+
+	if loaded.LastAppIDServed != 77 {
+		t.Errorf("expected LastAppIDServed=77, got %d", loaded.LastAppIDServed)
+	}
+
+	if loaded.RuleIDsServed[10] != 100 {
+		t.Errorf("expected rule 10 -> content 100, got %d", loaded.RuleIDsServed[10])
+	}
+	if loaded.RuleIDsServed[20] != 200 {
+		t.Errorf("expected rule 20 -> content 200, got %d", loaded.RuleIDsServed[20])
+	}
+
+	m := testutil.ToFloat64(metrics.sessionsActiveGauge)
+	if m != 1 {
+		t.Errorf("sessionsActiveGauge should be 1, got %f", m)
+	}
+}
+
+func TestLoadActiveSessionsNoLastRule(t *testing.T) {
+	dbClient := database.FakeDatabaseClient{
+		ErrorToReturn: nil,
+		SessionToReturn: models.Session{
+			ID:     8,
+			Active: true,
+			IP:     "9.9.9.9",
+		},
+	}
+
+	reg := prometheus.NewRegistry()
+	metrics := CreateSessionMetrics(reg)
+
+	sm := NewDatabaseSessionManager(&dbClient, 5*time.Minute, metrics)
+
+	if err := sm.LoadActiveSessions(); err != nil {
+		t.Fatalf("error loading active sessions: %s", err.Error())
+	}
+
+	loaded, err := sm.GetCachedSession("9.9.9.9")
+	if err != nil {
+		t.Fatalf("expected session in cache: %s", err.Error())
+	}
+
+	if loaded.LastAppIDServed != 0 {
+		t.Errorf("expected zero LastAppIDServed, got %d", loaded.LastAppIDServed)
+	}
+	if loaded.RuleIDsServed == nil {
+		t.Errorf("expected RuleIDsServed to be initialised, got nil")
+	}
+}
+
 func TestSessionManagerEndSession(t *testing.T) {
 	dbClient := database.FakeDatabaseClient{
 		ErrorToReturn: nil,

@@ -282,22 +282,11 @@ func main() {
 	sMetrics := session.CreateSessionMetrics(metricsRegistry)
 	sessionMgr := session.NewDatabaseSessionManager(dbc, cfg.Backend.Advanced.SessionTrackingTimeout, sMetrics)
 
-	slog.Info("Cleaning up any stale sessions")
-	totalSessionsCleaned := 0
-
-	for {
-		cnt, err := sessionMgr.CleanupStaleSessions(50)
-		if err != nil {
-			slog.Error("error cleaning up stale sessions", slog.String("error", err.Error()))
-			return
-		}
-
-		totalSessionsCleaned += cnt
-		if cnt < 50 {
-			break
-		}
+	slog.Info("Loading active sessions from database")
+	if err := sessionMgr.LoadActiveSessions(); err != nil {
+		slog.Error("error loading active sessions", slog.String("error", err.Error()))
+		return
 	}
-	slog.Info("Cleaned up stale sessions", slog.Int("count", totalSessionsCleaned))
 
 	preprocessLLMCfg, err := cfg.GetLLMConfig(cfg.AI.Triage.PreProcess.LLMConfig)
 	if err != nil {

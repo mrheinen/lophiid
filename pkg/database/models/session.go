@@ -25,8 +25,9 @@ type Session struct {
 	ID                     int64  `ksql:"id,skipInserts" json:"id" doc:"Database ID for the session"`
 	Active                 bool   `ksql:"active" json:"active" doc:"Is the session active"`
 	IP                     string `ksql:"ip" json:"ip" doc:"IP of the client"`
-	LastRuleServed         ContentRule
+	LastAppIDServed        int64  `ksql:"last_app_id_served" json:"last_app_id_served" doc:"App ID of the last content rule served in this session"`
 	RuleIDsServed          map[int64]int64
+	RuleIDsServedDB        []int64   `ksql:"rule_ids_served" json:"rule_ids_served" doc:"Flat interleaved pairs of [ruleID, contentID, ...] for DB storage"`
 	CreatedAt              time.Time `ksql:"created_at,skipInserts,skipUpdates" json:"created_at" doc:"Creation date of the session in the database (not session start!)"`
 	UpdatedAt              time.Time `ksql:"updated_at,timeNowUTC" json:"updated_at" doc:"Date and time of last update"`
 	StartedAt              time.Time `ksql:"started_at" json:"started_at" doc:"Start time of the session"`
@@ -37,7 +38,7 @@ type Session struct {
 	BehaviorFinalGaps      []float64 `ksql:"behavior_final_gaps"            json:"behavior_final_gaps"            doc:"The final gaps of the behavior of the session"`
 	KillChainProcessStatus string    `ksql:"kill_chain_process_status" json:"kill_chain_process_status" doc:"Kill chain analysis status: PENDING, DONE, FAILED or SKIPPED"`
 	RequestCount           int64     `ksql:"request_count" json:"request_count" doc:"Number of requests in this session"`
-	RequestGaps            []float64
+	RequestGaps            []float64 `ksql:"request_gaps" json:"request_gaps" doc:"Inter-request gap durations in seconds"`
 	LastRequestAt          time.Time `ksql:"last_request_at" json:"last_request_at" doc:"Time of the last request in this session"`
 	Mu                     sync.RWMutex
 }
@@ -84,6 +85,28 @@ func (c *Session) ServedRuleWithContent(ruleID int64, contentID int64) {
 	c.Mu.Lock()
 	defer c.Mu.Unlock()
 	c.RuleIDsServed[ruleID] = contentID
+}
+
+// SyncRuleIDsFromMap converts the in-memory RuleIDsServed map into the flat
+// interleaved RuleIDsServedDB slice for database persistence.
+func (c *Session) SyncRuleIDsFromMap() {
+	c.Mu.RLock()
+	defer c.Mu.RUnlock()
+	c.RuleIDsServedDB = make([]int64, 0, len(c.RuleIDsServed)*2)
+	for ruleID, contentID := range c.RuleIDsServed {
+		c.RuleIDsServedDB = append(c.RuleIDsServedDB, ruleID, contentID)
+	}
+}
+
+// SyncRuleIDsToMap converts the flat interleaved RuleIDsServedDB slice (loaded
+// from the database) back into the in-memory RuleIDsServed map.
+func (c *Session) SyncRuleIDsToMap() {
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
+	c.RuleIDsServed = make(map[int64]int64)
+	for i := 0; i+1 < len(c.RuleIDsServedDB); i += 2 {
+		c.RuleIDsServed[c.RuleIDsServedDB[i]] = c.RuleIDsServedDB[i+1]
+	}
 }
 
 // NewSession creates a new session.
