@@ -44,3 +44,11 @@ func (f *FakeSessionManager) StartSession(ip string) (*models.Session, error) {
 func (f *FakeSessionManager) EndSession(session *models.Session) error {
 	return f.ErrorToReturn
 }
+
+func (f *FakeSessionManager) PersistActiveSessions() error {
+	return f.ErrorToReturn
+}
+
+func (f *FakeSessionManager) LoadActiveSessions() error {
+	return f.ErrorToReturn
+}

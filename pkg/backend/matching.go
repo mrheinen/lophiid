@@ -142,7 +142,7 @@ func GetMatchedRule(rules []models.ContentRule, req *models.Request, session *mo
 		if !session.HasServedRule(r.ID) {
 			unservedRules = append(unservedRules, r)
 			// A rule matching the same app id is prefered.
-			if r.AppID == session.LastRuleServed.AppID {
+			if r.AppID == session.LastAppIDServed {
 				return returnIfAllowedFromNet(r, sourceAddr)
 			}
 		}

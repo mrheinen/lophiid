@@ -33,6 +33,8 @@ type SessionManager interface {
 	UpdateCachedSession(ip string, session *models.Session) error
 	StartSession(ip string) (*models.Session, error)
 	EndSession(session *models.Session) error
+	PersistActiveSessions() error
+	LoadActiveSessions() error
 }
 
 // DatabaseSessionManager manages the sessions in the database. It does use a
@@ -135,6 +137,62 @@ func (d *DatabaseSessionManager) SaveExpiredSession(session *models.Session) boo
 		return false
 	}
 	return true
+}
+
+// PersistActiveSessions writes all sessions currently held in the cache to the
+// database. Sessions are kept active (Active remains true) so that they can be
+// reloaded on the next startup. This is intended to be called during a graceful
+// shutdown before the database connection is closed.
+func (d *DatabaseSessionManager) PersistActiveSessions() error {
+	sessions := d.activeSessions.GetAsMap()
+
+	slog.Info("Persisting sessions", slog.Int("count", len(sessions)))
+	var firstErr error
+	for _, session := range sessions {
+		session.SyncRuleIDsFromMap()
+		if err := d.dbClient.Update(session); err != nil {
+			slog.Error("error persisting session on shutdown", slog.String("ip", session.IP), slog.String("error", err.Error()))
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	return firstErr
+}
+
+// LoadActiveSessions loads all sessions marked active in the database into the
+// in-memory cache. It is intended to be called during startup after a graceful
+// shutdown to restore the previous session state.
+//
+// Note that this method does not take into account how long sessions already
+// were in the cache. It just loads them and by doing so the sessions will again
+// get the full expiration time.
+func (d *DatabaseSessionManager) LoadActiveSessions() error {
+	var offset int64
+	const pageSize = 250
+	for {
+		res, err := d.dbClient.SearchSession(offset, pageSize, "active:true")
+		if err != nil {
+			return fmt.Errorf("error loading active sessions: %w", err)
+		}
+		if len(res) == 0 {
+			break
+		}
+
+		for i := range res {
+			sess := &res[i]
+			sess.SyncRuleIDsToMap()
+			d.activeSessions.Store(sess.IP, sess)
+			slog.Info("restored active session from database", slog.String("ip", sess.IP), slog.Int64("session_id", sess.ID))
+		}
+
+		if int64(len(res)) < pageSize {
+			break
+		}
+		offset += pageSize
+	}
+	d.metrics.sessionsActiveGauge.Set(float64(d.activeSessions.Count()))
+	return nil
 }
 
 // StartNewSession starts a new session for the given IP and stores the session
