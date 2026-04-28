@@ -90,8 +90,8 @@ func (c *Session) ServedRuleWithContent(ruleID int64, contentID int64) {
 // SyncRuleIDsFromMap converts the in-memory RuleIDsServed map into the flat
 // interleaved RuleIDsServedDB slice for database persistence.
 func (c *Session) SyncRuleIDsFromMap() {
-	c.Mu.RLock()
-	defer c.Mu.RUnlock()
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
 	c.RuleIDsServedDB = make([]int64, 0, len(c.RuleIDsServed)*2)
 	for ruleID, contentID := range c.RuleIDsServed {
 		c.RuleIDsServedDB = append(c.RuleIDsServedDB, ruleID, contentID)
