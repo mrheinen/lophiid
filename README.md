@@ -30,7 +30,7 @@ Key features:
 - Hybrid AI honeypot approach
 - AI agent for vulnerability research based rule creation
 - Static, scripted (Javascript) and AI supported response handling
-- AI specifialized request handlers for:
+- AI specialized request handlers for:
     * Shell code injection (with persistent session memory/command history)
     * Code injection (with code emulation)
     * File uploading (with multi step request handling)
